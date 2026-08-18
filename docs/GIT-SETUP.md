@@ -100,3 +100,26 @@ gh workflow run "Fleet Email DNS Check" --repo dougkasperek/cm-automation
 Run the email job before the Pantheon one. It has nothing to authenticate, so a
 red run can only mean a runner, network or workflow problem. If it is green and
 the Pantheon job is red, the machine token is the answer without guessing.
+
+---
+
+## Amendment, 2026-08-18: the rule is wider than `commit`
+
+The rule recorded here was "Claude cannot run `git commit`". That is too narrow
+and it cost time again on 2026-08-18.
+
+**Claude must not run any git command that writes the index.** That includes
+`commit`, `add`, `reset` and `update-index`. Each of them takes
+`.git/index.lock`, and the device bridge cannot delete files, so the lock
+survives the command and every later git operation fails with *Unable to create
+index.lock: File exists* until Doug clears it by hand:
+
+```bash
+rm -f ~/dev/cm-automation/.git/index.lock
+```
+
+Read-only git is fine and useful — `status`, `log`, `show`, `diff`, `ls-files`.
+`git show <rev>:<path>` in particular is how the pre-repair ledger was recovered
+for comparison without touching the working tree.
+
+**Claude edits files. Doug runs git.**

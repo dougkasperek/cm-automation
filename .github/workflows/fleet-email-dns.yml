@@ -24,6 +24,10 @@ on:
         description: "Fail the build if the adopted rule stops reproducing the workbook"
         type: boolean
         default: false
+      persist_ledger:
+        description: "Ingest this run into history/ and push it back to main"
+        type: boolean
+        default: true
   # Enable once a few manual runs have been reviewed. Cron is UTC and is not
   # punctual; runs queue under load. That is fine here, nothing depends on the
   # exact minute.
@@ -37,6 +41,9 @@ jobs:
   email-dns:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The persist job needs the stamp to find this run's artifact by name.
+    outputs:
+      stamp: ${{ steps.stamp.outputs.value }}
 
     steps:
       - uses: actions/checkout@v4
@@ -127,3 +134,43 @@ jobs:
           name: fleet-email-dns-${{ steps.stamp.outputs.value }}
           path: reports/fleet-email-dns-*.json
           retention-days: 90
+
+  # -------------------------------------------------------------------------
+  # Persist the run into the ledger. See the twin job in
+  # pantheon-fleet-healthcheck.yml; the two share the fleet-ledger-write lock
+  # and the same scripts/persist-ledger.sh, so they cannot race each other.
+  # -------------------------------------------------------------------------
+  persist-ledger:
+    name: Ingest into the ledger
+    needs: email-dns
+    if: >-
+      always()
+      && inputs.persist_ledger
+      && needs.email-dns.result != 'skipped'
+      && needs.email-dns.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: fleet-ledger-write
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download this run's reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: fleet-email-dns-${{ needs.email-dns.outputs.stamp }}
+          path: /tmp/ci-reports
+
+      - name: Ingest, render and push
+        run: ./scripts/persist-ledger.sh /tmp/ci-reports "Fleet email DNS check"

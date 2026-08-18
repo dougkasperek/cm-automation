@@ -34,6 +34,10 @@ on:
         description: "Fail the job when a CRIT finding exists"
         type: boolean
         default: false
+      persist_ledger:
+        description: "Ingest this run into history/ and push it back to main"
+        type: boolean
+        default: true
 
   # Validate the scripts themselves on every PR that touches them. This runs
   # the mock harness only - no secrets, no network, no Pantheon.
@@ -154,8 +158,17 @@ jobs:
           [ -n "$IN_SITES" ] && set -- "$@" --sites "$IN_SITES"
 
           echo "Running: pantheon-fleet-healthcheck.sh $*"
-          ./scripts/pantheon-fleet-healthcheck.sh "$@"
-          RC=$?
+
+          # `|| RC=$?` is load-bearing, do not simplify it back to a bare call
+          # followed by RC=$?. GitHub's default shell for a run: step is
+          # `bash -e {0}`, and `set -uo pipefail` above does NOT clear that -e.
+          # So a bare call that exits non-zero killed the step on that line:
+          # RC=$?, the script_exit output and the deliberate exit 0 below were
+          # all unreachable, and the re-raise step then read an EMPTY exit code
+          # and reported "Scan failed with exit code ." A command followed by
+          # || is exempt from -e, which is what makes the rest of this reachable.
+          RC=0
+          ./scripts/pantheon-fleet-healthcheck.sh "$@" || RC=$?
           echo "script_exit=$RC" >> "$GITHUB_OUTPUT"
           # The step must not die before artifacts are collected. Exit 2 (CRIT)
           # is re-raised in the final step, after everything is uploaded.
@@ -191,5 +204,63 @@ jobs:
             0) echo "Scan completed clean." ;;
             2) echo "::warning::Scan found CRIT findings."
                if [ "${{ inputs.fail_on_crit }}" = "true" ]; then exit 2; fi ;;
+            "") echo "::error::The scan step died before it could report an exit code. Read the 'Run fleet health check' step's log, not this message - the real error is the last line there."
+                exit 1 ;;
             *) echo "::error::Scan failed with exit code $RC."; exit 1 ;;
           esac
+
+  # -------------------------------------------------------------------------
+  # Persist the run into the ledger.
+  #
+  # This job exists because until 2026-08-18 nothing CI produced ever reached
+  # history/. reports/ is gitignored, ingest was a manual laptop step, and this
+  # workflow had contents:read, so every CI scan was a 90-day artifact and then
+  # gone. history/ is the one asset here that cannot be regenerated.
+  #
+  # It is a SEPARATE JOB on purpose. Only this job needs contents:write, and
+  # only this job serialises on the ledger lock - putting the concurrency guard
+  # on the scan would queue a 45-minute run behind a 25-second one.
+  #
+  # It runs even when the scan job FAILED. A CRIT finding fails the job by
+  # design when fail_on_crit is on, and that run's observations are precisely
+  # the ones worth keeping.
+  # -------------------------------------------------------------------------
+  persist-ledger:
+    name: Ingest into the ledger
+    needs: fleet-healthcheck
+    if: >-
+      always()
+      && inputs.persist_ledger
+      && needs.fleet-healthcheck.result != 'skipped'
+      && needs.fleet-healthcheck.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    # Repo-wide lock, shared by name with the email workflow. Two workflows
+    # appending to one JSONL and pushing is the one race this design has.
+    concurrency:
+      group: fleet-ledger-write
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # May legitimately not exist: the scan can die before writing anything,
+      # and the upload step above is if-no-files-found:warn. The script treats
+      # an absent or empty directory as zero runs.
+      - name: Download this run's reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: fleet-health-${{ github.run_number }}
+          path: /tmp/ci-reports
+
+      - name: Ingest, render and push
+        run: ./scripts/persist-ledger.sh /tmp/ci-reports "Pantheon health check, ${{ inputs.run_mode }}"

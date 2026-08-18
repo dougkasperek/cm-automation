@@ -141,8 +141,22 @@ require_tools() {
 # argument, so it cannot leak into `ps` output or a CI command echo.
 # ---------------------------------------------------------------------------
 pantheon_login() {
-  if terminus auth:whoami >/dev/null 2>&1; then
-    log "Terminus: already authenticated."
+  # Read the IDENTITY, not the exit code.
+  #
+  # This check used to be `terminus auth:whoami >/dev/null 2>&1`, which trusts
+  # the exit status alone. On a machine with no session at all, auth:whoami
+  # still exits 0, so this function returned early, auth:login was NEVER
+  # called, and the very next command came back empty with no explanation.
+  # It looked correct on a laptop, where the cached session makes the early
+  # return genuinely right, and failed on every fresh CI runner - the Pantheon
+  # job had never once authenticated in CI before 2026-08-18.
+  #
+  # Same bug as json_or_empty forty lines up: an exit code standing in for an
+  # answer. The fix is the same too - require actual output.
+  local who
+  who="$(terminus auth:whoami 2>/dev/null | strip_noise | tr -d '[:space:]')"
+  if [ -n "$who" ]; then
+    log "Terminus: already authenticated as ${who}."
     return 0
   fi
   if [ -z "${PANTHEON_MACHINE_TOKEN:-}" ]; then
@@ -150,10 +164,19 @@ pantheon_login() {
     return 1
   fi
   log "Terminus: authenticating with machine token..."
-  if terminus auth:login --machine-token="$PANTHEON_MACHINE_TOKEN" >/dev/null 2>&1; then
-    log "Terminus: authenticated."
+  local out
+  if out="$(terminus auth:login --machine-token="$PANTHEON_MACHINE_TOKEN" 2>&1)"; then
+    # Confirm the login actually produced a session rather than trusting its
+    # exit code in turn, which would reintroduce the bug above one line lower.
+    who="$(terminus auth:whoami 2>/dev/null | strip_noise | tr -d '[:space:]')"
+    if [ -z "$who" ]; then
+      err "terminus auth:login reported success but there is still no session."
+      return 1
+    fi
+    log "Terminus: authenticated as ${who}."
     return 0
   fi
-  err "terminus auth:login failed."
+  # Terminus's own message, minus the noise. Never echo the token itself.
+  err "terminus auth:login failed: $(printf '%s' "$out" | strip_noise | tail -3 | tr '\n' ' ')"
   return 1
 }

@@ -340,7 +340,7 @@ def render(m):
     A('<div class=card style="overflow-x:auto"><table id=fleet>'
       "<tr><th>Site</th><th>Host</th><th>State</th><th>PHP</th>"
       "<th>Newest backup</th><th>Upstream</th>"
-      "<th>WP core</th><th>Plugins</th><th>Themes</th>"
+      "<th>WP version</th><th>WP core</th><th>Plugins</th><th>Themes</th>"
       "<th>SPF</th><th>DKIM</th><th>DMARC sending</th><th>DMARC from</th>"
       "<th>Aligned</th></tr>")
 
@@ -383,6 +383,32 @@ def render(m):
                     'Not verified by any scan.">%s <em>claimed</em></span>' % e(claim))
         return '<span class=quiet>not checked</span>'
 
+    def wp_version_cell(v, claim):
+        """Observed WordPress version against the workbook's claim.
+
+        This is the comparison the project exists to make. The workbook asserts
+        7.0.2 fleet-wide and, until 2026-08-18, nothing had ever read the actual
+        version off a single site. One month after wp2shell - an RCE whose only
+        fix was that upgrade - a site not on 7.0.2 is the most important thing
+        this page can show, so a disagreement is called out rather than left for
+        a reader to spot by comparing two columns.
+        """
+        if v in (None, L.UNKNOWN):
+            if claim:
+                return ('<span class=quiet title="From the manual workbook. '
+                        'Not verified by any scan.">%s <em>claimed</em></span>'
+                        % e(claim))
+            return '<span class=quiet>not checked</span>'
+        if claim and str(v) != str(claim):
+            # chip(), not a bare span: there is no chip-bad class, and the
+            # palette is only legal in light mode because every chip carries a
+            # visible text label. "workbook says X" is that label.
+            return ('%s <span title="The manual workbook records %s for this '
+                    'site. The scan read %s off the site itself.">%s</span>'
+                    % (e(v), e(claim), e(v),
+                       chip("workbook says %s" % claim, "bad")))
+        return e(v)
+
     for s in m["sites"]:
         st = s.get("derived_status")
         state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
@@ -390,14 +416,20 @@ def render(m):
         A('<tr data-site="%s" data-host="%s" data-state="%s">'
           "<td><code>%s</code></td><td class=quiet>%s</td><td>%s</td>"
           "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
-          "<td>%s</td><td>%s</td><td>%s</td>"
+          "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""),
              e(s["site_id"]), e(s.get("host") or "—"), state,
              observed(s.get("php_version"), claim.get("php_version")),
              backup(s.get("db_backup_age_days")),
              e(s.get("upstream_pending", "—")),
-             observed(s.get("wp_core_update"), claim.get("wp_version")),
+             wp_version_cell(s.get("wp_version"), claim.get("wp_version")),
+             # No workbook claim is passed here on purpose. The workbook
+             # records a VERSION; this column answers whether an update is
+             # PENDING. Showing "7.0.2 claimed" in an update-pending column
+             # answered a question nobody asked, in the one place a reader
+             # most needs a straight answer.
+             observed(s.get("wp_core_update")),
              observed(s.get("plugin_updates"), claim.get("plugins_utd")),
              observed(s.get("theme_updates"), claim.get("themes_utd")),
              yn(s.get("spf_present")), e(s.get("dkim_selector") or "—"),
@@ -444,6 +476,10 @@ def main():
     ap.add_argument("--inventory", default="./data/fleet-inventory.json")
     ap.add_argument("--out", default="./fleet.html")
     ap.add_argument("--today", help="override today (YYYY-MM-DD) for deterministic output")
+    ap.add_argument("--strict", action="store_true",
+                    help="exit non-zero if the ledger holds a site the "
+                         "inventory does not. For CI, where nobody reads the "
+                         "site count on stdout.")
     a = ap.parse_args()
     today = datetime.date.fromisoformat(a.today) if a.today else datetime.date.today()
     m = build_model(a.history, a.inventory, today)
@@ -451,6 +487,25 @@ def main():
         fh.write(render(m))
     print("%d sites, %d change(s), %d standing finding(s) -> %s"
           % (len(m["sites"]), len(m["changes"]), len(m["standing"]), a.out))
+
+    # A site in the ledger but not in the inventory means some tool keyed a row
+    # on an identifier nothing else uses, so that site now has two histories and
+    # the page renders both as separate rows. It is exactly how a 84-site fleet
+    # rendered as 130 rows on 2026-08-18, and the only reason anyone noticed was
+    # that a person read the number. --strict is that person, for CI.
+    orphans = sorted(s["site_id"] for s in m["sites"] if not s.get("in_inventory"))
+    if orphans:
+        print("", file=sys.stderr)
+        print("%d site(s) in the ledger are not in the inventory:"
+              % len(orphans), file=sys.stderr)
+        shown = orphans[:12]
+        print("  " + ", ".join(shown)
+              + (", ... (%d more)" % (len(orphans) - 12) if len(orphans) > 12 else ""),
+              file=sys.stderr)
+        print("Expected %d sites, rendered %d."
+              % (m["inventory_count"], len(m["sites"])), file=sys.stderr)
+        if a.strict:
+            return 1
     return 0
 
 
