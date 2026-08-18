@@ -158,13 +158,39 @@ plus 7 where nothing was established:
 Rule agreement against the workbook is unchanged at 97.1% on all three fields,
 so the correction does not disturb the recovered rule.
 
-Six of the seven undetermined domains are in the same group
-(`lactalis*`, `eamusicfest`, `hitsfoundation`), which points at one slow or
-filtered nameserver rather than seven separate problems. Cause-grouping again.
-
 **This is the argument for keeping the CI-versus-local comparison.** Neither run
 was wrong about its own resolver. The disagreement was the finding, and it would
 have been invisible if only one of them existed.
+
+### Most "undetermined" results are self-inflicted, and that is fine
+
+Chasing the undetermined set produced a second, smaller lesson. Six of the seven
+domains that timed out mid-scan resolve in **0.0 seconds** when queried one at a
+time. The tool fires roughly 960 lookups through a dozen workers and saturates
+the local resolver. The domains are fine; the measurement was not.
+
+Two fixes were tried and measured, and both were rejected on the numbers:
+
+- **Escalating the deadline in place** (three attempts, longer timeout each,
+  with backoff). Tripled the wall clock to 86 seconds and recovered
+  **nothing**, because the other workers are still hammering while the retry
+  runs.
+- **A serial repair pass after the burst.** Better in principle, and it needs
+  per-zone short-circuiting plus a wall-clock budget just to be survivable,
+  since a zone whose nameserver is unreachable fails all ~112 of its DKIM
+  probes at full timeout each. On one run it spent 49 seconds and recovered
+  **zero**.
+
+So `--repair` exists and is **off by default**. That is a considered choice.
+This tool runs on a schedule and feeds a ledger, so a transient timeout resolves
+itself on the next run and belongs in a lookup-quality trend rather than in the
+findings. Preferring the diff over the snapshot pays for itself here: the fix
+for a flaky measurement is another measurement, not a slower one.
+
+Which failures are transient is itself visible, because they move between runs.
+`woodmarkpharmacy.com` is the one that does not. It times out consistently from
+some networks and answers instantly from others, including GitHub's, while its
+`_dmarc` record resolves fine either way.
 
 ---
 
