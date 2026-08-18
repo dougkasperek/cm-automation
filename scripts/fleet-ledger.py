@@ -117,7 +117,27 @@ def php_support(version, today):
 # Ingest
 # --------------------------------------------------------------------------
 
-RUN_RE = re.compile(r"fleet-(health|plugin-scan|[a-z0-9-]+)-(\d{4}-\d{2}-\d{2})_(\d{4})\.json$")
+# ---------------------------------------------------------------------------
+# Sources
+# ---------------------------------------------------------------------------
+# The whole point of this layer: three tools key on three different identifiers
+# (Pantheon machine name, domain, sending domain) and none of them agreed. Every
+# source is normalised onto the inventory's site_id (the domain) before anything
+# is stored, so one site has ONE history no matter which tool observed it.
+#
+# Fact names must not collide across sources; ingest asserts it rather than
+# trusting it, because a silent collision would merge two unrelated measurements
+# into one timeline and the diff would report changes that never happened.
+
+EMAIL_OBSERVED = (
+    "spf_present", "spf_all_qualifier", "spf_checked_at",
+    "dkim_present", "dkim_selector",
+    "dmarc_at_sending_present", "dmarc_at_sending_policy",
+    "dmarc_at_from_present", "dmarc_at_from_policy", "dmarc_via_org_fallback",
+    "relaxed_aligned",
+)
+
+RUN_RE = re.compile(r"fleet-(health|plugin-scan|email-dns|[a-z0-9-]+)-(\d{4}-\d{2}-\d{2})_(\d{4})\.json$")
 
 
 def parse_run_id(path):
@@ -133,7 +153,74 @@ def parse_run_id(path):
     }
 
 
-def ingest(reports_dir, history_dir):
+def load_inventory(path):
+    """site_id lookups. Returns (by_host_site_name, by_domain, records)."""
+    if not path or not os.path.exists(path):
+        return {}, {}, {}
+    inv = json.load(open(path))
+    by_host, by_domain, recs = {}, {}, {}
+    for s in inv["sites"]:
+        recs[s["site_id"]] = s
+        if s.get("host_site_name"):
+            by_host[s["host_site_name"]] = s["site_id"]
+        if s.get("domain"):
+            by_domain[s["domain"].lower()] = s["site_id"]
+    return by_host, by_domain, recs
+
+
+def _health_rows(payload, by_host):
+    """Pantheon health scan: a list of rows keyed on the machine name."""
+    if not isinstance(payload, list):
+        return None
+    out = []
+    for r in payload:
+        name = r["site"]
+        rec = {"site_id": by_host.get(name, name), "host_site_name": name,
+               "source": "health"}
+        for k in OBSERVED:
+            rec[k] = fact(r, k)
+        for k in DERIVED:
+            rec["derived_" + k] = fact(r, k)
+        out.append(rec)
+    return out
+
+
+def _email_rows(payload, by_domain):
+    """Email DNS check: a dict with a `sites` list keyed on the domain."""
+    if not isinstance(payload, dict) or payload.get("kind") != "email-dns":
+        return None
+    out = []
+    for s in payload.get("sites", []):
+        if "error" in s:
+            continue
+        d = s["domain"].lower()
+        dk, spf = s.get("dkim", {}), s.get("spf", {})
+        dm = s.get("dmarc", {})
+        at_send, at_from = dm.get("at_sending_domain", {}), dm.get("at_from_domain", {})
+        out.append({
+            "site_id": by_domain.get(d, d), "host_site_name": None, "source": "email-dns",
+            "spf_present": spf.get("present", UNKNOWN),
+            "spf_all_qualifier": spf.get("all_qualifier") or UNKNOWN,
+            "spf_checked_at": spf.get("checked_at") or UNKNOWN,
+            "dkim_present": dk.get("present", UNKNOWN),
+            "dkim_selector": dk.get("selector") or UNKNOWN,
+            "dmarc_at_sending_present": at_send.get("present", UNKNOWN),
+            "dmarc_at_sending_policy": at_send.get("policy") or UNKNOWN,
+            "dmarc_at_from_present": at_from.get("present", UNKNOWN),
+            "dmarc_at_from_policy": at_from.get("policy") or UNKNOWN,
+            "dmarc_via_org_fallback": at_from.get("via_org_fallback", UNKNOWN),
+            "relaxed_aligned": s.get("alignment", {}).get("relaxed_aligned", UNKNOWN),
+        })
+    return out
+
+
+# Fact-name collision guard. If two sources ever claim the same fact name, the
+# ledger would silently merge unrelated measurements onto one timeline.
+_overlap = set(OBSERVED) & set(EMAIL_OBSERVED)
+assert not _overlap, "fact name collision between sources: %s" % sorted(_overlap)
+
+
+def ingest(reports_dir, history_dir, inventory=None):
     obs_path = os.path.join(history_dir, "observations.jsonl")
     runs_path = os.path.join(history_dir, "runs.jsonl")
     if not os.path.isdir(history_dir):
@@ -146,6 +233,8 @@ def ingest(reports_dir, history_dir):
                 line = line.strip()
                 if line:
                     seen.add(json.loads(line)["run_id"])
+
+    by_host, by_domain, inv_recs = load_inventory(inventory)
 
     files = sorted(
         os.path.join(reports_dir, n)
@@ -164,36 +253,49 @@ def ingest(reports_dir, history_dir):
                 skipped += 1
                 continue
             with open(path) as fh:
-                rows = json.load(fh)
-            if not isinstance(rows, list):
-                print("  skip (not a row array): %s" % os.path.basename(path), file=sys.stderr)
+                payload = json.load(fh)
+
+            rows = _health_rows(payload, by_host)
+            if rows is None:
+                rows = _email_rows(payload, by_domain)
+            if rows is None:
+                print("  skip (unrecognised shape): %s" % os.path.basename(path),
+                      file=sys.stderr)
                 continue
 
-            # Coverage is a property of the RUN, derived from the rows, and it is
-            # the thing that makes an OK trustworthy or not. Store it once here
-            # so no later reader has to re-infer it.
-            deep = sum(1 for r in rows if r.get("wp_checked") is True)
-            meta.update(
-                {
-                    "source_file": os.path.basename(path),
-                    "site_count": len(rows),
-                    "deep_scanned": deep,
-                    "mode": "full" if deep else "api-only",
-                }
-            )
+            source = rows[0]["source"] if rows else "unknown"
+            # Coverage is a property of the RUN and is what makes an OK
+            # trustworthy or not. Store it once here so no later reader
+            # has to re-infer it.
+            if source == "health":
+                deep = sum(1 for r in payload if r.get("wp_checked") is True)
+                mode = "full" if deep else "api-only"
+            else:
+                deep = sum(1 for r in rows if r["dkim_present"] is True)
+                mode = "dns"
+            unresolved = [r for r in rows
+                          if r.get("site_id") and r["site_id"] not in inv_recs]
+            meta.update({
+                "source_file": os.path.basename(path),
+                "source": source,
+                "site_count": len(rows),
+                "deep_scanned": deep,
+                "mode": mode,
+                # Rows that matched no inventory entry. Never silently dropped:
+                # an unknown site is the highest-signal finding there is.
+                "sites_not_in_inventory": sorted(r["site_id"] for r in unresolved),
+            })
             runs_fh.write(json.dumps(meta, sort_keys=True) + "\n")
             added_runs += 1
 
             for r in rows:
-                rec = {
-                    "run_id": meta["run_id"],
-                    "observed_at": meta["observed_at"],
-                    "site": r["site"],
-                }
-                for k in OBSERVED:
-                    rec[k] = fact(r, k)
-                for k in DERIVED:
-                    rec["derived_" + k] = fact(r, k)
+                rec = dict(r)
+                rec["run_id"] = meta["run_id"]
+                rec["observed_at"] = meta["observed_at"]
+                # `site` kept as an alias of site_id so existing readers and the
+                # 43 assertions written against the health-only ledger keep
+                # working unchanged.
+                rec["site"] = r["site_id"]
                 obs_fh.write(json.dumps(rec, sort_keys=True) + "\n")
                 added_obs += 1
 
@@ -217,6 +319,23 @@ def load_ledger(history_dir):
             obs = [json.loads(l) for l in fh if l.strip()]
     runs.sort(key=lambda r: r["observed_at"])
     return runs, obs
+
+
+def previous_run_of_same_source(runs, idx=-1):
+    """The newest run, and the most recent earlier run from the SAME tool.
+
+    Without this, ingesting an email scan after a health scan makes the diff
+    compare a Pantheon snapshot against a DNS snapshot and report the entire
+    fleet as changed. Comparing like with like is not a nicety here.
+    """
+    if not runs:
+        return None, None
+    curr = runs[idx]
+    src = curr.get("source")
+    for r in reversed(runs[:idx if idx != -1 else len(runs) - 1]):
+        if r.get("source") == src:
+            return r, curr
+    return None, curr
 
 
 def rows_for(obs, run_id):
@@ -280,9 +399,32 @@ BACKUP_CRIT_DAYS = 2
 
 
 def _backup_bad(v):
-    if v == UNKNOWN:
-        return False  # unknown is not bad; it is unknown. See principle 5.
+    # None and the UNKNOWN token mean the same thing here: nobody established a
+    # backup age. A row from a source that does not measure backups (the email
+    # check) carries neither, and must not be read as "backup is fine" OR as
+    # "backup is missing".
+    if v is None or v == UNKNOWN or not isinstance(v, (int, float)):
+        return False
     return v > BACKUP_CRIT_DAYS
+
+
+FACTS_BY_SOURCE = {"health": OBSERVED, "email-dns": EMAIL_OBSERVED}
+
+
+def facts_for(row):
+    """Which fact names this row actually carries.
+
+    Diffing a health fact against an email row would compare None to None
+    forever, and worse, a source changing would look like every fact changing
+    at once. So the fact list follows the row's own source.
+    """
+    return FACTS_BY_SOURCE.get(row.get("source"), OBSERVED)
+
+
+def rows_for_source(obs, run_id, source=None):
+    return {o["site_id"] if "site_id" in o else o["site"]: o
+            for o in obs
+            if o["run_id"] == run_id and (source is None or o.get("source") == source)}
 
 
 def diff_runs(prev_rows, curr_rows, today):
@@ -297,7 +439,11 @@ def diff_runs(prev_rows, curr_rows, today):
 
     for s in sorted(set(prev_rows) & set(curr_rows)):
         p, c = prev_rows[s], curr_rows[s]
-        for k in OBSERVED:
+        if p.get("source") != c.get("source"):
+            changes.append({"class": "TRANSITION", "site": s, "fact": "source",
+                            "before": p.get("source"), "after": c.get("source")})
+            continue
+        for k in facts_for(c):
             if p.get(k) != c.get(k):
                 changes.append(
                     {
@@ -313,7 +459,7 @@ def diff_runs(prev_rows, curr_rows, today):
         for k in DERIVED:
             dk = "derived_" + k
             if p.get(dk) != c.get(dk):
-                observed_moved = any(p.get(x) != c.get(x) for x in OBSERVED)
+                observed_moved = any(p.get(x) != c.get(x) for x in facts_for(c))
                 changes.append(
                     {
                         "class": "TRANSITION" if observed_moved else "RULE_CHANGE",
@@ -338,9 +484,16 @@ def diff_runs(prev_rows, curr_rows, today):
 
 
 def standing(curr_rows, today):
+    """Grouped by cause, not by site. Only ever reads facts a row actually has."""
     groups = []
+    health = {s: r for s, r in curr_rows.items()
+              if r.get("source", "health") == "health"}
+    email = {s: r for s, r in curr_rows.items() if r.get("source") == "email-dns"}
 
-    upstream = sorted(s for s, r in curr_rows.items() if r.get("upstream_pending") not in (UNKNOWN, 0))
+    groups.extend(_standing_email(email))
+    curr_rows = health
+
+    upstream = sorted(s for s, r in curr_rows.items() if r.get("upstream_pending") not in (UNKNOWN, 0, None))
     if upstream:
         groups.append(
             {
@@ -362,7 +515,9 @@ def standing(curr_rows, today):
             {
                 "cause": "No recent DB backup",
                 "axis": "RISK",
-                "sites": ["%s (%dd, %s)" % (s, d, curr_rows[s].get("plan")) for s, d in nobackup],
+                "sites": [s for s, _ in nobackup],
+                "detail": dict(("%s" % s, "%dd, %s" % (d, curr_rows[s].get("plan")))
+                               for s, d in nobackup),
                 "action": "All on plan(s) %s. Sandbox plans get no automatic nightly backup, so decide whether these are production before treating as an incident."
                 % ", ".join(plans),
             }
@@ -380,7 +535,8 @@ def standing(curr_rows, today):
             {
                 "cause": "PHP version past end of security support",
                 "axis": "RISK",
-                "sites": ["%s (PHP %s, %s)" % (s, v, p) for s, v, p in sorted(eol)],
+                "sites": [s for s, _, _ in sorted(eol)],
+                "detail": dict((s, "PHP %s, %s" % (v, p)) for s, v, p in eol),
                 "action": "Receiving no security patches. Upgrade path is a Pantheon setting plus a compatibility check.",
             }
         )
@@ -391,7 +547,7 @@ def standing(curr_rows, today):
             {
                 "cause": "PHP %s leaves security support in %d days (%s)" % (v, d, PHP_SECURITY_EOL[v]),
                 "axis": "PLANNING",
-                "sites": ["%d sites" % len(expiring)],
+                "sites": sorted(s for s, _, _ in expiring),
                 "action": "Fleet-wide deadline, not a per-site alert. Schedule the upgrade wave now; it is the only finding here with a fixed date.",
             }
         )
@@ -402,7 +558,7 @@ def standing(curr_rows, today):
             {
                 "cause": "WordPress core, plugin and theme status not observed",
                 "axis": "COVERAGE",
-                "sites": ["%d sites" % len(unknown_deep)],
+                "sites": unknown_deep,
                 "action": "API-only mode cannot see these. Any OK on these sites means clean-on-what-we-looked-at, not clean.",
             }
         )
@@ -410,6 +566,48 @@ def standing(curr_rows, today):
     order = {"RISK": 0, "COVERAGE": 1, "PLANNING": 2, "DRIFT": 3}
     groups.sort(key=lambda g: order.get(g["axis"], 9))
     return groups
+
+
+def _standing_email(rows):
+    """Email posture, same grouping discipline: cause first, sites second."""
+    if not rows:
+        return []
+    out = []
+    no_spf = sorted(s for s, r in rows.items() if r.get("spf_present") is False)
+    if no_spf:
+        out.append({"axis": "RISK", "cause": "No SPF record on the sending domain",
+                    "sites": no_spf,
+                    "action": "Authoritative answer, genuinely absent. Mail from these "
+                              "domains cannot pass SPF."})
+    undet = sorted(s for s, r in rows.items() if r.get("spf_present") == UNKNOWN)
+    if undet:
+        out.append({"axis": "COVERAGE", "cause": "SPF could not be determined",
+                    "sites": undet,
+                    "action": "A finding about the lookup, not the domain. Mostly "
+                              "self-inflicted resolver saturation; the next run "
+                              "usually resolves it."})
+    no_dmarc = sorted(s for s, r in rows.items()
+                      if r.get("dmarc_at_from_present") is False)
+    if no_dmarc:
+        out.append({"axis": "RISK",
+                    "cause": "No DMARC on the domain recipients actually see",
+                    "sites": no_dmarc,
+                    "action": "Nothing protects the brand domain from spoofing. Note "
+                              "this is a different question from whether the provider "
+                              "setup is complete."})
+    monitor = sorted(s for s, r in rows.items()
+                     if r.get("dmarc_at_from_policy") == "none")
+    if monitor:
+        out.append({"axis": "DRIFT", "cause": "DMARC published but p=none",
+                    "sites": monitor,
+                    "action": "Monitoring only. One policy decision covers all %d."
+                              % len(monitor)})
+    unaligned = sorted(s for s, r in rows.items() if r.get("relaxed_aligned") is False)
+    if unaligned:
+        out.append({"axis": "RISK", "cause": "From domain not aligned with sending domain",
+                    "sites": unaligned,
+                    "action": "DMARC fails on unaligned mail even when SPF and DKIM pass."})
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -426,8 +624,8 @@ def render_digest(runs, obs, today):
     out.append("# Fleet delta - %s" % curr["observed_at"].replace("T", " "))
     out.append("")
 
-    if len(runs) >= 2:
-        prev = runs[-2]
+    prev, _ = previous_run_of_same_source(runs)
+    if prev is not None:
         prev_rows = rows_for(obs, prev["run_id"])
         changes = diff_runs(prev_rows, curr_rows, today)
         pushable = [c for c in changes if c["class"] != "DRIFT"]
@@ -509,32 +707,45 @@ def render_timeline(runs, obs, site=None):
         if not recs:
             return "No observations for site %r.\n" % site
         out.append("# Timeline: %s" % site)
+        inv_rec = None
         out.append("")
-        out.append("| Observed | Status | Plan | PHP | Backup age | Upstream | Deep scanned |")
-        out.append("|---|---|---|---|---|---|---|")
-        for r in recs:
-            out.append(
-                "| %s | %s | %s | %s | %s | %s | %s |"
-                % (
-                    r["observed_at"].replace("T", " "),
-                    r.get("derived_status"),
-                    r.get("plan"),
-                    r.get("php_version"),
-                    r.get("db_backup_age_days"),
-                    r.get("upstream_pending"),
-                    r.get("wp_checked"),
-                )
-            )
+        # One site, several tools, one history. Each source gets its own table
+        # because the facts genuinely differ; forcing them into one grid is how
+        # you end up with a row of None that reads like missing data.
+        for source in sorted(set(r.get("source", "health") for r in recs)):
+            block = [r for r in recs if r.get("source", "health") == source]
+            out.append("## source: %s" % source)
+            out.append("")
+            if source == "email-dns":
+                out.append("| Observed | SPF | DKIM sel | DMARC@sending | DMARC@from | Aligned |")
+                out.append("|---|---|---|---|---|---|")
+                for r in block:
+                    out.append("| %s | %s | %s | %s | %s | %s |" % (
+                        r["observed_at"].replace("T", " "),
+                        r.get("spf_present"), r.get("dkim_selector"),
+                        r.get("dmarc_at_sending_present"),
+                        r.get("dmarc_at_from_present"), r.get("relaxed_aligned")))
+            else:
+                out.append("| Observed | Status | Plan | PHP | Backup age | Upstream | Deep scanned |")
+                out.append("|---|---|---|---|---|---|---|")
+                for r in block:
+                    out.append("| %s | %s | %s | %s | %s | %s | %s |" % (
+                        r["observed_at"].replace("T", " "),
+                        r.get("derived_status"), r.get("plan"), r.get("php_version"),
+                        r.get("db_backup_age_days"), r.get("upstream_pending"),
+                        r.get("wp_checked")))
+            out.append("")
     else:
         out.append("# Runs in the ledger")
         out.append("")
-        out.append("| Run | Observed | Sites | Mode | Deep scanned |")
-        out.append("|---|---|---|---|---|")
+        out.append("| Run | Observed | Source | Sites | Mode | Deep scanned | Not in inventory |")
+        out.append("|---|---|---|---|---|---|---|")
         for r in runs:
-            out.append(
-                "| %s | %s | %d | %s | %d |"
-                % (r["run_id"], r["observed_at"].replace("T", " "), r["site_count"], r["mode"], r["deep_scanned"])
-            )
+            missing = r.get("sites_not_in_inventory") or []
+            out.append("| %s | %s | %s | %d | %s | %d | %s |" % (
+                r["run_id"], r["observed_at"].replace("T", " "), r.get("source", "?"),
+                r["site_count"], r["mode"], r["deep_scanned"],
+                ("**%d**" % len(missing)) if missing else "0"))
     out.append("")
     return "\n".join(out)
 
@@ -547,7 +758,12 @@ def main():
     ap.add_argument("command", choices=["ingest", "diff", "digest", "timeline"])
     ap.add_argument("--reports", default="./reports")
     ap.add_argument("--history", default="./history")
+    ap.add_argument("--inventory", default="./data/fleet-inventory.json",
+                    help="the authoritative site list. Every source is normalised "
+                         "onto its site_id before storage, so one site has one "
+                         "history regardless of which tool observed it.")
     ap.add_argument("--site")
+    ap.add_argument("--source", help="restrict to one tool: health | email-dns")
     ap.add_argument("--today", help="override today (YYYY-MM-DD) for deterministic tests")
     ap.add_argument("--out", help="write output to this file as well as stdout")
     a = ap.parse_args()
@@ -555,7 +771,7 @@ def main():
     today = datetime.date.fromisoformat(a.today) if a.today else datetime.date.today()
 
     if a.command == "ingest":
-        res = ingest(a.reports, a.history)
+        res = ingest(a.reports, a.history, inventory=a.inventory)
         print(
             "ingested %d run(s), %d observation(s); %d run(s) already present -> %s"
             % (res["runs_added"], res["observations_added"], res["runs_skipped"], res["ledger"])
@@ -568,11 +784,16 @@ def main():
         return 1
 
     if a.command == "diff":
-        if len(runs) < 2:
-            print("only one run in the ledger; nothing to diff")
+        if a.source:
+            runs = [r for r in runs if r.get("source") == a.source]
+        prev, curr = previous_run_of_same_source(runs)
+        if prev is None:
+            print("only one run from this source; nothing to diff")
             return 0
-        prev_rows = rows_for(obs, runs[-2]["run_id"])
-        curr_rows = rows_for(obs, runs[-1]["run_id"])
+        print("# %s vs %s  (source: %s)" % (prev["run_id"], curr["run_id"],
+                                            curr.get("source")), file=sys.stderr)
+        prev_rows = rows_for(obs, prev["run_id"])
+        curr_rows = rows_for(obs, curr["run_id"])
         changes = diff_runs(prev_rows, curr_rows, today)
         print(json.dumps(changes, indent=2, sort_keys=True))
         return 0
