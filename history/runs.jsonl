@@ -1,0 +1,2 @@
+{"deep_scanned": 0, "kind": "health", "mode": "api-only", "observed_at": "2026-08-16T17:25:00", "run_id": "health-2026-08-16_1725", "site_count": 52, "source_file": "fleet-health-2026-08-16_1725.json"}
+{"deep_scanned": 0, "kind": "health", "mode": "api-only", "observed_at": "2026-08-17T07:26:00", "run_id": "health-2026-08-17_0726", "site_count": 52, "source_file": "fleet-health-2026-08-17_0726.json"}
