@@ -47,6 +47,7 @@ import json
 import os
 import sys
 import threading
+import time
 
 try:
     import dns.resolver
@@ -105,13 +106,20 @@ def _resolve(name, rdtype, timeout):
             _stats["cache_hits"] += 1
             return _cache[key]
     r = dns.resolver.Resolver(configure=True)
-    r.timeout = timeout
-    r.lifetime = timeout * 2
-    # A timeout is not an answer. Retry once before recording it, because a
-    # single slow authoritative server would otherwise be indistinguishable
-    # from a domain that genuinely has no record.
+    # A timeout is not an answer, and most timeouts here are SELF-INFLICTED.
+    # This tool fires ~960 queries through several workers and saturates the
+    # local resolver; six domains that answer in 0.0s standalone came back as
+    # timeouts mid-scan. Escalating the deadline in place does NOT help, because
+    # the other workers are still hammering while the retry runs. Measured: it
+    # tripled the wall clock and fixed nothing.
+    #
+    # So the fast path stays fast with one cheap retry for genuine blips, and
+    # the real repair is `repair_failed_lookups()`, a serial second sweep over
+    # just the failures once the burst has finished.
     out = None
     for attempt in (1, 2):
+        r.timeout = timeout
+        r.lifetime = timeout * 2
         try:
             ans = r.resolve(name, rdtype)
             if rdtype == "TXT":
@@ -131,7 +139,7 @@ def _resolve(name, rdtype, timeout):
             out = {"status": "nonameservers", "records": []}
             break
         except dns.exception.Timeout:
-            out = {"status": "timeout", "records": []}
+            out = {"status": "timeout", "records": [], "attempts": attempt}
             continue
         except Exception as e:                          # noqa: BLE001 record, never guess
             out = {"status": "error:" + type(e).__name__, "records": []}
@@ -155,6 +163,88 @@ def cname(name, timeout=5.0):
 # a real fact. Anything else (timeout, SERVFAIL, no reachable nameserver) means
 # we do not know, and the difference has to survive into the report.
 RESOLVED = ("ok", "nxdomain", "noanswer")
+
+
+def repair_failed_lookups(timeout=6.0, budget_seconds=45.0):
+    """Re-query, serially, the names whose lookup did not complete.
+
+    Most in-scan failures are self-inflicted: everything was in flight at once
+    and the resolver dropped packets. Six domains that answered in 0.0s
+    standalone timed out mid-scan. Retrying them one at a time afterwards
+    recovers them in seconds.
+
+    Two things keep this from blowing up, both learned the hard way:
+
+    1. **Per-zone short circuit.** If a domain's nameservers are genuinely
+       unreachable, EVERY name under it fails, including all ~112 DKIM selector
+       probes. Retrying each serially at 6s is minutes of nothing. So the zones
+       are probed one name each first; a zone that fails again is abandoned and
+       its remaining names are not retried.
+    2. **A wall-clock budget**, and what it skipped is REPORTED, never silently
+       dropped. A cap you cannot see reads as "we checked everything".
+
+    Mutates the cache in place. Callers re-derive from the warm cache, so no
+    site is re-queried over the network.
+    """
+    with _lock:
+        failed = sorted(k for k, v in _cache.items() if v["status"] not in RESOLVED)
+
+    by_zone = {}
+    for key in failed:
+        by_zone.setdefault(org_domain(key[1]), []).append(key)
+
+    started = time.time()
+    recovered, dead_zones, skipped = 0, [], 0
+
+    def attempt(rdtype, name):
+        r = dns.resolver.Resolver(configure=True)
+        r.timeout = timeout
+        r.lifetime = timeout * 2
+        try:
+            ans = r.resolve(name, rdtype)
+            if rdtype == "TXT":
+                vals = ["".join(s.decode() if isinstance(s, bytes) else s for s in rr.strings)
+                        for rr in ans]
+            else:
+                vals = [str(rr.target).rstrip(".") for rr in ans]
+            return {"status": "ok", "records": vals, "via": "repair"}
+        except dns.resolver.NXDOMAIN:
+            return {"status": "nxdomain", "records": [], "via": "repair"}
+        except dns.resolver.NoAnswer:
+            return {"status": "noanswer", "records": [], "via": "repair"}
+        except Exception:                               # noqa: BLE001 still unknown
+            return None
+
+    for zone, keys in sorted(by_zone.items()):
+        if time.time() - started > budget_seconds:
+            skipped += len(keys)
+            continue
+        # Probe the zone once, on its shortest name, before spending time on
+        # the rest of it.
+        probe = min(keys, key=lambda k: len(k[1]))
+        res = attempt(*probe)
+        if res is None:
+            dead_zones.append(zone)
+            skipped += len(keys) - 1
+            continue
+        with _lock:
+            _cache[probe] = res
+        recovered += 1
+        for key in keys:
+            if key == probe:
+                continue
+            if time.time() - started > budget_seconds:
+                skipped += 1
+                continue
+            res = attempt(*key)
+            if res is not None:
+                with _lock:
+                    _cache[key] = res
+                recovered += 1
+
+    return {"retried": len(failed), "recovered": recovered,
+            "unreachable_zones": sorted(dead_zones), "skipped": skipped,
+            "seconds": round(time.time() - started, 1)}
 
 
 def parse_spf(res):
@@ -384,8 +474,35 @@ def cmd_check(a):
                 results.append({"domain": futs[f], "error": "%s: %s" % (type(e).__name__, e)})
             if done % 20 == 0 or done == len(sites):
                 print("  %d/%d" % (done, len(sites)), file=sys.stderr)
+    # Second sweep: everything that failed, serially, now that nothing else is
+    # competing. Then re-derive every site from the warm cache, which costs no
+    # network at all.
+    # Off by default, and that is a considered choice rather than laziness.
+    # Measured: the repair pass cost 50-60s and recovered 0 on a run whose
+    # failures were transient, while a clean network (the CI runner) had few
+    # failures to begin with. More importantly, this tool is meant to run on a
+    # schedule and feed a ledger. A transient timeout resolves itself on the
+    # next run and shows up as a lookup-quality trend rather than a finding,
+    # which is the whole point of preferring the diff over the snapshot. Use
+    # --repair for a one-off run where the answer is needed immediately.
+    rep = repair_failed_lookups() if a.repair else {
+        "retried": 0, "recovered": 0, "unreachable_zones": [], "skipped": 0,
+        "seconds": 0.0, "skipped_reason": "repair pass not requested (--repair)"}
+    if rep["retried"]:
+        print("  repair pass: %d failed lookup(s), %d recovered, %d skipped, %.1fs"
+              % (rep["retried"], rep["recovered"], rep["skipped"], rep["seconds"]),
+              file=sys.stderr)
+        if rep["unreachable_zones"]:
+            print("  zones still unreachable: %s" % ", ".join(rep["unreachable_zones"]),
+                  file=sys.stderr)
+        if rep["recovered"]:
+            results = [check_site(s) for s in sites]
+
     results.sort(key=lambda r: r["domain"])
     payload = {"kind": "email-dns", "site_count": len(results),
+               "repair": rep,
+               "unresolved_lookups": sum(1 for v in _cache.values()
+                                         if v["status"] not in RESOLVED),
                "dns_queries": _stats["queries"], "cache_hits": _stats["cache_hits"],
                "sites": results}
     if not os.path.isdir(a.out):
@@ -500,6 +617,10 @@ def main():
     c.add_argument("--out", default="./reports")
     c.add_argument("--stamp", required=True)
     c.add_argument("--workers", type=int, default=8)
+    c.add_argument("--repair", action="store_true",
+                   help="after the main pass, serially re-query lookups that did not "
+                        "complete. Slower. Off by default: on a scheduled run the next "
+                        "run resolves transients for free.")
     c.add_argument("--limit", type=int)
     c.set_defaults(fn=cmd_check)
     p = sub.add_parser("compare")
