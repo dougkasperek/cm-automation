@@ -15,6 +15,7 @@ is a ladder rather than a switch. See `docs/DESIGN-REVISIT.md`.
 | `docs/EMAIL-DNS.md` | the email check and the Pass/Fail rule recovered from the workbook |
 | `docs/DATA-MODEL.md` | the inventory + ledger the dashboard reads. Start here for anything data-shaped |
 | `docs/DASHBOARD-V2.md` | the dashboard: what it leads with, why two renderers, the palette rules |
+| `docs/SSH-KEY-SETUP.md` | **turning on full mode.** The runner key, and why ed25519 will not work |
 | `docs/GIT-SETUP.md` | moving this repo into GitHub, and the one open CI decision |
 | `docs/RUNBOOK.md` | the Pantheon health check: severity model, running it, failure modes |
 | `docs/SECRETS.md` | secret inventory and the Keeper research |

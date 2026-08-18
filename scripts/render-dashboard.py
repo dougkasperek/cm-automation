@@ -107,6 +107,11 @@ def build_model(history_dir, inventory_path, today):
                     m[k] = v
     for site_id, rec in inv.items():
         m = merged.setdefault(site_id, {"site_id": site_id, "sources": []})
+        # The workbook's last known values, carried but NEVER mixed in with
+        # observations. A human typing 7.0.2 into a spreadsheet is a claim; a
+        # scan reading it off the site is a fact. The table shows both and says
+        # which is which.
+        m["claimed"] = rec.get("workbook_last_known") or {}
         m["host"] = rec.get("host")
         m["host_site_name"] = rec.get("host_site_name")
         m["in_workbook"] = rec.get("in_workbook", True)
@@ -323,13 +328,21 @@ def render(m):
 
     # --- the fleet --------------------------------------------------------
     A("<h2>Every site</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">Blank cells are not tidy, they are '
+      'the point: <strong>not checked</strong> means no scan has looked, and '
+      '<em>claimed</em> means the value comes from the manual workbook and has '
+      'never been verified. WordPress core, plugin and theme status needs the '
+      'SSH-based full scan, which is not wired up yet.</p>')
     A('<div class=filters>'
       '<input id=q placeholder="Filter by site name" autocomplete=off>'
       '<select id=host><option value="">All hosts</option></select>'
       '<select id=state><option value="">All states</option></select></div>')
-    A('<div class=card><table id=fleet><tr><th>Site</th><th>Host</th><th>State</th>'
-      "<th>PHP</th><th>Backup</th><th>Upstream</th><th>SPF</th><th>DKIM</th>"
-      "<th>DMARC sending</th><th>DMARC from</th><th>Aligned</th></tr>")
+    A('<div class=card style="overflow-x:auto"><table id=fleet>'
+      "<tr><th>Site</th><th>Host</th><th>State</th><th>PHP</th>"
+      "<th>Newest backup</th><th>Upstream</th>"
+      "<th>WP core</th><th>Plugins</th><th>Themes</th>"
+      "<th>SPF</th><th>DKIM</th><th>DMARC sending</th><th>DMARC from</th>"
+      "<th>Aligned</th></tr>")
 
     def yn(v):
         if v is True:
@@ -338,17 +351,55 @@ def render(m):
             return chip("no", "bad")
         return chip("unknown", "muted")
 
+    def backup(v):
+        """Render the meaning, not the integer.
+
+        This column previously printed a bare `0` under a header reading
+        BACKUP, which reads as "zero backups" when it means the opposite: the
+        newest backup is 0 days old. Same family of defect as the fabricated
+        zeros and the DNS timeout, and it was misread on first contact.
+        """
+        if v in (None, L.UNKNOWN):
+            return '<span class=quiet>not checked</span>'
+        try:
+            d = int(v)
+        except (TypeError, ValueError):
+            return e(v)
+        if d == 0:
+            return chip("today", "good")
+        if d == 1:
+            return chip("1 day ago", "good")
+        if d <= 2:
+            return chip("%d days ago" % d, "good")
+        return chip("%d days ago" % d, "bad")
+
+    def observed(v, claim=None):
+        """An observed value, or an explicit gap. A workbook claim never fills
+        the gap silently; it is shown as a claim, in muted ink."""
+        if v not in (None, L.UNKNOWN):
+            return e(v)
+        if claim:
+            return ('<span class=quiet title="From the manual workbook. '
+                    'Not verified by any scan.">%s <em>claimed</em></span>' % e(claim))
+        return '<span class=quiet>not checked</span>'
+
     for s in m["sites"]:
         st = s.get("derived_status")
         state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
+        claim = s.get("claimed") or {}
         A('<tr data-site="%s" data-host="%s" data-state="%s">'
           "<td><code>%s</code></td><td class=quiet>%s</td><td>%s</td>"
-          "<td class=num>%s</td><td class=num>%s</td><td class=num>%s</td>"
+          "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
+          "<td>%s</td><td>%s</td><td>%s</td>"
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""),
              e(s["site_id"]), e(s.get("host") or "—"), state,
-             e(s.get("php_version", "—")), e(s.get("db_backup_age_days", "—")),
+             observed(s.get("php_version"), claim.get("php_version")),
+             backup(s.get("db_backup_age_days")),
              e(s.get("upstream_pending", "—")),
+             observed(s.get("wp_core_update"), claim.get("wp_version")),
+             observed(s.get("plugin_updates"), claim.get("plugins_utd")),
+             observed(s.get("theme_updates"), claim.get("themes_utd")),
              yn(s.get("spf_present")), e(s.get("dkim_selector") or "—"),
              yn(s.get("dmarc_at_sending_present")), yn(s.get("dmarc_at_from_present")),
              yn(s.get("relaxed_aligned"))))
