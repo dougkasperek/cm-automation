@@ -13,6 +13,8 @@ is a ladder rather than a switch. See `docs/DESIGN-REVISIT.md`.
 | `docs/DESIGN-REVISIT.md` | the current design and why; supersedes DESIGN-BRIEF section 5 |
 | `docs/AUDIT-SHEET-ANALYSIS.md` | the manual workbook, what is automatable, how Nexcess fits |
 | `docs/EMAIL-DNS.md` | the email check and the Pass/Fail rule recovered from the workbook |
+| `docs/DATA-MODEL.md` | the inventory + ledger the dashboard reads. Start here for anything data-shaped |
+| `docs/DASHBOARD-V2.md` | the dashboard: what it leads with, why two renderers, the palette rules |
 | `docs/GIT-SETUP.md` | moving this repo into GitHub, and the one open CI decision |
 | `docs/RUNBOOK.md` | the Pantheon health check: severity model, running it, failure modes |
 | `docs/SECRETS.md` | secret inventory and the Keeper research |
@@ -25,6 +27,8 @@ is a ladder rather than a switch. See `docs/DESIGN-REVISIT.md`.
 | `scripts/fleet-email-dns.py` | nothing | SPF, DKIM, DMARC for all 78 sites, any host |
 | `scripts/pantheon-fleet-healthcheck.sh` | Pantheon machine token | plan, PHP, backup age, upstream drift; SSH adds WP core/plugin/theme |
 | `scripts/fleet-ledger.py` | nothing | history, change detection, the delta digest |
+| `scripts/render-dashboard.py` | nothing | **the fleet dashboard**, read from the ledger, one self-contained HTML file |
+| `scripts/build-fleet-inventory.py` | nothing | seeds the authoritative 84-site inventory (the join key) |
 | `scripts/serve-dashboard.py` | nothing | watches `reports/`, fills in live while a scan runs |
 | `scripts/render-fleet-dashboard.py` | nothing | scan JSON to self-contained HTML |
 | `scripts/extract-audit-workbook.py` | openpyxl | the manual workbook to `data/fleet-email-inventory.json` |

@@ -1,0 +1,5660 @@
+{
+ "note": "Authoritative and human-owned. Edit by hand, review in a PR. Nothing regenerates this from a scan.",
+ "schema": "fleet-inventory/1",
+ "site_count": 84,
+ "sites": [
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "1-800-dumpster.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "1-800-DUMPSTER@smtp.clevermethod.net",
+    "from_address": "1-800-DUMPSTER@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "1-800-dumpster.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "11daypowerplay.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@app.11daypowerplay.com",
+    "from_address": "no-reply@app.11daypowerplay.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.11daypowerplay.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "11daypowerplay",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "11daypowerplay.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "42northbrewing.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "42northbrewing@smtp.clevermethod.net",
+    "from_address": "42northbrewing@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "42northbrewing.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "acibg.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "evan.acibg@gmail.com",
+    "from_address": "evan.acibg@gmail.com",
+    "provider": "Gmail",
+    "sending_domain": "gmail.com",
+    "smtp_plugin": "WP Mail SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "acibg",
+   "in_workbook": true,
+   "notes": "SMTP Error: Could not authenticate",
+   "owner": null,
+   "production": null,
+   "site_id": "acibg.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Network Solutions",
+   "domain": "actioncarting.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@app.actioncarting.com",
+    "from_address": "no-reply@app.actioncarting.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.actioncarting.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "actioncarting",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "actioncarting.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "alliedcircuits.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "alliedcircuits@smtp.clevermethod.net",
+    "from_address": "alliedcircuits@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "alliedcircuits.com",
+   "workbook_last_known": {
+    "php_version": "8.3",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CSC",
+   "domain": "animatics.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@support.animatics.com",
+    "from_address": "no-reply@support.animatics.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "support.animatics.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "WP Engine",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "Spam subscribers",
+   "owner": null,
+   "production": null,
+   "site_id": "animatics.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "No",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "bhargavalaw.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "bhargavalaw@smtp.clevermethod.net",
+    "from_address": "bhargavalaw@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "bhargavalaw.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "blockclub.co",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "advertising@blockclub.co",
+    "from_address": "advertising@blockclub.co",
+    "provider": "Gmail",
+    "sending_domain": "blockclub.co",
+    "smtp_plugin": "WP Mail SMTP"
+   },
+   "host": "Pressable",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "Uses Jetpack; 2FA is handled by Defender plugin; Subscribers are excluded from 2FA; xmlrpc.php disabled using Disable XML-RPC plugin",
+   "owner": null,
+   "production": null,
+   "site_id": "blockclub.co",
+   "workbook_last_known": {
+    "php_version": "8.4",
+    "plugins_utd": "No",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "breakstones.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "breakstones@smtp.clevermethod.net",
+    "from_address": "breakstones@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "breakstones",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "breakstones.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "buffalobeds.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "buffalobeds@smtp.clevermethod.net",
+    "from_address": "buffalobeds@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "buffalobeds.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "buffalorecycles.org",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "buffalorecycles@smtp.clevermethod.net",
+    "from_address": "buffalorecycles@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "Pressable",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "Uses Jetpack; 2FA is handled by Defender plugin; Subscribers are excluded from 2FA; xmlrpc.php disabled using Disable XML-RPC plugin",
+   "owner": null,
+   "production": null,
+   "site_id": "buffalorecycles.org",
+   "workbook_last_known": {
+    "php_version": "8.4",
+    "plugins_utd": "No",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "celticindustrialservices.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@celticindustrialservices.com",
+    "from_address": "info@celticindustrialservices.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.celticindustrialservices.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "celticindustrialservices",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "celticindustrialservices.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "choosechq.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@choosechq.com",
+    "from_address": "no-reply@choosechq.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.choosechq.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "ccida",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "choosechq.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Network Solutions",
+   "domain": "ciminelli.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@e.ciminelli.com",
+    "from_address": "no-reply@e.ciminelli.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "e.ciminelli.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "ciminelli",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "ciminelli.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Network Solutions",
+   "domain": "ciminelliflorida.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@e.ciminelliflorida.com",
+    "from_address": "no-reply@e.ciminelliflorida.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "e.ciminelliflorida.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "ciminelli-florida",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "ciminelliflorida.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {},
+   "client": null,
+   "decommission_candidate": false,
+   "dns": null,
+   "domain": null,
+   "email": {},
+   "host": "CM Pantheon",
+   "host_site_name": "clevermethod-forward",
+   "in_workbook": false,
+   "notes": null,
+   "observed_plan": "Sandbox",
+   "observed_status": "SKIP",
+   "owner": null,
+   "production": null,
+   "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+   "site_id": "clevermethod-forward",
+   "workbook_last_known": {}
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "clevermethod.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "clevermethod@smtp.clevermethod.net",
+    "from_address": "clevermethod@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "clevermethod",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "clevermethod.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {},
+   "client": null,
+   "decommission_candidate": false,
+   "dns": null,
+   "domain": null,
+   "email": {},
+   "host": "CM Pantheon",
+   "host_site_name": "cm-whitelabel",
+   "in_workbook": false,
+   "notes": null,
+   "observed_plan": "Sandbox",
+   "observed_status": "CRIT",
+   "owner": null,
+   "production": null,
+   "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+   "site_id": "cm-whitelabel",
+   "workbook_last_known": {}
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "cottrillspharmacy.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "cottrillspharmacy@smtp.clevermethod.net",
+    "from_address": "cottrillspharmacy@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "cottrillspharmacy",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "cottrillspharmacy.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "crackerbarrelcheese.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "crackerbarrelcheese@smtp.clevermethod.net",
+    "from_address": "crackerbarrelcheese@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "crackerbarrelcheese",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "crackerbarrelcheese.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "drspietrantone.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "noreply@web.drspietrantone.com",
+    "from_address": "noreply@web.drspietrantone.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.drspietrantone.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "pietrantone-health",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "drspietrantone.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "dslawfirm.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "dslawfirm@smtp.clevermethod.net",
+    "from_address": "dslawfirm@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "dslawfirm.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Advance2000",
+   "domain": "dynapurge.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "dynapurge@smtp.clevermethod.net",
+    "from_address": "dynapurge@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "Flywheel",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "dynapurge.com",
+   "workbook_last_known": {
+    "php_version": "7.4",
+    "plugins_utd": "No",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": true,
+   "dns": "CM Cloudflare",
+   "domain": "eamusicfest.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": null,
+    "from_address": null,
+    "provider": null,
+    "sending_domain": null,
+    "smtp_plugin": null
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "Can we decommission this?",
+   "owner": null,
+   "production": null,
+   "site_id": "eamusicfest.com",
+   "workbook_last_known": {
+    "php_version": "8.3",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "eastauroracc.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "webmaster@app.eastauroracc.com",
+    "from_address": "webmaster@app.eastauroracc.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.eastauroracc.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "eastauroracc",
+   "in_workbook": true,
+   "notes": "Subscribers are excluded from 2FA",
+   "owner": null,
+   "production": null,
+   "site_id": "eastauroracc.com",
+   "workbook_last_known": {
+    "php_version": "8.3",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "eastauroraef.org",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "eastauroraeducationalfoundation@smtp.clevermethod.net",
+    "from_address": "eastauroraeducationalfoundation@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "eastauroraef.org",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "ecmea.org",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@ecmea.org",
+    "from_address": "info@ecmea.org",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.ecmea.org",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "2FA is only required for Administrator role",
+   "owner": null,
+   "production": null,
+   "site_id": "ecmea.org",
+   "workbook_last_known": {
+    "php_version": "8.3",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "elderwoodipa.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@web.elderwoodipa.com",
+    "from_address": "no-reply@web.elderwoodipa.com",
+    "provider": "SendGrid",
+    "sending_domain": "web.elderwoodipa.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "Azure",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "xmlrpc.php disabled using Disable XML-RPC-API plugin",
+   "owner": null,
+   "production": null,
+   "site_id": "elderwoodipa.com",
+   "workbook_last_known": {
+    "php_version": "8.5",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "elmanyhistory.org",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "elmanyhistory@smtp.clevermethod.net",
+    "from_address": "elmanyhistory@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "elmanyhistory.org",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "fairchildcapitalpartners.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "fairchildcapitalpartners@smtp.clevermethod.net",
+    "from_address": "fairchildcapitalpartners@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "fairchildcapitalpartners.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "firstaurorafinancial.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@firstaurora.com",
+    "from_address": "info@firstaurora.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.firstaurorafinancial.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "firstaurora",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "firstaurorafinancial.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "galbanicheese.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "website=galbanicheese.com@app.galbani.com",
+    "from_address": "website@galbanicheese.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.galbani.com",
+    "smtp_plugin": "WP Mail SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "galbanicheese",
+   "in_workbook": true,
+   "notes": "Updating php to newer version causes a Wordpress critical error",
+   "owner": null,
+   "production": null,
+   "site_id": "galbanicheese.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "gmroot.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@app.gmroot.com",
+    "from_address": "no-reply@app.gmroot.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.gmroot.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "gm-root",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "gmroot.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "heartofmusicfestival.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "heartofmusicfestival@smtp.clevermethod.net",
+    "from_address": "heartofmusicfestival@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "heartofmusicfestival.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": true,
+   "dns": "Cloudflare",
+   "domain": "hitsfoundation.org",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": null,
+    "from_address": null,
+    "provider": null,
+    "sending_domain": null,
+    "smtp_plugin": null
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "Can we decommission this? SSL not configured; too out of date to add security plugins",
+   "owner": null,
+   "production": null,
+   "site_id": "hitsfoundation.org",
+   "workbook_last_known": {
+    "php_version": null,
+    "plugins_utd": null,
+    "themes_utd": null,
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {},
+   "client": null,
+   "decommission_candidate": false,
+   "dns": null,
+   "domain": null,
+   "email": {},
+   "host": "CM Pantheon",
+   "host_site_name": "hoffmanscheese",
+   "in_workbook": false,
+   "notes": null,
+   "observed_plan": "Sandbox",
+   "observed_status": "CRIT",
+   "owner": null,
+   "production": null,
+   "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+   "site_id": "hoffmanscheese",
+   "workbook_last_known": {}
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "hoosierfeeder.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@hoosierfeedercompany.com",
+    "from_address": "info@hoosierfeedercompany.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.hoosierfeedercompany.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "reconciliation": "Listed as CM Pantheon in the workbook, but the Pantheon account does not return a matching site. Attested to but not observed.",
+   "site_id": "hoosierfeeder.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "icegame.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "play@icegame.com",
+    "from_address": "play@icegame.com",
+    "provider": "AWS",
+    "sending_domain": "amazonses.icegame.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "icegame",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "icegame.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "internationaljuniormasters.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "internationaljuniormasters@smtp.clevermethod.net",
+    "from_address": "internationaljuniormasters@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "internationaljuniormasters.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "interstatewaste.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@web.interstatewaste.com",
+    "from_address": "no-reply@web.interstatewaste.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.interstatewaste.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "interstatewaste",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "interstatewaste.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "iroquoisfence.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "sales@iroquoisFence.com",
+    "from_address": "sales@iroquoisFence.com",
+    "provider": "Mailgun",
+    "sending_domain": "www.iroquoisfence.com",
+    "smtp_plugin": "Mailgun"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "iroquoisfence",
+   "in_workbook": true,
+   "notes": "Overrode from information in WP 2FA plugin (wp2fa@iroquoisfence.com) since the WP Mailgun plugin does not allow global override",
+   "owner": null,
+   "production": null,
+   "site_id": "iroquoisfence.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "kingsdumpstersny.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "noreply@web.kingsdumpstersny.com",
+    "from_address": "noreply@web.kingsdumpstersny.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.kingsdumpstersny.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "kingsdumpstersny.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "knudsen.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "knudsen@smtp.clevermethod.net",
+    "from_address": "knudsen@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "knudsen",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "knudsen.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "kraftnaturalcheese.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "kraftnaturalcheese@smtp.clevermethod.net",
+    "from_address": "kraftnaturalcheese@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "kraftcheese",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "kraftnaturalcheese.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "kulinskigolf.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "kulinskigolf@smtp.clevermethod.net",
+    "from_address": "kulinskigolf@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "kulinskigolf.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "lactalisamericangroup.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": null,
+    "from_address": null,
+    "provider": null,
+    "sending_domain": null,
+    "smtp_plugin": "?"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "lactalisamericangroup",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "lactalisamericangroup.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "lactalisheritagedairy.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": null,
+    "from_address": null,
+    "provider": null,
+    "sending_domain": null,
+    "smtp_plugin": "?"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "lactalisheritagedairy",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "lactalisheritagedairy.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "lactalisyogurtusa.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": null,
+    "from_address": null,
+    "provider": null,
+    "sending_domain": null,
+    "smtp_plugin": "?"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "lactalisyogurt",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "lactalisyogurtusa.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "lancastervillageny.gov",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "Website@email.lancastervillageny.gov",
+    "from_address": "VoL@mail.smtp2go.com",
+    "provider": "SMTP2Go",
+    "sending_domain": "email.lancastervillageny.gov",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "lancastervillage",
+   "in_workbook": true,
+   "notes": "SMTP Error: From header sender domain not verified (mail.smtp2go.com) On your Sending > Verified Senders page verify the sender domain or email to be allowed to send",
+   "owner": null,
+   "production": null,
+   "site_id": "lancastervillageny.gov",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "lasershows.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "website@app.lasershows.com",
+    "from_address": "website@app.lasershows.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.lasershows.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "lasershows",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "lasershows.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Rackspace",
+   "domain": "lifebreath.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "marketing@web.airiabrands.com",
+    "from_address": "marketing@web.airiabrands.com",
+    "provider": "Mailgun",
+    "sending_domain": "web.airiabrands.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "life-breath",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "lifebreath.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "?",
+   "domain": "live-frontline-construction.pantheonsite.io",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "frontlineconstructionbuffalo@smtp.clevermethod.net",
+    "from_address": "frontlineconstructionbuffalo@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "frontline-construction",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "live-frontline-construction.pantheonsite.io",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "local92afm.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@local92afm.com",
+    "from_address": "info@local92afm.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.local92afm.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "l92",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "local92afm.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "midwestyogurt.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": null,
+    "from_address": null,
+    "provider": null,
+    "sending_domain": null,
+    "smtp_plugin": "?"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "lactalismidwestyogurt",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "midwestyogurt.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {},
+   "client": null,
+   "decommission_candidate": false,
+   "dns": null,
+   "domain": null,
+   "email": {},
+   "host": "CM Pantheon",
+   "host_site_name": "moorseville-nc",
+   "in_workbook": false,
+   "notes": null,
+   "observed_plan": "Sandbox",
+   "observed_status": "SKIP",
+   "owner": null,
+   "production": null,
+   "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+   "site_id": "moorseville-nc",
+   "workbook_last_known": {}
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "morrison-chs.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@morrison-chs.com",
+    "from_address": "info@morrison-chs.com",
+    "provider": "SendGrid",
+    "sending_domain": "em1420.morrison-chs.com",
+    "smtp_plugin": "WP Mail SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "morrison-chs",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "morrison-chs.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {},
+   "client": null,
+   "decommission_candidate": false,
+   "dns": null,
+   "domain": null,
+   "email": {},
+   "host": "CM Pantheon",
+   "host_site_name": "nc-moorseville",
+   "in_workbook": false,
+   "notes": null,
+   "observed_plan": "Sandbox",
+   "observed_status": "FROZEN",
+   "owner": null,
+   "production": null,
+   "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+   "site_id": "nc-moorseville",
+   "workbook_last_known": {}
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "FoundationDNS",
+   "domain": "newmarkciminelli.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@e.ciminelli.com",
+    "from_address": "no-reply@e.ciminelli.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "e.ciminelli.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "ciminelli-newmark",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "newmarkciminelli.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "ntlibrary.org",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "ntlibrary@smtp.clevermethod.net",
+    "from_address": "ntlibrary@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "ntlibrary",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "ntlibrary.org",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "ontracksitedevelopment.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "ontracksitedevelopment@smtp.clevermethod.net",
+    "from_address": "ontracksitedevelopment@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "ontracksitedevelopment",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "ontracksitedevelopment.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "packagedesignsupply.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "packagedesignsupply@smtp.clevermethod.net",
+    "from_address": "packagedesignsupply@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "pdsci",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "packagedesignsupply.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "palmettoresidentialelectric.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@palmettoresidentialelectric.com",
+    "from_address": "info@palmettoresidentialelectric.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.palmettoresidentialelectric.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "palmetto-residential-electric",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "palmettoresidentialelectric.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "DomainDiscover",
+   "domain": "paramaxcorp.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "paramaxcorp@smtp.clevermethod.net",
+    "from_address": "paramaxcorp@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "Pressable",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "Uses Jetpack; xmlrpc.php disabled using Disable XML-RPC-API plugin",
+   "owner": null,
+   "production": null,
+   "site_id": "paramaxcorp.com",
+   "workbook_last_known": {
+    "php_version": "8.4",
+    "plugins_utd": "No",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - CF WAF"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "pediatricspecialty.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@e.pediatricspecialty.com",
+    "from_address": "no-reply@e.pediatricspecialty.com",
+    "provider": "SendGrid",
+    "sending_domain": "e.pediatricspecialty.com",
+    "smtp_plugin": "SendGrid"
+   },
+   "host": "Azure",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "pediatricspecialty.com",
+   "workbook_last_known": {
+    "php_version": "8.5",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - CF WAF"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "pediatricspecialtymedicalday.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@e.pediatricspecialtymedicalday.com",
+    "from_address": "no-reply@e.pediatricspecialtymedicalday.com",
+    "provider": "SendGrid",
+    "sending_domain": "e.pediatricspecialtymedicalday.com",
+    "smtp_plugin": "SendGrid"
+   },
+   "host": "Azure",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "pediatricspecialtymedicalday.com",
+   "workbook_last_known": {
+    "php_version": "8.5",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {},
+   "client": null,
+   "decommission_candidate": false,
+   "dns": null,
+   "domain": null,
+   "email": {},
+   "host": "CM Pantheon",
+   "host_site_name": "pfannenbergsales",
+   "in_workbook": false,
+   "notes": null,
+   "observed_plan": "Sandbox",
+   "observed_status": "SKIP",
+   "owner": null,
+   "production": null,
+   "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+   "site_id": "pfannenbergsales",
+   "workbook_last_known": {}
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No -  See notes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "United Domains AG",
+   "domain": "pfannenbergusa.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "marketing.pfannenberg@gmail.com",
+    "from_address": "marketing.pfannenberg@gmail.com",
+    "provider": "Gmail",
+    "sending_domain": "gmail.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "pfannenbergusa",
+   "in_workbook": true,
+   "notes": "2FA is handled by Defender Pro plugin; Subscribers are excluded from 2FA",
+   "owner": null,
+   "production": null,
+   "site_id": "pfannenbergusa.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Rackspace",
+   "domain": "runtalnorthamerica.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@app.runtalnorthamerica.com",
+    "from_address": "no-reply@app.runtalnorthamerica.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.runtalnorthamerica.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "runtalnorthamerica",
+   "in_workbook": true,
+   "notes": "2FA is only required for Administrator and Sales Rep roles; zach@ifocusmarketing.com is excluded from 2FA",
+   "owner": null,
+   "production": null,
+   "site_id": "runtalnorthamerica.com",
+   "workbook_last_known": {
+    "php_version": "8.1",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "scottishcheddarcheese.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "scottishcheddarcheese@smtp.clevermethod.net",
+    "from_address": "scottishcheddarcheese@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "scottishcheddarcheese",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "scottishcheddarcheese.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "senecafinancialadvisors.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "no-reply@web.senecafinancialadvisors.com",
+    "from_address": "no-reply@web.senecafinancialadvisors.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.senecafinancialadvisors.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "seneca-financial-advisors",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "senecafinancialadvisors.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "sgroilawley.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@sgroilawley.com",
+    "from_address": "info@sgroilawley.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.sgroilawley.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "sgroifinancial",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "sgroilawley.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Advance2000",
+   "domain": "shuman-plastics.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "shumanplastics@smtp.clevermethod.net",
+    "from_address": "shumanplastics@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "Flywheel",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "shuman-plastics.com",
+   "workbook_last_known": {
+    "php_version": "7.4",
+    "plugins_utd": "Yes",
+    "themes_utd": "No",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "statlerfoundation.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "statlerfoundation@smtp.clevermethod.net",
+    "from_address": "statlerfoundation@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "statlerfoundation.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "summerstreetcapital.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "summerstreetcapital@smtp.clevermethod.net",
+    "from_address": "summerstreetcapital@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "summerstreetcapital.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "thehambycollection.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@thehambycollection.com",
+    "from_address": "info@thehambycollection.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.thehambycollection.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "thehambycollection.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "thenorthstarcompanies.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "thenorthstarcompanies@smtp.clevermethod.net",
+    "from_address": "thenorthstarcompanies@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "thenorthstarcompanies",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "thenorthstarcompanies.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Hover",
+   "domain": "thermalfoams.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "thermalfoams@smtp.clevermethod.net",
+    "from_address": "thermalfoams@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "thermalfoams",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "thermalfoams.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "CM Cloudflare",
+   "domain": "twostuds.net",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@twostuds.net",
+    "from_address": "info@twostuds.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "web.twostuds.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "twostuds.net",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "valbresocheese.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "valbresocheese@smtp.clevermethod.net",
+    "from_address": "valbresocheese@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "valbresocheese",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "valbresocheese.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": null
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - WP plugin"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "GoDaddy",
+   "domain": "websterszanyi.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "websterszanyi@smtp.clevermethod.net",
+    "from_address": "websterszanyi@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Nexcess",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "websterszanyi.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "No - see notes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - CF WAF"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Cloudflare",
+   "domain": "woodmarkpharmacy.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@woodmarkpharmacy.com",
+    "from_address": "info@woodmarkpharmacy.com",
+    "provider": null,
+    "sending_domain": null,
+    "smtp_plugin": null
+   },
+   "host": "Azure",
+   "host_site_name": null,
+   "in_workbook": true,
+   "notes": "WP Activity Log plugin is installed but not capturing events. Settings are correct and logs show no errors, possibly caused by the custom theme? Pausing on this since there is discussion around a new site anyway",
+   "owner": null,
+   "production": null,
+   "site_id": "woodmarkpharmacy.com",
+   "workbook_last_known": {
+    "php_version": "8.5",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Directnic",
+   "domain": "zehnder-rittling.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "zehnder-rittling@smtp.clevermethod.net",
+    "from_address": "zehnder-rittling@smtp.clevermethod.net",
+    "provider": "CM Mailgun",
+    "sending_domain": "smtp.clevermethod.net",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "zehnder-rittling",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "zehnder-rittling.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  },
+  {
+   "attestations": {
+    "activity_log": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "hide_login": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "keeper_password": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "single_cm_user": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp2shell_remedied": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "wp_2fa": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes"
+    },
+    "xmlrpc_disabled": {
+     "at": null,
+     "by": null,
+     "source": "workbook import 2026-08-18",
+     "value": "Yes - Pantheon"
+    }
+   },
+   "client": null,
+   "decommission_candidate": false,
+   "dns": "Rackspace",
+   "domain": "zehnderamerica.com",
+   "email": {
+    "dkim_selector": null,
+    "envelope_from": "info@zehnderamerica.com",
+    "from_address": "info@zehnderamerica.com",
+    "provider": "CM Mailgun",
+    "sending_domain": "app.zehnderamerica.com",
+    "smtp_plugin": "Post SMTP"
+   },
+   "host": "CM Pantheon",
+   "host_site_name": "zehnder-america-zna",
+   "in_workbook": true,
+   "notes": null,
+   "owner": null,
+   "production": null,
+   "site_id": "zehnderamerica.com",
+   "workbook_last_known": {
+    "php_version": "8.2",
+    "plugins_utd": "Yes",
+    "themes_utd": "Yes",
+    "wp_version": "7.0.2"
+   }
+  }
+ ]
+}

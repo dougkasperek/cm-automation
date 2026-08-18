@@ -82,24 +82,30 @@ have_reports = os.path.isdir(real_dir) and any(
     f.startswith("fleet-health-") and f.endswith(".json") for f in os.listdir(real_dir))
 tmp = tempfile.mkdtemp()
 try:
+    inv_path = os.path.join(ROOT, "data", "fleet-inventory.json")
+    inv_arg = inv_path if os.path.exists(inv_path) else None
     if have_reports:
-        res = L.ingest(real_dir, tmp)
+        res = L.ingest(real_dir, tmp, inventory=inv_arg)
         runs, obs = L.load_ledger(tmp)
-        check("ingest picks up both real runs", res["runs_added"] >= 2, str(res))
-        check("104 observations from 2 x 52 sites", res["observations_added"] == 104,
-              str(res["observations_added"]))
-        res2 = L.ingest(real_dir, tmp)
+        check("ingest picks up both real health runs",
+              len([r for r in runs if r.get("source") == "health"]) >= 2, str(res))
+        check("52 observations per health run",
+              all(r["site_count"] == 52 for r in runs if r.get("source") == "health"),
+              str([r["site_count"] for r in runs]))
+        res2 = L.ingest(real_dir, tmp, inventory=inv_arg)
         check("re-ingest is idempotent, adds nothing",
               res2["runs_added"] == 0 and res2["observations_added"] == 0)
     else:
         print("  SKIPPED ingest: reports/ is gitignored and absent here.")
         runs, obs = L.load_ledger(hist_dir)
 
-    if len(runs) < 2:
-        print("  SKIPPED diff: fewer than two runs available in either source.")
+    # Compare like with like. The ledger now holds more than one tool's output.
+    health_runs = [r for r in runs if r.get("source", "health") == "health"]
+    if len(health_runs) < 2:
+        print("  SKIPPED diff: fewer than two health runs available.")
     else:
-        p = L.rows_for(obs, runs[-2]["run_id"])
-        c = L.rows_for(obs, runs[-1]["run_id"])
+        p = L.rows_for(obs, health_runs[-2]["run_id"])
+        c = L.rows_for(obs, health_runs[-1]["run_id"])
         ch = L.diff_runs(p, c, TODAY)
         check("real diff finds exactly one change", len(ch) == 1, json.dumps(ch))
         check("that change is hoffmanscheese backup age",
@@ -198,6 +204,112 @@ check("an unseen version is unknown, not assumed bad", L.php_support("9.9", TODA
 check("unknown php raises no EOL claim", L.php_support("unknown", TODAY)[0] == "unknown")
 # and the calendar must not silently rot
 check("8.2 expiry is the real php.net date", L.PHP_SECURITY_EOL["8.2"] == "2026-12-31")
+
+# ------------------------------------------------- 4b. the unified data model
+print("\n-- one site, several tools, one history --")
+check("no fact name collides between sources",
+      not (set(L.OBSERVED) & set(L.EMAIL_OBSERVED)))
+
+inv_p = os.path.join(ROOT, "data", "fleet-inventory.json")
+if os.path.exists(inv_p):
+    by_host, by_domain, recs = L.load_inventory(inv_p)
+    check("inventory maps a Pantheon machine name to a domain",
+          by_host.get("kraftcheese") == "kraftnaturalcheese.com", str(by_host.get("kraftcheese")))
+    check("inventory maps the awkward ones too",
+          by_host.get("l92") == "local92afm.com" and by_host.get("pdsci") == "packagedesignsupply.com")
+    check("a domain maps to itself", by_domain.get("galbanicheese.com") == "galbanicheese.com")
+    check("a Pantheon site with no workbook row keeps its machine name as the id",
+          "hoffmanscheese" in recs and recs["hoffmanscheese"]["in_workbook"] is False)
+    check("that site carries the reconciliation note, not a silent pass",
+          "absent from the workbook" in recs["hoffmanscheese"]["reconciliation"])
+    check("a workbook site Pantheon does not return is flagged the other way",
+          recs["hoosierfeeder.com"].get("host_site_name") is None
+          and "not observed" in recs["hoosierfeeder.com"]["reconciliation"])
+    check("attestations are carried over with their provenance",
+          recs["galbanicheese.com"]["attestations"]["wp2shell_remedied"]["source"].startswith("workbook"))
+    check("attestations record who and when, both empty on import",
+          recs["galbanicheese.com"]["attestations"]["wp2shell_remedied"]["by"] is None)
+else:
+    print("  SKIPPED inventory checks: data/fleet-inventory.json not present")
+
+# health rows normalise onto site_id
+hr = L._health_rows([row("kraftcheese")], {"kraftcheese": "kraftnaturalcheese.com"})
+check("a health row is re-keyed onto the inventory site_id",
+      hr[0]["site_id"] == "kraftnaturalcheese.com")
+check("the original machine name is kept, not discarded",
+      hr[0]["host_site_name"] == "kraftcheese")
+check("an unmapped health row falls back to its own name, never dropped",
+      L._health_rows([row("mystery")], {})[0]["site_id"] == "mystery")
+
+# email rows
+email_payload = {"kind": "email-dns", "sites": [{
+    "domain": "Galbanicheese.com",
+    "spf": {"present": True, "all_qualifier": "~all", "checked_at": "app.galbani.com"},
+    "dkim": {"present": True, "selector": "pic"},
+    "dmarc": {"at_sending_domain": {"present": False},
+              "at_from_domain": {"present": True, "policy": "none", "via_org_fallback": False}},
+    "alignment": {"relaxed_aligned": False}}]}
+er = L._email_rows(email_payload, {"galbanicheese.com": "galbanicheese.com"})
+check("an email row is keyed on the domain, case-insensitively",
+      er[0]["site_id"] == "galbanicheese.com")
+check("both DMARC readings survive into the ledger separately",
+      er[0]["dmarc_at_sending_present"] is False and er[0]["dmarc_at_from_present"] is True)
+check("a site with an error row is skipped, not stored as unknown facts",
+      L._email_rows({"kind": "email-dns", "sites": [{"domain": "x.com", "error": "boom"}]}, {}) == [])
+
+# the two shapes are told apart by shape, not by filename
+check("a list payload is recognised as a health scan",
+      L._health_rows([row("a")], {}) is not None and L._email_rows([row("a")], {}) is None)
+check("a dict payload is recognised as an email scan",
+      L._email_rows(email_payload, {}) is not None and L._health_rows(email_payload, {}) is None)
+
+# diffing must compare like with like
+print("\n-- diffs compare like with like --")
+h = {"s": dict(hr[0], run_id="r1", source="health")}
+e = {"s": dict(er[0], run_id="r2", source="email-dns")}
+ch = L.diff_runs(h, e, TODAY)
+check("a source change is reported as ONE fact, not every fact at once",
+      len([c for c in ch if c["site"] == "s"]) == 1 and ch[0]["fact"] == "source",
+      json.dumps(ch)[:200])
+check("facts_for follows the row's own source",
+      L.facts_for({"source": "email-dns"}) == L.EMAIL_OBSERVED
+      and L.facts_for({"source": "health"}) == L.OBSERVED)
+
+e2 = {"s": dict(er[0], run_id="r3", source="email-dns", spf_present=False)}
+ch = L.diff_runs(e, e2, TODAY)
+check("an email fact change IS detected", any(c["fact"] == "spf_present" for c in ch))
+
+runs = [{"run_id": "h1", "source": "health"}, {"run_id": "e1", "source": "email-dns"},
+        {"run_id": "h2", "source": "health"}]
+prev, curr = L.previous_run_of_same_source(runs)
+check("the previous run is the previous run OF THE SAME TOOL",
+      prev["run_id"] == "h1" and curr["run_id"] == "h2",
+      "got %s -> %s" % (prev and prev["run_id"], curr and curr["run_id"]))
+prev, curr = L.previous_run_of_same_source([{"run_id": "e1", "source": "email-dns"}])
+check("one run from a source means nothing to diff, not a bogus comparison", prev is None)
+
+# standing() must not read health facts off an email row
+print("\n-- standing groups never read a fact the row does not have --")
+g = L.standing({"a": dict(er[0], source="email-dns")}, TODAY)
+check("an email-only ledger produces email groups", any("SPF" in x["cause"] or "DMARC" in x["cause"] for x in g))
+check("and raises no backup or upstream group", not any("backup" in x["cause"].lower() or "upstream" in x["cause"].lower() for x in g))
+check("a row with no backup fact is not read as a missing backup", L._backup_bad(None) is False)
+
+# `sites` must always be a real list of ids. A pre-formatted summary string in
+# that slot made the dashboard's count column read 1 where the truth was 48.
+print("\n-- standing groups report a real site count --")
+many = to_obs([row("s%02d" % i, wp_checked=False) for i in range(48)], "r")
+for g in L.standing(many, TODAY):
+    check("group %r counts sites, not summary strings" % g["cause"][:34],
+          len(g["sites"]) == 48 and all(not x.endswith(" sites") for x in g["sites"]),
+          "%d: %s" % (len(g["sites"]), g["sites"][:2]))
+crit = to_obs([row("a", db_backup_age_days=900, status="CRIT"),
+               row("b", db_backup_age_days=800, status="CRIT")], "r")
+g = [x for x in L.standing(crit, TODAY) if x["cause"] == "No recent DB backup"][0]
+check("backup group lists bare site ids", g["sites"] == ["a", "b"], str(g["sites"]))
+check("the per-site extra lives in `detail`, not smuggled into the id",
+      "900d" in g["detail"]["a"])
+check("a non-numeric backup value is not read as bad", L._backup_bad("n/a") is False)
 
 # ----------------------------------------------------------- 5. portability
 print("\n-- portability --")
