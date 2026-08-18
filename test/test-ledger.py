@@ -70,25 +70,46 @@ def classes(changes):
 
 
 # ---------------------------------------------------------------- 1. real data
+# Two sources, on purpose:
+#   reports/  raw scan output. GITIGNORED, so absent on a fresh clone and on
+#             every CI runner. Ingest is only exercised when it is present.
+#   history/  the committed ledger. This is the asset that survives a clone,
+#             so the diff assertions read from here and always run.
 print("\n-- against the two real runs --")
 real_dir = os.path.join(ROOT, "reports")
+hist_dir = os.path.join(ROOT, "history")
+have_reports = os.path.isdir(real_dir) and any(
+    f.startswith("fleet-health-") and f.endswith(".json") for f in os.listdir(real_dir))
 tmp = tempfile.mkdtemp()
 try:
-    res = L.ingest(real_dir, tmp)
-    runs, obs = L.load_ledger(tmp)
-    check("ingest picks up both real runs", res["runs_added"] >= 2, str(res))
-    check("104 observations from 2 x 52 sites", res["observations_added"] == 104, str(res["observations_added"]))
-    res2 = L.ingest(real_dir, tmp)
-    check("re-ingest is idempotent, adds nothing", res2["runs_added"] == 0 and res2["observations_added"] == 0)
+    if have_reports:
+        res = L.ingest(real_dir, tmp)
+        runs, obs = L.load_ledger(tmp)
+        check("ingest picks up both real runs", res["runs_added"] >= 2, str(res))
+        check("104 observations from 2 x 52 sites", res["observations_added"] == 104,
+              str(res["observations_added"]))
+        res2 = L.ingest(real_dir, tmp)
+        check("re-ingest is idempotent, adds nothing",
+              res2["runs_added"] == 0 and res2["observations_added"] == 0)
+    else:
+        print("  SKIPPED ingest: reports/ is gitignored and absent here.")
+        runs, obs = L.load_ledger(hist_dir)
 
-    p = L.rows_for(obs, runs[-2]["run_id"])
-    c = L.rows_for(obs, runs[-1]["run_id"])
-    ch = L.diff_runs(p, c, TODAY)
-    check("real diff finds exactly one change", len(ch) == 1, json.dumps(ch))
-    check("that change is hoffmanscheese backup age", ch and ch[0]["site"] == "hoffmanscheese" and ch[0]["fact"] == "db_backup_age_days")
-    check("it is classed DRIFT, not an alert", ch and ch[0]["class"] == "DRIFT")
-    check("rendered `notes` is NOT diffed (no double report)", all(x["fact"] != "notes" for x in ch))
-    check("upstream group counts 38, incl. the 2 CRIT rows the old model hid", any(g["cause"].startswith("One pending") and len(g["sites"]) == 38 for g in L.standing(c, TODAY)))
+    if len(runs) < 2:
+        print("  SKIPPED diff: fewer than two runs available in either source.")
+    else:
+        p = L.rows_for(obs, runs[-2]["run_id"])
+        c = L.rows_for(obs, runs[-1]["run_id"])
+        ch = L.diff_runs(p, c, TODAY)
+        check("real diff finds exactly one change", len(ch) == 1, json.dumps(ch))
+        check("that change is hoffmanscheese backup age",
+              ch and ch[0]["site"] == "hoffmanscheese" and ch[0]["fact"] == "db_backup_age_days")
+        check("it is classed DRIFT, not an alert", ch and ch[0]["class"] == "DRIFT")
+        check("rendered `notes` is NOT diffed (no double report)",
+              all(x["fact"] != "notes" for x in ch))
+        check("upstream group counts 38, incl. the 2 CRIT rows the old model hid",
+              any(g["cause"].startswith("One pending") and len(g["sites"]) == 38
+                  for g in L.standing(c, TODAY)))
 finally:
     shutil.rmtree(tmp)
 

@@ -15,3 +15,9 @@ __pycache__/
 .venv/
 venv/
 .env
+
+# Staging area only. The Claude device bridge is not allowed to write into
+# .github/, so workflow edits land here first and are copied across. The
+# authoritative copy is .github/workflows/. Ignoring this prevents a second,
+# silently diverging copy from being committed.
+ci/github-actions/

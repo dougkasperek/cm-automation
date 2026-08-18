@@ -442,6 +442,14 @@ def cmd_report(a):
 
 
 def main():
+    # Piping `report` into head or less closes stdout early; without this the
+    # tool dies with a BrokenPipeError traceback instead of just stopping.
+    try:
+        import signal
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except (ImportError, AttributeError, ValueError):
+        pass                                # not available on every platform
+
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)

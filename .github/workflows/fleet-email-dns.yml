@@ -48,10 +48,21 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Confirm the input file is committed
+        # reports/ is gitignored but data/ is not. If the inventory is missing
+        # the check would fail later with a less obvious error, so fail here
+        # with a clear one.
+        run: |
+          test -f data/fleet-email-inventory.json \
+            || { echo "::error::data/fleet-email-inventory.json is missing from the repo. Regenerate it with scripts/extract-audit-workbook.py and commit it."; exit 1; }
+          python3 -c "import json;d=json.load(open('data/fleet-email-inventory.json'));print('inventory OK: %d sites' % d['site_count'])"
+
       - name: Self-check (offline, no DNS)
         # Runs before the real check on purpose. If the parsing or the recovered
-        # rule has been broken by an edit, that should surface here rather than
-        # as a puzzling diff in the results.
+        # rule has been broken by an edit, that surfaces here rather than as a
+        # puzzling diff in the results. The scan-dependent assertions skip at
+        # this point, because reports/ is gitignored and does not exist yet;
+        # they run in the verification step after the check instead.
         run: python3 test/test-email-dns.py
 
       - name: Stamp
@@ -65,6 +76,13 @@ jobs:
             --out reports \
             --stamp "${{ steps.stamp.outputs.value }}" \
             --workers 12
+
+      - name: Verify the scan that was just produced
+        # Same suite, second run. Now that reports/ has a real file in it, the
+        # assertions that were skipped above execute against genuine output:
+        # 78 sites, no errored rows, both DMARC readings recorded, and the
+        # adopted rule still reproducing the workbook.
+        run: python3 test/test-email-dns.py
 
       - name: Findings digest
         run: |
