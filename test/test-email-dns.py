@@ -32,8 +32,18 @@ def check(name, cond, detail=""):
 ZONE = {}
 
 
+# Domains whose nameservers are treated as unreachable. Needed because a real
+# timeout does not hit one name, it hits every lookup in that zone, including
+# all the DKIM selector probes.
+TIMEOUT_ZONES = set()
+
+
 def stub_resolve(name, rdtype, timeout=0):
-    return ZONE.get((rdtype, name.lower()), {"status": "nxdomain", "records": []})
+    n = name.lower()
+    for z in TIMEOUT_ZONES:
+        if n == z or n.endswith("." + z):
+            return {"status": "timeout", "records": []}
+    return ZONE.get((rdtype, n), {"status": "nxdomain", "records": []})
 
 
 E._resolve = stub_resolve
@@ -45,8 +55,16 @@ def zone(**kw):
         pass
 
 
-def put(rdtype, name, records):
-    ZONE[(rdtype, name.lower())] = {"status": "ok", "records": records}
+def put(rdtype, name, records, status="ok"):
+    ZONE[(rdtype, name.lower())] = {"status": status, "records": records}
+
+
+def ok(records):
+    return {"status": "ok", "records": records}
+
+
+def failed(status="timeout"):
+    return {"status": status, "records": []}
 
 
 # ------------------------------------------------------------- org domain math
@@ -63,28 +81,37 @@ check("None address is None", E.domain_of(None) is None)
 
 # ------------------------------------------------------------------ SPF parse
 print("\n-- SPF parsing --")
-s = E.parse_spf(["v=spf1 include:mailgun.org ~all"])
+s = E.parse_spf(ok(["v=spf1 include:mailgun.org ~all"]))
 check("spf detected", s["present"] is True)
 check("include extracted", s["includes"] == ["mailgun.org"])
 check("qualifier extracted", s["all_qualifier"] == "~all")
-s = E.parse_spf(["v=spf1 redirect=_spf.google.com"])
+s = E.parse_spf(ok(["v=spf1 redirect=_spf.google.com"]))
 check("redirect-style SPF is still present", s["present"] is True)
 check("redirect-style SPF has no all qualifier", s["all_qualifier"] is None,
       "this is exactly why the adopted rule is presence, not qualifier")
-check("non-spf TXT ignored", E.parse_spf(["google-site-verification=abc"])["present"] is False)
+check("non-spf TXT ignored", E.parse_spf(ok(["google-site-verification=abc"]))["present"] is False)
 check("two SPF records flagged as an RFC violation",
-      E.parse_spf(["v=spf1 a ~all", "v=spf1 mx ~all"])["multiple_spf_records"] is True)
+      E.parse_spf(ok(["v=spf1 a ~all", "v=spf1 mx ~all"]))["multiple_spf_records"] is True)
+
+print("\n-- a failed lookup is not an answer --")
+check("SPF timeout is unknown, NOT 'no record'", E.parse_spf(failed("timeout"))["present"] == E.UNKNOWN)
+check("SPF SERVFAIL is unknown", E.parse_spf(failed("nonameservers"))["present"] == E.UNKNOWN)
+check("SPF unknown carries the lookup status", E.parse_spf(failed("timeout"))["lookup_status"] == "timeout")
+check("SPF NXDOMAIN IS a real absence, not unknown", E.parse_spf(failed("nxdomain"))["present"] is False)
+check("SPF NOANSWER IS a real absence", E.parse_spf(failed("noanswer"))["present"] is False)
+check("DMARC timeout is unknown, NOT 'no record'", E.parse_dmarc(failed("timeout"))["present"] == E.UNKNOWN)
+check("DMARC NXDOMAIN IS a real absence", E.parse_dmarc(failed("nxdomain"))["present"] is False)
 
 # ---------------------------------------------------------------- DMARC parse
 print("\n-- DMARC parsing --")
-d = E.parse_dmarc(["v=DMARC1; p=reject; rua=mailto:x@y.com; adkim=s"])
+d = E.parse_dmarc(ok(["v=DMARC1; p=reject; rua=mailto:x@y.com; adkim=s"]))
 check("dmarc detected", d["present"] is True)
 check("policy extracted", d["policy"] == "reject")
 check("rua extracted", d["rua"] == "mailto:x@y.com")
 check("explicit adkim honoured", d["adkim"] == "s")
-check("adkim defaults to relaxed when absent", E.parse_dmarc(["v=DMARC1; p=none"])["adkim"] == "r")
-check("absent dmarc is not present", E.parse_dmarc([])["present"] is False)
-check("an SPF record is not mistaken for DMARC", E.parse_dmarc(["v=spf1 ~all"])["present"] is False)
+check("adkim defaults to relaxed when absent", E.parse_dmarc(ok(["v=DMARC1; p=none"]))["adkim"] == "r")
+check("absent dmarc is not present", E.parse_dmarc(ok([]))["present"] is False)
+check("an SPF record is not mistaken for DMARC", E.parse_dmarc(ok(["v=spf1 ~all"]))["present"] is False)
 
 # ------------------------------------------------------------------ DKIM find
 print("\n-- DKIM discovery --")
@@ -158,6 +185,35 @@ check("no sending domain -> SPF unknown, not False", s["spf"]["present"] == E.UN
 check("no sending domain -> DMARC unknown, not False",
       s["dmarc"]["at_sending_domain"]["present"] == E.UNKNOWN)
 check("no sending domain -> DKIM unknown, not False", s["dkim"]["present"] == E.UNKNOWN)
+
+# the woodmarkpharmacy.com case: CI and local disagreed because one resolver
+# timed out and the code called that "no SPF record".
+print("\n-- the CI-vs-local divergence that exposed this --")
+ZONE.clear()
+TIMEOUT_ZONES.add("woodmark.example")
+s = E.check_site({"domain": "woodmark.example", "provider": "CM Mailgun",
+                  "sending_domain": "woodmark.example",
+                  "from_address": "x@woodmark.example",
+                  "envelope_from": "x@woodmark.example"})
+check("a timed-out SPF lookup reports unknown, not a missing record",
+      s["spf"]["present"] == E.UNKNOWN, json.dumps(s["spf"]))
+check("and it is excluded from the 'no SPF record' finding",
+      s["spf"]["present"] is not False)
+check("DKIM records how many probes failed to resolve",
+      s["dkim"].get("unresolved_probes", 0) > 0, json.dumps(s["dkim"])[:160])
+check("DMARC on an unreachable zone is unknown, not absent",
+      s["dmarc"]["at_sending_domain"]["present"] == E.UNKNOWN)
+TIMEOUT_ZONES.clear()
+
+# and the contrast: a zone that answers authoritatively with nothing
+ZONE.clear()
+s2 = E.check_site({"domain": "empty.example", "provider": "CM Mailgun",
+                   "sending_domain": "empty.example",
+                   "from_address": "x@empty.example",
+                   "envelope_from": "x@empty.example"})
+check("a domain that resolves with no SPF IS a real absence", s2["spf"]["present"] is False)
+check("a domain that resolves with no DMARC IS a real absence",
+      s2["dmarc"]["at_sending_domain"]["present"] is False)
 
 # ------------------------------------------------------------- real scan file
 # reports/ is gitignored, so on a fresh clone (and on every CI runner before the
