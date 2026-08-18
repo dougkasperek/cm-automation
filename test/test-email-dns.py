@@ -160,8 +160,15 @@ check("no sending domain -> DMARC unknown, not False",
 check("no sending domain -> DKIM unknown, not False", s["dkim"]["present"] == E.UNKNOWN)
 
 # ------------------------------------------------------------- real scan file
-print("\n-- against the real 78-site scan --")
-scans = sorted(f for f in os.listdir(os.path.join(ROOT, "reports")) if f.startswith("fleet-email-dns-") or f.startswith("email-dns-"))
+# reports/ is gitignored, so on a fresh clone (and on every CI runner before the
+# check step has run) this directory does not exist at all. Skip cleanly rather
+# than crashing. Everything above this line is offline and unconditional, so a
+# skip here still leaves the code fully covered.
+print("\n-- against a real scan, if one is present --")
+reports_dir = os.path.join(ROOT, "reports")
+scans = sorted(f for f in os.listdir(reports_dir)
+               if f.startswith("fleet-email-dns-") or f.startswith("email-dns-")
+               ) if os.path.isdir(reports_dir) else []
 if scans:
     scan = json.load(open(os.path.join(ROOT, "reports", scans[-1])))
     sites = scan["sites"]
@@ -183,7 +190,10 @@ if scans:
         check("the adopted DMARC rule still reproduces the workbook at >= 97%",
               agree / float(len(scored)) >= 0.97, "%d/%d" % (agree, len(scored)))
 else:
-    print("  (no scan file present, skipping)")
+    print("  SKIPPED: no scan file in reports/ yet.")
+    print("  This is expected on a fresh clone and on a CI runner before the")
+    print("  check step runs. Run the check, then run this again to validate")
+    print("  the real output.")
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
