@@ -51,6 +51,7 @@ OBSERVED = (
     "db_backup_age_days",
     "upstream_pending",
     "wp_checked",
+    "wp_version",
     "wp_core_update",
     "plugin_updates",
     "theme_updates",
@@ -73,7 +74,14 @@ UNKNOWN = "unknown"
 # and the digest when the truth is "nobody looked". The ledger refuses to store
 # it. This is settled principle 5 (unknown is never folded into negative)
 # applied to the data rather than only to the display.
-DEEP_ONLY = ("wp_core_update", "plugin_updates", "theme_updates")
+# wp_version joined this list on 2026-08-18. It is the fact the whole project
+# was built to establish: the workbook asserts 7.0.2 on all 78 sites and nothing
+# had ever verified it on any of them. Until that date the scan recorded only
+# wp_core_update, which reports the version AVAILABLE and reads "up-to-date"
+# when none is, so a fleet on any version at all looked identical to a fleet on
+# 7.0.2. Belongs here because reading it needs SSH, so on an api-only run it
+# must be unknown and never a value.
+DEEP_ONLY = ("wp_version", "wp_core_update", "plugin_updates", "theme_updates")
 
 
 def fact(row, key):
@@ -154,9 +162,30 @@ def parse_run_id(path):
 
 
 def load_inventory(path):
-    """site_id lookups. Returns (by_host_site_name, by_domain, records)."""
-    if not path or not os.path.exists(path):
+    """site_id lookups. Returns (by_host_site_name, by_domain, records).
+
+    A MISSING inventory is an ERROR here, not an empty result. Accepting it
+    silently is exactly how the ledger written on 2026-08-16 came to key its
+    health rows on Pantheon machine names: the inventory did not exist yet,
+    every lookup fell back to the raw key, nothing complained, and the damage
+    was only visible a day later when the dashboard reported 130 sites for an
+    84-site fleet. The store is append-only, so it could not be corrected in
+    place; it had to be rebuilt from reports/ that happened to still exist.
+
+    Pass path=None to mean "deliberately no inventory". That is now a decision
+    the caller states out loud, rather than what a wrong path quietly gets you.
+    """
+    if path is None:
         return {}, {}, {}
+    if not os.path.exists(path):
+        raise SystemExit(
+            "inventory not found: %s\n"
+            "Ingesting without it keys every row on whatever identifier its own\n"
+            "tool happens to use, and this ledger is append-only, so the result\n"
+            "cannot be corrected afterwards. Point --inventory at the real file,\n"
+            "or pass --no-inventory if you genuinely mean unnormalised keys."
+            % path
+        )
     inv = json.load(open(path))
     by_host, by_domain, recs = {}, {}, {}
     for s in inv["sites"]:
@@ -236,13 +265,25 @@ def ingest(reports_dir, history_dir, inventory=None):
 
     by_host, by_domain, inv_recs = load_inventory(inventory)
 
-    files = sorted(
-        os.path.join(reports_dir, n)
-        for n in os.listdir(reports_dir)
-        if n.endswith(".json")
-    )
+    # reports/ is gitignored, so it legitimately does not exist on a fresh
+    # clone, or on a CI runner whose scan died before writing anything. Nothing
+    # to ingest is zero runs, not a traceback. This is the same absence that
+    # broke CI run #1.
+    if os.path.isdir(reports_dir):
+        files = sorted(
+            os.path.join(reports_dir, n)
+            for n in os.listdir(reports_dir)
+            if n.endswith(".json")
+        )
+    else:
+        files = []
 
     added_runs, added_obs, skipped = 0, 0, 0
+    # Rows whose identifier matched no inventory entry, accumulated across every
+    # run in this ingest. Each run already records its own list, but a value
+    # written into a file nobody reads is not a warning. The caller gets a count
+    # back and the CLI prints it.
+    unresolved_by_run = {}
     with open(obs_path, "a") as obs_fh, open(runs_path, "a") as runs_fh:
         for path in files:
             meta = parse_run_id(path)
@@ -285,6 +326,9 @@ def ingest(reports_dir, history_dir, inventory=None):
                 # an unknown site is the highest-signal finding there is.
                 "sites_not_in_inventory": sorted(r["site_id"] for r in unresolved),
             })
+            if unresolved:
+                unresolved_by_run[meta["run_id"]] = sorted(
+                    r["site_id"] for r in unresolved)
             runs_fh.write(json.dumps(meta, sort_keys=True) + "\n")
             added_runs += 1
 
@@ -304,6 +348,8 @@ def ingest(reports_dir, history_dir, inventory=None):
         "runs_skipped": skipped,
         "observations_added": added_obs,
         "ledger": obs_path,
+        "unresolved_by_run": unresolved_by_run,
+        "unresolved_count": sum(len(v) for v in unresolved_by_run.values()),
     }
 
 
@@ -762,6 +808,15 @@ def main():
                     help="the authoritative site list. Every source is normalised "
                          "onto its site_id before storage, so one site has one "
                          "history regardless of which tool observed it.")
+    ap.add_argument("--no-inventory", action="store_true",
+                    help="ingest WITHOUT normalising onto site_id. Stores "
+                         "whatever key each tool uses, so a site observed by "
+                         "two tools gets two histories. Escape hatch for "
+                         "tests; not for real data.")
+    ap.add_argument("--fail-on-unresolved", action="store_true",
+                    help="exit non-zero if any ingested row matched no "
+                         "inventory entry. For CI, where nobody is reading "
+                         "stdout.")
     ap.add_argument("--site")
     ap.add_argument("--source", help="restrict to one tool: health | email-dns")
     ap.add_argument("--today", help="override today (YYYY-MM-DD) for deterministic tests")
@@ -771,11 +826,30 @@ def main():
     today = datetime.date.fromisoformat(a.today) if a.today else datetime.date.today()
 
     if a.command == "ingest":
-        res = ingest(a.reports, a.history, inventory=a.inventory)
+        res = ingest(a.reports, a.history,
+                     inventory=None if a.no_inventory else a.inventory)
         print(
             "ingested %d run(s), %d observation(s); %d run(s) already present -> %s"
             % (res["runs_added"], res["observations_added"], res["runs_skipped"], res["ledger"])
         )
+        # An unresolved row is not dropped, it is stored under its own tool's
+        # identifier. That is the right call for data, and the wrong thing to
+        # do quietly: it is a second history for a site that already has one.
+        if res["unresolved_count"]:
+            print("", file=sys.stderr)
+            print("WARNING: %d row(s) matched no inventory entry and were "
+                  "stored under the tool's own key:" % res["unresolved_count"],
+                  file=sys.stderr)
+            for run_id in sorted(res["unresolved_by_run"]):
+                names = res["unresolved_by_run"][run_id]
+                shown = ", ".join(names[:8])
+                if len(names) > 8:
+                    shown += ", ... (%d more)" % (len(names) - 8)
+                print("  %s: %s" % (run_id, shown), file=sys.stderr)
+            print("Either add them to %s, or map them via host_site_name."
+                  % a.inventory, file=sys.stderr)
+            if a.fail_on_unresolved:
+                return 1
         return 0
 
     runs, obs = load_ledger(a.history)

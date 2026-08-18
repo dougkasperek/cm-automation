@@ -16,6 +16,9 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="$REPO_ROOT/test/mock:$PATH"
 export PANTHEON_MACHINE_TOKEN="mock-token-not-real"
 export MOCK_LOGGED_IN=0
+# Each case gets its own empty session file, so a login in one case cannot make
+# the next case look authenticated. Case 4 in particular must start with none.
+new_session() { export MOCK_SESSION_FILE="$TMP/session-$1"; : > "$MOCK_SESSION_FILE"; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -33,6 +36,7 @@ check() {
 status_of() { jq -r --arg s "$2" '.[]|select(.site==$s)|.status' "$1"; }
 
 echo "=== Case 1: full scan, fail-on-crit ON (default) ==================="
+new_session 1
 START="$(date +%s)"
 "$REPO_ROOT/scripts/pantheon-fleet-healthcheck.sh" --out "$TMP/full" >"$TMP/full.log" 2>&1
 RC=$?
@@ -53,6 +57,23 @@ else
   check "timeoutsite ERROR not SKIP"            "ERROR"  "$(status_of "$J" timeoutsite)"
   check "noisysite parsed despite stdout noise" "OK"     "$(status_of "$J" noisysite)"
   check "drupalsite scanned, WP checks n/a"     "n/a"    "$(jq -r '.[]|select(.site=="drupalsite")|.wp_core_update' "$J")"
+
+  # The observed WordPress version, added 2026-08-18. check-update alone only
+  # ever says whether something is PENDING, so a fleet claimed to be on 7.0.2
+  # read as "up-to-date" everywhere and the claim stayed unverified.
+  ver_of() { jq -r --arg s "$1" '.[]|select(.site==$s)|.wp_version' "$J"; }
+  check "normalsite reports its installed version" "7.0.2"   "$(ver_of normalsite)"
+  check "coredrift is BEHIND what it can update to" "6.8.1"  "$(ver_of coredrift)"
+  check "noisysite version survives stdout noise"  "7.0.2"   "$(ver_of noisysite)"
+  check "staleback silent -> unknown, not a value" "unknown" "$(ver_of staleback)"
+  check "drupalsite not asked -> n/a, not unknown" "n/a"     "$(ver_of drupalsite)"
+
+  # A row that exited before the WP stage carries NO wp_version key at all.
+  # Absent means the row never reached the question; "n/a" means it reached it
+  # and did not ask; "unknown" means it asked and got nothing. Three different
+  # states, and collapsing any two of them is how this project has produced
+  # every wrong number it has produced.
+  check "frozensite has no wp_version key"      "null"   "$(jq -r '.[]|select(.site=="frozensite")|.wp_version' "$J")"
   check "site count"                            "10"     "$(jq 'length' "$J")"
 fi
 
@@ -66,6 +87,7 @@ fi
 
 echo ""
 echo "=== Case 2: --api-only (the first-CI-run mode) ====================="
+new_session 2
 "$REPO_ROOT/scripts/pantheon-fleet-healthcheck.sh" --api-only --no-fail-on-crit --out "$TMP/api" >"$TMP/api.log" 2>&1
 RC2=$?
 J2="$(ls "$TMP"/api/fleet-health-*.json 2>/dev/null | head -n1)"
@@ -74,10 +96,20 @@ if [ -n "$J2" ]; then
   check "coredrift NOT crit in api-only"  "false" "$(jq -r '.[]|select(.site=="coredrift")|.status=="CRIT"' "$J2")"
   check "staleback still CRIT (backup age is API data)" "CRIT" "$(status_of "$J2" staleback)"
   check "no site was wp_checked"          "0"     "$(jq '[.[]|select(.wp_checked==true)]|length' "$J2")"
+  # api-only never opens an SSH connection, so no row may carry a version and
+  # none may say "unknown" either - "unknown" would claim the scan tried and
+  # could not tell. The only permitted values are "n/a" on a scanned row and
+  # the field being absent on a row that exited early (FROZEN / SKIP / ERROR),
+  # which is why this counts violations rather than counting "n/a".
+  check "api-only never reports a version or unknown" "0" \
+        "$(jq '[.[]|select(.wp_version!=null and .wp_version!="n/a")]|length' "$J2")"
+  check "scanned rows in api-only all say n/a" "0" \
+        "$(jq '[.[]|select(.wp_checked!=null and .wp_version!="n/a")]|length' "$J2")"
 fi
 
 echo ""
 echo "=== Case 3: subset + limit flags ==================================="
+new_session 3
 "$REPO_ROOT/scripts/pantheon-fleet-healthcheck.sh" --api-only --no-fail-on-crit \
   --sites normalsite,staleback --out "$TMP/subset" >"$TMP/subset.log" 2>&1
 J3="$(ls "$TMP"/subset/fleet-health-*.json 2>/dev/null | head -n1)"
@@ -85,9 +117,35 @@ J3="$(ls "$TMP"/subset/fleet-health-*.json 2>/dev/null | head -n1)"
 
 echo ""
 echo "=== Case 4: bad machine token fails fast ==========================="
+new_session 4
 PANTHEON_MACHINE_TOKEN=BAD "$REPO_ROOT/scripts/pantheon-fleet-healthcheck.sh" \
   --api-only --out "$TMP/bad" >"$TMP/bad.log" 2>&1
 check "exit 1 on auth failure" "1" "$?"
+
+echo ""
+echo "=== Case 5: auth:whoami exits 0 but reports nobody ================="
+# THE REGRESSION TEST FOR THE 2026-08-18 CI FAILURE.
+#
+# On a GitHub runner `terminus auth:whoami` exits 0 with no output when there
+# is no session at all. pantheon_login used to read only the exit code, so it
+# logged "already authenticated", never called auth:login, and site:list came
+# back empty. The job failed in seconds with "no sites returned" and three
+# guesses as to why. It works on a laptop because the cached session makes the
+# early return genuinely correct there, which is why nothing caught it for
+# weeks.
+#
+# The check must read the IDENTITY, not the status. With a valid token this
+# run has to authenticate and complete normally.
+new_session 5
+MOCK_WHOAMI_SILENT_OK=1 "$REPO_ROOT/scripts/pantheon-fleet-healthcheck.sh" \
+  --api-only --no-fail-on-crit --sites normalsite --out "$TMP/silent" \
+  >"$TMP/silent.log" 2>&1
+RC5=$?
+J5="$(ls "$TMP"/silent/fleet-health-*.json 2>/dev/null | head -n1)"
+check "a silent whoami does not pass for a session" "0" "$RC5"
+check "the token is used, so the fleet is not empty" "1" "$(jq 'length' "$J5" 2>/dev/null || echo 0)"
+check "and the log says who it authenticated AS" "1" \
+      "$(grep -c 'authenticated as ci@clevermethod.com' "$TMP/silent.log")"
 
 echo ""
 echo "-------------------------------------------------------------------"

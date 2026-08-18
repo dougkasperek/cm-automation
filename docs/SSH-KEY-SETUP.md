@@ -109,6 +109,24 @@ for r in json.load(open(f)):
 and full mode is not actually working, whatever else the output says. Stop here
 and send me the scan output rather than continuing to CI.
 
+**Also check `wp_version`.** As of 2026-08-18 the scan reads the version the
+site is actually running, not only whether an update is pending. Add it to the
+snippet above:
+
+```bash
+python3 -c "
+import json,glob
+f=sorted(glob.glob('reports/fleet-health-*.json'))[-1]
+for r in json.load(open(f)):
+    print(r['site'], 'wp_checked=', r.get('wp_checked'), 'version=', r.get('wp_version'))
+"
+```
+
+Three values are possible and they mean different things. A version string means
+it read it. `unknown` means it asked and got nothing back. `n/a` means it did not
+ask, which on a full-mode WordPress site is a bug. **The first cohort scan run
+before this field existed stores `unknown`; re-run it.**
+
 ## Step 4. Add the private key to GitHub
 
 ```bash
@@ -173,9 +191,17 @@ timeout bug was found exactly this way, when GitHub said 8 and my laptop said 9.
 ./scripts/render-dashboard.py --out fleet.html && open fleet.html
 ```
 
+Both scripts were committed non-executable until 2026-08-18, so these two lines
+returned *Permission denied*. The mode is fixed. If you ever see that again,
+`python3 scripts/fleet-ledger.py ...` works regardless of the mode bit.
+
 **What should change.** The coverage meter *WordPress core, plugins, themes*
-goes from **0 of 52** to 52 of 52, and the WP core / Plugins / Themes columns
-stop saying *claimed* and start showing observed values.
+goes from **0 of 52** to 52 of 52. The **WP version** column stops reading
+*7.0.2 claimed* in muted ink and starts showing what each site actually reports,
+with a red *workbook says 7.0.2* chip on any site that disagrees. The WP core
+column now answers only whether an update is pending — it no longer borrows the
+workbook's version to fill its gap, because that answered a different question
+than the one its heading asks.
 
 **What to look at first:** any site where the observed value disagrees with the
 workbook's claim. The workbook asserts WordPress 7.0.2 on all 78 sites and

@@ -85,22 +85,41 @@ try:
     inv_path = os.path.join(ROOT, "data", "fleet-inventory.json")
     inv_arg = inv_path if os.path.exists(inv_path) else None
     if have_reports:
+        # reports/ is a working directory, not a fixture. It holds whatever the
+        # last local scan produced, including one-site cohort runs from SSH
+        # testing, so nothing here may assert a fleet size or a specific run.
+        # Those assertions moved onto the committed ledger below, which is
+        # version-controlled and therefore identical on a laptop and in CI.
         res = L.ingest(real_dir, tmp, inventory=inv_arg)
-        runs, obs = L.load_ledger(tmp)
-        check("ingest picks up both real health runs",
-              len([r for r in runs if r.get("source") == "health"]) >= 2, str(res))
-        check("52 observations per health run",
-              all(r["site_count"] == 52 for r in runs if r.get("source") == "health"),
-              str([r["site_count"] for r in runs]))
+        check("ingest reads the local reports directory", res["runs_added"] >= 1, str(res))
+        check("every ingested row resolves to the inventory",
+              res["unresolved_count"] == 0, str(res.get("unresolved_by_run")))
         res2 = L.ingest(real_dir, tmp, inventory=inv_arg)
         check("re-ingest is idempotent, adds nothing",
               res2["runs_added"] == 0 and res2["observations_added"] == 0)
     else:
         print("  SKIPPED ingest: reports/ is gitignored and absent here.")
-        runs, obs = L.load_ledger(hist_dir)
 
-    # Compare like with like. The ledger now holds more than one tool's output.
+    # The committed ledger. This is the deterministic fixture: it is in git, so
+    # CI and a laptop see byte-identical input, and reports/ cannot perturb it.
+    runs, obs = L.load_ledger(hist_dir)
     health_runs = [r for r in runs if r.get("source", "health") == "health"]
+    check("the committed ledger holds both real health runs",
+          len(health_runs) >= 2, str([r["run_id"] for r in health_runs]))
+    check("52 observations per committed health run",
+          all(r["site_count"] == 52 for r in health_runs),
+          str([r["site_count"] for r in health_runs]))
+    # Both tools reach the committed ledger. Before 2026-08-18 they did not:
+    # the file in git held health rows only, while the dashboard beside it had
+    # been rendered from a ledger with email in it that was never committed.
+    check("and the email runs too, so the committed ledger matches the page",
+          any(r.get("source") == "email-dns" for r in runs),
+          str(sorted(set(r.get("source") for r in runs))))
+    check("no committed run left a site unresolved",
+          all(not r.get("sites_not_in_inventory") for r in runs),
+          str([(r["run_id"], r.get("sites_not_in_inventory")) for r in runs
+               if r.get("sites_not_in_inventory")]))
+
     if len(health_runs) < 2:
         print("  SKIPPED diff: fewer than two health runs available.")
     else:
@@ -310,6 +329,88 @@ check("backup group lists bare site ids", g["sites"] == ["a", "b"], str(g["sites
 check("the per-site extra lives in `detail`, not smuggled into the id",
       "900d" in g["detail"]["a"])
 check("a non-numeric backup value is not read as bad", L._backup_bad("n/a") is False)
+
+# ------------------------------------------------- 4b. ingest, the write path
+# Every assertion in this block is a regression test for a defect that shipped.
+# The ledger is the one asset in this repo that cannot be regenerated, so the
+# write path deserves more suspicion than the read path, and until 2026-08-18
+# it had less.
+print("\n-- ingest refuses to write a ledger it cannot key correctly --")
+
+_tmp = tempfile.mkdtemp()
+try:
+    hist = os.path.join(_tmp, "history")
+    reports = os.path.join(_tmp, "reports")
+    os.makedirs(hist)
+
+    # DEFECT 1. reports/ is gitignored, so it does not exist on a fresh clone
+    # or on a CI runner whose scan died before writing. ingest raised
+    # FileNotFoundError. This is the same absence that broke CI run #1.
+    try:
+        res = L.ingest(reports, hist, inventory=None)
+        check("an absent reports/ is zero runs, not a traceback",
+              res["runs_added"] == 0)
+    except Exception as exc:
+        check("an absent reports/ is zero runs, not a traceback", False,
+              "%s: %s" % (type(exc).__name__, exc))
+
+    os.makedirs(reports)
+    res = L.ingest(reports, hist, inventory=None)
+    check("an empty reports/ is zero runs too", res["runs_added"] == 0)
+
+    # DEFECT 2. A missing inventory silently produced an unnormalised ledger.
+    # That is not a hypothetical: the ledger committed on 2026-08-16 keyed its
+    # health rows on Pantheon machine names because the inventory did not exist
+    # yet, every lookup fell back to the raw key, and nothing said a word. The
+    # dashboard rendered 130 rows for an 84-site fleet a day later, and because
+    # the store is append-only it had to be rebuilt from reports/ rather than
+    # corrected.
+    raised = False
+    try:
+        L.load_inventory(os.path.join(_tmp, "no-such-inventory.json"))
+    except SystemExit:
+        raised = True
+    check("a MISSING inventory path is refused, not treated as empty", raised)
+    check("inventory=None is still allowed, because it is explicit",
+          L.load_inventory(None) == ({}, {}, {}))
+
+    # DEFECT 3. Rows that resolve to nothing were recorded in runs.jsonl and
+    # never surfaced anywhere a person would look.
+    inv_path = os.path.join(_tmp, "inv.json")
+    json.dump({"sites": [{"site_id": "known.com", "domain": "known.com",
+                          "host_site_name": "known"}]}, open(inv_path, "w"))
+    json.dump([row("known"), row("stranger")],
+              open(os.path.join(reports, "fleet-health-2026-08-18_0900.json"), "w"))
+    res = L.ingest(reports, hist, inventory=inv_path)
+    check("an unresolved row is COUNTED, not just filed away",
+          res["unresolved_count"] == 1, str(res.get("unresolved_by_run")))
+    check("and it is reported against the run that carried it",
+          res["unresolved_by_run"].get("health-2026-08-18_0900") == ["stranger"])
+    check("a resolved row is normalised onto the inventory's site_id",
+          any(json.loads(l)["site"] == "known.com"
+              for l in open(os.path.join(hist, "observations.jsonl"))))
+
+    # Idempotence. persist-ledger.sh re-ingests onto the current remote head on
+    # every push attempt, so a second ingest of the same run MUST be a no-op or
+    # a raced CI run would duplicate the fleet.
+    before = len(open(os.path.join(hist, "observations.jsonl")).readlines())
+    res = L.ingest(reports, hist, inventory=inv_path)
+    after = len(open(os.path.join(hist, "observations.jsonl")).readlines())
+    check("re-ingesting the same run adds nothing",
+          res["runs_added"] == 0 and before == after, "%d -> %d" % (before, after))
+finally:
+    shutil.rmtree(_tmp, ignore_errors=True)
+
+# ------------------------------------------- 4c. the WordPress version fact
+print("\n-- wp_version is deep-only, and absent is never a value --")
+check("wp_version is stored as an observed fact", "wp_version" in L.OBSERVED)
+check("wp_version needs SSH, so it is deep-only", "wp_version" in L.DEEP_ONLY)
+check("an api-only row reports unknown, never a version",
+      L.fact(row("a", wp_checked=False, wp_version="7.0.2"), "wp_version") == L.UNKNOWN)
+check("a deep-scanned row reports what the site actually said",
+      L.fact(row("a", wp_checked=True, wp_version="6.8.1"), "wp_version") == "6.8.1")
+check("a deep scan that could not read the version says unknown",
+      L.fact(row("a", wp_checked=True, wp_version=None), "wp_version") == L.UNKNOWN)
 
 # ----------------------------------------------------------- 5. portability
 print("\n-- portability --")

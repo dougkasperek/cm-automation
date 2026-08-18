@@ -123,3 +123,27 @@ as such.
 
 `test/test-ledger.py` covers this with 69 assertions, 26 of them on the
 unification specifically.
+
+---
+
+## Amendment, 2026-08-18: `wp_version`, and how the ledger got mis-keyed
+
+**`wp_version` is now an observed, deep-only fact.** It is the version the site
+reports for itself, read with `wp core version` over SSH. It is not
+`wp_core_update`, which reports the version *available* and reads `"up-to-date"`
+when there is none — a value that is identical on a fleet on 7.0.2 and a fleet
+on anything else. The workbook claims 7.0.2 on all 78 sites, so without the
+installed version there was nothing to compare the claim against.
+
+Being in `DEEP_ONLY` means an api-only run stores `unknown`, never a version.
+
+**The join key is not optional.** The first ledger was ingested before
+`data/fleet-inventory.json` existed. `load_inventory` accepted the absence and
+returned empty lookups, so every row fell back to whatever identifier its own
+tool used: machine names from Pantheon, domains from the email check. One site,
+two histories, and an 84-site fleet rendering as 130 rows. Nothing failed and
+nothing warned.
+
+The store is append-only, so this could not be corrected in place — it had to be
+rebuilt from `reports/`, which worked only because those files still existed on
+one laptop. Three guards now stand in front of it, listed in `docs/CI-LEDGER.md`.

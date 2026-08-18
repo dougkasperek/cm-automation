@@ -83,7 +83,13 @@ require_tools terminus jq || exit 1
 pantheon_login || exit 1
 
 mkdir -p "$OUT_DIR" || { err "cannot create output dir: $OUT_DIR"; exit 1; }
-STAMP="$(date +%Y-%m-%d_%H%M)"
+# UTC, not local. The ledger derives a run's observed_at from this stamp and
+# orders runs by it to pick the pair it diffs. A laptop stamping Eastern and a
+# CI runner stamping UTC put the same timeline four hours out of step, so a
+# local run and a CI run can sort into the wrong order and the diff compares
+# the wrong pair. Harmless while only one machine writes; wrong the moment CI
+# does too.
+STAMP="$(date -u +%Y-%m-%d_%H%M)"
 JSON_OUT="$OUT_DIR/fleet-health-$STAMP.json"
 CSV_OUT="$OUT_DIR/fleet-health-$STAMP.csv"
 MD_OUT="$OUT_DIR/fleet-health-$STAMP.md"
@@ -107,7 +113,14 @@ else
 fi
 
 if [ -z "$SITES_JSON" ] || [ "$SITES_JSON" = "[]" ]; then
-  err "no sites returned. Check the machine token, the org filter, or network egress to pantheon.io."
+  # json_or_empty discards stderr, which is correct for parsing and useless for
+  # diagnosis: the generic message below offers three guesses where Terminus
+  # already knows the answer. Ask it again, plainly, and print what it says.
+  err "no sites returned. Terminus said:"
+  # shellcheck disable=SC2086
+  run_with_timeout "$API_CALL_TIMEOUT" terminus $SITE_LIST_ARGS 2>&1 \
+    | strip_noise | tail -5 | sed 's/^/    /' >&2 || true
+  err "Check the machine token, the org filter, or network egress to pantheon.io."
   exit 1
 fi
 
@@ -253,10 +266,26 @@ while IFS= read -r site; do
 
   # --- WordPress specifics via remote WP-CLI (SSH; skipped in API-only mode) ---
   wp_core_update="n/a"; plugin_updates=0; theme_updates=0; wp_checked="false"
+  # "n/a" means this scan did not look. It is NOT the same as "unknown", which
+  # means it looked and could not tell. Keeping them distinct is the whole
+  # reason the WP columns could be trusted the day full mode came on.
+  wp_version="n/a"
   case "$framework" in
     wordpress*)
       if [ "$API_ONLY" -eq 0 ]; then
         wp_checked="true"
+        # The version the site is ACTUALLY ON. check-update below reports only
+        # the version available, and yields the string "up-to-date" when there
+        # is none, which says nothing about what is installed. The workbook
+        # claims 7.0.2 fleet-wide and has never been verified; "up-to-date" can
+        # not be compared to "7.0.2", so without this the central question of
+        # the project stays unanswered on a scan that looks complete.
+        # Plain text, not JSON, so it is matched as a version rather than parsed.
+        wp_version="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- core version 2>/dev/null \
+                      | strip_noise | tr -d '\r' \
+                      | grep -Eom1 '[0-9]+(\.[0-9]+)+')" || wp_version=""
+        [ -z "$wp_version" ] && wp_version="unknown"
+
         core_json="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- core check-update --format=json | json_or_empty)" || core_json=""
         if [ -n "$core_json" ] && [ "$core_json" != "[]" ]; then
           wp_core_update="$(printf '%s' "$core_json" | jq -r '.[0].version // "up-to-date"' 2>/dev/null || echo "unknown")"
@@ -310,12 +339,13 @@ while IFS= read -r site; do
     --argjson backup_age "$backup_age_days" \
     --argjson upstream "$upstream_count" \
     --arg core "$wp_core_update" \
+    --arg wpver "$wp_version" \
     --argjson plugins "$plugin_updates" --argjson themes "$theme_updates" \
     --argjson wp_checked "$wp_checked" \
     --arg status "$status" --arg notes "$notes" \
     '{site:$site,framework:$fw,plan:$plan,env:$env,php_version:$php,
       db_backup_age_days:$backup_age,upstream_pending:$upstream,
-      wp_checked:$wp_checked,wp_core_update:$core,
+      wp_checked:$wp_checked,wp_version:$wpver,wp_core_update:$core,
       plugin_updates:$plugins,theme_updates:$themes,
       status:$status,notes:$notes,frozen:false}')"
   results="$(jq --argjson o "$obj" '. + [$o]' <<<"$results")"
@@ -333,8 +363,8 @@ EOF
 printf '%s' "$results" | jq '.' > "$JSON_OUT"
 
 printf '%s' "$results" | jq -r '
-  (["site","framework","plan","env","php_version","db_backup_age_days","upstream_pending","wp_checked","wp_core_update","plugin_updates","theme_updates","status","notes"]),
-  (.[] | [.site,.framework,.plan,.env,(.php_version//""),(.db_backup_age_days//""),(.upstream_pending//""),(.wp_checked//false),(.wp_core_update//""),(.plugin_updates//""),(.theme_updates//""),.status,.notes])
+  (["site","framework","plan","env","php_version","db_backup_age_days","upstream_pending","wp_checked","wp_version","wp_core_update","plugin_updates","theme_updates","status","notes"]),
+  (.[] | [.site,.framework,.plan,.env,(.php_version//""),(.db_backup_age_days//""),(.upstream_pending//""),(.wp_checked//false),(.wp_version//""),(.wp_core_update//""),(.plugin_updates//""),(.theme_updates//""),.status,.notes])
   | @csv' > "$CSV_OUT"
 
 crit=$(printf '%s' "$results"   | jq '[.[]|select(.status=="CRIT")]|length')
@@ -361,13 +391,13 @@ MODE_LABEL="full scan"
   fi
   echo "## Needs attention"
   echo ""
-  echo "| Site | Status | Plan | PHP | Backup age (d) | Core | Plugins | Themes | Notes |"
-  echo "|------|--------|------|-----|----------------|------|---------|--------|-------|"
+  echo "| Site | Status | Plan | PHP | Backup age (d) | WP | Core | Plugins | Themes | Notes |"
+  echo "|------|--------|------|-----|----------------|----|------|---------|--------|-------|"
   printf '%s' "$results" | jq -r '
     [.[]|select(.status=="CRIT" or .status=="WARN")]
     | sort_by(.status)
     | .[]
-    | "| \(.site) | \(.status) | \(.plan // "-") | \(.php_version // "-") | \(.db_backup_age_days // "-") | \(.wp_core_update // "-") | \(.plugin_updates // "-") | \(.theme_updates // "-") | \(.notes) |"'
+    | "| \(.site) | \(.status) | \(.plan // "-") | \(.php_version // "-") | \(.db_backup_age_days // "-") | \(.wp_version // "-") | \(.wp_core_update // "-") | \(.plugin_updates // "-") | \(.theme_updates // "-") | \(.notes) |"'
   echo ""
   if [ "$skip_n" -gt 0 ] || [ "$err_n" -gt 0 ]; then
     echo "## Not scanned"
