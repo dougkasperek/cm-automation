@@ -143,6 +143,15 @@ JSON
     ;;
 
   remote:wp)
+    # DRAIN STDIN, because the real thing does.
+    #
+    # `terminus remote:wp` spawns ssh, and ssh reads stdin. Any caller that
+    # feeds a loop from stdin has the rest of its input eaten on the first
+    # site. This mock did not read stdin, so a full-mode scan of ten sites
+    # passed here while every real full-mode scan - laptop and CI alike -
+    # silently stopped after ONE site and reported the requested count.
+    # A mock that is politer than production certifies bugs as fixed.
+    cat >/dev/null 2>&1 || true
     se="${1:-}"
     # If the env preflight is working, this must NEVER be reached for
     # pfannenbergpartners. If it is, the run will hang - which is exactly the

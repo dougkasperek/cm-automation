@@ -75,6 +75,18 @@ else
   # every wrong number it has produced.
   check "frozensite has no wp_version key"      "null"   "$(jq -r '.[]|select(.site=="frozensite")|.wp_version' "$J")"
   check "site count"                            "10"     "$(jq 'length' "$J")"
+
+  # THE REGRESSION TEST FOR THE 2026-08-18 STDIN BUG.
+  # terminus remote:wp spawns ssh, ssh reads stdin, and the per-site loop used
+  # to read its site list FROM stdin - so ssh ate the remaining sites on the
+  # first one and every full-mode scan ever run stopped after one site while
+  # reporting the requested count. The loop now reads on fd 3. The mock drains
+  # stdin the way ssh does, so this fails if the descriptor is ever taken away.
+  M="${J%.json}.md"
+  check "the digest counts rows scanned, not rows requested" "10" \
+        "$(grep -oE 'Scanned \*\*[0-9]+\*\*' "$M" | grep -oE '[0-9]+')"
+  check "and claims no incompleteness when there is none" "0" \
+        "$(grep -c 'produced no row at all' "$M")"
 fi
 
 # The uninitialized-env hang is a 600s sleep in the mock. If the preflight ever
