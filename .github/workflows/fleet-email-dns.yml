@@ -1,0 +1,111 @@
+# Fleet email authentication check.
+#
+# This is deliberately the FIRST job to reach CI, ahead of the Pantheon scan,
+# because it needs no secret of any kind. That makes it a clean infrastructure
+# canary: if this job goes red, the problem is the runner, the network or the
+# workflow itself. It cannot be an auth problem, because there is nothing to
+# authenticate. If this is green and the Pantheon job is red, the machine token
+# is the answer and nobody has to guess.
+#
+# Thin wrapper on purpose. Every decision this makes is a flag on a script that
+# runs identically on a laptop. If you find yourself editing this file to change
+# WHAT gets checked, the change belongs in the script instead.
+
+name: Fleet Email DNS Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      compare_to_workbook:
+        description: "Also score the adopted rules against the workbook's recorded cells"
+        type: boolean
+        default: true
+      fail_on_regression:
+        description: "Fail the build if the adopted rule stops reproducing the workbook"
+        type: boolean
+        default: false
+  # Enable once a few manual runs have been reviewed. Cron is UTC and is not
+  # punctual; runs queue under load. That is fine here, nothing depends on the
+  # exact minute.
+  # schedule:
+  #   - cron: "17 11 * * 1-5"   # 07:17 America/New_York during EDT
+
+permissions:
+  contents: read
+
+jobs:
+  email-dns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Self-check (offline, no DNS)
+        # Runs before the real check on purpose. If the parsing or the recovered
+        # rule has been broken by an edit, that should surface here rather than
+        # as a puzzling diff in the results.
+        run: python3 test/test-email-dns.py
+
+      - name: Stamp
+        id: stamp
+        run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Check email authentication for the whole fleet
+        run: |
+          python3 scripts/fleet-email-dns.py check \
+            --inventory data/fleet-email-inventory.json \
+            --out reports \
+            --stamp "${{ steps.stamp.outputs.value }}" \
+            --workers 12
+
+      - name: Findings digest
+        run: |
+          {
+            echo "## Fleet email authentication"
+            echo
+            python3 scripts/fleet-email-dns.py report \
+              --scan "reports/fleet-email-dns-${{ steps.stamp.outputs.value }}.json"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Score the adopted rules against the workbook
+        if: ${{ inputs.compare_to_workbook }}
+        id: compare
+        run: |
+          {
+            echo "<details><summary>Rule agreement with the manual workbook</summary>"
+            echo
+            echo '```'
+            python3 scripts/fleet-email-dns.py compare \
+              --inventory data/fleet-email-inventory.json \
+              --scan "reports/fleet-email-dns-${{ steps.stamp.outputs.value }}.json" \
+              | tee /tmp/compare.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guard against rule drift
+        # The adopted rules were recovered empirically from the workbook. If a
+        # code change quietly stops reproducing it, that is a regression even
+        # though nothing crashed. Off by default until a few clean runs exist.
+        if: ${{ inputs.compare_to_workbook && inputs.fail_on_regression }}
+        run: |
+          worst=$(grep -oE 'BEST: [^ ]+ at [0-9.]+%' /tmp/compare.txt \
+                  | grep -oE '[0-9.]+' | sort -n | head -1)
+          echo "lowest rule agreement: ${worst}%"
+          awk -v w="$worst" 'BEGIN { exit (w >= 95) ? 0 : 1 }' \
+            || { echo "::error::rule agreement fell below 95%"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fleet-email-dns-${{ steps.stamp.outputs.value }}
+          path: reports/fleet-email-dns-*.json
+          retention-days: 90

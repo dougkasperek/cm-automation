@@ -1,0 +1,195 @@
+# ---------------------------------------------------------------------------
+# Pantheon Fleet Health Check
+#
+# THIS FILE IS DELIBERATELY THIN. It does platform glue only:
+#   install tools -> inject secrets -> run the script -> collect outputs.
+# All actual logic lives in scripts/pantheon-fleet-healthcheck.sh so the exact
+# same run is reproducible on a laptop and portable to Azure DevOps. If you
+# find yourself adding business logic here, it belongs in the script instead.
+#
+# PHASE 1 (now): manual dispatch, API-only, no SSH key, no schedule.
+# PHASE 2: flip run_mode to "full" once an SSH key is registered with Pantheon.
+# PHASE 3: uncomment the schedule block and turn fail_on_crit on.
+# ---------------------------------------------------------------------------
+name: Pantheon Fleet Health Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_mode:
+        description: "api-only (no SSH) or full (SSH + WP-CLI)"
+        type: choice
+        options: [api-only, full]
+        default: api-only
+      target_env:
+        description: "Pantheon environment to inspect"
+        type: choice
+        options: [live, test, dev]
+        default: live
+      sites:
+        description: "Optional comma-separated site subset (blank = whole fleet)"
+        type: string
+        default: ""
+      fail_on_crit:
+        description: "Fail the job when a CRIT finding exists"
+        type: boolean
+        default: false
+
+  # Validate the scripts themselves on every PR that touches them. This runs
+  # the mock harness only - no secrets, no network, no Pantheon.
+  pull_request:
+    paths:
+      - "scripts/**"
+      - "test/**"
+      - ".github/workflows/pantheon-fleet-healthcheck.yml"
+
+  # PHASE 3 - enable when the workflow has been trusted for a few cycles.
+  # schedule:
+  #   - cron: "0 11 * * 1"   # Mondays 11:00 UTC (07:00 ET / 06:00 EST)
+
+permissions:
+  contents: read
+
+env:
+  # Pin the Terminus version. An unpinned install means a Pantheon release can
+  # change this job's behaviour on a morning nobody touched the repo.
+  TERMINUS_VERSION: "4.3.2"
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Always-on, secret-free validation. Fails in ~90s if a script regressed.
+  # -------------------------------------------------------------------------
+  verify-scripts:
+    name: Verify scripts (offline mock)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint shell scripts
+        run: shellcheck -S warning scripts/*.sh scripts/lib/*.sh
+
+      - name: Run mock harness
+        run: ./test/run-local-test.sh
+
+  # -------------------------------------------------------------------------
+  # The real scan. Manual only in phase 1.
+  # -------------------------------------------------------------------------
+  fleet-healthcheck:
+    name: Fleet health check
+    if: github.event_name != 'pull_request'
+    needs: verify-scripts
+    runs-on: ubuntu-latest
+    # Platform-level ceiling. The script has its own per-call timeouts; this is
+    # the second safety net, so a pathological run cannot burn an entire hour
+    # of minutes the way the pfannenbergpartners hang burned a local terminal.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show tool versions
+        run: |
+          php --version | head -1
+          jq --version
+
+      - name: Install Terminus
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/terminus.phar \
+            "https://github.com/pantheon-systems/terminus/releases/download/${TERMINUS_VERSION}/terminus.phar"
+          chmod +x /tmp/terminus.phar
+          sudo mv /tmp/terminus.phar /usr/local/bin/terminus
+          terminus --version
+
+      # ---------------------------------------------------------------------
+      # SECRETS - phase 1 uses plain GitHub Actions secrets so the first run has
+      # exactly one moving part. docs/SECRETS.md describes the swap to Keeper,
+      # which replaces THIS STEP ONLY and leaves everything below untouched.
+      # ---------------------------------------------------------------------
+
+      # PHASE 2 ONLY. An ephemeral runner has no known_hosts, so without
+      # accept-new every single site emits a host-key prompt or warning. That
+      # warning on stdout is what broke jq on the first real fleet run.
+      - name: Configure SSH for Pantheon
+        if: inputs.run_mode == 'full'
+        env:
+          PANTHEON_SSH_KEY: ${{ secrets.PANTHEON_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PANTHEON_SSH_KEY}" ]; then
+            echo "::error::run_mode=full requires the PANTHEON_SSH_KEY secret."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${PANTHEON_SSH_KEY}" > ~/.ssh/id_pantheon
+          chmod 600 ~/.ssh/id_pantheon
+          cat >> ~/.ssh/config <<'EOF'
+          Host *.drush.in
+            IdentityFile ~/.ssh/id_pantheon
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Run fleet health check
+        id: scan
+        env:
+          # Passed via env, never as a CLI argument, so it cannot appear in a
+          # process listing or a command echo.
+          PANTHEON_MACHINE_TOKEN: ${{ secrets.PANTHEON_MACHINE_TOKEN }}
+          # Workflow inputs are read through env, never interpolated straight
+          # into the shell body. `${{ }}` inside a run block is textual
+          # substitution, so an input containing a quote or a semicolon would
+          # otherwise execute as shell.
+          IN_MODE: ${{ inputs.run_mode }}
+          IN_ENV: ${{ inputs.target_env }}
+          IN_SITES: ${{ inputs.sites }}
+          IN_FAIL: ${{ inputs.fail_on_crit }}
+        run: |
+          set -uo pipefail
+          set -- --out ./reports --env "$IN_ENV"
+          [ "$IN_MODE" = "api-only" ] && set -- "$@" --api-only
+          [ "$IN_FAIL" != "true" ] && set -- "$@" --no-fail-on-crit
+          [ -n "$IN_SITES" ] && set -- "$@" --sites "$IN_SITES"
+
+          echo "Running: pantheon-fleet-healthcheck.sh $*"
+          ./scripts/pantheon-fleet-healthcheck.sh "$@"
+          RC=$?
+          echo "script_exit=$RC" >> "$GITHUB_OUTPUT"
+          # The step must not die before artifacts are collected. Exit 2 (CRIT)
+          # is re-raised in the final step, after everything is uploaded.
+          exit 0
+
+      # Platform glue: turn the script's own Markdown digest into the job
+      # summary. The script does not know GitHub exists; this step is the only
+      # thing that would need rewriting for Azure DevOps.
+      - name: Publish digest to job summary
+        if: always()
+        run: |
+          MD="$(ls -1 reports/fleet-health-*.md 2>/dev/null | tail -n1 || true)"
+          if [ -n "$MD" ]; then
+            cat "$MD" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No digest produced - the scan failed before writing output." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fleet-health-${{ github.run_number }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Re-raise scan severity
+        if: always()
+        run: |
+          RC="${{ steps.scan.outputs.script_exit }}"
+          case "$RC" in
+            0) echo "Scan completed clean." ;;
+            2) echo "::warning::Scan found CRIT findings."
+               if [ "${{ inputs.fail_on_crit }}" = "true" ]; then exit 2; fi ;;
+            *) echo "::error::Scan failed with exit code $RC."; exit 1 ;;
+          esac

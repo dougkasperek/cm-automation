@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+#
+# test/mock/terminus
+# A fake `terminus` binary for offline testing. Put test/mock first on PATH and
+# the healthcheck script runs end to end with no Pantheon account, no network,
+# and no SSH key.
+#
+# It deliberately reproduces the failure modes that were hit against the REAL
+# fleet, so a fix can be proven before it goes near production:
+#
+#   normalsite          happy path, healthy
+#   staleback           DB backup 10 days old            -> CRIT
+#   coredrift           WP core update available         -> CRIT
+#   plugindrift         3 plugin updates + upstream      -> WARN
+#   frozensite          frozen:true                      -> FROZEN
+#   pfannenbergpartners live env exists but UNINITIALIZED -> SKIP, and it HANGS
+#                       if anything actually tries remote:wp against it
+#   noisysite           emits SSH host-key + Terminus notice noise on stdout
+#   ghostenv            has no live env at all            -> SKIP
+#   timeoutsite         env:list itself hangs             -> ERROR (not SKIP)
+#   drupalsite          non-WordPress, WP checks not applicable
+#
+set -u
+
+CMD="${1:-}"
+shift || true
+
+emit_noise() {
+  echo "Warning: Permanently added 'appserver.live.abc123.drush.in' to the list of known hosts."
+  echo "[notice] Command: appserver.live.abc123 -- wp plugin list"
+  echo " [0.42 s] Loaded configuration"
+}
+
+case "$CMD" in
+  auth:whoami)
+    if [ "${MOCK_LOGGED_IN:-0}" = "1" ]; then echo "ci@clevermethod.com"; exit 0; fi
+    exit 1
+    ;;
+
+  auth:login)
+    case "${1:-}" in
+      --machine-token=*)
+        tok="${1#--machine-token=}"
+        if [ "$tok" = "BAD" ] || [ -z "$tok" ]; then
+          echo "[error] Invalid machine token." >&2; exit 1
+        fi
+        echo "Logged in via machine token."; exit 0 ;;
+      *) echo "[error] no machine token" >&2; exit 1 ;;
+    esac
+    ;;
+
+  site:list)
+    cat <<'JSON'
+[
+ {"name":"normalsite","framework":"wordpress","plan_name":"Performance Small","frozen":false},
+ {"name":"staleback","framework":"wordpress","plan_name":"Basic","frozen":false},
+ {"name":"coredrift","framework":"wordpress","plan_name":"Performance Medium","frozen":false},
+ {"name":"plugindrift","framework":"wordpress","plan_name":"Basic","frozen":false},
+ {"name":"frozensite","framework":"wordpress","plan_name":"Sandbox","frozen":true},
+ {"name":"pfannenbergpartners","framework":"wordpress","plan_name":"Sandbox","frozen":false},
+ {"name":"noisysite","framework":"wordpress","plan_name":"Basic","frozen":false},
+ {"name":"ghostenv","framework":"wordpress","plan_name":"Sandbox","frozen":false},
+ {"name":"timeoutsite","framework":"wordpress","plan_name":"Basic","frozen":false},
+ {"name":"drupalsite","framework":"drupal9","plan_name":"Performance Small","frozen":false}
+]
+JSON
+    exit 0
+    ;;
+
+  env:list)
+    site="${1:-}"
+    case "$site" in
+      timeoutsite) sleep 600; exit 0 ;;   # hangs; must be caught by the timeout
+      ghostenv)    echo '{"dev":{"id":"dev","initialized":"true"}}'; exit 0 ;;
+      pfannenbergpartners)
+        echo '{"dev":{"id":"dev","initialized":"true"},"test":{"id":"test","initialized":"false"},"live":{"id":"live","initialized":"false"}}'
+        exit 0 ;;
+      noisysite)
+        emit_noise
+        echo '{"dev":{"id":"dev","initialized":"true"},"live":{"id":"live","initialized":"true"}}'
+        exit 0 ;;
+      *)
+        echo '{"dev":{"id":"dev","initialized":"true"},"test":{"id":"test","initialized":"true"},"live":{"id":"live","initialized":"true"}}'
+        exit 0 ;;
+    esac
+    ;;
+
+  env:info)
+    se="${1:-}"
+    case "$se" in
+      noisysite.*) emit_noise; echo "8.1" ;;
+      staleback.*) echo "7.4" ;;
+      *)           echo "8.2" ;;
+    esac
+    exit 0
+    ;;
+
+  backup:list)
+    se="${1:-}"
+    now="$(date +%s)"
+    case "$se" in
+      staleback.*)  echo "[{\"date\":$((now - 10*86400))}]" ;;
+      coredrift.*)  echo "[{\"date\":$((now - 3600))}]" ;;
+      noisysite.*)  emit_noise; echo "[{\"date\":$((now - 7200)).5}]" ;;   # float timestamp on purpose
+      ghostenv.*)   echo "[]" ;;
+      *)            echo "[{\"date\":$((now - 43200))},{\"date\":$((now - 90000))}]" ;;
+    esac
+    exit 0
+    ;;
+
+  site:upstream:clear-cache) exit 0 ;;
+
+  upstream:updates:list)
+    se="${1:-}"
+    case "$se" in
+      plugindrift.*) echo '[{"hash":"a1"},{"hash":"b2"}]' ;;
+      *)             echo '[]' ;;
+    esac
+    exit 0
+    ;;
+
+  remote:wp)
+    se="${1:-}"
+    # If the env preflight is working, this must NEVER be reached for
+    # pfannenbergpartners. If it is, the run will hang - which is exactly the
+    # production bug, reproduced here so a regression cannot pass silently.
+    case "$se" in
+      pfannenbergpartners.*) sleep 600; exit 0 ;;
+    esac
+    sub=""
+    for a in "$@"; do
+      case "$a" in core|plugin|theme) sub="$a"; break ;; esac
+    done
+    case "$se" in
+      noisysite.*) emit_noise ;;
+    esac
+    case "$se:$sub" in
+      coredrift.*:core)   echo '[{"version":"6.9.1","update_type":"major"}]' ;;
+      plugindrift.*:plugin) echo '[{"name":"akismet"},{"name":"wordfence"},{"name":"yoast"}]' ;;
+      *:core)   echo '[]' ;;
+      *:plugin) echo '[]' ;;
+      *:theme)  echo '[]' ;;
+      *)        echo '[]' ;;
+    esac
+    exit 0
+    ;;
+
+  *)
+    echo "[error] mock terminus: unhandled command '$CMD'" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,17 @@
+# Raw per-run scan output. Regenerable, and once ingested the ledger in
+# history/ holds the facts. CI keeps these as build artifacts for 90 days.
+reports/
+
+# The ledger is NOT ignored. history/*.jsonl is the append-only record of what
+# the fleet looked like over time, and it is the single asset here that cannot
+# be regenerated. See docs/DESIGN-REVISIT.md section B.
+!history/
+
+*.log
+.DS_Store
+.terminus/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
