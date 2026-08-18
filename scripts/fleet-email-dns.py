@@ -107,24 +107,35 @@ def _resolve(name, rdtype, timeout):
     r = dns.resolver.Resolver(configure=True)
     r.timeout = timeout
     r.lifetime = timeout * 2
-    try:
-        ans = r.resolve(name, rdtype)
-        if rdtype == "TXT":
-            vals = ["".join(s.decode() if isinstance(s, bytes) else s for s in rr.strings)
-                    for rr in ans]
-        else:
-            vals = [str(rr.target).rstrip(".") for rr in ans]
-        out = {"status": "ok", "records": vals}
-    except dns.resolver.NXDOMAIN:
-        out = {"status": "nxdomain", "records": []}
-    except dns.resolver.NoAnswer:
-        out = {"status": "noanswer", "records": []}
-    except dns.resolver.NoNameservers:
-        out = {"status": "nonameservers", "records": []}
-    except dns.exception.Timeout:
-        out = {"status": "timeout", "records": []}
-    except Exception as e:                              # noqa: BLE001 record, never guess
-        out = {"status": "error:" + type(e).__name__, "records": []}
+    # A timeout is not an answer. Retry once before recording it, because a
+    # single slow authoritative server would otherwise be indistinguishable
+    # from a domain that genuinely has no record.
+    out = None
+    for attempt in (1, 2):
+        try:
+            ans = r.resolve(name, rdtype)
+            if rdtype == "TXT":
+                vals = ["".join(s.decode() if isinstance(s, bytes) else s for s in rr.strings)
+                        for rr in ans]
+            else:
+                vals = [str(rr.target).rstrip(".") for rr in ans]
+            out = {"status": "ok", "records": vals}
+            break
+        except dns.resolver.NXDOMAIN:
+            out = {"status": "nxdomain", "records": []}
+            break
+        except dns.resolver.NoAnswer:
+            out = {"status": "noanswer", "records": []}
+            break
+        except dns.resolver.NoNameservers:
+            out = {"status": "nonameservers", "records": []}
+            break
+        except dns.exception.Timeout:
+            out = {"status": "timeout", "records": []}
+            continue
+        except Exception as e:                          # noqa: BLE001 record, never guess
+            out = {"status": "error:" + type(e).__name__, "records": []}
+            break
     with _lock:
         _cache[key] = out
         _stats["queries"] += 1
@@ -139,7 +150,19 @@ def cname(name, timeout=5.0):
     return _resolve(name, "CNAME", timeout)
 
 
-def parse_spf(records):
+# A lookup that did not complete is NOT an answer. These two statuses mean the
+# resolver reached an authoritative answer of "there is nothing here", which is
+# a real fact. Anything else (timeout, SERVFAIL, no reachable nameserver) means
+# we do not know, and the difference has to survive into the report.
+RESOLVED = ("ok", "nxdomain", "noanswer")
+
+
+def parse_spf(res):
+    if res["status"] not in RESOLVED:
+        return {"present": UNKNOWN, "lookup_status": res["status"],
+                "reason": "DNS lookup did not complete, so absence of a record "
+                          "is not established"}
+    records = res["records"]
     spf = [r for r in records if r.lower().startswith("v=spf1")]
     if not spf:
         return {"present": False}
@@ -157,7 +180,12 @@ def parse_spf(records):
     }
 
 
-def parse_dmarc(records):
+def parse_dmarc(res):
+    if res["status"] not in RESOLVED:
+        return {"present": UNKNOWN, "lookup_status": res["status"],
+                "reason": "DNS lookup did not complete, so absence of a record "
+                          "is not established"}
+    records = res["records"]
     d = [r for r in records if r.lower().startswith("v=dmarc1")]
     if not d:
         return {"present": False}
@@ -190,12 +218,14 @@ def find_dkim(base_domains, override=None):
     DNS has no way to enumerate selectors, so absence is not evidence.
     """
     sels = ([override] if override else []) + [s for s in DKIM_SELECTORS if s != override]
-    tried = 0
+    tried, unresolved = 0, 0
     for base in [b for b in base_domains if b]:
         for sel in sels:
             name = "%s._domainkey.%s" % (sel, base)
             tried += 1
             t = txt(name)
+            if t["status"] not in RESOLVED:
+                unresolved += 1
             hit = [r for r in t["records"] if "p=" in r or r.lower().startswith("v=dkim1")]
             if hit:
                 return {"present": True, "selector": sel, "at": base,
@@ -205,9 +235,10 @@ def find_dkim(base_domains, override=None):
                 return {"present": True, "selector": sel, "at": base,
                         "via": "cname", "target": c["records"][0], "probes": tried}
     return {"present": UNKNOWN, "selector": None, "probes": tried,
-            "reason": "no key at %d probed selector/domain combinations; DKIM selectors "
-                      "cannot be enumerated from DNS, so this is unknown, not a failure"
-                      % tried}
+            "unresolved_probes": unresolved,
+            "reason": "no key at %d probed selector/domain combinations (%d of those "
+                      "lookups did not complete); DKIM selectors cannot be enumerated "
+                      "from DNS, so this is unknown, not a failure" % (tried, unresolved)}
 
 
 def check_site(site):
@@ -223,7 +254,7 @@ def check_site(site):
     # or sending domain, never on the site's own domain.
     spf_target = sending or env_dom
     if spf_target:
-        out["spf"] = parse_spf(txt(spf_target)["records"])
+        out["spf"] = parse_spf(txt(spf_target))
         out["spf"]["checked_at"] = spf_target
     else:
         out["spf"] = {"present": UNKNOWN, "checked_at": None,
@@ -238,7 +269,7 @@ def check_site(site):
     #   from     - is the domain that appears to recipients actually protected?
     dm = {}
     if spf_target:
-        p = parse_dmarc(txt("_dmarc." + spf_target)["records"])
+        p = parse_dmarc(txt("_dmarc." + spf_target))
         p["checked_at"] = "_dmarc." + spf_target
         p["via_org_fallback"] = False
         # Record the exact-subdomain answer and the org-fallback answer as TWO
@@ -253,7 +284,7 @@ def check_site(site):
         if p.get("present"):
             dm["at_sending_org_domain"] = p
         elif org and org != spf_target:
-            p2 = parse_dmarc(txt("_dmarc." + org)["records"])
+            p2 = parse_dmarc(txt("_dmarc." + org))
             p2["checked_at"] = "_dmarc." + org
             p2["via_org_fallback"] = True
             dm["at_sending_org_domain"] = p2
@@ -264,13 +295,13 @@ def check_site(site):
         dm["at_sending_org_domain"] = dm["at_sending_domain"]
 
     dm_target = from_dom or domain
-    p = parse_dmarc(txt("_dmarc." + dm_target)["records"])
+    p = parse_dmarc(txt("_dmarc." + dm_target))
     p["checked_at"] = "_dmarc." + dm_target
     p["via_org_fallback"] = False
     if not p.get("present"):
         org = org_domain(dm_target)
         if org and org != dm_target:
-            p2 = parse_dmarc(txt("_dmarc." + org)["records"])
+            p2 = parse_dmarc(txt("_dmarc." + org))
             if p2.get("present"):
                 p2["checked_at"] = "_dmarc." + org
                 p2["via_org_fallback"] = True
@@ -412,18 +443,29 @@ def cmd_report(a):
         print("  %s\n" % note)
 
     grp("No SPF record on the sending domain",
-        [s["domain"] for s in sites if s["spf"].get("present") is not True],
-        "SPF cannot pass without one.")
+        [s["domain"] for s in sites if s["spf"].get("present") is False],
+        "Resolver returned an authoritative answer and there is no SPF record.")
+    grp("SPF could not be determined (lookup did not complete)",
+        [s["domain"] for s in sites if s["spf"].get("present") == UNKNOWN],
+        "Not a finding about the domain, a finding about the lookup. Re-run before acting.")
     grp("No DKIM key found at any probed selector",
         [s["domain"] for s in sites if s["dkim"].get("present") is not True],
         "UNKNOWN, not failure. Record the real selector in the inventory to close these.")
+    grp("DKIM probing was unreliable (some lookups did not complete)",
+        [s["domain"] for s in sites if s["dkim"].get("unresolved_probes")],
+        "Selector probing hit DNS failures, so even the unknown is less certain than usual.")
     own = [s for s in sites if (s.get("provider") or "").strip().lower() == "cm mailgun"]
     grp("clevermethod Mailgun setup incomplete (no DMARC at the sending subdomain)",
-        [s["domain"] for s in own if s["dmarc"]["at_sending_domain"].get("present") is not True],
+        [s["domain"] for s in own if s["dmarc"]["at_sending_domain"].get("present") is False],
         "The workbook's own Fail condition, on infrastructure clevermethod controls and can fix.")
     grp("No DMARC on the domain recipients actually see",
-        [s["domain"] for s in sites if s["dmarc"]["at_from_domain"].get("present") is not True],
+        [s["domain"] for s in sites if s["dmarc"]["at_from_domain"].get("present") is False],
         "Nothing protects the brand domain from spoofing.")
+    grp("DMARC could not be determined (lookup did not complete)",
+        [s["domain"] for s in sites
+         if s["dmarc"]["at_from_domain"].get("present") == UNKNOWN
+         or s["dmarc"]["at_sending_domain"].get("present") == UNKNOWN],
+        "Not a finding about the domain. Re-run before acting.")
     grp("DMARC published but p=none on the From domain",
         [s["domain"] for s in sites
          if s["dmarc"]["at_from_domain"].get("present")

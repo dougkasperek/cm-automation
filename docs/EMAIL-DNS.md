@@ -121,14 +121,63 @@ remaining unknowns permanently, record the real selector once per site as
 
 ---
 
+## A failed lookup is not an answer
+
+Found 2026-08-18, by exactly the CI-versus-local comparison `docs/RUNBOOK.md`
+insists on. GitHub reported 8 sites with no SPF record; the same code on a
+laptop reported 9. The extra one was `woodmarkpharmacy.com`, whose TXT lookup
+**times out** on some resolvers and answers on others.
+
+The code was recording a timeout as `present: false`, which rendered as "No SPF
+record on the sending domain." That is a fabricated negative, the same defect
+already found in the Pantheon scanner's `plugin_updates: 0`, and it appeared
+here in the tool written to avoid it.
+
+Fixed three ways:
+
+1. **A timeout is retried once** before it is believed, so a single slow
+   authoritative server does not become a finding.
+2. **Only `ok`, `nxdomain` and `noanswer` count as an answer.** Those mean the
+   resolver reached an authoritative "there is nothing here", which is a real
+   fact. A timeout, SERVFAIL or unreachable nameserver returns `unknown` with
+   the failing status attached.
+3. **The report separates them.** "No SPF record" and "SPF could not be
+   determined" are different sections, because one is a finding about the
+   domain and the other is a finding about the lookup.
+
+The correction is large. What read as **9 sites with no SPF** is really **2**,
+plus 7 where nothing was established:
+
+| | before | after |
+|---|---|---|
+| No SPF record (authoritative) | 9 | **2** |
+| SPF could not be determined | 0 | **7** |
+| No DMARC on the From domain | 14 | 14 |
+| DMARC could not be determined | 0 | **6** |
+
+Rule agreement against the workbook is unchanged at 97.1% on all three fields,
+so the correction does not disturb the recovered rule.
+
+Six of the seven undetermined domains are in the same group
+(`lactalis*`, `eamusicfest`, `hitsfoundation`), which points at one slow or
+filtered nameserver rather than seven separate problems. Cause-grouping again.
+
+**This is the argument for keeping the CI-versus-local comparison.** Neither run
+was wrong about its own resolver. The disagreement was the finding, and it would
+have been invisible if only one of them existed.
+
+---
+
 ## Current findings, 78 sites
 
 | finding | count | note |
 |---|---|---|
 | clevermethod Mailgun setup incomplete | 10 | infrastructure clevermethod controls and can fix |
-| No SPF record on the sending domain | 9 | SPF cannot pass without one |
+| No SPF record on the sending domain | 2 | authoritative answer, genuinely absent |
+| SPF could not be determined | 7 | lookup failed; re-run before acting |
 | No DKIM key at any probed selector | 8 | unknown, not failure; record the selector |
 | No DMARC on the From domain | 14 | nothing protects the brand domain |
+| DMARC could not be determined | 6 | lookup failed |
 | DMARC present but `p=none` on the From domain | 49 | monitoring only |
 | From domain not aligned with sending domain | 9 | DMARC fails even when SPF and DKIM pass |
 | DMARC inherited from the org domain | 9 | covered, by a record the site does not control |
