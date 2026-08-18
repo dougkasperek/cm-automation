@@ -171,7 +171,21 @@ i=0
 # Read the site list from a here-doc rather than a pipe, so the loop body runs
 # in THIS shell and `results` survives each iteration. A `| while read` pipeline
 # would run in a subshell and silently discard every result.
-while IFS= read -r site; do
+#
+# AND READ IT ON FD 3, NOT STDIN. This is the fix for a bug that made every
+# full-mode scan ever run - laptop and CI alike - scan exactly ONE site and
+# then report the requested count as though it had scanned them all.
+#
+# `terminus remote:wp` spawns ssh, and ssh reads stdin. With the here-doc on
+# stdin, ssh drained the remaining site names on the first site and the loop
+# exited with nothing left to read. api-only runs were unaffected, which is
+# why 52-site scans looked healthy and the bug stayed invisible until full
+# mode was switched on.
+#
+# A dedicated descriptor is immune to ANY child that reads stdin, not just the
+# ones we currently know about, which is why this is preferred over adding
+# </dev/null to each terminus call.
+while IFS= read -r site <&3; do
   [ -z "$site" ] && continue
   i=$((i+1))
   log "[$i/$TOTAL] $site"
@@ -355,7 +369,7 @@ while IFS= read -r site; do
   printf '%s' "$results" | jq '.' > "$JSON_OUT"
 
   sleep "$SLEEP_BETWEEN"
-done <<EOF
+done 3<<EOF
 $SITE_NAMES
 EOF
 
@@ -367,6 +381,7 @@ printf '%s' "$results" | jq -r '
   (.[] | [.site,.framework,.plan,.env,(.php_version//""),(.db_backup_age_days//""),(.upstream_pending//""),(.wp_checked//false),(.wp_version//""),(.wp_core_update//""),(.plugin_updates//""),(.theme_updates//""),.status,.notes])
   | @csv' > "$CSV_OUT"
 
+SCANNED=$(printf '%s' "$results" | jq 'length')
 crit=$(printf '%s' "$results"   | jq '[.[]|select(.status=="CRIT")]|length')
 warn_n=$(printf '%s' "$results" | jq '[.[]|select(.status=="WARN")]|length')
 ok=$(printf '%s' "$results"     | jq '[.[]|select(.status=="OK")]|length')
@@ -380,10 +395,24 @@ MODE_LABEL="full scan"
 {
   echo "# Pantheon Fleet Health - $STAMP"
   echo ""
-  echo "Scanned **$TOTAL** site(s), \`$TARGET_ENV\` environment. Mode: **$MODE_LABEL**."
+  # Report what was actually SCANNED, not what was requested.
+  #
+  # This line used to print $TOTAL, the size of the requested list, without
+  # ever checking it against the results. On 2026-08-18 it read "Scanned 3
+  # site(s)" above a table containing one row and a tally summing to one, and
+  # the run was marked a success. The count a reader trusts most was the one
+  # number nothing verified.
+  echo "Scanned **$SCANNED** site(s), \`$TARGET_ENV\` environment. Mode: **$MODE_LABEL**."
   echo ""
   echo "**$crit critical / $warn_n warning / $ok healthy / $frozen_n frozen / $skip_n skipped / $err_n errored**"
   echo ""
+  if [ "$SCANNED" -ne "$TOTAL" ]; then
+    echo "> **$((TOTAL - SCANNED)) of $TOTAL requested site(s) produced no row at all.**"
+    echo "> They were neither healthy nor skipped nor errored - they are simply"
+    echo "> absent, so nothing below says anything about them. Treat this run as"
+    echo "> incomplete rather than clean."
+    echo ""
+  fi
   if [ "$API_ONLY" -eq 1 ]; then
     echo "> API-only run. WordPress core, plugin, and theme update status was NOT"
     echo "> checked on any site. Backup age and upstream drift are complete."
@@ -422,6 +451,9 @@ log "  $MD_OUT"
 log "  $CSV_OUT"
 log "  $JSON_OUT"
 log "Summary: $crit CRIT / $warn_n WARN / $ok OK / $frozen_n FROZEN / $skip_n SKIP / $err_n ERROR"
+if [ "$SCANNED" -ne "$TOTAL" ]; then
+  warn "INCOMPLETE: $SCANNED of $TOTAL requested site(s) produced a row."
+fi
 
 if [ "$crit" -gt 0 ] && [ "$FAIL_ON_CRIT" -eq 1 ]; then
   exit 2
