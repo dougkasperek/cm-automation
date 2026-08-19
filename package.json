@@ -1,0 +1,13 @@
+{
+  "name": "cm-automation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "clevermethod operating layer: the consent sweep is the only workflow here that needs a browser, and this file exists for it alone",
+  "scripts": {
+    "consent:sweep": "node scripts/consent/run-sweep.mjs --inventory data/fleet-inventory.json --out reports"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}

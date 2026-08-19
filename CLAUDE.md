@@ -13,12 +13,16 @@ a second scoring model or a second site list.
 |---|---|
 | Pantheon fleet health | live, CI, 52 sites |
 | Email DNS (all hosts) | live, CI, 78 sites, no credentials |
-| **Nexcess** | **next.** 21 sites, zero coverage. `docs/NEXCESS-ARCHITECTURE.md` |
-| **Cookie consent monitor** | **next.** Exists standalone; joining the suite |
+| **Nexcess estate discovery** | **built; BLOCKED ON NEXCESS.** Cloudflare challenge. `docs/NEXCESS-SUPPORT.md` |
+| Nexcess SSH deep scan | not built. Gated on the account-level-SSH-key answer |
+| **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
 | Asana routing | not built. The missing shared plumbing |
 
 **The scoreboard is the UNKNOWN count on the dashboard** — sites no scan has
-ever reached. It is 32 today. That number falling is what progress looks like.
+ever reached. It is **32 today, measured 2026-08-19**. That number falling is
+what progress looks like. The Nexcess discovery workflow is built and should
+take it to 11, but **no Nexcess API call has been made yet, so 32 is still the
+real number.** Do not quote 11 until a live run has produced it.
 
 **Every rule below cost something to learn.** Nothing here is general good
 practice; it is all scar tissue. If a rule seems obvious, read the sentence
@@ -68,9 +72,26 @@ eleven times:
 | 35 sites SKIP | 32 of them nobody has ever scanned |
 | PHP 7.4 supported | the rule failed open when passed no date |
 | the back door is closed | a cached HTTP response from 15 minutes earlier |
+| `8.2 claimed`, `7.0.2 claimed` | the version had just been measured; the cell showed the workbook |
+| all four hosts `unreachable` | three served valid TLS; this laptop had no CA bundle |
+| `ok  site list returned` | HTTP 200 with a web page body; nothing had read it |
+| `the token was rejected` | a Cloudflare challenge; the token was never read at all |
+| `UNKNOWN: 0` | the coverage scoreboard, silently zeroed by a source that is not health |
+| 23 sites "no banner, no trackers" | HTTP 403 block pages; `ok` meant the navigation did not throw |
+| `js.cookie.min.js` in `cmpScripts` | a WooCommerce helper, not a consent manager |
+
+The thirteenth was our own diagnostic: `probe` printed one word for a DNS
+failure, a TLS trust failure and a dead host alike, and sent Doug looking at
+Nexcess when the fault was his Python's trust store. **A tool built to report
+absences honestly has to classify its own failures too.**
 
 **Only two were caught by code. The rest were caught by a person looking at a
-rendered page or a raw number.**
+rendered page or a raw number.** The twelfth was found the same way, on
+2026-08-19, by rendering the page with Nexcess facts in the ledger: 21 sites
+whose PHP and WordPress versions had just been measured still displayed the
+workbook's unverified claim. The measurement was in the ledger and scoring
+correctly, and invisible. Same family, pointed the other way — an absence
+standing in for a value.
 
 So: **unknown is a value, never folded into yes or no.** When adding a fact or
 a rule, state what it shows when the answer is unknown, and whether a reader
@@ -97,8 +118,26 @@ of scripts:
 4. **Its own CI workflow.** Credential-free checks run on every push; anything
    needing secrets is manual until it has been trusted for several cycles.
 
-The ledger, diff, dashboard and renderer need no changes for a new provider or
-a new check. They are keyed on site identity, not on host or tool.
+The ledger, diff, dashboard and **severity** need no changes for a new provider
+beyond the four steps above. They are keyed on site identity, not on host or
+tool. **The RENDERER is the exception and the claim used to say otherwise.**
+**Do not assert a fleet COUNT in a test.** Three tests broke this session on
+correct changes because they pinned a number that a new source was entitled to
+move: `len(FACT_FAMILIES) == 3`, `len(unknown) == 32`, and a fixture row count.
+Assert the property that must hold — "no site with no health evidence reads
+OK" — not the number that happened to be true the day it was written. This is
+the sibling of the existing rule about fleet-size assertions against
+`reports/`.
+
+**And a new source can change what an EXISTING number means**: the consent
+sweep took UNKNOWN from 32 to 0 without anything improving, because UNKNOWN
+answers "has any scan reached this" and was only ever the health-coverage
+number by accident. Check what your new source does to the numbers already on
+the page, not just to its own.
+Adding Nexcess needed three lines in `render-dashboard.py`, because a table
+column reads one named fact and a new provider answers the same question under
+a different name. Scoring is generic; display is not. Assume a new provider
+costs a renderer change and check the page.
 
 ## Data model, in one paragraph
 
@@ -139,6 +178,9 @@ change. Full rationale in `docs/SEVERITY.md`. Two rules worth restating:
 
 ```bash
 ./scripts/pantheon-fleet-healthcheck.sh --api-only --no-fail-on-crit  # scan
+./scripts/fleet-nexcess.py probe                                      # confirm the base URL
+./scripts/fleet-nexcess.py discover --stamp "$(date -u +%Y-%m-%d_%H%M)"
+node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs npm i
 ./scripts/fleet-ledger.py ingest --reports ./reports --history ./history
 ./scripts/render-dashboard.py --out fleet.html                        # the page
 ./scripts/publish-dashboard.sh --dry-run                              # preview
@@ -155,8 +197,10 @@ reads the ledger and is what gets published. Do not delete either.
 
 ```bash
 python3 test/test-ledger.py       # 106
-python3 test/test-severity.py     #  68
+python3 test/test-severity.py     #  70
 python3 test/test-email-dns.py    #  58   (needs dnspython)
+python3 test/test-nexcess.py      #  88   offline, no API call
+python3 test/test-consent.py      #  57   offline, no browser
 ./test/run-local-test.sh          #  32   1-3 min, silent, two mock sites hang
                                   #       on purpose. Never run it through the
                                   #       device bridge: 45s timeout.

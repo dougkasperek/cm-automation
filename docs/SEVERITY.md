@@ -195,3 +195,43 @@ call to make silently. Left for a decision.
 The ledger assertions run against the **committed** ledger in `history/`,
 pinned to a **named** run. Never against `reports/`, which is gitignored, and
 never positionally — see the note in `test/test-ledger.py` about cohort runs.
+
+
+---
+
+## Nexcess control-plane rules, added 2026-08-19
+
+The Nexcess adapter answers PHP and WordPress version from the hosting control
+plane rather than from WP-CLI. Those readings are stored under their own fact
+names (`nexcess_php_version`, `nexcess_app_version`) and scored by four rules.
+
+**`wp_below_floor` from `nexcess_app_version`** — CRIT, and only when no WP-CLI
+reading exists. Scoring CRIT on control-plane evidence is deliberate. Below the
+wp2shell floor is the highest-value finding this project has, the remediation
+column is blank for all 21 Nexcess sites, and being wrong in this direction
+produces a site to go and check. Being wrong in the other direction produces a
+green row over an unauthenticated RCE.
+
+**`php_eol` from `nexcess_php_version`** — CRIT. Same `PHP_SECURITY_EOL` table,
+same function. Used only when the health scan has no PHP version, never merged
+with it.
+
+**`nexcess_app_version_unknown`** — WARN. The API answered for the site but said
+nothing about the application. Without this rule such a site scores on PHP
+alone and can reach OK, which prints green over a site whose wp2shell status is
+exactly as unknown as it was before the scan ran.
+
+**`coverage_partial`** — WARN. Control-plane discovery gives no backup age, no
+plugin count and no theme count, and those are the facts that make a Pantheon
+OK mean anything. So a Nexcess site cannot reach OK on discovery evidence. The
+rule is conditioned on the site having Nexcess facts and NO health facts, so it
+retires itself the moment an SSH scan supplies them.
+
+**`wp_version_disagreement`** — WARN. WP-CLI and the control plane reporting
+different versions is a finding, not a tie to break. The WP-CLI reading is what
+scores, so a stale control-plane number cannot manufacture a CRIT.
+
+`nexcess_state` is recorded and scores nothing. Its value set has never been
+observed from this codebase — "stable" is the only value the vendor docs show —
+and a rule written against a guessed enum either never fires or fires on
+everything. Write the rule after a live run shows what the field contains.

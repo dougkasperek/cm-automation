@@ -360,6 +360,16 @@ if os.path.exists(inv_p):
     check("a workbook site Pantheon does not return is flagged the other way",
           recs["hoosierfeeder.com"].get("host_site_name") is None
           and "not observed" in recs["hoosierfeeder.com"]["reconciliation"])
+    # Added 2026-08-19 with the consent sweep's roster reconciliation, which
+    # measured this site rather than restating the workbook. The note has to
+    # keep saying what was MEASURED and what was not: the DNS answer is
+    # evidence that it is not on Pantheon, and it is not evidence of what host
+    # it IS on, because Cloudflare hides the origin.
+    check("...and the note records what was measured, separately from what "
+          "the workbook claims",
+          "MEASURED" in recs["hoosierfeeder.com"]["reconciliation"]
+          and "NOT been established"
+          in recs["hoosierfeeder.com"]["reconciliation"])
     check("attestations are carried over with their provenance",
           recs["galbanicheese.com"]["attestations"]["wp2shell_remedied"]["source"].startswith("workbook"))
     check("attestations record who and when, both empty on import",

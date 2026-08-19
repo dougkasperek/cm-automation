@@ -25,3 +25,12 @@ ci/github-actions/
 # Wrangler local state and account cache. Created on first `wrangler deploy`.
 # Contains an account id and login cache; not a secret, but not shared state.
 .wrangler/
+
+# Node. Only the consent sweep needs it: observing what a page requests before
+# consent requires running the page, and that means a browser. package.json and
+# package-lock.json ARE committed so CI resolves the same versions this ran on.
+node_modules/
+
+# Files Claude retired but cannot delete: the device bridge refuses rm, so they
+# are moved here and a person clears the folder. Never committed.
+_to_delete/

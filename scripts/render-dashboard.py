@@ -72,7 +72,7 @@ STATE_MEANING = {
     "CRIT": "act now",
     "WARN": "schedule it",
     "OK": "nothing pending that needs a person",
-    "UNKNOWN": "no health scan has ever reached these",
+    "UNKNOWN": "no scan of any kind has reached these",
     "SKIP": "no environment to measure",
     "FROZEN": "site frozen by Pantheon",
 }
@@ -176,6 +176,14 @@ def build_model(history_dir, inventory_path, today):
         coverage.append(("DKIM (selector must be known to verify)", frac(er, "dkim_selector")))
         coverage.append(("DMARC", frac(er, "dmarc_at_from_present")))
 
+    if "consent" in latest:
+        cr = list(L.rows_for(obs, latest["consent"]["run_id"]).values())
+        # Coverage here is "the page actually loaded", which is exactly what
+        # `consent_scan_ok` records. A site behind a WAF counts as not covered.
+        seen = [x for x in cr if x.get("consent_scan_ok") is True]
+        coverage.append(("Cookie consent (public homepage, needs a browser)",
+                         (len(seen), len(cr))))
+
     unreconciled = [s for s in sites
                     if s.get("in_workbook") is False or s.get("reconciliation")]
 
@@ -195,7 +203,13 @@ def build_model(history_dir, inventory_path, today):
 EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               "wp_core_update", "wp_checked", "plugin_updates", "theme_updates",
               "upstream_pending", "db_backup_age_days", "frozen",
-              "in_workbook", "production")
+              "in_workbook", "production",
+              # Control-plane facts, under their own names. A consumer that
+              # wants "the WordPress version" has to choose between
+              # `wp_version` and `nexcess_app_version` and therefore has to
+              # know which is which, which is the point.
+              "nexcess_site_id", "nexcess_unix_username", "nexcess_state",
+              "nexcess_php_version", "nexcess_app_version")
 
 
 def emit_data(m):
@@ -221,8 +235,15 @@ def emit_data(m):
             row[k] = s.get(k)
         sites.append(row)
 
+    no_health = sorted(s["site_id"] for s in m["sites"]
+                       if any(r.get("code") == "coverage_partial"
+                              for r in (s.get("severity") or {}).get("reasons", [])))
     return {
         "schema": "fleet-dashboard/2",
+        # The health-coverage gap, as a first-class number rather than
+        # something a consumer has to re-derive from reasons. See the comment
+        # on the same block in render().
+        "no_health_evidence": no_health,
         # Bumped from the v1 {stamp, kind, rows} shape. A consumer written
         # against v1 must fail on the version rather than silently read fields
         # that no longer mean what they meant.
@@ -381,6 +402,33 @@ def render(m):
           % (chip(st, STATE_TONE.get(st, "muted")), e(n),
              e(STATE_MEANING.get(st, ""))))
     A("</div>")
+
+    # HEALTH COVERAGE, stated separately from the status counts.
+    #
+    # Added 2026-08-19 with the consent sweep, because rendering the page with
+    # consent facts in the ledger took UNKNOWN from 32 to ZERO. Nothing had
+    # improved: the sweep reached every domain, so no site was left in "nobody
+    # looked", and the number Doug named as the scoreboard silently became 0.
+    #
+    # UNKNOWN answers "has any scan reached this site". It never answered "do
+    # we know this site's health", and the two were only ever the same number
+    # by accident, while health was the only scan there was. Every source added
+    # to the suite breaks that coincidence again, so the health-coverage
+    # question gets its own line rather than riding on a status count.
+    no_health = [s for s in m["sites"]
+                 if any(r.get("code") == "coverage_partial"
+                        for r in (s.get("severity") or {}).get("reasons", []))]
+    if no_health:
+        A('<p class=sub style="margin:10px 0 0"><strong>%d site(s) have been '
+          'looked at but have NO health evidence</strong> — no backup age, no '
+          'plugin or theme count. They score WARN rather than OK for that '
+          'reason alone. This is the coverage number to watch; it is not the '
+          'same question as UNKNOWN, which asks whether any scan reached a '
+          'site at all.</p>' % len(no_health))
+        A('<p class=quiet style="margin:4px 0 0">%s</p>'
+          % ", ".join("<code>%s</code>" % e(x["site_id"])
+                      for x in sorted(no_health, key=lambda r: r["site_id"])[:40]))
+
     if h["excluded_sites"]:
         A('<p class=quiet style="margin:10px 0 0">Excluded from these counts: '
           '%s. Marked <code>production: false</code> in the inventory by a '
@@ -500,6 +548,8 @@ def render(m):
     A("<h2>Every site</h2>")
     A('<p class=sub style="margin:-4px 0 10px">Blank cells are not tidy, they are '
       'the point: <strong>not checked</strong> means no scan has looked, and '
+      '<em>per host</em> means the hosting control plane reported it rather '
+      'than a scan reading it off the site, and '
       '<em>claimed</em> means the value comes from the manual workbook and has '
       'never been verified. WordPress core, plugin and theme status needs the '
       'SSH-based full scan, which is not wired up yet.</p>')
@@ -543,17 +593,35 @@ def render(m):
             return chip("%d days ago" % d, "good")
         return chip("%d days ago" % d, "bad")
 
-    def observed(v, claim=None):
-        """An observed value, or an explicit gap. A workbook claim never fills
-        the gap silently; it is shown as a claim, in muted ink."""
+    # Three tiers of evidence, strongest first, and the cell says which tier it
+    # is showing. Added 2026-08-19 with the Nexcess source, because rendering
+    # the page with control-plane facts in the ledger showed 21 sites whose PHP
+    # and WordPress versions had just been MEASURED still displaying the
+    # workbook's unverified claim -- the measurement was in the ledger, scoring
+    # correctly, and invisible on the page. Same family as every other entry in
+    # CLAUDE.md's table, pointed the other way: an absence standing in for a
+    # value this time.
+    #
+    #   read off the site by WP-CLI     plain text, no qualifier
+    #   reported by the hosting API     "per host", muted qualifier
+    #   typed into the audit workbook   "claimed", muted, whole cell quiet
+    #   none of the above               "not checked"
+    def observed(v, claim=None, plane=None):
+        """An observed value, or an explicit gap. Neither a control-plane
+        reading nor a workbook claim ever fills the gap silently."""
         if v not in (None, L.UNKNOWN):
             return e(v)
+        if plane not in (None, L.UNKNOWN, ""):
+            return ('<span title="Reported by the hosting control plane, not '
+                    'read off the site itself. Stronger than the workbook, '
+                    'weaker than a WP-CLI reading.">%s <em class=quiet>per '
+                    'host</em></span>' % e(plane))
         if claim:
             return ('<span class=quiet title="From the manual workbook. '
                     'Not verified by any scan.">%s <em>claimed</em></span>' % e(claim))
         return '<span class=quiet>not checked</span>'
 
-    def wp_version_cell(v, claim):
+    def wp_version_cell(v, claim, plane=None):
         """Observed WordPress version against the workbook's claim.
 
         This is the comparison the project exists to make. The workbook asserts
@@ -563,6 +631,17 @@ def render(m):
         this page can show, so a disagreement is called out rather than left for
         a reader to spot by comparing two columns.
         """
+        if v in (None, L.UNKNOWN) and plane not in (None, L.UNKNOWN, ""):
+            # The control plane answered where WP-CLI has not run. This is the
+            # only evidence that exists for the 21 Nexcess sites, and it is the
+            # evidence that answers the wp2shell question for them, so it is
+            # shown -- qualified, and still compared against the workbook.
+            cell = ('%s <em class=quiet title="Reported by the hosting control '
+                    'plane, not read off the site itself.">per host</em>'
+                    % e(plane))
+            if claim and str(plane) != str(claim):
+                cell += " " + chip("workbook says %s" % claim, "bad")
+            return cell
         if v in (None, L.UNKNOWN):
             if claim:
                 return ('<span class=quiet title="From the manual workbook. '
@@ -590,10 +669,12 @@ def render(m):
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""),
              e(s["site_id"]), e(s.get("host") or "—"), state,
-             observed(s.get("php_version"), claim.get("php_version")),
+             observed(s.get("php_version"), claim.get("php_version"),
+                      s.get("nexcess_php_version")),
              backup(s.get("db_backup_age_days")),
              e(s.get("upstream_pending", "—")),
-             wp_version_cell(s.get("wp_version"), claim.get("wp_version")),
+             wp_version_cell(s.get("wp_version"), claim.get("wp_version"),
+                             s.get("nexcess_app_version")),
              # No workbook claim is passed here on purpose. The workbook
              # records a VERSION; this column answers whether an update is
              # PENDING. Showing "7.0.2 claimed" in an update-pending column

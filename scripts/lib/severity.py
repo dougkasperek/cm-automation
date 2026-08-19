@@ -112,12 +112,42 @@ UNKNOWN = "unknown"
 # an input. `upstream_pending` and `theme_updates` are deliberately absent:
 # they are recorded and displayed, and they score nothing.
 SCORING_FACTS = ("frozen", "wp_checked", "wp_version", "php_version",
-                 "db_backup_age_days", "wp_core_update", "plugin_updates")
+                 "db_backup_age_days", "wp_core_update", "plugin_updates",
+                 "nexcess_app_version", "nexcess_php_version",
+                 "consent_scan_ok", "consent_banner_detected",
+                 "consent_pre_trackers")
 
 # The fact names a Pantheon health observation always carries, whatever their
 # values. Presence of ANY of these means the health scanner saw this site.
 HEALTH_FACTS = ("php_version", "wp_checked", "db_backup_age_days",
                 "upstream_pending", "plan")
+
+# The same idea for the Nexcess control-plane adapter. A Nexcess row is a
+# DIFFERENT kind of look than a health scan: it is what the hosting control
+# plane reports about a site, not what WP-CLI read off the filesystem. The
+# names are prefixed so the two can never be confused for each other on one
+# timeline, and so that when SSH lands in Phase 2 a disagreement between
+# `nexcess_app_version` and `wp_version` shows up as a finding instead of
+# overwriting one with the other.
+NEXCESS_FACTS = ("nexcess_site_id", "nexcess_php_version",
+                 "nexcess_app_version", "nexcess_state", "nexcess_package")
+
+# Cookie-consent coverage, from a browser observation of the public homepage.
+# `consent_scan_ok` is listed first and is present on EVERY consent row,
+# including rows where the page would not load, so its presence means "the
+# sweep reached this site" and its VALUE says whether the look succeeded.
+CONSENT_FACTS = ("consent_scan_ok", "consent_banner_detected",
+                 "consent_pre_trackers")
+
+# Any scan of any kind reached this site. Used ONLY to decide UNKNOWN. Adding
+# a provider means adding its fact tuple here, or 21 measured sites keep
+# rendering as "nobody looked".
+#
+# The email/DNS facts are deliberately NOT here. That check answers a different
+# question -- can this domain send mail that authenticates -- and a site with
+# only email facts genuinely has had no scan reach the SITE. Adding it would
+# move 78 sites out of UNKNOWN without anyone having looked at one of them.
+COVERAGE_FACTS = HEALTH_FACTS + NEXCESS_FACTS + CONSENT_FACTS
 
 # States, worst first. Callers that need to sort or pick a worst-of should use
 # this rather than hardcoding an order.
@@ -230,13 +260,18 @@ def evaluate(site, today=None):
     # evidence gap rendering as a shrug. Same bug as every other entry in the
     # handoff's table: a value that looks like an answer standing in for an
     # absence.
-    if not any(k in site for k in HEALTH_FACTS):
+    if not any(k in site for k in COVERAGE_FACTS):
         return _result("UNKNOWN", [], [], site)
 
     # The health scan reached it, but there is no environment to measure: a
     # live env that was never initialized. Distinct from UNKNOWN above. SKIP
     # means there is nothing there; UNKNOWN means nobody looked.
-    if site.get("wp_checked") is not True and _version(site.get("php_version")) is None:
+    nexcess_seen = any(k in site for k in NEXCESS_FACTS)
+    consent_seen = any(k in site for k in CONSENT_FACTS)
+    health_seen = any(k in site for k in HEALTH_FACTS)
+    if (not nexcess_seen and not consent_seen
+            and site.get("wp_checked") is not True
+            and _version(site.get("php_version")) is None):
         return _result("SKIP", [], [], site)
 
     # --- CRIT ---------------------------------------------------------------
@@ -246,11 +281,36 @@ def evaluate(site, today=None):
             "WordPress %s is below the %s security floor (wp2shell)"
             % (site.get("wp_version"), ".".join(map(str, WP_SECURITY_FLOOR))))
 
+    # The same question, answered by the Nexcess control plane instead of by
+    # WP-CLI. It fires only when no WP-CLI reading exists, so a site with both
+    # is scored on the one that was read off the filesystem.
+    #
+    # A control-plane version is weaker evidence than `wp core version`, and
+    # scoring CRIT on it is deliberate: below the wp2shell floor is the single
+    # highest-value finding this project has, the remediation column is blank
+    # for all 21 Nexcess sites, and being wrong in this direction produces a
+    # site to go and check. Being wrong in the other direction produces a green
+    # row over an unauthenticated RCE.
+    nx_wp = _version(site.get("nexcess_app_version"))
+    if wp is None and nx_wp is not None and nx_wp < WP_SECURITY_FLOOR:
+        add(crit, "wp_below_floor",
+            "WordPress %s is below the %s security floor (wp2shell), per the "
+            "Nexcess control plane" % (site.get("nexcess_app_version"),
+                                       ".".join(map(str, WP_SECURITY_FLOOR))))
+
     tier, days = php_support(site.get("php_version"), today)
+    # Fall back to the control plane's PHP version only when the health scan
+    # has none. Never merge the two into one value: keeping them separate is
+    # what makes a disagreement visible below instead of silent.
+    if tier == UNKNOWN and site.get("nexcess_php_version") not in (None, UNKNOWN):
+        tier, days = php_support(site.get("nexcess_php_version"), today)
+        php_shown = site.get("nexcess_php_version")
+    else:
+        php_shown = site.get("php_version")
     if tier == "eol":
         add(crit, "php_eol",
             "PHP %s stopped receiving security patches on %s"
-            % (site.get("php_version"), PHP_SECURITY_EOL[str(site.get("php_version"))]))
+            % (php_shown, PHP_SECURITY_EOL[str(php_shown)]))
 
     backup = _num(site.get("db_backup_age_days"))
     if backup is not None and backup > BACKUP_CRIT_DAYS:
@@ -280,6 +340,82 @@ def evaluate(site, today=None):
         add(warn, "wp_version_unknown",
             "Deep scan ran but the WordPress version could not be read")
 
+    # --- Nexcess control-plane rules ---------------------------------------
+    # The API answered for this site but told us nothing about the application
+    # version. Without this rule such a site scores on PHP alone and can reach
+    # OK, which prints a green row over a site whose wp2shell status is still
+    # exactly as unknown as it was before the scan ran. That is the shape of
+    # every row in CLAUDE.md's table.
+    if nexcess_seen and wp is None and nx_wp is None:
+        add(warn, "nexcess_app_version_unknown",
+            "The Nexcess control plane returned no application version, so the "
+            "wp2shell question is still unanswered for this site")
+
+    # The two readings disagree. Neither is overwritten and neither is picked:
+    # the disagreement is the finding, and it is the reason the control-plane
+    # facts are stored under their own names.
+    if wp is not None and nx_wp is not None and wp != nx_wp:
+        add(warn, "wp_version_disagreement",
+            "WP-CLI reports WordPress %s, the Nexcess control plane reports %s"
+            % (site.get("wp_version"), site.get("nexcess_app_version")))
+
+    # --- cookie-consent rules -----------------------------------------------
+    # WARN, not CRIT. Doug's ruling, 2026-08-19: CRIT stays a security tier --
+    # act now, unpatched RCE, no backup, PHP past end of support -- so that the
+    # CRIT count remains a short list somebody actually works through. A
+    # consent gap is real and it is a client conversation, which is what WARN
+    # means here.
+    #
+    # NEITHER RULE IS A COMPLIANCE VERDICT, and the wording is the guardrail:
+    # they report what was observed on the sampled page. Do not reword these
+    # into "non-compliant" -- see docs/CONSENT.md.
+    pre = _num(site.get("consent_pre_trackers"))
+    if pre:
+        add(warn, "consent_pre_consent_trackers",
+            "%d tracker(s) fired on the homepage before any consent "
+            "interaction: %s" % (pre, site.get("consent_pre_tracker_names")
+                                 if site.get("consent_pre_tracker_names")
+                                 not in (None, UNKNOWN) else "see the scan"))
+
+    if site.get("consent_banner_detected") is False:
+        add(warn, "consent_no_tooling",
+            "No consent tooling was detected on the homepage")
+
+    # A page that would not load for the browser scores NOTHING. Plenty of
+    # sites refuse headless clients, and a rule that fires on all of them would
+    # put a WARN floor under the fleet for a reason that is identical
+    # everywhere -- the exact mistake `upstream_pending` was making. It is
+    # recorded, shown, and left to a person.
+    if site.get("consent_scan_ok") is False:
+        st = site.get("consent_http_status")
+        if isinstance(st, int) and st >= 400:
+            # The most common case by a distance: a WAF refusing the headless
+            # client. 23 of 78 sites on the first real sweep. Naming the status
+            # matters because it is the difference between "this site is down"
+            # and "this site will not talk to our scanner".
+            info.append("The consent sweep got HTTP %d, so it saw an error page "
+                        "rather than the site. Its consent posture is "
+                        "unmeasured, not clean." % st)
+        else:
+            info.append("The consent sweep could not load this site; its consent "
+                        "posture is unmeasured, not clean")
+
+    # Partial coverage. There is no backup age, no plugin count and no theme
+    # count for this site, and those are the facts that make a Pantheon OK mean
+    # anything. So a site seen ONLY by a provider adapter or the consent sweep
+    # cannot reach OK; it reaches WARN and says what is missing. The rule
+    # retires itself for a site the moment a health scan supplies those facts.
+    #
+    # Generalised 2026-08-19 when the consent sweep arrived: it was written for
+    # Nexcess, but the condition was never about Nexcess. It is about a site
+    # having been LOOKED AT without its health being ESTABLISHED, and every new
+    # source that is not a health scan creates more of those.
+    if (nexcess_seen or consent_seen) and not health_seen:
+        missing = "Nexcess control-plane discovery" if nexcess_seen else "the consent sweep"
+        add(warn, "coverage_partial",
+            "Seen only by %s: no backup age, plugin or theme evidence exists "
+            "for this site" % missing)
+
     # --- informational ------------------------------------------------------
     # Pending upstream commits used to be a WARN. Every site has 1 or 2, always,
     # so it scored the whole fleet as WARN and made OK unreachable. It is a real
@@ -291,8 +427,17 @@ def evaluate(site, today=None):
     # a PLANNING item, which is where the ledger already puts it.
     if tier == "expiring":
         info.append("PHP %s leaves security support in %d days (%s)"
-                    % (site.get("php_version"), days,
-                       PHP_SECURITY_EOL[str(site.get("php_version"))]))
+                    % (php_shown, days, PHP_SECURITY_EOL[str(php_shown)]))
+
+    app = site.get("nexcess_app")
+    if app not in (None, UNKNOWN, "wordpress"):
+        info.append("Nexcess reports the application as %r, not WordPress" % app)
+
+    # `nexcess_state` is recorded and deliberately scores NOTHING. Its value
+    # set has never been observed from this codebase -- "stable" is the only
+    # value the vendor docs show -- and a rule written against a guessed enum
+    # either never fires or fires on everything. Add the rule after a live run
+    # shows what the field actually contains.
 
     up = _num(site.get("upstream_pending"))
     if up:
