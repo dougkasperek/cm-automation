@@ -221,7 +221,20 @@ EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               # `wp_version` and `nexcess_app_version` and therefore has to
               # know which is which, which is the point.
               "nexcess_site_id", "nexcess_unix_username", "nexcess_state",
-              "nexcess_php_version", "nexcess_app_version")
+              "nexcess_php_version", "nexcess_app_version",
+              # Consent facts. Omitted on the day the sweep landed, which meant
+              # the PAGE showed 34 no-tooling and 28 leaking sites while the
+              # feed next to it carried no consent data at all. The docstring
+              # below says the two cannot disagree because they come from one
+              # model -- true for facts that are emitted, and no protection at
+              # all against a whole family being left out of this tuple.
+              # test-severity.py now asserts SCORING_FACTS is a subset of this,
+              # so a fact that can change a site's status cannot be invisible
+              # to a consumer asking why.
+              "consent_scan_ok", "consent_banner_vendor",
+              "consent_banner_detected", "consent_pre_trackers",
+              "consent_pre_tracker_names", "consent_mode_denied",
+              "consent_http_status", "consent_final_url")
 
 
 def emit_data(m):
