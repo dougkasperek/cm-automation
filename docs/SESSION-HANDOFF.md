@@ -8,6 +8,70 @@ written down.
 
 ---
 
+## PICK UP HERE — 2026-08-19, end of day
+
+**Everything is committed and the tree is clean.** Tests: ledger 107, severity
+71, nexcess 88, consent 59. All five workflow files match their staging copies.
+`fleet.thudstaff.com` is LIVE and published by CI.
+
+### Tomorrow, in order
+
+1. **Re-run the consent sweep from Doug's Mac and republish.** The newest run in
+   the ledger is the CI one, which saw only 38 of 78 sites, so the live page is
+   currently missing 16 measured sites including `hoosierfeeder.com`'s leak.
+   ```
+   node scripts/consent/run-sweep.mjs --inventory data/fleet-inventory.json \
+     --out reports --stamp "$(date -u +%Y-%m-%d_%H%M)" --concurrency 4
+   python3 scripts/fleet-ledger.py ingest --reports ./reports --history ./history
+   CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... ./scripts/publish-dashboard.sh
+   ```
+2. **Ask Pantheon to allowlist the consent scanner.** 20 blocked sites, one
+   conversation, on an account clevermethod owns. See "the 403s" below.
+3. **Send `docs/NEXCESS-SUPPORT.md`.** Unchanged and still blocking.
+4. **Build Asana routing.** The last unbuilt step of deck slide 16, and now
+   there is real material to route.
+
+### The 403s, split by host — this is the finding, not "the scanner is blocked"
+
+| host | blocked from a laptop | blocked from CI | of |
+|---|---|---|---|
+| **CM Pantheon** | **20** | 22 | 47 |
+| **CM Nexcess** | **1** | **15** | 21 |
+| Azure | 3 | 3 | 4 |
+| Flywheel / Pressable / WP Engine | 0 | 0 | 6 |
+
+**Two different causes, and conflating them makes this look like one big
+blocker when it is two small ones.**
+
+- **Nexcess is IP reputation.** 1 from a residential connection, 15 from a
+  GitHub runner. Nothing to fix — run it from a normal connection.
+- **Pantheon is a bot rule.** 20 blocked from both IPs, identically. Not about
+  where the request comes from. Pantheon is clevermethod's own account.
+
+**DO NOT enable the consent workflow's `schedule:` block until Pantheon
+allowlists.** A CI run sees 38 sites where a laptop sees 54, and the dashboard
+renders the LATEST run per source, so every scheduled run would replace a
+better measurement with a worse one. Zero sites were recovered by running in
+CI; it is a strict subset.
+
+**Worth doing with the allowlist request:** give the scanner an identifying
+User-Agent (`cm-automation-consent-scan/1.0 (+url; read-only; contact)`)
+instead of default headless Chrome. That turns "allowlist these IPs" into
+"allowlist this string". Ship it WITH the request, not before — on its own a
+non-browser UA may be blocked harder, not less.
+
+### Also open
+- Nothing warns when a run sees FEWER sites than the previous run of the same
+  source. The ledger already refuses to diff against a lower-coverage baseline;
+  the same idea belongs in the persist step. This gap is how the CI coverage
+  drop went unnoticed until two scan files were compared by hand.
+- `hitsfoundation.org` fails TLS negotiation outright. Unrelated to consent.
+- `pantheon-fleet-healthcheck.yml` still has its own inline publish job; folding
+  it into `_publish-dashboard.yml` is a tidy-up.
+- The 5 sites needing a production ruling, and the human triage queue.
+
+---
+
 ## READ THIS FIRST IF YOU ARE STARTING COLD
 
 **`CLAUDE.md` in the repo root is the operating manual.** Read it before
