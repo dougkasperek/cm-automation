@@ -1,7 +1,15 @@
 # cm-automation
 
-Read-only automation for the clevermethod site fleet: 78 WordPress sites across
-Pantheon, Nexcess, Azure, Pressable, Flywheel and WP Engine.
+Read-only automation for the clevermethod site fleet: **84 WordPress sites**
+across Pantheon, Nexcess, Azure, Pressable, Flywheel and WP Engine.
+
+The manual audit workbook lists 78. The extra six are sites the workbook does
+not have, found by comparing it against what the hosts actually return, and two
+of them turned out to be the worst-maintained sites in the fleet. 78 is the
+claim; 84 is the count.
+
+**Working in this repo?** Read `CLAUDE.md` first. This file maps the project;
+that one holds the rules, the boundaries and the mistakes already made.
 
 Everything here is read-only. Nothing applies an update, and execution authority
 is a ladder rather than a switch. See `docs/DESIGN-REVISIT.md`.

@@ -1,11 +1,77 @@
 # Fleet automation: handoff for the next session
 
-**Written 2026-08-18, second revision, late.** Chats share this folder and
-project memory, never each other's conversation history, so everything needed to
-resume is written down.
+**Rewritten 2026-08-19, end of day.** Chats share this folder and project memory,
+never each other's conversation history, so everything needed to resume is
+written down.
 
-**This supersedes `DESIGN-BRIEF.md`**, and it replaces the earlier version of
-itself from the same day, which is now wrong in several places.
+**This supersedes `DESIGN-BRIEF.md` and every earlier version of itself.**
+
+---
+
+## READ THIS FIRST IF YOU ARE STARTING COLD
+
+**`CLAUDE.md` in the repo root is the operating manual.** Read it before
+touching anything. It holds the hard boundaries, the definition of done, and
+the eleven-row table of times this project mistook a confident-looking value
+for an answer. It was written 2026-08-19 and did not exist before that.
+
+### The scope changed today
+
+Doug, 2026-08-19: *"this dashboard (and eventual operating layer) is only
+useful if it considers all of our sites, not just pantheon. additionally, i
+want to have the cookie consent monitor built and running as part of a 'suite'
+of automations built for our operation layer."*
+
+So this is no longer one Pantheon workflow. It is **a suite feeding one
+operating layer**, and the next two pieces are:
+
+1. **Nexcess plumbing** — 21 sites with zero coverage today. See
+   `docs/NEXCESS-ARCHITECTURE.md`, imported today and **entirely unverified**.
+2. **Cookie consent monitor** — already exists as a runnable standalone pilot
+   at `DK Sandbox/claude/Cowork Automation Portfolio/cookie-consent/`. Node +
+   Playwright, read-only, zero credentials. It needs to be brought into the
+   suite: same ledger, same dashboard, same severity vocabulary.
+
+---
+
+## WHAT SHIPPED TODAY, 2026-08-19
+
+**The dashboard is live at `https://fleet.thudstaff.com`**, behind Cloudflare
+Access, updated automatically by CI. That was the goal of the whole build.
+
+| thing | state |
+|---|---|
+| Severity model | **rebuilt.** `scripts/lib/severity.py`, the only scorer. `docs/SEVERITY.md` |
+| Publish path | **rewired.** Renders from the ledger, uploads straight to R2 |
+| Worker `cm-fleet` | **read-only**, no write route, no secrets. `workers_dev = false` |
+| CI end-to-end | **proven.** scan -> ingest -> push -> render -> publish, all green |
+| `CLAUDE.md` | **written.** The operating manual the deck promised |
+| Tests | ledger 106, severity 68, mock 32, email 58 |
+
+### The severity rebuild, in one paragraph
+
+The old model scored **33 of 52 sites CRIT and nothing healthy**, because
+`upstream_pending > 0` was a WARN and no site ever has zero. It also missed the
+one genuinely exposed site, because that site's `wp_core_update` read
+`up-to-date` while it ran WordPress 6.9.4. Scoring now lives in one module,
+re-derived at render time, so a threshold change rescores all history instead
+of reporting as a fleet change. Current: **2 CRIT / 32 WARN / 13 OK /
+32 UNKNOWN / 3 SKIP / 1 FROZEN.**
+
+**The 32 UNKNOWN are the point of the next phase: they are the sites no health
+scan has ever reached.** 21 Nexcess plus the outlier hosts.
+
+### The two real CRITs
+
+- **`hoffmanscheese`** — no database backup in 721 days. Also absent from the
+  audit workbook. Still needs a person.
+- **`runtalnorthamerica.com`** — PHP 8.1, past end of security support since
+  2025-12-31. Found only because the PHP table was unified; a hardcoded
+  `< 8.0` floor missed it.
+
+`cm-whitelabel` (WordPress 6.9.4, no backup in 2,147 days) is **closed** —
+Doug ruled it a temp non-public site. It carries `production: false`, so it is
+still scanned and shown but excluded from fleet counts.
 
 ---
 
@@ -152,46 +218,89 @@ five scripts with a corrected exec bit
 
 ## Do this next, in order
 
-**1. ~~Triage `cm-whitelabel`.~~ CLOSED 2026-08-19.** Doug: temp non-public
-site, not a concern. Marked `production: false` in the inventory, so it is
-still scanned and still shown on its own row but does not count toward fleet
-health. **`hoffmanscheese` is still open** — 721-day backup gap, 29 plugin
-updates, and one of the two remaining CRITs.
+### 1. NEXCESS. This is the next build task.
 
-**2. ~~Recalibrate severity.~~ DONE 2026-08-19. See `docs/SEVERITY.md`.**
-Scoring moved to `scripts/lib/severity.py` and is now re-derived at RENDER time
-from the ledger, so thresholds can change without a rules move reporting as a
-fleet change. The run rescores to **2 CRIT / 32 WARN / 13 OK / 32 UNKNOWN /
-3 SKIP / 1 FROZEN**, with `cm-whitelabel` excluded by a `production: false`
-ruling. **One thing is left open there: the scanner still scores with its own
-inline rules, so its digest and its CI exit code disagree with the dashboard.**
+21 sites, zero coverage, and the largest evidence gap in the security audit:
+**every blank cell in the workbook's `wp2shell Security Flaw Remedied?` column
+is a Nexcess site.** They are also 32 of the dashboard's UNKNOWN rows.
 
-**3. Deploy to Cloudflare. THE CODE IS DONE; the Cloudflare side is not.**
-`publish-dashboard.sh` was rewired to `render-dashboard.py` on 2026-08-19 and
-now takes **no scan file** — it renders from the ledger. `--emit-data` writes
-the JSON feed from the same model object as the page, so `/api/fleet-scan`
-stayed and serves `{"schema":"fleet-dashboard/2", ...}`. A `publish-dashboard`
-job exists in the workflow, **default off**, running after `persist-ledger`.
+`docs/NEXCESS-ARCHITECTURE.md` holds Doug's research. **Read its provenance
+header: nothing in it has been verified from this codebase.** The model it
+proposes:
 
-**What is left is all in Doug's Cloudflare and GitHub settings**, in this order:
-Worker `cm-fleet` via `wrangler deploy`, R2 binding `FLEET` -> `dash-data`,
-`PUBLISH_TOKEN` secret, hostname (suggest `fleet.thudstaff.com`), **its own
-Access policy** — the deck's allowlist is partners-only and must not include
-developers. Then repo variable `FLEET_PUBLISH_URL` and repo secret
-`FLEET_PUBLISH_TOKEN`, then flip `publish_dashboard` on. Full walkthrough is
-`docs/DASHBOARD.md`. **Run `./scripts/publish-dashboard.sh --dry-run` and look
-at the page before any of it.**
+```
+Portal API token  -> GET /v1/site        -> site inventory, Unix usernames
+ONE automation    -> per-site SSH users  -> WP-CLI, read-only
+SSH key
+```
 
-**4. Turn on `persist_ledger` and then the schedule.** See the permissions
-decision above.
+**The critical unverified claim** is that one SSH public key added at the
+Nexcess user level authorises every Managed WordPress site that user can reach.
+If true, this is one credential for 21 sites. If false, it is 21 credentials
+and a very different design. Section 19 of that doc is a ready-made support
+email; **sending it is a human task and it gates the SSH half.**
 
-**5. Nexcess.** 46 sites vs 21, still zero `wp2shell` verification, and the
-reason the dashboard covers 52 of 78 rather than all of them. The deep-scan code
-written for Pantheon is what it reuses; the one real unknown is enumeration.
+Sequencing that does NOT wait on that answer:
 
-**Not on the critical path:** the CI-versus-local comparison in
-`SSH-KEY-SETUP.md` step 6. Worth doing as validation eventually, but there is a
-clean local baseline now and CI has proven it authenticates and reads versions.
+- **The 21 sites are already in `data/fleet-inventory.json`.** API enumeration
+  is not required for a first pass; the inventory IS the site list. Enumeration
+  only buys discovery of sites nobody wrote down — which on Pantheon found the
+  two worst-maintained sites in the fleet, so it is worth having, second.
+- Phase 1 of section 17 (read-only estate discovery via `GET /v1/site`) needs
+  only a portal API token, and validates the doc's field-name claims.
+- The deep-scan half reuses the Pantheon WP-CLI work almost unchanged. Same
+  commands, different transport.
+
+**The ledger, severity, diff and dashboard need NO changes** — they are keyed
+on site identity, not host. Adding a provider means adding an adapter, and the
+`UNKNOWN` count falling is the measure of success.
+
+### 2. COOKIE CONSENT MONITOR, into the suite.
+
+Lives at `DK Sandbox/claude/Cowork Automation Portfolio/cookie-consent/`. Node
+18 + Playwright, loads each public homepage, watches what fires before consent,
+detects banner tooling, writes a dated exception report. Read-only, no
+credentials, already runnable.
+
+Bringing it into the suite means:
+
+- a third `source` in the ledger, beside `health` and `email-dns`
+- its own fact family in `OBSERVED` (the fact-name collision guard in
+  `fleet-ledger.py` will catch a mistake here)
+- severity codes in `scripts/lib/severity.py`, using the same vocabulary
+- its own CI workflow, same shape as the email one: no credentials, so it can
+  run on every push
+
+**Its roster is a separate `sites.yaml` of 12 domains**, drawn from Harvest
+project names. That is a fourth site list, and this project has already been
+bitten once by lists that disagree. **Reconcile it against
+`data/fleet-inventory.json` before wiring anything.**
+
+Note its README already describes the production shape: *"Claude reads a
+CLAUDE.md, calls the same scanner, does the classification, opens Asana tasks
+for new FAILs."* That matches the deck.
+
+### 3. Asana routing — the last step of the deck's pattern.
+
+Slide 16 promises: *"open an Asana item only where a person is needed, and keep
+it open until confirmed."* Digest and dashboard are built; routing is not.
+Asana appears in three design docs and no code. This is what turns a report
+into an operating layer, and it is shared plumbing for every workflow in the
+suite rather than Pantheon-specific.
+
+### 4. Turn on the schedule.
+
+The cron block is written and commented out in the workflow. The deck's own
+rule is that execution is earned over several cycles; today was cycle one and
+the first that ran end to end.
+
+### 5. The scanner still scores severity itself.
+
+`pantheon-fleet-healthcheck.sh` keeps its own inline rules, so its digest calls
+a pending core update CRIT while the dashboard calls it WARN, and **its exit
+code 2 still gates CI on the old definition**. Fixing it means a CLI mode on
+`severity.py` and **changing what fails a build**. Left deliberately for a
+decision. See the end of `docs/SEVERITY.md`.
 
 ## Three things that need a person, not code
 
