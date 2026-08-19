@@ -192,34 +192,56 @@ fi
 # requiring someone to open the page to find out what was published. Kept here
 # rather than in the workflow because the workflow is platform glue only.
 if [ -n "${FLEET_PUBLISH_SUMMARY:-}" ]; then
-  python3 - "$WORK/latest.json" "${FLEET_PUBLIC_URL:-https://fleet.thudstaff.com}" >> "$FLEET_PUBLISH_SUMMARY" <<'PY' || true
+  summary_rc=0
+  python3 - "$WORK/latest.json" "${FLEET_PUBLIC_URL:-https://fleet.thudstaff.com}" \
+      >> "$FLEET_PUBLISH_SUMMARY" <<'PY' || summary_rc=$?
 import json, sys
+
 d = json.load(open(sys.argv[1]))
-base = sys.argv[2]
+base = sys.argv[2].rstrip("/")
 h = d["health"]
-print("## Dashboard published
-")
-print("<%s/>
-" % base)
+
+# Bare print() for blank lines rather than a trailing escape inside a string.
+# The first version used "\n" inside these literals and the generator that
+# wrote this file turned them into real newlines, producing an unterminated
+# string literal. The publish had already succeeded, so the job went green with
+# no summary at all.
+print("## Dashboard published")
+print()
+print("<%s/>" % base)
+print()
 print("| state | sites |")
 print("|---|---|")
 for k, v in h["counts"].items():
     if v:
         print("| %s | %d |" % (k, v))
+
 if h["excluded_sites"]:
-    print("
-Excluded from these counts (`production: false`): %s"
+    print()
+    print("Excluded from these counts (`production: false`): %s"
           % ", ".join("`%s`" % s for s in h["excluded_sites"]))
+
 if h["unreviewed"]:
-    print("
-**%d site(s) still need a production ruling:** %s"
+    print()
+    print("**%d site(s) still need a production ruling:** %s"
           % (len(h["unreviewed"]), ", ".join("`%s`" % s for s in h["unreviewed"])))
+
 runs = d.get("runs", {})
 if runs:
-    print("
-Rendered from: %s"
+    print()
+    print("Rendered from: %s"
           % ", ".join("%s `%s`" % (k, v["run_id"]) for k, v in sorted(runs.items())))
 PY
+
+  # A summary that fails must SAY so. The first version ended in `|| true`, so
+  # a SyntaxError in the block above printed a traceback into the log and the
+  # step still reported success with the summary silently missing. The publish
+  # itself has already succeeded by this point, so this is a warning and not a
+  # failure, but it is not nothing.
+  if [ "$summary_rc" -ne 0 ]; then
+    err "the run summary could not be generated (exit $summary_rc)."
+    err "The publish itself SUCCEEDED; only the summary is missing."
+  fi
 fi
 
 PUBLIC="${FLEET_PUBLIC_URL:-https://fleet.thudstaff.com}"
