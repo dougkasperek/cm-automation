@@ -256,10 +256,29 @@ python3 test/test-consent.py                      # offline, no browser
 
 **Ingest is append-only. A mis-keyed row cannot be corrected in place.**
 
-Expect the first sweep to take roughly 78 × 12s ÷ concurrency, so about four
-minutes at `--concurrency 4`. The 9-second settle in `check-site.mjs` is a
-judgement, not a measurement: tag managers fire late, and a shorter wait
-under-reports leaks, which is the direction that reads as an all-clear.
+Expect roughly 78 × 12s ÷ concurrency, so about four minutes at
+`--concurrency 4`.
+
+### Leave concurrency at 4
+
+Not politeness for its own sake. **Raising it costs coverage, which is the one
+thing the sweep produces.**
+
+- 23 of ~78 of these sites already answer HTTP 403 to a headless browser. More
+  concurrency makes a WAF likelier to read the sweep as a crawl and block more
+  of them, and **a blocked site is UNMEASURED** — it leaves the numbers
+  entirely rather than showing up as a finding.
+- Memory is not the constraint. Each unit is a headless Chrome at ~300MB; a
+  GitHub `ubuntu-latest` runner (4 vCPU / 16GB) would take 8 comfortably.
+- The saving is small anyway. Every site carries a fixed 9-second settle, so
+  going from 4 to 8 turns a four-minute run into a two-minute one.
+
+Two minutes is not worth trading measured sites for. Raise it only for an
+`--only` run against a handful of domains.
+
+The 9-second settle in `check-site.mjs` is a judgement, not a measurement: tag
+managers fire late, and a shorter wait under-reports leaks, which is the
+direction that reads as an all-clear.
 
 ## In CI
 

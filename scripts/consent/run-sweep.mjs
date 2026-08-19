@@ -42,6 +42,12 @@ function arg(name, fallback = null) {
 const INVENTORY = arg('inventory', 'data/fleet-inventory.json');
 const OUT = arg('out', 'reports');
 const STAMP = arg('stamp');
+// Parallel headless browsers. Default 4, and raising it is a worse trade than
+// it looks: 23 of ~78 sites already answer 403 to a headless client, and more
+// concurrency makes a WAF likelier to treat the sweep as a crawl. A blocked
+// site is UNMEASURED, so speed is bought with coverage -- the one thing this
+// tool produces. The run is ~4 minutes at 4 anyway, because each site carries a
+// fixed 9-second settle that no amount of parallelism removes.
 const CONCURRENCY = Number(arg('concurrency', '4'));
 const ONLY = arg('only');
 

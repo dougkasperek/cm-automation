@@ -39,9 +39,20 @@ on:
         type: boolean
         default: true
       publish_dashboard:
-        description: "Publish the dashboard to the Cloudflare Worker"
+        # DEFAULT FLIPPED TO TRUE, 2026-08-19. It was false, which meant the
+        # one workflow that could publish only did so when somebody remembered
+        # to tick it. Together with the other three never publishing at all,
+        # that is the whole reason fleet.thudstaff.com drifted behind the
+        # ledger it is rendered from.
+        #
+        # The description was also stale: publishing has written straight to
+        # R2 since 2026-08-19 and the Worker has no write route.
+        #
+        # Turn it off for a debugging run you do not want on the live page.
+        # The ledger and the page should move together by default.
+        description: "After ingesting, re-render from the ledger and publish to fleet.thudstaff.com"
         type: boolean
-        default: false
+        default: true
 
   # Validate the scripts themselves on every PR that touches them. This runs
   # the mock harness only - no secrets, no network, no Pantheon.
