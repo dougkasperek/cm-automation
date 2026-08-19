@@ -271,3 +271,9 @@ Credential-free, so unlike the Nexcess and Pantheon workflows it can run on a
 schedule without anyone first deciding to trust it with a secret. Findings are
 GitHub warnings, never a red build: a build that goes red for a client
 conversation teaches people to ignore the build.
+
+It calls the shared `_publish-dashboard.yml` after persisting, so the ledger and
+`fleet.thudstaff.com` move together. That was added 2026-08-19 when the first
+ingest revealed that three of four workflows updated the ledger and left the
+live page showing older data — a stale dashboard that looks current is worse
+than an obviously missing one.

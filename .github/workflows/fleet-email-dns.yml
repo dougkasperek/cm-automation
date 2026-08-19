@@ -28,6 +28,10 @@ on:
         description: "Ingest this run into history/ and push it back to main"
         type: boolean
         default: true
+      publish_dashboard:
+        description: "After ingesting, re-render and publish to fleet.thudstaff.com"
+        type: boolean
+        default: true
   # Enable once a few manual runs have been reviewed. Cron is UTC and is not
   # punctual; runs queue under load. That is fine here, nothing depends on the
   # exact minute.
@@ -174,3 +178,20 @@ jobs:
 
       - name: Ingest, render and push
         run: ./scripts/persist-ledger.sh /tmp/ci-reports "Fleet email DNS check"
+
+  # -------------------------------------------------------------------------
+  # Publish. Without this the ledger moves and fleet.thudstaff.com does not,
+  # which is worse than not publishing at all: the page looks current.
+  # Shared job, not a fourth copy of the same steps.
+  # -------------------------------------------------------------------------
+  publish-dashboard:
+    name: Publish dashboard
+    needs: persist-ledger
+    if: >-
+      always()
+      && inputs.publish_dashboard
+      && needs.persist-ledger.result == 'success'
+    uses: ./.github/workflows/_publish-dashboard.yml
+    secrets: inherit
+    with:
+      label: "Fleet email DNS check"

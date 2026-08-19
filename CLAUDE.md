@@ -78,6 +78,7 @@ eleven times:
 | `the token was rejected` | a Cloudflare challenge; the token was never read at all |
 | `UNKNOWN: 0` | the coverage scoreboard, silently zeroed by a source that is not health |
 | 23 sites "no banner, no trackers" | HTTP 403 block pages; `ok` meant the navigation did not throw |
+| a current-looking dashboard | three of four workflows ingested and never published |
 | `js.cookie.min.js` in `cmpScripts` | a WooCommerce helper, not a consent manager |
 
 The thirteenth was our own diagnostic: `probe` printed one word for a DNS
@@ -121,6 +122,13 @@ of scripts:
 The ledger, diff, dashboard and **severity** need no changes for a new provider
 beyond the four steps above. They are keyed on site identity, not on host or
 tool. **The RENDERER is the exception and the claim used to say otherwise.**
+**A workflow that writes to the ledger MUST also publish.** Until 2026-08-19
+only the Pantheon workflow did, so the email, Nexcess and consent workflows each
+moved the ledger and left `fleet.thudstaff.com` rendering older data. Nobody
+sees a stale page and knows it is stale. Publishing is now one shared reusable
+workflow, `_publish-dashboard.yml`, called by the three; folding Pantheon's
+inline copy into it is the next tidy-up.
+
 **Do not assert a fleet COUNT in a test.** Three tests broke this session on
 correct changes because they pinned a number that a new source was entitled to
 move: `len(FACT_FAMILIES) == 3`, `len(unknown) == 32`, and a fixture row count.
@@ -200,7 +208,7 @@ python3 test/test-ledger.py       # 106
 python3 test/test-severity.py     #  70
 python3 test/test-email-dns.py    #  58   (needs dnspython)
 python3 test/test-nexcess.py      #  88   offline, no API call
-python3 test/test-consent.py      #  57   offline, no browser
+python3 test/test-consent.py      #  59   offline, no browser
 ./test/run-local-test.sh          #  32   1-3 min, silent, two mock sites hang
                                   #       on purpose. Never run it through the
                                   #       device bridge: 45s timeout.
