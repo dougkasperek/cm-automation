@@ -111,31 +111,46 @@ can tell a fleet change from a rules change.
 Existing account resources this reuses: the `dash-data` R2 bucket. It does not
 touch `cm-deck-assets` or the `cm-deck` Worker.
 
-**1. Create the Worker.** Name it `cm-fleet` and deploy
-`ci/cloudflare/cm-fleet-worker.js`.
+**1. Create the Worker.**
 
-Note that this account has two different deploy habits, and this Worker should
-follow the better one: `cm-deck`'s Worker is pasted into the Cloudflare
-dashboard by hand, but `cm-dash` deploys with `wrangler deploy`. Use wrangler
-here. Hand-pasting a Worker means the deployed version can silently drift from
-the version in git, which has already bitten this account once.
+```bash
+cd ci/cloudflare
+wrangler deploy
+```
 
-**2. Bind R2.** Settings, Variables and Bindings, add an R2 bucket binding:
+`ci/cloudflare/wrangler.toml` carries the name (`cm-fleet`), the entry point and
+the R2 binding, so this one command covers what used to be steps 1 and 2. It was
+added 2026-08-19: this document had said "use wrangler, not hand-pasting" since
+it was written, while no wrangler config existed, so the instruction could not
+be followed.
 
-| Field | Value |
-|---|---|
-| Variable name | `FLEET` |
-| Bucket | `dash-data` |
+This account has two deploy habits and this Worker follows the better one:
+`cm-deck`'s Worker is pasted into the Cloudflare dashboard by hand, `cm-dash`
+deploys with wrangler. Hand-pasting means the deployed version can silently
+drift from the version in git, which has already bitten this account once.
 
-The Worker writes and reads only under the `fleet/` prefix, so it cannot
-collide with whatever `cm-dash` already keeps in that bucket.
+`main` resolves relative to the toml, which is why the command has a `cd` in it.
 
-**3. Add the publish secret.** Add a secret named `PUBLISH_TOKEN`, any long
-random string. Generate one with `openssl rand -hex 32`. Without it the publish
-route returns 503 and the dashboard is upload-only via wrangler.
+**2. R2 is already bound** by the config above: binding `FLEET`, bucket
+`dash-data` (verified to exist 2026-08-19). The Worker reads and writes only
+under the `fleet/` prefix, so it cannot collide with what `cm-dash` keeps there.
+
+**3. Add the publish secret.**
+
+```bash
+cd ci/cloudflare
+wrangler secret put PUBLISH_TOKEN     # paste the output of: openssl rand -hex 32
+```
+
+It is a secret, so it is set this way and never written into `wrangler.toml`.
+Without it the publish route returns 503 and the dashboard is upload-only.
 
 **4. Route a hostname.** Suggested: `fleet.thudstaff.com`. Do not serve this
 from `cm.thudstaff.com`.
+
+Prefer doing it in `wrangler.toml` rather than clicking. There is a commented
+`[[routes]]` block at the bottom of that file; uncomment it and redeploy, so the
+hostname lives in git for the same drift reason as the Worker itself.
 
 **5. Put it behind Access, with the right policy.** See the next section, which
 is the part that actually decides whether this works for your purpose.
