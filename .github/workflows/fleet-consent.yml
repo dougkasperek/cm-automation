@@ -20,9 +20,39 @@ on:
   workflow_dispatch:
     inputs:
       concurrency:
-        description: "Parallel browsers. 4 is polite; raise it if the run is slow."
-        type: string
+        # RAISING THIS COSTS COVERAGE, WHICH IS THE ONE THING THE SWEEP IS FOR.
+        #
+        # Each unit is a headless Chrome instance, ~300MB. A GitHub
+        # ubuntu-latest runner (4 vCPU / 16GB) will take 8 without trouble, so
+        # memory is not the binding constraint.
+        #
+        # The binding constraint is that 23 of ~78 of these sites already
+        # answer HTTP 403 to a headless browser. Concurrency raises the chance
+        # a WAF treats the sweep as a crawl and blocks more of them, and a
+        # blocked site is UNMEASURED -- it drops out of the numbers entirely.
+        # Trading measured sites for a shorter run is a bad trade in a tool
+        # whose whole output is coverage.
+        #
+        # And the run is not slow. Every site carries a fixed 9-second settle
+        # for late-firing tags, so 78 sites at 4 is roughly 4 minutes. Going to
+        # 8 saves about two minutes.
+        #
+        # Raise it only for a --only run against a handful of domains you
+        # control. Leave it at 4 for a full sweep.
+        #
+        # A CHOICE, not a free-text box. A string input renders as an empty
+        # field that invites a number somebody made up, and the whole point of
+        # the comment above is that this value has a right answer for a full
+        # sweep and a narrow set of defensible exceptions. Constraining it puts
+        # the guidance in the picker instead of in a file nobody opens.
+        description: "Parallel headless browsers. 4 for a full sweep. Higher risks more WAF blocks, and a blocked site is unmeasured, not clean."
+        type: choice
         default: "4"
+        options:
+          - "1"
+          - "2"
+          - "4"
+          - "8"
       only:
         description: "Comma-separated domains, to test a handful without a full sweep."
         type: string
