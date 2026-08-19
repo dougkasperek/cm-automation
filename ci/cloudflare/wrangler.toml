@@ -33,10 +33,25 @@ bucket_name = "dash-data"
 #
 # Without it the PUT route returns 503 and the dashboard is upload-only.
 
-# The hostname. Uncomment and set the zone once fleet.thudstaff.com is the
-# decided name, so the route lives in git rather than only in the dashboard.
-# Adding it here is better than clicking, for the same drift reason as above.
+# ---------------------------------------------------------------------------
+# The hostname, and the workers.dev back door
+# ---------------------------------------------------------------------------
+# CLOUDFLARE ACCESS CANNOT PROTECT A *.workers.dev URL. Access applications
+# attach to hostnames in a zone you control, and workers.dev is not one. So a
+# Worker that is behind Access on its custom domain is still served,
+# unauthenticated, on its workers.dev URL to anyone who has it. For a page that
+# names 84 client sites, their backup gaps and their unpatched versions, that
+# is the whole exposure with none of the protection.
 #
-# [[routes]]
-# pattern = "fleet.thudstaff.com"
-# custom_domain = true
+# Uncomment the route, deploy, put Access on the hostname, PROVE Access works
+# in a private window, and only THEN set workers_dev = false and deploy again.
+# Doing it in that order means a misconfigured Access policy cannot lock you
+# out of your own dashboard, because workers.dev is still there while you test.
+#
+[[routes]]
+pattern = "fleet.thudstaff.com"
+custom_domain = true
+
+# Step 3 of the above. Leave this commented until Access is PROVEN working on
+# the custom domain; uncommenting it early removes the URL you are testing from.
+# workers_dev = false

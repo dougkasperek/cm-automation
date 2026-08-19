@@ -19,16 +19,28 @@
  *                             2026-08-19. The old {stamp, kind, rows} shape is
  *                             gone; consumers should check `schema`.
  *   GET /healthz           -> plain "ok", for uptime checks
- *   PUT /api/publish/<key> -> upload, requires the PUBLISH_TOKEN secret
+ *
+ * READ-ONLY. There is no write route. A PUT /api/publish/<key> existed until
+ * 2026-08-19; publishing now writes to the bucket directly with
+ * `wrangler r2 object put`, from scripts/publish-dashboard.sh.
+ *
+ * Why it went: the route sat behind a hostname that is behind Cloudflare
+ * Access, so a machine publishing had to clear Access with a service token AND
+ * a correctly ordered Service Auth policy, just to reach a bearer-token check
+ * it would then also have to pass. Two auth layers, one of which a machine
+ * cannot satisfy without extra configuration, guarding an operation the R2 API
+ * already authenticates on its own.
+ *
+ * Deleting it removed a class of problem rather than solving one, and left
+ * this Worker with no write endpoint on a public hostname at all. Do not add
+ * one back without a reason that survives that sentence.
  *
  * Binding required:  R2 bucket binding named FLEET  (point it at dash-data)
- * Secret required for publishing:  PUBLISH_TOKEN
+ * No secrets.
  *
- * ACCESS: put this hostname behind Cloudflare Access with a policy that
+ * ACCESS: this hostname is behind Cloudflare Access with a policy that
  * includes the developers. Do NOT reuse the deck's policy - the deck is
  * partner-confidential and its allowlist is Doug/Matt/Brian only.
- * The PUT route is bypassed by Access via a service token, or you skip it and
- * upload with wrangler instead.
  */
 
 const PREFIX = "fleet/";
@@ -49,10 +61,6 @@ export default {
 
     if (path === "/healthz") {
       return new Response("ok", { headers: { "Content-Type": "text/plain", ...SEC } });
-    }
-
-    if (request.method === "PUT" && path.startsWith("/api/publish/")) {
-      return publish(request, env, path.slice("/api/publish/".length));
     }
 
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -88,9 +96,10 @@ async function serve(env, key, contentType) {
     // single-scan snapshot instead of the ledger view.
     const msg = key.endsWith(".html")
       ? "No dashboard published yet. From the cm-automation repo:\n\n" +
-        "  FLEET_PUBLISH_URL=<this hostname> FLEET_PUBLISH_TOKEN=<PUBLISH_TOKEN> \\\n" +
+        "  CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... \\\n" +
         "      ./scripts/publish-dashboard.sh\n\n" +
-        "It renders from the ledger in history/ and takes no scan file.\n" +
+        "It renders from the ledger in history/ and takes no scan file, and\n" +
+        "uploads straight to R2 rather than through this Worker.\n" +
         "Use --dry-run first to look at the page before it goes live.\n"
       : "No fleet data published yet at " + key + "\n";
     return new Response(msg, { status: 404, headers: { "Content-Type": "text/plain", ...SEC } });
@@ -105,29 +114,3 @@ async function serve(env, key, contentType) {
   });
 }
 
-async function publish(request, env, name) {
-  const token = env.PUBLISH_TOKEN;
-  if (!token) {
-    return new Response("Publishing is disabled: PUBLISH_TOKEN is not set.", { status: 503, headers: SEC });
-  }
-  const given = request.headers.get("Authorization") || "";
-  const expected = "Bearer " + token;
-  // Constant-time-ish compare. Length check first so we never compare a short
-  // guess against a long secret and leak length through timing.
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
-    return new Response("Unauthorized", { status: 401, headers: SEC });
-  }
-  if (!/^[a-zA-Z0-9._-]{1,64}$/.test(name)) {
-    return new Response("Bad object name", { status: 400, headers: SEC });
-  }
-  await env.FLEET.put(PREFIX + name, request.body);
-  return new Response(JSON.stringify({ ok: true, key: PREFIX + name }), {
-    headers: { "Content-Type": "application/json", ...SEC },
-  });
-}
-
-function timingSafeEqual(a, b) {
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}

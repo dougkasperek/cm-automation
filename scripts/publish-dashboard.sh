@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 #
 # publish-dashboard.sh
-# Render the LEDGER-backed dashboard and push it to the hosted Worker.
+# Render the LEDGER-backed dashboard and upload it to R2.
 #
-#   FLEET_PUBLISH_URL=https://fleet.thudstaff.com \
-#   FLEET_PUBLISH_TOKEN=xxxx \
+#   CLOUDFLARE_API_TOKEN=xxxx \
+#   CLOUDFLARE_ACCOUNT_ID=xxxx \
 #   ./scripts/publish-dashboard.sh
+#
+#   ./scripts/publish-dashboard.sh --dry-run    # render only, look at it first
 #
 # It takes NO scan file. That is the change made 2026-08-19 and the reason this
 # script existed in a broken state for a month.
@@ -34,6 +36,23 @@
 # cannot: if the feed is wrong, the page is wrong identically, and looking at
 # the page catches both.
 #
+# IT UPLOADS STRAIGHT TO R2, NOT THROUGH THE WORKER
+# -------------------------------------------------
+# Changed 2026-08-19. It used to PUT to the Worker's /api/publish route with a
+# bearer token. That route sits behind the hostname, and the hostname is behind
+# Cloudflare Access, so a machine publishing had to cross TWO auth layers and
+# needed an Access service token with a correctly ordered Service Auth policy
+# just to reach a token check it would then also have to pass.
+#
+# Writing to the bucket directly removes the whole problem:
+#   - no Access interaction, so no service token and no policy ordering
+#   - no PUBLISH_TOKEN
+#   - and no write endpoint on a public hostname at all, which is the real
+#     win: the Worker is now strictly read-only.
+#
+# Access still fronts the hostname for PEOPLE. That part was never the problem
+# and it stays.
+#
 # Portability: bash 3.2 compatible. See scripts/lib/common.sh for the contract.
 #
 set -uo pipefail
@@ -60,7 +79,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-require_tools python3 curl || exit 1
+require_tools python3 || exit 1
 
 if [ ! -d "$HISTORY" ]; then
   err "no ledger at $HISTORY"
@@ -76,9 +95,16 @@ if [ ! -f "$INVENTORY" ]; then
 fi
 
 if [ "$DRY_RUN" -eq 0 ]; then
-  : "${FLEET_PUBLISH_URL:?FLEET_PUBLISH_URL is not set (e.g. https://fleet.thudstaff.com)}"
-  : "${FLEET_PUBLISH_TOKEN:?FLEET_PUBLISH_TOKEN is not set}"
+  : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is not set (needs R2 read+write on the account)}"
+  : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID is not set (see: wrangler whoami)}"
+  require_tools wrangler || exit 1
 fi
+
+# Where the objects land. The Worker reads exactly these two keys, so changing
+# either here without changing ci/cloudflare/cm-fleet-worker.js publishes into
+# a void that returns the "nothing published yet" page.
+R2_BUCKET="${FLEET_R2_BUCKET:-dash-data}"
+R2_PREFIX="fleet/"
 
 if [ "$DRY_RUN" -eq 1 ]; then
   WORK="$REPO_ROOT/reports/publish-preview"
@@ -109,52 +135,51 @@ if [ "$DRY_RUN" -eq 1 ]; then
   exit 0
 fi
 
-BASE="${FLEET_PUBLISH_URL%/}"
 rc=0
 for pair in "dashboard.html:text/html" "latest.json:application/json"; do
   name="${pair%%:*}"
   ctype="${pair##*:}"
-  log "Publishing $name ..."
-  code="$(curl -sS -o "$WORK/resp.txt" -w '%{http_code}' \
-    -X PUT "$BASE/api/publish/$name" \
-    -H "Authorization: Bearer $FLEET_PUBLISH_TOKEN" \
-    -H "Content-Type: $ctype" \
-    --data-binary "@$WORK/$name")" || code="000"
-  if [ "$code" != "200" ]; then
-    err "publish of $name failed with HTTP $code"
-    # awk, not sed: the Worker's error bodies carry no trailing newline, so
-    # `sed -n 1,5p` ran the body straight into the next log line and produced
-    # "UnauthorizedPublishing latest.json ...". awk's print adds the newline.
-    awk 'NR<=5 {print "        " $0}' "$WORK/resp.txt" >&2 2>/dev/null || true
-    case "$code" in
-      401) err "        The Worker rejected the token. Two causes, in order of"
-           err "        likelihood:"
-           err ""
-           err "        1. PROPAGATION. A 'wrangler secret put' takes longer than"
-           err "           it looks to reach the running Worker. Five seconds was"
-           err "           measured as NOT enough on 2026-08-19; the same request"
-           err "           that 401'd then returned 200 a minute later with"
-           err "           nothing changed. If you just set the secret, wait a"
-           err "           minute and re-run this before changing anything."
-           err "        2. The values genuinely differ. Note that each"
-           err "           'openssl rand -hex 32' produces a NEW value, so"
-           err "           generating one for the secret and another for"
-           err "           FLEET_PUBLISH_TOKEN gives two different tokens." ;;
-      503) err "        PUBLISH_TOKEN is not set on the Worker. Run:" 
-           err "        cd ci/cloudflare && wrangler secret put PUBLISH_TOKEN" ;;
-      000) err "        Could not reach $BASE at all. Check the hostname." ;;
-      302|403) err "        Looks like Cloudflare Access intercepted this."
-               err "        The publish route needs a service token or a bypass policy." ;;
-    esac
-    rc=1
+  key="${R2_PREFIX}${name}"
+  log "Uploading $key ..."
+
+  # --remote is load-bearing. Without it wrangler writes to the LOCAL
+  # miniflare simulation in .wrangler/ and reports success, so the command
+  # looks like it published and nothing reaches Cloudflare. A confident
+  # success message standing in for no action is this project's oldest bug;
+  # the read-back below is what proves it did not happen here.
+  if wrangler r2 object put "${R2_BUCKET}/${key}" \
+       --file "$WORK/$name" \
+       --content-type "$ctype" \
+       --remote >"$WORK/put.log" 2>&1; then
+    log "  uploaded"
   else
-    log "  ok"
+    err "upload of $key failed"
+    awk 'NR<=12 {print "        " $0}' "$WORK/put.log" >&2 2>/dev/null || true
+    err "        Check that CLOUDFLARE_API_TOKEN has R2 read AND write on"
+    err "        account $CLOUDFLARE_ACCOUNT_ID, and that the bucket"
+    err "        '$R2_BUCKET' exists."
+    rc=1
+    continue
+  fi
+
+  # Read it back and compare sizes. Verifying after deploy is a standing rule
+  # in this account after a Worker shipped a wrong number and nobody checked.
+  if wrangler r2 object get "${R2_BUCKET}/${key}" \
+       --file "$WORK/verify-$name" --remote >"$WORK/get.log" 2>&1; then
+    want="$(wc -c < "$WORK/$name" | tr -d ' ')"
+    got="$(wc -c < "$WORK/verify-$name" | tr -d ' ')"
+    if [ "$want" = "$got" ]; then
+      log "  verified ${got} bytes"
+    else
+      err "$key read back as $got bytes, expected $want"
+      rc=1
+    fi
+  else
+    err "$key uploaded but could not be read back; treat it as unpublished"
+    rc=1
   fi
 done
 
-# Both objects or neither. The page and the feed are one render; shipping the
-# page while the feed 500s leaves the API serving the PREVIOUS run's numbers
-# beside a current page, and nothing on either would say so.
 if [ "$rc" -ne 0 ]; then
   err ""
   err "PARTIAL PUBLISH. The page and the JSON feed may now disagree."
@@ -167,7 +192,7 @@ fi
 # requiring someone to open the page to find out what was published. Kept here
 # rather than in the workflow because the workflow is platform glue only.
 if [ -n "${FLEET_PUBLISH_SUMMARY:-}" ]; then
-  python3 - "$WORK/latest.json" "$BASE" >> "$FLEET_PUBLISH_SUMMARY" <<'PY' || true
+  python3 - "$WORK/latest.json" "${FLEET_PUBLIC_URL:-https://fleet.thudstaff.com}" >> "$FLEET_PUBLISH_SUMMARY" <<'PY' || true
 import json, sys
 d = json.load(open(sys.argv[1]))
 base = sys.argv[2]
@@ -197,7 +222,9 @@ Rendered from: %s"
 PY
 fi
 
+PUBLIC="${FLEET_PUBLIC_URL:-https://fleet.thudstaff.com}"
 log ""
-log "Published. Dashboard is live at: $BASE/"
-log "JSON feed:                       $BASE/api/fleet-scan"
+log "Published. Dashboard is live at: ${PUBLIC%/}/"
+log "JSON feed:                       ${PUBLIC%/}/api/fleet-scan"
+log "(both behind Cloudflare Access, so open them in a browser, not curl)"
 exit 0
