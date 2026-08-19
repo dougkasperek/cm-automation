@@ -21,3 +21,7 @@ venv/
 # authoritative copy is .github/workflows/. Ignoring this prevents a second,
 # silently diverging copy from being committed.
 ci/github-actions/
+
+# Wrangler local state and account cache. Created on first `wrangler deploy`.
+# Contains an account id and login cache; not a secret, but not shared state.
+.wrangler/

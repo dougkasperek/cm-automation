@@ -122,7 +122,30 @@ for pair in "dashboard.html:text/html" "latest.json:application/json"; do
     --data-binary "@$WORK/$name")" || code="000"
   if [ "$code" != "200" ]; then
     err "publish of $name failed with HTTP $code"
-    sed -n '1,5p' "$WORK/resp.txt" >&2 2>/dev/null || true
+    # awk, not sed: the Worker's error bodies carry no trailing newline, so
+    # `sed -n 1,5p` ran the body straight into the next log line and produced
+    # "UnauthorizedPublishing latest.json ...". awk's print adds the newline.
+    awk 'NR<=5 {print "        " $0}' "$WORK/resp.txt" >&2 2>/dev/null || true
+    case "$code" in
+      401) err "        The Worker rejected the token. Two causes, in order of"
+           err "        likelihood:"
+           err ""
+           err "        1. PROPAGATION. A 'wrangler secret put' takes longer than"
+           err "           it looks to reach the running Worker. Five seconds was"
+           err "           measured as NOT enough on 2026-08-19; the same request"
+           err "           that 401'd then returned 200 a minute later with"
+           err "           nothing changed. If you just set the secret, wait a"
+           err "           minute and re-run this before changing anything."
+           err "        2. The values genuinely differ. Note that each"
+           err "           'openssl rand -hex 32' produces a NEW value, so"
+           err "           generating one for the secret and another for"
+           err "           FLEET_PUBLISH_TOKEN gives two different tokens." ;;
+      503) err "        PUBLISH_TOKEN is not set on the Worker. Run:" 
+           err "        cd ci/cloudflare && wrangler secret put PUBLISH_TOKEN" ;;
+      000) err "        Could not reach $BASE at all. Check the hostname." ;;
+      302|403) err "        Looks like Cloudflare Access intercepted this."
+               err "        The publish route needs a service token or a bypass policy." ;;
+    esac
     rc=1
   else
     log "  ok"
