@@ -15,6 +15,70 @@ touching anything. It holds the hard boundaries, the definition of done, and
 the eleven-row table of times this project mistook a confident-looking value
 for an answer. It was written 2026-08-19 and did not exist before that.
 
+### BUILT LATER THE SAME DAY: Nexcess Phase 1
+
+`scripts/fleet-nexcess.py`, `test/test-nexcess.py` (58 checks, offline),
+`ci/github-actions/fleet-nexcess.yml`, `docs/NEXCESS.md`. Ledger source
+`nexcess`, severity rules, and a renderer fix. **Not yet run against the
+Nexcess API — no call has ever been made from this codebase.** The next action
+is Doug running `./scripts/fleet-nexcess.py probe` with a portal token.
+
+Measured this session on a simulated run (fixture data, never ingested into
+`history/`): the render path works and the fleet moves
+**2 CRIT / 31 WARN / 14 OK / 32 UNKNOWN → 9 CRIT / 45 WARN / 14 OK / 11
+UNKNOWN**. OK does not move, by design: discovery gives no backup age and no
+plugin counts, so a Nexcess site tops out at WARN with `coverage_partial` until
+an SSH scan supplies them.
+
+**Those simulated numbers are NOT fleet facts.** The real UNKNOWN count is
+still 32 and stays 32 until a live run.
+
+Rendering that page found the twelfth entry for CLAUDE.md's table: 21 sites
+whose versions had just been measured still displayed the workbook's claim,
+because the table columns read `php_version` and `wp_version` and the Nexcess
+facts are stored under their own names on purpose. Fixed — the dashboard now
+shows three labelled evidence tiers (plain / *per host* / *claimed*).
+
+### ALSO BUILT TODAY: the cookie consent monitor, in the suite
+
+`scripts/consent/run-sweep.mjs` + `check-site.mjs`, `test/test-consent.py`
+(42 checks, offline, no browser), `ci/github-actions/fleet-consent.yml`
+(credential-free), `docs/CONSENT.md`. Third ledger source `consent`, three
+severity codes at WARN, `package.json` + lockfile committed.
+
+**The pilot's `sites.yaml` is superseded. The roster is the inventory: 78
+domains, up from 12.** Reconciling the pilot's twelve before writing any
+integration code found **two wrong**: `morrisoncontainerhandlingsolutions.com`
+does not resolve at all, and `hoosierfeedercompany.com` 302s to
+`hoosierfeeder.com`. One in six, on the list that decides what gets watched.
+
+That second finding moved a standing open item: `hoosierfeeder.com` resolves to
+Cloudflare, not Pantheon's range, which is consistent with the workbook's "CM
+Pantheon" being wrong. The origin host behind Cloudflare is **not** established
+and the inventory note says so.
+
+**Rendering a simulated full sweep took UNKNOWN from 32 to ZERO** with nothing
+improved — the sweep reaches every domain, so no site is left in "nobody
+looked". UNKNOWN was only ever the health-coverage number by accident. The page
+now states health coverage on its own line and the JSON feed carries
+`no_health_evidence`. **Watch that, not UNKNOWN.** Third time a render caught
+something no test would have.
+
+**RUN AND INGESTED 2026-08-19.** 54 of 78 sites genuinely seen: 17 clean with
+OneTrust, **3 with tooling that leaks anyway** (`blockclub.co`,
+`hoosierfeeder.com`, `pfannenbergusa.com`), 25 leaking with no tooling, 9 clean
+with no tooling. 23 sites answer HTTP 403 to a headless browser and are
+UNMEASURED. `zehnder-rittling.com` is clean.
+
+**The first run caught a bug in the tool**: `ok` meant "page.goto did not
+throw", so 23 HTTP 403 block pages were classified as having nothing to fix —
+30% of the fleet clean on the evidence of an error page. Same shape as the
+Nexcess probe reading a status code as an answer. Fixed, with a 403 fixture.
+
+Fleet now: **2 CRIT / 70 WARN / 7 OK / 0 UNKNOWN / 3 SKIP / 1 FROZEN**, and 32
+sites with no health evidence. The WARN jump is consent: 34 no-tooling +
+28 leaking.
+
 ### The scope changed today
 
 Doug, 2026-08-19: *"this dashboard (and eventual operating layer) is only

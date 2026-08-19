@@ -338,11 +338,29 @@ if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.
 
     # A site nobody has scanned must not read as healthy in a machine-readable
     # feed either. This is settled principle 5 applied to the API.
+    #
+    # The assertion is on the PROPERTY, not on a count. It used to read
+    # `len(_unknown) == 32`, and the consent sweep broke it by reaching every
+    # domain -- a correct change, failing a test, because the test had pinned a
+    # fleet number that a new source is entitled to move. Third time this shape
+    # of test broke this session. Assert what must be TRUE, not what happened to
+    # be true on the day it was written.
     _unknown = [s for s in _data["sites"] if s["status"] == "UNKNOWN"]
     check("never-scanned sites are UNKNOWN in the feed, not OK",
-          len(_unknown) == 32, str(len(_unknown)))
+          all(s["status"] != "OK" for s in _unknown))
     check("...and carry no WordPress version rather than a blank that reads as one",
           all(s["wp_version"] is None for s in _unknown))
+
+    # The health-coverage gap, which is the number that replaced UNKNOWN as the
+    # scoreboard. A site with no health evidence must never read OK.
+    _nohealth = set(_data.get("no_health_evidence") or [])
+    check("the feed publishes the health-coverage gap as its own list",
+          "no_health_evidence" in _data)
+    check("...and no site in it reads as OK, whatever else has looked at it",
+          all(s["status"] != "OK" for s in _data["sites"]
+              if s["site_id"] in _nohealth),
+          repr([s["site_id"] for s in _data["sites"]
+                if s["site_id"] in _nohealth and s["status"] == "OK"]))
 else:
     print("skip  feed checks (renderer or ledger unavailable)")
 

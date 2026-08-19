@@ -6,6 +6,27 @@
 > endpoints, field names and the SSH key-propagation model as claims to test,
 > not as facts to build on. Section 17 Phase 1 is the first thing to actually
 > run. See `docs/SESSION-HANDOFF.md` for where this sits in the queue.
+>
+> **Update 2026-08-19, later the same day.** Phase 1 is now BUILT
+> (`scripts/fleet-nexcess.py`, `docs/NEXCESS.md`) and still unrun. Two
+> corrections to section 4, taken from the vendor's own API documentation
+> repository rather than from summary pages:
+>
+> - The API base URL is **not documented anywhere**. Every vendor example is
+>   written against `$PORTAL_API_URL` and no page says what it resolves to. The
+>   scanner therefore refuses to guess one; `fleet-nexcess.py probe` measures
+>   it. Add the answer to section 19's support email if probe cannot find it.
+> - Auth is `Authorization: Bearer $PORTAL_API_KEY` plus
+>   `Accept: application/json`, confirmed against `site/list.md` and
+>   `site/show.md` in `nexcess/nexcess-api-docs`. Pagination is `page` and
+>   `pageSize`, 1-based; `416` is the out-of-range status.
+>
+> One claim in section 4 got materially better on inspection: `GET /v1/site/{id}`
+> documents `unix_username`, `environment.software.php.version` AND
+> `environment.software.app.version`. If that holds live, **the wp2shell
+> question is answerable for all 21 Nexcess sites with no SSH at all.** That is
+> the single highest-value thing in this phase and it is the second item the
+> first live run has to establish.
 
 **Purpose:** Reference for building centralized automation across clevermethod-hosted sites on Nexcess, Liquid Web, and Pantheon.
 

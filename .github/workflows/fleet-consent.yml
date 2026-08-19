@@ -1,0 +1,174 @@
+# Cookie-consent coverage sweep.
+#
+# CREDENTIAL-FREE, like the email/DNS check, so it can run on every push and on
+# a schedule without anyone deciding to trust it with a secret first. It loads
+# public homepages and watches what they request. It never logs in, never
+# clicks, never submits.
+#
+# This is the ONE workflow in the repo that needs Node and a browser. There is
+# no way to observe what a page requests before consent without running the
+# page. The exception is stated here and in scripts/consent/run-sweep.mjs
+# rather than discovered by whoever next wonders why node_modules exists.
+#
+# NOTE FOR WHOEVER COPIES THIS ACROSS: the Claude file bridge cannot write into
+# .github/, so this lands in ci/github-actions/ and a person moves it. Diff the
+# two copies before telling anyone to run it; they have diverged before.
+
+name: Fleet Consent Coverage
+
+on:
+  workflow_dispatch:
+    inputs:
+      concurrency:
+        description: "Parallel browsers. 4 is polite; raise it if the run is slow."
+        type: string
+        default: "4"
+      only:
+        description: "Comma-separated domains, to test a handful without a full sweep."
+        type: string
+        default: ""
+      persist_ledger:
+        description: "Ingest this run into history/ and push it back to main"
+        type: boolean
+        default: true
+  # Enable once a few manual runs have been read by a person. Cron is UTC.
+  # schedule:
+  #   - cron: "41 9 * * 1"   # 05:41 America/New_York during EDT
+
+permissions:
+  contents: read
+
+jobs:
+  consent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      stamp: ${{ steps.stamp.outputs.value }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Confirm the roster is committed
+        # The inventory IS the roster. The pilot's own sites.yaml is gone, and
+        # a second site list must never come back: reconciling the pilot's
+        # twelve against the inventory found two wrong, which is the whole
+        # argument for one list.
+        run: |
+          test -f data/fleet-inventory.json \
+            || { echo "::error::data/fleet-inventory.json is missing from the repo."; exit 1; }
+          python3 -c "import json,re;d=json.load(open('data/fleet-inventory.json'));n=[s for s in d['sites'] if s.get('domain') and re.match(r'^[a-z0-9-]+(\.[a-z0-9-]+)+$', s['domain'], re.I)];print('roster OK: %d scannable of %d inventory entries' % (len(n), d['site_count']))"
+
+      - name: Self-check (offline, no browser, no network)
+        # Runs first. Every fixture is local, so a red here is a code problem
+        # and can never be a network problem or a site being down.
+        run: python3 test/test-consent.py
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Stamp
+        id: stamp
+        run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Sweep
+        run: |
+          node scripts/consent/run-sweep.mjs \
+            --inventory data/fleet-inventory.json \
+            --out reports \
+            --stamp "${{ steps.stamp.outputs.value }}" \
+            --concurrency "${{ inputs.concurrency || '4' }}" \
+            ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }} \
+            | tee /tmp/sweep.txt
+
+      - name: Findings
+        run: |
+          {
+            echo "## Consent coverage"
+            echo
+            echo '```'
+            cat /tmp/sweep.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Coverage gate
+        # Surfaced as warnings, never as a red build. A consent finding is a
+        # client conversation, and a build that goes red for one teaches people
+        # to ignore the build. The numbers are the point, not the exit code.
+        run: |
+          python3 - "reports/fleet-consent-${{ steps.stamp.outputs.value }}.json" <<'PY'
+          import json, sys
+          scan = json.load(open(sys.argv[1]))
+          sites = scan.get("sites", [])
+          ok = [s for s in sites if s.get("ok")]
+          leak = [s for s in ok if s.get("preConsentTrackers")]
+          notool = [s for s in ok if not s.get("bannerDetected")]
+          dead = [s for s in sites if not s.get("ok")]
+          if leak:
+              print("::warning::%d site(s) fired trackers before any consent interaction: %s"
+                    % (len(leak), ", ".join(s["domain"] for s in leak[:20])))
+          if notool:
+              print("::warning::%d site(s) showed no consent tooling: %s"
+                    % (len(notool), ", ".join(s["domain"] for s in notool[:20])))
+          if dead:
+              print("::warning::%d site(s) could not be loaded, so their consent posture is unmeasured, not clean: %s"
+                    % (len(dead), ", ".join(s["domain"] for s in dead[:20])))
+          for s in scan.get("skipped_no_domain", []):
+              print("::notice::skipped %s: %s" % (s["site_id"], s["reason"]))
+          print("scanned=%d of %d  leaking=%d  no_tooling=%d  unscannable=%d"
+                % (len(ok), len(sites), len(leak), len(notool), len(dead)))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fleet-consent-${{ steps.stamp.outputs.value }}
+          path: reports/fleet-consent-*.json
+          retention-days: 90
+
+  # -------------------------------------------------------------------------
+  # Same persist script and the same fleet-ledger-write lock as the other
+  # workflows, so none of them can race each other.
+  # -------------------------------------------------------------------------
+  persist-ledger:
+    name: Ingest into the ledger
+    needs: consent
+    if: >-
+      always()
+      && inputs.persist_ledger
+      && needs.consent.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: fleet-ledger-write
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download this run's reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: fleet-consent-${{ needs.consent.outputs.stamp }}
+          path: /tmp/ci-reports
+
+      - name: Ingest, render and push
+        run: ./scripts/persist-ledger.sh /tmp/ci-reports "Consent coverage sweep"

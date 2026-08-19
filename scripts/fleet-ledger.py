@@ -140,6 +140,59 @@ EMAIL_OBSERVED = (
     "relaxed_aligned",
 )
 
+# Nexcess control-plane discovery. Every name is prefixed, and that is a
+# decision rather than a style: the control plane and WP-CLI answer the same
+# two questions (what PHP, what WordPress) by different means, and the
+# control-plane answer is the weaker of the two. Storing them under one name
+# means whichever ran last wins and the disagreement disappears. Storing them
+# apart means the disagreement is a fact, and `wp_version_disagreement` in the
+# severity module can report it.
+#
+# `nexcess_unix_username` is here because it is the join key for Phase 2: SSH
+# identity on Nexcess Managed WordPress is per site, so the SSH scan cannot be
+# built until this has been measured once.
+NEXCESS_OBSERVED = (
+    "nexcess_site_id",
+    "nexcess_unix_username",
+    "nexcess_ip",
+    "nexcess_package",
+    "nexcess_state",
+    "nexcess_app",
+    "nexcess_app_version",
+    "nexcess_php_version",
+    "nexcess_env",
+    "nexcess_temp_domain",
+)
+
+# Cookie-consent coverage. A browser observation of the public homepage: what
+# fired before any consent interaction, and which consent tooling is present.
+#
+# `consent_pre_tracker_names` is a sorted comma string, not a list. The ledger
+# diffs values, and a list would report a reorder as a change. Sorting it makes
+# "GA4 appeared" a real diff and "the same two in a different order" a no-op.
+#
+# NOTHING HERE IS A COMPLIANCE VERDICT. These are observations. The words
+# "compliant" and "non-compliant" do not appear in this workflow and must not
+# be added -- see docs/CONSENT.md for why that line is load-bearing rather than
+# lawyerly.
+CONSENT_OBSERVED = (
+    "consent_scan_ok",
+    "consent_banner_vendor",
+    "consent_banner_detected",
+    "consent_pre_trackers",
+    "consent_pre_tracker_names",
+    "consent_mode_denied",
+    "consent_http_status",
+    "consent_final_url",
+)
+
+# `cmpScripts` from the scan file is deliberately NOT a ledger fact. It is
+# evidence for interpreting `consent_banner_vendor` -- it tells "no CMP" apart
+# from "a CMP we do not recognise" -- and it lives in reports/ where a person
+# reading a finding can consult it. Giving it a timeline would mean diffing a
+# list of URLs that change on every cache-buster, and reporting that as a fleet
+# change.
+
 RUN_RE = re.compile(r"fleet-(health|plugin-scan|email-dns|[a-z0-9-]+)-(\d{4}-\d{2}-\d{2})_(\d{4})\.json$")
 
 
@@ -238,10 +291,114 @@ def _email_rows(payload, by_domain):
     return out
 
 
+def _nexcess_rows(payload, by_domain):
+    """Nexcess estate discovery: a dict with a `sites` list keyed on the domain.
+
+    Sites the API could not be asked about are NOT written. A row that exists
+    with every fact unknown is indistinguishable on the page from a row that
+    was measured and came back empty, and this project has shipped that bug
+    more than once. A site missing from the scan stays UNKNOWN, which is what
+    it is.
+    """
+    if not isinstance(payload, dict) or payload.get("kind") != "nexcess-estate":
+        return None
+    out = []
+    for s in payload.get("sites", []):
+        if s.get("error"):
+            continue
+        d = (s.get("domain") or "").lower()
+        if not d:
+            continue
+        out.append({
+            "site_id": by_domain.get(d, d), "host_site_name": None,
+            "source": "nexcess",
+            "nexcess_site_id": s.get("nexcess_site_id", UNKNOWN) or UNKNOWN,
+            "nexcess_unix_username": s.get("unix_username") or UNKNOWN,
+            "nexcess_ip": s.get("ip") or UNKNOWN,
+            "nexcess_package": s.get("package") or UNKNOWN,
+            "nexcess_state": s.get("state") or UNKNOWN,
+            "nexcess_app": s.get("app") or UNKNOWN,
+            "nexcess_app_version": s.get("app_version") or UNKNOWN,
+            "nexcess_php_version": s.get("php_version") or UNKNOWN,
+            "nexcess_env": s.get("env") or UNKNOWN,
+            "nexcess_temp_domain": s.get("temp_domain") or UNKNOWN,
+        })
+    return out
+
+
+def _consent_rows(payload, by_domain):
+    """Consent sweep: a dict with a `sites` list keyed on the domain.
+
+    UNLIKE the Nexcess adapter, a FAILED scan IS written, carrying
+    `consent_scan_ok: false` and unknown for everything else. The two cases are
+    genuinely different. A Nexcess site the API would not describe was still
+    listed by the API, so the listing was the measurement and an all-unknown row
+    would have added nothing. Here the site itself would not load for a browser,
+    and that is a fact about the site worth keeping a history of -- a domain
+    that stops answering is a finding, and a row that quietly vanishes from the
+    sweep is not one anybody sees.
+    """
+    if not isinstance(payload, dict) or payload.get("kind") != "consent-sweep":
+        return None
+    out = []
+    for s in payload.get("sites", []):
+        d = (s.get("domain") or "").lower()
+        if not d:
+            continue
+        ok = bool(s.get("ok"))
+        trackers = s.get("preConsentTrackers") or []
+        rec = {
+            "site_id": s.get("site_id") or by_domain.get(d, d),
+            "host_site_name": None, "source": "consent",
+            "consent_scan_ok": ok,
+        }
+        if ok:
+            rec.update({
+                "consent_banner_vendor": s.get("bannerVendor") or (
+                    "generic" if s.get("genericBannerVisible") else "none"),
+                "consent_banner_detected": bool(s.get("bannerDetected")),
+                "consent_pre_trackers": len(trackers),
+                "consent_pre_tracker_names": ", ".join(sorted(trackers)) or "none",
+                "consent_mode_denied": bool(s.get("consentModeDenied")),
+                "consent_final_url": s.get("finalUrl") or UNKNOWN,
+            })
+        else:
+            # Nobody looked successfully. Every observation is unknown, and none
+            # of them is zero: "0 trackers fired" on a page that never loaded
+            # would render as an all-clear.
+            for k in CONSENT_OBSERVED:
+                rec.setdefault(k, UNKNOWN)
+            rec["consent_scan_ok"] = False
+
+        # The status is set from the payload whether or not the scan succeeded,
+        # because on a failed row it is usually the REASON. 23 sites in the
+        # first real sweep answered 403; recording that as unknown would hide
+        # the one fact that explains the whole row.
+        rec["consent_http_status"] = (
+            s.get("status") if s.get("status") is not None else UNKNOWN)
+        out.append(rec)
+    return out
+
+
 # Fact-name collision guard. If two sources ever claim the same fact name, the
 # ledger would silently merge unrelated measurements onto one timeline.
-_overlap = set(OBSERVED) & set(EMAIL_OBSERVED)
-assert not _overlap, "fact name collision between sources: %s" % sorted(_overlap)
+#
+# Checked pairwise across every family rather than as one hardcoded pair, so
+# adding a fourth source (the cookie consent monitor is next) cannot get past
+# it by nobody remembering to extend the assert.
+FACT_FAMILIES = {
+    "health": OBSERVED,
+    "email-dns": EMAIL_OBSERVED,
+    "nexcess": NEXCESS_OBSERVED,
+    "consent": CONSENT_OBSERVED,
+}
+for _a in sorted(FACT_FAMILIES):
+    for _b in sorted(FACT_FAMILIES):
+        if _a >= _b:
+            continue
+        _overlap = set(FACT_FAMILIES[_a]) & set(FACT_FAMILIES[_b])
+        assert not _overlap, ("fact name collision between sources %s and %s: %s"
+                              % (_a, _b, sorted(_overlap)))
 
 
 def ingest(reports_dir, history_dir, inventory=None):
@@ -295,6 +452,10 @@ def ingest(reports_dir, history_dir, inventory=None):
             if rows is None:
                 rows = _email_rows(payload, by_domain)
             if rows is None:
+                rows = _nexcess_rows(payload, by_domain)
+            if rows is None:
+                rows = _consent_rows(payload, by_domain)
+            if rows is None:
                 print("  skip (unrecognised shape): %s" % os.path.basename(path),
                       file=sys.stderr)
                 continue
@@ -306,6 +467,20 @@ def ingest(reports_dir, history_dir, inventory=None):
             if source == "health":
                 deep = sum(1 for r in payload if r.get("wp_checked") is True)
                 mode = "full" if deep else "api-only"
+            elif source == "consent":
+                # Coverage here means "the page actually loaded". A site that
+                # would not load is counted as not covered, so `deep_scanned`
+                # never overstates the sweep.
+                deep = sum(1 for r in rows if r["consent_scan_ok"] is True)
+                mode = "browser"
+            elif source == "nexcess":
+                # For this source, coverage means "the control plane told us
+                # what version of WordPress is installed". A site the API
+                # listed but would not describe is counted as not covered, so
+                # `deep_scanned` never overstates what was actually learned.
+                deep = sum(1 for r in rows
+                           if r["nexcess_app_version"] != UNKNOWN)
+                mode = "api-estate"
             else:
                 deep = sum(1 for r in rows if r["dkim_present"] is True)
                 mode = "dns"
@@ -502,7 +677,7 @@ def _backup_bad(v):
     return v > BACKUP_CRIT_DAYS
 
 
-FACTS_BY_SOURCE = {"health": OBSERVED, "email-dns": EMAIL_OBSERVED}
+FACTS_BY_SOURCE = FACT_FAMILIES
 
 
 def facts_for(row):
@@ -672,14 +847,90 @@ def collapse_coverage(changes):
 # one cause reads as a crisis and is one merge.
 
 
+def _standing_consent(rows):
+    """Consent findings, grouped by cause like everything else on the page.
+
+    Added 2026-08-19 after the first real sweep. Without this the two largest
+    causes on the fleet -- 34 sites with no consent tooling and 28 firing
+    trackers before consent -- appeared only as per-site WARN reasons, and the
+    "grouped by cause, not by site" section that exists to stop 34 findings
+    reading as 34 decisions did not mention them at all.
+    """
+    out = []
+    if not rows:
+        return out
+
+    leaking = sorted(s for s, r in rows.items()
+                     if isinstance(r.get("consent_pre_trackers"), int)
+                     and r["consent_pre_trackers"] > 0)
+    if leaking:
+        # Split, because these are two different conversations. A site with
+        # tooling that leaks anyway is a BUILD defect we own. A site with no
+        # tooling at all is a scope question for the client.
+        tooled = [s for s in leaking if rows[s].get("consent_banner_detected") is True]
+        untooled = [s for s in leaking if s not in tooled]
+        if tooled:
+            out.append({
+                "cause": "Consent tooling present, but trackers fire before consent",
+                "axis": "RISK",
+                "sites": tooled,
+                "detail": dict((s, rows[s].get("consent_pre_tracker_names", ""))
+                               for s in tooled),
+                "action": "The highest-value rows here: the banner implies consent is "
+                          "being collected and the tags are not waiting for it. This is "
+                          "a correctness defect in a build, not a posture question.",
+            })
+        if untooled:
+            out.append({
+                "cause": "Trackers fire before consent, and no consent tooling is present",
+                "axis": "RISK",
+                "sites": untooled,
+                "detail": dict((s, rows[s].get("consent_pre_tracker_names", ""))
+                               for s in untooled),
+                "action": "One scope decision covers all %d: whether these sites are "
+                          "in scope for consent tooling at all. Technical observation, "
+                          "not a legal conclusion." % len(untooled),
+            })
+
+    notool = sorted(s for s, r in rows.items()
+                    if r.get("consent_banner_detected") is False)
+    if notool:
+        out.append({
+            "cause": "No consent tooling detected on the homepage",
+            "axis": "RISK",
+            "sites": notool,
+            "action": "One decision covers all %d, not %d separate findings: which "
+                      "of these need consent tooling. Sites in this group that also "
+                      "fire trackers are listed separately above." % (len(notool), len(notool)),
+        })
+
+    blocked = sorted(s for s, r in rows.items()
+                     if r.get("consent_scan_ok") is False)
+    if blocked:
+        out.append({
+            "cause": "The consent sweep could not see the site",
+            "axis": "COVERAGE",
+            "sites": blocked,
+            "detail": dict((s, "HTTP %s" % rows[s].get("consent_http_status"))
+                           for s in blocked),
+            "action": "Mostly a WAF refusing a headless browser. These are UNMEASURED, "
+                      "not clean, and no consent rule scores on them. Getting the "
+                      "scanner allowlisted is one decision covering all %d."
+                      % len(blocked),
+        })
+    return out
+
+
 def standing(curr_rows, today):
     """Grouped by cause, not by site. Only ever reads facts a row actually has."""
     groups = []
     health = {s: r for s, r in curr_rows.items()
               if r.get("source", "health") == "health"}
     email = {s: r for s, r in curr_rows.items() if r.get("source") == "email-dns"}
+    consent = {s: r for s, r in curr_rows.items() if r.get("source") == "consent"}
 
     groups.extend(_standing_email(email))
+    groups.extend(_standing_consent(consent))
     curr_rows = health
 
     upstream = sorted(s for s, r in curr_rows.items() if r.get("upstream_pending") not in (UNKNOWN, 0, None))
@@ -961,7 +1212,9 @@ def main():
                          "inventory entry. For CI, where nobody is reading "
                          "stdout.")
     ap.add_argument("--site")
-    ap.add_argument("--source", help="restrict to one tool: health | email-dns")
+    ap.add_argument("--source",
+                    help="restrict to one tool: health | email-dns | "
+                         "nexcess | consent")
     ap.add_argument("--today", help="override today (YYYY-MM-DD) for deterministic tests")
     ap.add_argument("--out", help="write output to this file as well as stdout")
     a = ap.parse_args()

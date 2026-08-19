@@ -1,0 +1,213 @@
+# Nexcess control-plane discovery.
+#
+# MANUAL ONLY, and it stays that way until several runs have been reviewed.
+# It carries a credential, and CLAUDE.md's rule for a new workflow is that
+# credential-free checks run on every push while anything needing a secret is
+# human-triggered until it has been trusted for a while.
+#
+# Thin wrapper, like the other two. Every decision here is a flag on a script
+# that runs identically on a laptop. If you are editing this file to change
+# WHAT gets measured, the change belongs in scripts/fleet-nexcess.py.
+#
+# NOTE FOR WHOEVER COPIES THIS ACROSS: the Claude file bridge cannot write into
+# .github/, so this file lands in ci/github-actions/ and a person moves it. The
+# two copies have already diverged once, with the live workflow demanding a
+# secret that had been deleted for a code path that no longer existed. Diff
+# them before telling anyone to run this.
+
+name: Nexcess Estate Discovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        # NO DEFAULT ON PURPOSE. As of 2026-08-19 no candidate has returned a
+        # site list; sites-portal.nexcess.com/api answers 200 with a web page.
+        # Defaulting to it would put an unverified guess into every run.
+        description: "Portal API base URL. Blank falls back to the NEXCESS_PORTAL_API_URL secret. Run probe_only first."
+        type: string
+        default: ""
+      probe_only:
+        description: "Only report which base URL answers and whether the token works. No scan."
+        type: boolean
+        default: false
+      with_detail:
+        description: "Also call GET /v1/site/{id}. Off means no PHP version, no WordPress version and no unix username."
+        type: boolean
+        default: true
+      persist_ledger:
+        description: "Ingest this run into history/ and push it back to main"
+        type: boolean
+        default: false
+  # Not enabled. Turn this on only after the numbers below have been read by a
+  # person on several manual runs.
+  # schedule:
+  #   - cron: "23 11 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  nexcess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      stamp: ${{ steps.stamp.outputs.value }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Confirm the inventory is committed
+        # The inventory IS the site list. Ingest refuses to run without it,
+        # because an append-only ledger keyed on the wrong identifier cannot be
+        # corrected in place. Fail here with a clear message instead of there
+        # with an obscure one.
+        run: |
+          test -f data/fleet-inventory.json \
+            || { echo "::error::data/fleet-inventory.json is missing from the repo."; exit 1; }
+          python3 -c "import json;d=json.load(open('data/fleet-inventory.json'));n=[s for s in d['sites'] if 'nexcess' in str(s.get('host','')).lower()];print('inventory OK: %d sites, %d on Nexcess' % (d['site_count'], len(n)))"
+
+      - name: Self-check (offline, no API calls)
+        # Runs before anything reaches the network. Every fixture in this suite
+        # is local, so a red here is a code problem and can never be a
+        # credentials or connectivity problem.
+        run: python3 test/test-nexcess.py
+
+      - name: Confirm the token is present
+        env:
+          NEXCESS_PORTAL_API_TOKEN: ${{ secrets.NEXCESS_PORTAL_API_TOKEN }}
+        run: |
+          test -n "$NEXCESS_PORTAL_API_TOKEN" \
+            || { echo "::error::NEXCESS_PORTAL_API_TOKEN is not set. Add it under Settings -> Secrets and variables -> Actions. It is never committed."; exit 1; }
+          echo "token present (${#NEXCESS_PORTAL_API_TOKEN} characters)"
+
+      - name: Probe the API base URL
+        # Nexcess documents every example against $PORTAL_API_URL and never
+        # says what it is, so this step is how the answer gets measured rather
+        # than assumed. It also separates "endpoint unreachable" from "token
+        # rejected", which are different problems that a single red X would
+        # merge.
+        env:
+          NEXCESS_PORTAL_API_TOKEN: ${{ secrets.NEXCESS_PORTAL_API_TOKEN }}
+        run: |
+          {
+            echo "## Nexcess API probe"
+            echo
+            echo '```'
+            python3 scripts/fleet-nexcess.py probe || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Stamp
+        if: ${{ !inputs.probe_only }}
+        id: stamp
+        run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Discover the estate (read-only)
+        if: ${{ !inputs.probe_only }}
+        env:
+          NEXCESS_PORTAL_API_TOKEN: ${{ secrets.NEXCESS_PORTAL_API_TOKEN }}
+          NEXCESS_PORTAL_API_URL: ${{ inputs.api_base != '' && inputs.api_base || secrets.NEXCESS_PORTAL_API_URL }}
+        run: |
+          python3 scripts/fleet-nexcess.py discover \
+            --inventory data/fleet-inventory.json \
+            --out reports \
+            --stamp "${{ steps.stamp.outputs.value }}" \
+            ${{ inputs.with_detail && ' ' || '--no-detail' }}
+
+      - name: Findings
+        if: ${{ !inputs.probe_only }}
+        run: |
+          {
+            echo "## Nexcess estate"
+            echo
+            echo '```'
+            python3 scripts/fleet-nexcess.py report \
+              --scan "reports/fleet-nexcess-${{ steps.stamp.outputs.value }}.json"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Reconciliation gate
+        if: ${{ !inputs.probe_only }}
+        # A disagreement between the API's roster and the inventory is a
+        # FINDING, so it is surfaced as a warning annotation rather than
+        # swallowed. It does not fail the build: on the first runs the
+        # disagreement is expected, and a red build that everyone learns to
+        # ignore is worse than a warning that gets read.
+        run: |
+          python3 - "reports/fleet-nexcess-${{ steps.stamp.outputs.value }}.json" <<'PY'
+          import json, sys
+          scan = json.load(open(sys.argv[1]))
+          for key, label in (
+                  ("in_inventory_not_in_api", "in the inventory as Nexcess, not returned by the API"),
+                  ("in_api_not_in_inventory", "returned by the API, in no inventory row"),
+                  ("in_api_host_mismatch", "returned by the API, inventory names another host")):
+              vals = scan.get(key) or []
+              if vals:
+                  print("::warning::%d sites %s: %s" % (len(vals), label, ", ".join(vals[:20])))
+          sites = scan.get("sites", [])
+          noversion = [s["domain"] for s in sites if not s.get("app_version")]
+          if noversion:
+              print("::warning::%d of %d sites returned no WordPress version, so their wp2shell status is still unknown: %s"
+                    % (len(noversion), len(sites), ", ".join(x for x in noversion[:20] if x)))
+          print("listed=%d  with_wp_version=%d  with_php_version=%d  with_unix_user=%d"
+                % (len(sites),
+                   sum(1 for s in sites if s.get("app_version")),
+                   sum(1 for s in sites if s.get("php_version")),
+                   sum(1 for s in sites if s.get("unix_username"))))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && !inputs.probe_only }}
+        with:
+          name: fleet-nexcess-${{ steps.stamp.outputs.value }}
+          path: reports/fleet-nexcess-*.json
+          retention-days: 90
+
+  # -------------------------------------------------------------------------
+  # Persist into the ledger. Same script and the same fleet-ledger-write lock
+  # as the other two workflows, so the three cannot race each other.
+  #
+  # Defaults OFF for this workflow, unlike the other two. The ledger is
+  # append-only: a mis-keyed row cannot be corrected in place. Nothing has ever
+  # executed against this API, so the first runs get looked at as artifacts
+  # before any of it becomes permanent history.
+  # -------------------------------------------------------------------------
+  persist-ledger:
+    name: Ingest into the ledger
+    needs: nexcess
+    if: >-
+      always()
+      && inputs.persist_ledger
+      && !inputs.probe_only
+      && needs.nexcess.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: fleet-ledger-write
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download this run's reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: fleet-nexcess-${{ needs.nexcess.outputs.stamp }}
+          path: /tmp/ci-reports
+
+      - name: Ingest, render and push
+        run: ./scripts/persist-ledger.sh /tmp/ci-reports "Nexcess estate discovery"
