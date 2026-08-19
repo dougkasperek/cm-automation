@@ -28,28 +28,54 @@ Two decisions that follow from it, both made 2026-08-18:
 
 ## Where things actually stand
 
+**The fleet has been measured.** First full-fleet full-mode scan completed
+2026-08-19 00:02 UTC, 52 sites, in the ledger and pushed.
+
 | thing | state |
 |---|---|
 | Repo | live, `github.com/dougkasperek/cm-automation`, private |
-| Email DNS check, 78 sites | green in GitHub Actions, 26s |
-| Pantheon health scan, 52 sites | works locally |
-| **Full mode (SSH + WP-CLI)** | **WORKS.** Proven on galbanicheese, `wp_checked: true` |
+| Email DNS check, 78 sites | green in Actions, 26s |
+| **Pantheon full mode** | **works locally AND in CI.** Run #5 green |
+| **Full fleet scanned** | **52 sites, 48 deep-scanned.** Coverage 0 -> 48 of 52 |
 | Unified 84-site inventory | built, keyed on domain |
-| Ledger | repaired, 4 runs, both tools, every row resolving |
-| Dashboard | 84 sites, WP version column, verified in both schemes |
-| **CI writes to the ledger** | **built, not yet run.** `docs/CI-LEDGER.md` |
-| Tests | ledger **90**, email **58**, mock harness **27**. All offline |
+| Ledger | 8 runs, both tools, every row resolving |
+| Dashboard | 84 sites, real WordPress versions, verified both schemes |
+| CI writes to the ledger | built, **never yet exercised** - see below |
+| Tests | ledger **90**, mock harness **32**, email **58**. All offline |
 
-### The full-mode result so far
+### THE FIRST REAL RESULTS, 2026-08-19
 
-One site, `galbanicheese`, `reports/fleet-health-2026-08-18_1643.json`:
-`wp_checked: true`, `plugin_updates: 0`, `theme_updates: 0`,
-`wp_core_update: "up-to-date"`, and `upstream_pending: 2`.
+```
+52 scanned | 33 CRIT / 15 WARN / 3 SKIP / 1 FROZEN / 0 healthy
+versions:  7.0.3 x33   7.0.4 x13   7.0.2 x1   6.9.4 x1   (4 never reached the WP stage)
+32 sites have a core update to 7.0.4 pending
+384 plugin updates pending across 43 of 48 measurable sites
+```
 
-Those zeros are real readings, not the fabricated kind. **The full fleet has not
-been scanned in full mode yet.**
+**`cm-whitelabel` is on 6.9.4 — the only site below 7.0.2, so the only one below
+the `wp2shell` fix line.** Two things make it worse: `wp_core_update` reports
+`up-to-date`, so the pre-2026-08-18 columns called it clean and only the
+installed version exposes it; and it has **no DB backup in 2,147 days**. Sandbox
+plan, zero plugin updates, reads like abandoned internal scratch — **but it was
+scanned on `live` and nobody has confirmed whether it resolves publicly. That is
+the first question to answer.**
 
----
+**`hoffmanscheese`: no backup in 721 days, 29 plugin updates.** Note that
+`cm-whitelabel` and `hoffmanscheese` are the same two sites already flagged as
+present in Pantheon and absent from the workbook. **The two sites with no audit
+record are the two worst-maintained sites in the fleet.**
+
+The workbook claims 7.0.2 and *plugins up to date* for all 78. Exactly **one**
+site is on 7.0.2. 7.0.3 and 7.0.4 are both above the `wp2shell` fix, so those 45
+are a maintenance backlog, not 45 emergencies.
+
+### Known-good but unexercised
+
+- **`persist_ledger` has never run.** It was unticked on run #5, so the job
+  skipped. It also needs **Settings -> Actions -> General -> Workflow
+  permissions -> Read and write**, or the push is capped at 403. That setting
+  applies to every workflow in the repo; the tighter alternative is a
+  repo-scoped fine-grained PAT used only by the persist step. **Undecided.**
 
 ## What was found and fixed on 2026-08-18 (second half)
 
@@ -105,30 +131,38 @@ five scripts with a corrected exec bit
 
 ## Do this next, in order
 
-1. **`rm -f .git/index.lock`**, then commit the above. A session left a stale
-   lock; see the traps below.
-2. **Copy both workflows** from `ci/github-actions/` into `.github/workflows/`.
-   The bridge cannot write `.github/`. Nothing in CI changes until this is done.
-3. **Re-run the 2-site cohort locally** so `wp_version` is actually populated —
-   the galbanicheese run above predates the field and stores `unknown`.
-4. **Then the full fleet in full mode**, then the same scan in CI, then compare
-   the two on facts. `docs/SSH-KEY-SETUP.md` steps 5 and 6.
-5. **Look at the WP version column.** Any site not on 7.0.2 is the most
-   important thing this project can surface. One month after `wp2shell`, an RCE
-   whose only fix was that upgrade.
-6. **Recover the lost email run.** One `email-dns` run observed
-   `2026-08-18 15:00:00` appears in the old rendered page and has no report file
-   anywhere. Its Actions artifact should still exist for 90 days. Download it
-   into `reports/` and ingest.
-7. **Deploy the dashboard to Cloudflare.** Worker and R2 code in
-   `ci/cloudflare/cm-fleet-worker.js`, never deployed. Needs its own hostname
-   (suggest `fleet.thudstaff.com`) and **its own Access policy** — the deck's
-   allowlist is partners-only and must not include developers.
-8. **Nexcess.** 46 sites vs 21, and Nexcess Managed WordPress also has SSH plus
-   WP-CLI, so the deep-scan code written for Pantheon is what it reuses. The one
-   genuine unknown is site enumeration.
+**1. Triage `cm-whitelabel`.** Does it resolve publicly? If yes it is an exposed
+unpatched WordPress install carrying clevermethod's name. If it is dark scratch,
+decommission it and the finding closes. Same question for `hoffmanscheese`,
+which has a 721-day backup gap either way.
 
----
+**2. Recalibrate severity. THIS IS THE NEXT BUILD TASK.** 33 CRIT, 15 WARN,
+**0 healthy**. Every site carries at least one pending Pantheon upstream commit
+(34 have two, 14 have one), so the fleet-wide floor is WARN, and any pending
+core update makes it CRIT. A model where 63% of the fleet is CRIT and nothing is
+OK cannot be used to decide what to look at first. **Not bad data — a threshold
+problem that only became visible once real WordPress state arrived.** Fix it
+before a developer or Tor sees the page.
+
+**3. Deploy to Cloudflare.** Two parts, and the first is not obvious:
+`publish-dashboard.sh` renders with **`render-fleet-dashboard.py`**, the v1
+single-scan renderer, and feeds the Worker's `/api/fleet-scan` route. Both
+predate the ledger. **Deploying today publishes the wrong dashboard.** Rewire
+them to `render-dashboard.py` first — and decide whether the Worker keeps a JSON
+route at all, since the ledger dashboard is self-contained and fetches nothing.
+Then the hostname (suggest `fleet.thudstaff.com`) and **its own Access policy** —
+the deck's allowlist is partners-only and must not include developers.
+
+**4. Turn on `persist_ledger` and then the schedule.** See the permissions
+decision above.
+
+**5. Nexcess.** 46 sites vs 21, still zero `wp2shell` verification, and the
+reason the dashboard covers 52 of 78 rather than all of them. The deep-scan code
+written for Pantheon is what it reuses; the one real unknown is enumeration.
+
+**Not on the critical path:** the CI-versus-local comparison in
+`SSH-KEY-SETUP.md` step 6. Worth doing as validation eventually, but there is a
+clean local baseline now and CI has proven it authenticates and reads versions.
 
 ## Three things that need a person, not code
 
@@ -181,6 +215,9 @@ Six times now, a number read confidently and was wrong:
 | the dashboard's `BACKUP: 0` | no backups | backed up today |
 | the committed ledger | 84 sites, one history each | 130 rows, two per site |
 | `wp_core_update: "up-to-date"` | the site is on 7.0.2 | nobody ever read the version |
+| `terminus auth:whoami` exit 0 | authenticated | no session at all; CI never once logged in |
+| the digest's `Scanned **3**` | three sites scanned | one; ssh ate the rest of the list |
+| `cm-whitelabel` core `up-to-date` | patched | 6.9.4, below the wp2shell fix |
 
 Every one was a confident-looking value standing in for an absence or a
 misreading. **Only two were caught by code. The rest were caught by a person
