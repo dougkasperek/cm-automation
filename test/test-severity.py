@@ -356,6 +356,21 @@ if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.
     _nohealth = set(_data.get("no_health_evidence") or [])
     check("the feed publishes the health-coverage gap as its own list",
           "no_health_evidence" in _data)
+
+    # THE GUARD THAT WOULD HAVE CAUGHT THE CONSENT OMISSION.
+    # If a fact can change a site's status, a consumer of the feed has to be
+    # able to see why. The consent sweep shipped with its facts scoring on the
+    # page and absent from the feed, because EMIT_FACTS is a hand-written
+    # allowlist and nobody extended it. Enumerating it is deliberate -- it is a
+    # contract, and a rename should break loudly here -- so the protection is
+    # this assertion rather than deriving the list.
+    _missing = [f for f in S.SCORING_FACTS if f not in R.EMIT_FACTS]
+    check("every fact severity scores on is published in the feed",
+          not _missing, repr(_missing))
+    check("...and every site row actually carries them",
+          all(all(f in s for f in S.SCORING_FACTS) for s in _data["sites"]),
+          repr([f for f in S.SCORING_FACTS
+                if not all(f in s for s in _data["sites"])]))
     check("...and no site in it reads as OK, whatever else has looked at it",
           all(s["status"] != "OK" for s in _data["sites"]
               if s["site_id"] in _nohealth),
