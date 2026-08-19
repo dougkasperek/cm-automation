@@ -1,8 +1,23 @@
 # Fleet dashboard: live demo, then hosting
 
-One HTML page that renders a fleet scan. Same renderer four ways: watched live
-while a scan runs, opened as a local file, served from R2 by a Worker, or
-republished automatically at the end of every CI scan.
+**Updated 2026-08-19. What gets PUBLISHED changed; the live local demo did not.**
+
+There are **two renderers, deliberately**, and confusing them is how this
+document was wrong for a month:
+
+| renderer | input | used for |
+|---|---|---|
+| `render-fleet-dashboard.py` (v1) | one scan JSON | the **live local view** that fills in site by site while a scan runs |
+| `render-dashboard.py` (v2) | the **ledger** in `history/` | the **published** dashboard: all 84 sites, both tools, change detection |
+
+Until 2026-08-19 `publish-dashboard.sh` called **v1**, so running it would have
+published a single-run snapshot -- 52 sites instead of 84, no change detection,
+no email/DNS data -- to a hostname people were about to be sent to. It now
+renders from the ledger.
+
+**Do not delete `render-fleet-dashboard.py`.** `serve-dashboard.py` imports it,
+and the live view is the thing that makes a scan watchable on a screen share.
+See `docs/DASHBOARD-V2.md` for why the two were never merged.
 
 ---
 
@@ -48,24 +63,46 @@ hosted path below is the better answer for anything beyond a live demo.
 
 | File | Job |
 |---|---|
-| `scripts/render-fleet-dashboard.py` | scan JSON in, self-contained HTML out. All classification logic lives here |
-| `scripts/serve-dashboard.py` | watches a reports dir, re-renders on change, serves it. Stdlib only, nothing to install |
-| `scripts/publish-dashboard.sh` | render, then PUT both artifacts to the Worker |
-| `ci/cloudflare/cm-fleet-worker.js` | serves the page and the data endpoint out of R2. No business logic |
-
-The renderer handles both scan schemas and detects which it was given, so the
-same command works for the plugin scan today and the fleet health check the
-moment that produces output.
+| `scripts/render-dashboard.py` | **the ledger in, page + JSON feed out. This is what gets published** |
+| `scripts/lib/severity.py` | decides CRIT/WARN/OK. The only place that does. See `docs/SEVERITY.md` |
+| `scripts/render-fleet-dashboard.py` | one scan JSON in, HTML out. Feeds the LIVE view only |
+| `scripts/serve-dashboard.py` | watches a reports dir, re-renders on change, serves it. Stdlib only |
+| `scripts/publish-dashboard.sh` | render from the ledger, then PUT both artifacts to the Worker |
+| `ci/cloudflare/cm-fleet-worker.js` | serves the page and the feed out of R2. No business logic |
 
 ```bash
-# local, no infra
-python3 scripts/render-fleet-dashboard.py reports/<scan>.json -o dashboard.html
-open dashboard.html
+# the published page, locally
+./scripts/render-dashboard.py --out fleet.html
+open fleet.html
 
-# hosted pair
-python3 scripts/render-fleet-dashboard.py reports/<scan>.json \
-    -o dashboard.html --emit-data latest.json --live-url /api/fleet-scan
+# exactly what CI publishes, without publishing it
+./scripts/publish-dashboard.sh --dry-run
 ```
+
+`--dry-run` writes both artifacts under `reports/publish-preview/` and stops.
+**Use it.** Six of the ten bugs this project has found were caught by a person
+reading a rendered page, not by a passing test.
+
+### The two artifacts come from one render
+
+`--emit-data` writes the JSON feed from the **same model object** that produced
+the HTML. The v1 pair was built by two code paths, which is how a live JSON
+endpoint ends up disagreeing with the page beside it. `test/test-severity.py`
+asserts every count in the feed appears in the rendered HTML, so drift fails a
+test rather than waiting for someone to open both.
+
+### What `/api/fleet-scan` returns now
+
+`{"schema": "fleet-dashboard/2", ...}` -- **not** the v1 `{stamp, kind, rows}`
+shape. The version is there so a consumer written against v1 breaks loudly
+instead of quietly reading fields that no longer mean what they meant.
+
+It carries, per site: the re-derived `status`, `counts_toward_fleet`, the
+`reasons` behind that status with machine-readable codes, the observed facts,
+and the workbook's claims kept separate from them. Plus the fleet `health`
+counts, the review queue, standing findings, changes, and
+**`severity_rules`** -- the thresholds the run was scored with, so a consumer
+can tell a fleet change from a rules change.
 
 ---
 
@@ -103,13 +140,35 @@ from `cm.thudstaff.com`.
 **5. Put it behind Access, with the right policy.** See the next section, which
 is the part that actually decides whether this works for your purpose.
 
-**6. Publish.**
+**6. Publish.** Note it takes **no scan file** -- it renders from the ledger.
 
 ```bash
+# look at it first
+./scripts/publish-dashboard.sh --dry-run
+open reports/publish-preview/dashboard.html
+
+# then for real
 export FLEET_PUBLISH_URL=https://fleet.thudstaff.com
 export FLEET_PUBLISH_TOKEN=<the PUBLISH_TOKEN value>
-./scripts/publish-dashboard.sh reports/<scan>.json
+./scripts/publish-dashboard.sh
 ```
+
+**7. Let CI do it.** The `Pantheon Fleet Health Check` workflow has a
+`publish_dashboard` input, **default off**. Turn it on once the above works by
+hand. It needs two repo settings:
+
+| where | name | value |
+|---|---|---|
+| Settings, Secrets and variables, Actions, **Variables** | `FLEET_PUBLISH_URL` | `https://fleet.thudstaff.com` |
+| Settings, Secrets and variables, Actions, **Secrets** | `FLEET_PUBLISH_TOKEN` | the `PUBLISH_TOKEN` value |
+
+The publish job runs **after** `persist-ledger`, and checks out `main` fresh.
+Both matter: publishing first would ship a page rendered from a ledger that does
+not yet hold the run that just finished, so the live dashboard would sit one
+scan behind forever and nothing on the page would say so.
+
+It also requires `persist_ledger` to be on. With no ingest there is nothing new
+to publish.
 
 ---
 

@@ -276,5 +276,75 @@ if os.path.exists(hist) and os.path.exists(inv_path):
 else:
     print("skip  ledger checks (history/ or inventory missing)")
 
+
+# --------------------------------------------------------------------------
+# The published JSON feed must agree with the page it ships beside.
+#
+# The v1 pair was a page and a JSON blob produced by two code paths, and that
+# is how a live endpoint ends up disagreeing with the dashboard next to it.
+# emit_data() is built from the SAME model object that renders the HTML, and
+# these checks prove that rather than trusting it -- a separate emit path that
+# quietly drifted would be a fresh instance of this project's oldest bug.
+# --------------------------------------------------------------------------
+print("\n-- the JSON feed agrees with the page --")
+import datetime as _dt
+import importlib.util as _il
+import re as _re
+
+_rs = _il.spec_from_file_location("render", os.path.join(ROOT, "scripts", "render-dashboard.py"))
+try:
+    R = _il.module_from_spec(_rs)
+    _rs.loader.exec_module(R)
+except Exception as _e:                                    # pragma: no cover
+    print("skip  renderer would not import: %s" % _e)
+    R = None
+
+if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.jsonl")):
+    _m = R.build_model(os.path.join(ROOT, "history"),
+                       os.path.join(ROOT, "data", "fleet-inventory.json"),
+                       _dt.date(2026, 8, 19))
+    _html = R.render(_m)
+    _data = R.emit_data(_m)
+
+    check("feed carries a schema version",
+          _data["schema"] == "fleet-dashboard/2", _data.get("schema"))
+    check("feed has one entry per site on the page",
+          len(_data["sites"]) == len(_m["sites"]) == 84, str(len(_data["sites"])))
+
+    # Every count in the feed must appear in the rendered HTML next to its
+    # state chip. If the page said 2 CRIT and the feed said 33, only a person
+    # opening both would ever notice.
+    for _state, _n in _data["health"]["counts"].items():
+        if not _n:
+            continue
+        _pat = _re.compile(r"%s</span>\s*</div>\s*<div class=val>%d</div>" % (_state, _n))
+        check("page shows %d %s, same as the feed" % (_n, _state),
+              bool(_pat.search(_html)), "not found in rendered HTML")
+
+    # A per-site spot check, on the row where being wrong matters most.
+    _feed = {s["site_id"]: s for s in _data["sites"]}
+    check("the excluded site is in the feed, not silently dropped",
+          "cm-whitelabel" in _feed)
+    check("...flagged as not counting toward the fleet",
+          _feed["cm-whitelabel"]["counts_toward_fleet"] is False)
+    check("...and still carrying its real CRIT status",
+          _feed["cm-whitelabel"]["status"] == "CRIT")
+    check("feed states WHY a site is CRIT, not just that it is",
+          any(r["code"] == "wp_below_floor"
+              for r in _feed["cm-whitelabel"]["reasons"]))
+    check("feed publishes the thresholds it was scored with",
+          _data["severity_rules"]["wp_security_floor"] == "7.0.2"
+          and _data["severity_rules"]["backup_crit_days"] == S.BACKUP_CRIT_DAYS)
+
+    # A site nobody has scanned must not read as healthy in a machine-readable
+    # feed either. This is settled principle 5 applied to the API.
+    _unknown = [s for s in _data["sites"] if s["status"] == "UNKNOWN"]
+    check("never-scanned sites are UNKNOWN in the feed, not OK",
+          len(_unknown) == 32, str(len(_unknown)))
+    check("...and carry no WordPress version rather than a blank that reads as one",
+          all(s["wp_version"] is None for s in _unknown))
+else:
+    print("skip  feed checks (renderer or ledger unavailable)")
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

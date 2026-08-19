@@ -188,6 +188,66 @@ def build_model(history_dir, inventory_path, today):
     }
 
 
+# Facts published in the JSON feed. Enumerated ON PURPOSE rather than dumping
+# the internal model: this is a contract other things read, and an internal
+# rename should break the emit loudly here rather than silently change an API
+# somebody built against.
+EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
+              "wp_core_update", "wp_checked", "plugin_updates", "theme_updates",
+              "upstream_pending", "db_backup_age_days", "frozen",
+              "in_workbook", "production")
+
+
+def emit_data(m):
+    """The JSON feed, built from the SAME model object that renders the page.
+
+    That shared origin is the whole design. The v1 pair was a page and a JSON
+    blob produced by two code paths, which is how a live endpoint ends up
+    disagreeing with the page next to it. Here, if the numbers below are wrong
+    the page is wrong in exactly the same way, and looking at the page catches
+    both.
+    """
+    sites = []
+    for s in m["sites"]:
+        sev = s.get("severity") or {}
+        row = {"site_id": s["site_id"],
+               "status": sev.get("status"),
+               "counts_toward_fleet": sev.get("production", True),
+               "reasons": sev.get("reasons", []),
+               "info": sev.get("info", []),
+               "sources": sorted(s.get("sources") or []),
+               "workbook_claims": s.get("claimed") or {}}
+        for k in EMIT_FACTS:
+            row[k] = s.get(k)
+        sites.append(row)
+
+    return {
+        "schema": "fleet-dashboard/2",
+        # Bumped from the v1 {stamp, kind, rows} shape. A consumer written
+        # against v1 must fail on the version rather than silently read fields
+        # that no longer mean what they meant.
+        "generated": m["generated"],
+        "severity_rules": {
+            "wp_security_floor": ".".join(map(str, SEV.WP_SECURITY_FLOOR)),
+            "backup_crit_days": SEV.BACKUP_CRIT_DAYS,
+            "backup_warn_days": SEV.BACKUP_WARN_DAYS,
+            "plugin_warn_count": SEV.PLUGIN_WARN_COUNT,
+            "php_security_eol": SEV.PHP_SECURITY_EOL,
+        },
+        "runs": {src: {"run_id": r["run_id"], "observed_at": r.get("observed_at"),
+                       "site_count": r.get("site_count"),
+                       "mode": r.get("mode"), "deep_scanned": r.get("deep_scanned")}
+                 for src, r in m["latest"].items()},
+        "health": m["health"],
+        "sites": sites,
+        "standing": m["standing"],
+        "changes": m["changes"],
+        "coverage_changes": m["coverage_changes"],
+        "coverage": [{"what": w, "known": k, "of": n} for w, (k, n) in m["coverage"]],
+        "inventory_count": m["inventory_count"],
+    }
+
+
 def css():
     out = [":root{"]
     for k, v in PALETTE["light"].items():
@@ -585,6 +645,10 @@ def main():
     ap.add_argument("--history", default="./history")
     ap.add_argument("--inventory", default="./data/fleet-inventory.json")
     ap.add_argument("--out", default="./fleet.html")
+    ap.add_argument("--emit-data", metavar="PATH",
+                    help="also write the same model as JSON, for the Worker's "
+                         "/api/fleet-scan route. Built from the model that "
+                         "renders the page, so the two cannot disagree.")
     ap.add_argument("--today", help="override today (YYYY-MM-DD) for deterministic output")
     ap.add_argument("--strict", action="store_true",
                     help="exit non-zero if the ledger holds a site the "
@@ -595,6 +659,11 @@ def main():
     m = build_model(a.history, a.inventory, today)
     with open(a.out, "w") as fh:
         fh.write(render(m))
+    if a.emit_data:
+        with open(a.emit_data, "w") as fh:
+            json.dump(emit_data(m), fh, indent=1, sort_keys=False)
+            fh.write("\n")
+        print("data -> %s" % a.emit_data)
     c = m["health"]["counts"]
     print("%d sites, %d change(s), %d standing finding(s) -> %s"
           % (len(m["sites"]), len(m["changes"]), len(m["standing"]), a.out))
