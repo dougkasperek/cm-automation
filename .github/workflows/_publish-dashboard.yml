@@ -1,0 +1,76 @@
+# Reusable: render from the ledger and publish to R2.
+#
+# WHY THIS EXISTS. Until 2026-08-19 only pantheon-fleet-healthcheck.yml
+# published. The email, Nexcess and consent workflows all ingested into the
+# ledger and stopped there, so every one of them left fleet.thudstaff.com
+# showing older data than the ledger it was rendered from. Nobody would have
+# seen a stale page and known it was stale; it just quietly stopped being the
+# operating layer for three sources out of four.
+#
+# The fix is one shared job rather than the same block pasted into four files.
+# This repo has already been bitten once by two copies of a workflow diverging
+# (see the header of any ci/github-actions/*.yml), and four copies of a publish
+# step is that bug waiting to happen.
+#
+# Called with `uses: ./.github/workflows/_publish-dashboard.yml` and
+# `secrets: inherit`. It checks out main FRESH: the calling workflow's persist
+# job pushed this run's observations a moment ago, and rendering the commit the
+# workflow started from would publish a page WITHOUT them.
+#
+# pantheon-fleet-healthcheck.yml still has its own inline copy. Folding it into
+# this one is the next tidy-up; it was left alone on the day this was written
+# rather than editing a working publish path late in a session.
+
+name: Publish dashboard (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      label:
+        description: "What triggered this publish, for the run summary."
+        type: string
+        required: false
+        default: "ledger update"
+
+jobs:
+  publish:
+    name: Render from the ledger and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+
+      - name: Check publish credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        # A missing secret must stop the job with a readable message rather
+        # than letting the script fail on an unbound variable ten lines later.
+        run: |
+          set -uo pipefail
+          missing=""
+          [ -z "${CLOUDFLARE_API_TOKEN}" ]  && missing="$missing CLOUDFLARE_API_TOKEN(secret)"
+          [ -z "${CLOUDFLARE_ACCOUNT_ID}" ] && missing="$missing CLOUDFLARE_ACCOUNT_ID(variable)"
+          if [ -n "$missing" ]; then
+            echo "::error::publish is on but$missing is not set. Set them in repo settings, or turn the publish input off on the calling workflow."
+            exit 1
+          fi
+
+      - name: Render and publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          FLEET_PUBLIC_URL: ${{ vars.FLEET_PUBLISH_URL }}
+          FLEET_PUBLISH_LABEL: ${{ inputs.label }}
+        run: FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh

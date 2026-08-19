@@ -39,6 +39,10 @@ on:
         description: "Ingest this run into history/ and push it back to main"
         type: boolean
         default: false
+      publish_dashboard:
+        description: "After ingesting, re-render and publish to fleet.thudstaff.com"
+        type: boolean
+        default: true
   # Not enabled. Turn this on only after the numbers below have been read by a
   # person on several manual runs.
   # schedule:
@@ -211,3 +215,20 @@ jobs:
 
       - name: Ingest, render and push
         run: ./scripts/persist-ledger.sh /tmp/ci-reports "Nexcess estate discovery"
+
+  # -------------------------------------------------------------------------
+  # Publish. Without this the ledger moves and fleet.thudstaff.com does not,
+  # which is worse than not publishing at all: the page looks current.
+  # Shared job, not a fourth copy of the same steps.
+  # -------------------------------------------------------------------------
+  publish-dashboard:
+    name: Publish dashboard
+    needs: persist-ledger
+    if: >-
+      always()
+      && inputs.publish_dashboard
+      && needs.persist-ledger.result == 'success'
+    uses: ./.github/workflows/_publish-dashboard.yml
+    secrets: inherit
+    with:
+      label: "Nexcess estate discovery"

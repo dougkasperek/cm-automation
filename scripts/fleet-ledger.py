@@ -873,6 +873,11 @@ def _standing_consent(rows):
             out.append({
                 "cause": "Consent tooling present, but trackers fire before consent",
                 "axis": "RISK",
+                # Outranks its neighbours regardless of size: it is the only
+                # group on the page describing a defect in something WE built,
+                # rather than a decision the client has not made. Three sites
+                # beats thirty-four when the three are ours to fix.
+                "priority": 10,
                 "sites": tooled,
                 "detail": dict((s, rows[s].get("consent_pre_tracker_names", ""))
                                for s in tooled),

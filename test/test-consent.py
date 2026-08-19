@@ -391,6 +391,16 @@ try:
               and any("403" in v for v in g["detail"].values()) for g in _st))
     check("no standing finding states a compliance verdict",
           all("compliant" not in json.dumps(g).lower() for g in _st))
+    # Sort order is a finding in its own right. The tooling-present-but-leaking
+    # group is 3 sites next to a 34-site group, and sorting RISK by size alone
+    # buried the one group describing a defect in something we built.
+    _tooled = [g for g in _st if "tooling present" in g["cause"].lower()][0]
+    check("the tooling-present-but-leaking group carries an explicit priority, "
+          "so a 3-site defect we own outranks a 34-site client scope question",
+          _tooled.get("priority", 0) > 0, repr(_tooled.get("priority")))
+    check("...and no other consent group claims priority, so the key stays "
+          "meaningful rather than becoming decoration",
+          sum(1 for g in _st if g.get("priority", 0) > 0) == 1)
 
     res2 = L.ingest(_reports, _history, inventory=INV_PATH)
     check("re-ingesting the same run adds nothing",

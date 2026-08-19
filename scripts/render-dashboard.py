@@ -113,7 +113,19 @@ def build_model(history_dir, inventory_path, today):
     changes.sort(key=lambda c: (order.get(c["class"], 99), c["site"], c["fact"]))
     changes, coverage_changes = L.collapse_coverage(changes)
     axis_order = {"RISK": 0, "COVERAGE": 1, "PLANNING": 2, "DRIFT": 3}
-    standing.sort(key=lambda g: (axis_order.get(g["axis"], 9), -len(g["sites"])))
+    # Within an axis, sort by an explicit priority FIRST, then by size.
+    #
+    # Size alone put "consent tooling present, but trackers fire before
+    # consent" -- 3 sites, and the only group on the page that is a defect in
+    # something clevermethod built -- fifth, below three larger groups that are
+    # client scope questions. Its own text said "the highest-value rows here"
+    # while sitting halfway down. Size is a decent default for "how much does
+    # this cost to fix"; it is a poor one for "who has to act and how bad is
+    # it", and a group that knows it outranks its neighbours should be able to
+    # say so rather than hoping it is big enough.
+    standing.sort(key=lambda g: (axis_order.get(g["axis"], 9),
+                                 -g.get("priority", 0),
+                                 -len(g["sites"])))
 
     # One row per site, merged across every source that has seen it.
     merged = {}
