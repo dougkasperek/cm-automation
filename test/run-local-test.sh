@@ -12,6 +12,20 @@
 #
 set -uo pipefail
 
+# STDIN MUST NOT BE A TERMINAL. The mock's `remote:wp` drains stdin on purpose,
+# because the real `terminus remote:wp` spawns ssh and ssh reads stdin -- that
+# is the 2026-08-18 bug where a scan of ten sites silently scanned one. When
+# this script is run from an interactive shell, that `cat` blocks on the
+# keyboard and every WP-CLI call sits there until the 60s timeout kills it:
+# 20 calls, ~21 minutes, and four failures that all read as "the version could
+# not be determined" rather than as a hang.
+#
+# Redirecting from /dev/null makes the drain return at EOF immediately. It does
+# NOT weaken the regression check: the here-doc the site loop reads is created
+# inside the healthcheck script, so if that loop ever goes back to stdin the
+# mock still eats it and the test still catches it.
+exec </dev/null
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="$REPO_ROOT/test/mock:$PATH"
 export PANTHEON_MACHINE_TOKEN="mock-token-not-real"
@@ -36,6 +50,8 @@ check() {
 status_of() { jq -r --arg s "$2" '.[]|select(.site==$s)|.status' "$1"; }
 
 echo "=== Case 1: full scan, fail-on-crit ON (default) ==================="
+echo "    (1-3 min, silent: two mock sites hang on purpose to prove the timeout"
+echo "     guard works. Output goes to a temp log, not here.)"
 new_session 1
 START="$(date +%s)"
 "$REPO_ROOT/scripts/pantheon-fleet-healthcheck.sh" --out "$TMP/full" >"$TMP/full.log" 2>&1
@@ -94,7 +110,12 @@ fi
 if [ "$ELAPSED" -lt 180 ]; then
   printf '  PASS  %-58s %ss\n' "run finished fast (no hang on uninitialized env)" "$ELAPSED"; PASS=$((PASS+1))
 else
-  printf '  FAIL  %-58s %ss\n' "run took too long - hang protection may have regressed" "$ELAPSED"; FAIL=$((FAIL+1))
+  printf '  FAIL  %-58s %ss\n' "run took too long - hang protection may have regressed" "$ELAPSED"
+  # ~1300s with every wp_version reading "unknown" is the signature of stdin
+  # being a terminal, not of the timeout guard regressing. See `exec </dev/null`
+  # at the top of this file.
+  printf '        %s\n' "~1300s + unknown versions => stdin was a TTY, not a guard failure"
+  FAIL=$((FAIL+1))
 fi
 
 echo ""

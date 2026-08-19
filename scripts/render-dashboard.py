@@ -43,6 +43,9 @@ _spec = importlib.util.spec_from_file_location("ledger", os.path.join(HERE, "fle
 L = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(L)
 
+# Same module the ledger scores with. Two scorers would be two answers.
+SEV = L.SEV
+
 # Validated status palette. Do NOT swap these for brand colours without re-running
 # scripts/validate_palette.js in the dataviz skill: the deck's own severity green
 # and amber fail colourblind separation at protan delta-E 3.8.
@@ -57,11 +60,26 @@ PALETTE = {
 
 STATE_TONE = {
     "CRIT": "bad", "WARN": "info", "OK": "good", "ERROR": "info",
-    "SKIP": "muted", "FROZEN": "muted",
+    "UNKNOWN": "info", "SKIP": "muted", "FROZEN": "muted",
+}
+
+# What each state means, verbatim on the page. Written out because the whole
+# reason severity was rebuilt on 2026-08-19 is that the old model scored 33 of
+# 52 sites CRIT and nothing OK, and a reader had no way to tell that the word
+# had stopped meaning anything. A legend is cheap insurance against that
+# happening quietly a second time.
+STATE_MEANING = {
+    "CRIT": "act now",
+    "WARN": "schedule it",
+    "OK": "nothing pending that needs a person",
+    "UNKNOWN": "no health scan has ever reached these",
+    "SKIP": "no environment to measure",
+    "FROZEN": "site frozen by Pantheon",
 }
 AXIS_TONE = {"RISK": "bad", "COVERAGE": "info", "PLANNING": "info", "DRIFT": "muted"}
 CLASS_TONE = {"INVENTORY": "bad", "TRANSITION": "info", "ONSET": "bad",
-              "RESOLVED": "good", "DRIFT": "muted", "RULE_CHANGE": "info"}
+              "RESOLVED": "good", "COVERAGE": "info", "DRIFT": "muted",
+              "RULE_CHANGE": "info"}
 
 
 def e(v):
@@ -81,18 +99,19 @@ def build_model(history_dir, inventory_path, today):
 
     latest, changes, standing = {}, [], []
     for source, rs in by_source.items():
-        prev, curr = L.previous_run_of_same_source(rs)
+        prev, curr = L.previous_run_of_same_source(rs, obs=obs)
         latest[source] = curr
         rows = L.rows_for(obs, curr["run_id"])
         standing.extend(L.standing(rows, today))
         if prev is not None:
-            for c in L.diff_runs(L.rows_for(obs, prev["run_id"]), rows, today):
+            for c in L.diff_runs(L.rows_for(obs, prev["run_id"]), rows, today, inv):
                 c["source"] = source
                 c["against"] = prev["run_id"]
                 changes.append(c)
 
     order = {c: i for i, c in enumerate(L.CLASS_ORDER + ["RULE_CHANGE"])}
     changes.sort(key=lambda c: (order.get(c["class"], 99), c["site"], c["fact"]))
+    changes, coverage_changes = L.collapse_coverage(changes)
     axis_order = {"RISK": 0, "COVERAGE": 1, "PLANNING": 2, "DRIFT": 3}
     standing.sort(key=lambda g: (axis_order.get(g["axis"], 9), -len(g["sites"])))
 
@@ -116,12 +135,24 @@ def build_model(history_dir, inventory_path, today):
         m["host_site_name"] = rec.get("host_site_name")
         m["in_workbook"] = rec.get("in_workbook", True)
         m["reconciliation"] = rec.get("reconciliation")
+        m["production"] = rec.get("production")
+        m["notes"] = rec.get("notes")
         m["in_inventory"] = True
     for m in merged.values():
         m.setdefault("in_inventory", False)
         m.setdefault("host", None)
+        m.setdefault("production", None)
 
     sites = sorted(merged.values(), key=lambda s: s["site_id"])
+
+    # Severity is computed HERE, from the stored facts, every render. The row's
+    # own `derived_status` -- what the scanner thought at scan time -- is
+    # deliberately not used. It is a historical record of an older model, and
+    # reading it would mean a threshold change never reaching the page.
+    for s_ in sites:
+        s_["severity"] = SEV.evaluate(s_, today)
+        s_["status"] = s_["severity"]["status"]
+    health = SEV.summarise(sites, today)
 
     # Coverage: what was actually observed, per fact family. This is the honesty
     # layer, and it is why an OK on this page can be trusted or not.
@@ -151,7 +182,8 @@ def build_model(history_dir, inventory_path, today):
     return {
         "runs": runs, "latest": latest, "changes": changes, "standing": standing,
         "sites": sites, "coverage": coverage, "inventory_count": len(inv),
-        "unreconciled": unreconciled,
+        "unreconciled": unreconciled, "health": health,
+        "coverage_changes": coverage_changes,
         "generated": today.isoformat(),
     }
 
@@ -233,7 +265,7 @@ def render(m):
       % (m["inventory_count"], e(srcs)))
 
     # --- hero: the one number the page leads with -------------------------
-    pushable = [c for c in m["changes"] if c["class"] != "DRIFT"]
+    pushable = [c for c in m["changes"] if c["class"] not in L.QUIET_CLASSES]
     drift = [c for c in m["changes"] if c["class"] == "DRIFT"]
     A('<div class=card>')
     A('<div class=hero>%d</div>' % len(pushable))
@@ -246,6 +278,13 @@ def render(m):
     if drift:
         A('<div class=hero-sub style="margin-top:6px">%d counter(s) moved on findings '
           'already open, suppressed as noise.</div>' % len(drift))
+    if m["coverage_changes"]:
+        n = sum(len(g["sites"]) for g in m["coverage_changes"])
+        A('<div class=hero-sub style="margin-top:6px">%d fact(s) crossed the '
+          'unknown boundary on %d site(s). That is this tool\'s coverage '
+          'changing, not the fleet\'s. Summarised below, not counted '
+          'here.</div>'
+          % (n, len(set(x for g in m["coverage_changes"] for x in g["sites"]))))
     A('</div>')
 
     # --- kpi row ----------------------------------------------------------
@@ -264,6 +303,59 @@ def render(m):
           '<div class=note>%s</div></div>' % (e(lab), e(val), e(note)))
     A('</div>')
 
+    # --- fleet health -----------------------------------------------------
+    h = m["health"]
+    counts, excl = h["counts"], h["excluded"]
+    A("<h2>Fleet health</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">Scored from the ledger at render '
+      'time, not at scan time. Thresholds are named constants in '
+      '<code>scripts/lib/severity.py</code>; changing one rescores every run in '
+      'history and does not report as a fleet change.</p>')
+    A("<div class=card><div class=kpis>")
+    for st in SEV.ORDER:
+        n = counts.get(st, 0)
+        if not n and st in ("UNKNOWN", "FROZEN", "SKIP"):
+            continue
+        A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
+          '<div class=note>%s</div></div>'
+          % (chip(st, STATE_TONE.get(st, "muted")), e(n),
+             e(STATE_MEANING.get(st, ""))))
+    A("</div>")
+    if h["excluded_sites"]:
+        A('<p class=quiet style="margin:10px 0 0">Excluded from these counts: '
+          '%s. Marked <code>production: false</code> in the inventory by a '
+          'person. Still scanned, still shown in the table below, and scoring '
+          '%s on its own row.</p>'
+          % (", ".join("<code>%s</code>" % e(x) for x in h["excluded_sites"]),
+             ", ".join("%s %s" % (v, k) for k, v in excl.items() if v)))
+    A("</div>")
+
+    # --- review queue -----------------------------------------------------
+    # Sites with no `production` ruling AND no workbook row: nobody has ever
+    # looked at them. Deliberately NOT every site whose `production` is null,
+    # which is all 84 and would be ignored.
+    if h["unreviewed"]:
+        A("<h2>Needs a decision</h2>")
+        A('<p class=sub style="margin:-4px 0 10px">%d site(s) with no audit '
+          'record and no production ruling. Nobody has decided whether these '
+          'matter, so they are counted as production until someone does. On '
+          'this fleet that set has included the two worst-maintained sites, so '
+          'it is worth clearing once.</p>' % len(h["unreviewed"]))
+        A("<div class=card><table><tr><th>Site</th><th>State</th><th>Plan</th>"
+          "<th>Why it is here</th></tr>")
+        by_id = {x["site_id"]: x for x in m["sites"]}
+        for sid in h["unreviewed"]:
+            s_ = by_id.get(sid, {})
+            st = s_.get("status")
+            reasons = "; ".join(r["text"] for r in
+                                (s_.get("severity") or {}).get("reasons", []))
+            A("<tr><td><code>%s</code></td><td>%s</td><td class=quiet>%s</td>"
+              "<td>%s</td></tr>"
+              % (e(sid), chip(st, STATE_TONE.get(st, "muted")) if st else "—",
+                 e(s_.get("plan") or "—"),
+                 e(reasons or "In the Pantheon account, absent from the workbook.")))
+        A("</table></div>")
+
     # --- what changed -----------------------------------------------------
     A("<h2>What changed</h2><div class=card>")
     if not m["changes"]:
@@ -278,6 +370,24 @@ def render(m):
                  e(c["fact"]), e(c["before"]), e(c["after"]), e(c.get("source"))))
         A("</table>")
     A("</div>")
+
+    # --- coverage ---------------------------------------------------------
+    if m["coverage_changes"]:
+        A("<h2>What this tool can now see</h2>")
+        A('<p class=sub style="margin:-4px 0 10px">Facts that went from unknown '
+          'to known, or back. One line per fact rather than one row per site: '
+          'the first full-mode run gave 48 sites six new facts each, which is '
+          'one event, not 288 of them.</p>')
+        A("<div class=card><table><tr><th>Fact</th><th>Became visible</th>"
+          "<th>Went dark</th><th>Sites</th></tr>")
+        for g in m["coverage_changes"]:
+            A("<tr><td><code>%s</code></td><td class=num>%s</td>"
+              "<td class=num>%s</td><td><details><summary>%d site(s)</summary>"
+              '<div class=quiet style="margin-top:6px">%s</div></details></td></tr>'
+              % (e(g["fact"]), e(g["gained"]) if g["gained"] else "—",
+                 e(g["lost"]) if g["lost"] else "—",
+                 len(g["sites"]), e(", ".join(g["sites"]))))
+        A("</table></div>")
 
     # --- still true, grouped by cause ------------------------------------
     A("<h2>Still true</h2>")
@@ -410,7 +520,7 @@ def render(m):
         return e(v)
 
     for s in m["sites"]:
-        st = s.get("derived_status")
+        st = s.get("status")
         state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
         claim = s.get("claimed") or {}
         A('<tr data-site="%s" data-host="%s" data-state="%s">'
@@ -485,8 +595,31 @@ def main():
     m = build_model(a.history, a.inventory, today)
     with open(a.out, "w") as fh:
         fh.write(render(m))
+    c = m["health"]["counts"]
     print("%d sites, %d change(s), %d standing finding(s) -> %s"
           % (len(m["sites"]), len(m["changes"]), len(m["standing"]), a.out))
+    print("  health: %s%s"
+          % (" / ".join("%d %s" % (c[k], k) for k in SEV.ORDER if c.get(k)),
+             ("   (%d excluded: %s)"
+              % (sum(m["health"]["excluded"].values()),
+                 ", ".join(m["health"]["excluded_sites"])))
+             if m["health"]["excluded_sites"] else ""))
+    if m["health"]["unreviewed"]:
+        print("  %d site(s) need a production ruling: %s"
+              % (len(m["health"]["unreviewed"]),
+                 ", ".join(m["health"]["unreviewed"])))
+
+    # Severity looked up an inventory record and did not find one. That means a
+    # `production: false` ruling would have been silently ignored, which is the
+    # quiet-mis-key failure this project has now hit twice.
+    if L.MISSED_INVENTORY:
+        print("\nWARNING: %d site(s) scored against no inventory record: %s"
+              % (len(L.MISSED_INVENTORY), ", ".join(sorted(L.MISSED_INVENTORY))),
+              file=sys.stderr)
+        print("Any production ruling on those sites was NOT applied.",
+              file=sys.stderr)
+        if a.strict:
+            sys.exit(1)
 
     # A site in the ledger but not in the inventory means some tool keyed a row
     # on an identifier nothing else uses, so that site now has two histories and

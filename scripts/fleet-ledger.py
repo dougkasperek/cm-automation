@@ -28,10 +28,20 @@ Usage
 
 import argparse
 import datetime
+import importlib.util
 import json
 import os
 import re
 import sys
+
+# Severity lives in scripts/lib/severity.py and NOTHING computes it anywhere
+# else. It is a pure function of observed facts plus the inventory's
+# `production` flag, so history rescores consistently whenever a threshold
+# moves. Loaded by path because this file is not on a package path.
+_sev_spec = importlib.util.spec_from_file_location(
+    "severity", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib", "severity.py"))
+SEV = importlib.util.module_from_spec(_sev_spec)
+_sev_spec.loader.exec_module(SEV)
 
 # --------------------------------------------------------------------------
 # Fact model
@@ -98,27 +108,12 @@ def fact(row, key):
 # --------------------------------------------------------------------------
 # Kept as data, not as an if-chain, so it is reviewable and updatable without
 # touching logic. Dates are the END of security support.
-PHP_SECURITY_EOL = {
-    "8.0": "2023-11-26",
-    "8.1": "2025-12-31",
-    "8.2": "2026-12-31",
-    "8.3": "2027-12-31",
-    "8.4": "2028-12-31",
-    "8.5": "2029-12-31",
-}
-
-
-def php_support(version, today):
-    """Return (tier, days_left). tier in eol | expiring | supported | unknown."""
-    if version == UNKNOWN or version not in PHP_SECURITY_EOL:
-        return (UNKNOWN, None)
-    eol = datetime.date.fromisoformat(PHP_SECURITY_EOL[version])
-    days = (eol - today).days
-    if days < 0:
-        return ("eol", days)
-    if days <= 180:
-        return ("expiring", days)
-    return ("supported", days)
+# The PHP end-of-support table used to live here AND as a hardcoded floor in
+# the severity rules, and the two disagreed on the page: "Still true" reported
+# a site past PHP end-of-support while its severity row read fine. One table
+# now, in the severity module, read from here.
+PHP_SECURITY_EOL = SEV.PHP_SECURITY_EOL
+php_support = SEV.php_support
 
 
 # --------------------------------------------------------------------------
@@ -367,21 +362,49 @@ def load_ledger(history_dir):
     return runs, obs
 
 
-def previous_run_of_same_source(runs, idx=-1):
-    """The newest run, and the most recent earlier run from the SAME tool.
+def previous_run_of_same_source(runs, idx=-1, obs=None):
+    """The newest run, and the most recent earlier COMPARABLE run of the same tool.
 
-    Without this, ingesting an email scan after a health scan makes the diff
-    compare a Pantheon snapshot against a DNS snapshot and report the entire
-    fleet as changed. Comparing like with like is not a nicety here.
+    Without the same-source rule, ingesting an email scan after a health scan
+    makes the diff compare a Pantheon snapshot against a DNS snapshot and
+    report the entire fleet as changed. Comparing like with like is not a
+    nicety here.
+
+    The same argument applies to COVERAGE, and that half was missing until
+    2026-08-19. Debugging a scanner leaves one- and three-site cohort runs in
+    the ledger. Diffing a 3-site cohort against the 52-site fleet run that
+    follows it reports the other 49 sites as `INVENTORY: absent -> present`,
+    and the dashboard's headline number becomes "51 changes needing a
+    decision" when the real answer is a handful. A cohort run is a partial
+    look, not a statement that the rest of the fleet vanished.
+
+    So a candidate baseline whose site set is a STRICT SUBSET of the current
+    run's is skipped. Equal sets are kept -- two full runs of the same fleet
+    are exactly what should be compared. If every earlier run is a subset,
+    there is no honest baseline and this returns None rather than inventing
+    one.
+
+    `obs` is optional only for backwards compatibility; without it the
+    coverage rule cannot be applied and the old behaviour stands.
     """
     if not runs:
         return None, None
     curr = runs[idx]
     src = curr.get("source")
+    curr_sites = _sites_in(obs, curr["run_id"]) if obs is not None else None
     for r in reversed(runs[:idx if idx != -1 else len(runs) - 1]):
-        if r.get("source") == src:
-            return r, curr
+        if r.get("source") != src:
+            continue
+        if curr_sites is not None:
+            prev_sites = _sites_in(obs, r["run_id"])
+            if prev_sites < curr_sites:      # strict subset: a cohort run
+                continue
+        return r, curr
     return None, curr
+
+
+def _sites_in(obs, run_id):
+    return set(o["site"] for o in obs if o["run_id"] == run_id)
 
 
 def rows_for(obs, run_id):
@@ -405,13 +428,36 @@ def rows_for(obs, run_id):
 #              hoffmanscheese 719 -> 720. Suppressed from push by default,
 #              retained in the ledger, still visible in the timeline.
 
-CLASS_ORDER = ["INVENTORY", "TRANSITION", "ONSET", "RESOLVED", "DRIFT"]
+#   COVERAGE   a fact went from unknown to known, or back. The TOOL started
+#              or stopped being able to see something. Not a fleet change at
+#              all, and the reason this class exists: the first full-mode run
+#              after api-only runs produced 325 "changes", because 48 sites
+#              each gained six facts at once. That is one event -- deep-scan
+#              coverage arrived -- and reporting it 300 times buries the
+#              handful of real changes underneath it. Collapsed in the
+#              display and excluded from the headline count, like DRIFT.
+CLASS_ORDER = ["INVENTORY", "TRANSITION", "ONSET", "RESOLVED", "COVERAGE", "DRIFT"]
+
+# Classes that are real but must not inflate "changes needing a decision".
+QUIET_CLASSES = ("COVERAGE", "DRIFT")
 
 # Facts where a monotonic increase on an already-bad row is drift, not onset.
 COUNTERS = ("db_backup_age_days",)
 
 
 def classify(site, key, before, after, prev_row, curr_row, today):
+    # Crossing the unknown boundary in either direction is the TOOL's coverage
+    # changing, never the fleet's state. Checked before every other rule so it
+    # covers facts added later without anyone remembering to handle it.
+    if UNKNOWN in (before, after) and before != after:
+        return "COVERAGE"
+
+    # `wp_checked` IS the coverage flag. A run going api-only -> full flips it
+    # on every site at once; that is one event and belongs in the coverage
+    # summary, not as 48 rows in "what changed".
+    if key == "wp_checked":
+        return "COVERAGE"
+
     if key in COUNTERS:
         # Did it cross a threshold that changes the answer? Then it is real.
         # Otherwise it is a clock ticking on something already reported.
@@ -427,7 +473,7 @@ def classify(site, key, before, after, prev_row, curr_row, today):
         b = 0 if before == UNKNOWN else before
         a = 0 if after == UNKNOWN else after
         if before == UNKNOWN or after == UNKNOWN:
-            return "TRANSITION"  # coverage changed; that is worth saying out loud
+            return "COVERAGE"
         if b == 0 and a > 0:
             return "ONSET"
         if b > 0 and a == 0:
@@ -441,7 +487,9 @@ def classify(site, key, before, after, prev_row, curr_row, today):
     return "TRANSITION"
 
 
-BACKUP_CRIT_DAYS = 2
+# There used to be a second, different backup threshold here (2 days) while the
+# scanner used its own. One number now, owned by the severity module.
+BACKUP_CRIT_DAYS = SEV.BACKUP_CRIT_DAYS
 
 
 def _backup_bad(v):
@@ -473,7 +521,38 @@ def rows_for_source(obs, run_id, source=None):
             if o["run_id"] == run_id and (source is None or o.get("source") == source)}
 
 
-def diff_runs(prev_rows, curr_rows, today):
+# Sites scored against an inventory that does not contain them. Surfaced by the
+# CLI and the renderer rather than swallowed -- see score().
+MISSED_INVENTORY = set()
+
+
+def score(row, inv=None, today=None):
+    """Severity for one ledger row, with the inventory's decisions merged in.
+
+    The ledger stores only what was OBSERVED. `production` and `in_workbook`
+    are human decisions and live in the inventory, so they have to be joined on
+    here rather than assumed absent -- absent `production` means "nobody has
+    ruled", which scores AS production, and that is the safe direction.
+    """
+    # Look up on site_id, falling back to `site`. Ledger rows carry both, but a
+    # caller holding a row keyed the other way must not silently miss: a failed
+    # lookup yields production=None, which scores AS production, so a
+    # `production: false` ruling would be quietly ignored rather than applied.
+    # Failing safe is the right direction; failing safe INVISIBLY is how this
+    # project got a 130-row ledger for an 84-site fleet.
+    key = row.get("site_id") or row.get("site")
+    inv = inv or {}
+    rec = inv.get(key) or {}
+    if key and inv and key not in inv:
+        MISSED_INVENTORY.add(key)
+    merged = dict(row)
+    merged["site_id"] = key
+    merged["production"] = rec.get("production")
+    merged["in_workbook"] = rec.get("in_workbook")
+    return SEV.evaluate(merged, today)
+
+
+def diff_runs(prev_rows, curr_rows, today, inv=None):
     changes = []
 
     gone = sorted(set(prev_rows) - set(curr_rows))
@@ -489,36 +568,100 @@ def diff_runs(prev_rows, curr_rows, today):
             changes.append({"class": "TRANSITION", "site": s, "fact": "source",
                             "before": p.get("source"), "after": c.get("source")})
             continue
+        # A fact ABSENT from a row is not None, it is unknown. Runs predating a
+        # fact carry no key for it at all, and `p.get(k)` returning None meant
+        # the unknown-boundary check below never fired: the first full-mode run
+        # reported `wp_version` as 48 separate fleet changes on the day the
+        # fact was introduced. This is the "meaning of a fact changed" problem
+        # the handoff left open, and defaulting to UNKNOWN is the fix.
+        site_changes = []
         for k in facts_for(c):
-            if p.get(k) != c.get(k):
-                changes.append(
+            before, after = p.get(k, UNKNOWN), c.get(k, UNKNOWN)
+            if before != after:
+                site_changes.append(
                     {
-                        "class": classify(s, k, p.get(k), c.get(k), p, c, today),
+                        "class": classify(s, k, before, after, p, c, today),
                         "site": s,
                         "fact": k,
-                        "before": p.get(k),
-                        "after": c.get(k),
+                        "before": before,
+                        "after": after,
                     }
                 )
-        # Derived change with no observed change on the same site means the
-        # RULES moved, not the fleet. Label it so nobody chases a ghost.
-        for k in DERIVED:
-            dk = "derived_" + k
-            if p.get(dk) != c.get(dk):
-                observed_moved = any(p.get(x) != c.get(x) for x in facts_for(c))
-                changes.append(
-                    {
-                        "class": "TRANSITION" if observed_moved else "RULE_CHANGE",
-                        "site": s,
-                        "fact": k,
-                        "before": p.get(dk),
-                        "after": c.get(dk),
-                    }
-                )
+        changes.extend(site_changes)
+        # Severity is RE-DERIVED for both sides with the CURRENT rules rather
+        # than read off the stored `derived_status` the scanner wrote at the
+        # time. That is the whole point of moving scoring out of the scanner:
+        # retuning a threshold moves both sides together and emits NOTHING,
+        # instead of reporting all 52 sites as changed with no observed fact
+        # behind it.
+        #
+        # RULE_CHANGE therefore now means something narrower and still real:
+        # the score moved with no observed fact behind it, which happens when
+        # the site's `production` flag is flipped in the inventory.
+        pv = score(p, inv, today)["status"]
+        cv = score(c, inv, today)["status"]
+        if pv != cv:
+            # Only facts the score actually READS can explain a score change.
+            # Without this filter, a site whose `upstream_pending` ticked 1->2
+            # in the same run looked like a real transition, when the status
+            # move was entirely caused by core-update state becoming visible
+            # for the first time. 31 of the 33 status moves on the first
+            # full-mode run were exactly that.
+            real = [x for x in site_changes
+                    if x["class"] != "COVERAGE" and x["fact"] in SEV.SCORING_FACTS]
+            if not real:
+                # The score moved only because facts that were unknown became
+                # known. The site did not get worse; we started being able to
+                # see it. Reporting 33 of these as TRANSITION on the first
+                # full-mode run is the single loudest false alarm this tool can
+                # produce, and it fires exactly once per new fact -- on the run
+                # where the new fact is most worth reading calmly.
+                cls = "COVERAGE"
+            else:
+                cls = "TRANSITION"
+            if not site_changes:
+                # No observed movement at all: the RULES moved. Today that
+                # means a human flipped `production` in the inventory.
+                cls = "RULE_CHANGE"
+            changes.append({"class": cls, "site": s, "fact": "status",
+                            "before": pv, "after": cv})
 
     order = {c: i for i, c in enumerate(CLASS_ORDER + ["RULE_CHANGE"])}
     changes.sort(key=lambda c: (order.get(c["class"], 99), c["site"], c["fact"]))
     return changes
+
+
+def collapse_coverage(changes):
+    """Fold COVERAGE rows into one summary per fact.
+
+    Returns (kept, summaries). `summaries` is a list of
+    {"fact", "sites", "before", "after"} -- one line each, listing the sites,
+    rather than one row per site per fact.
+    """
+    kept, cov = [], []
+    for c in changes:
+        (cov if c["class"] == "COVERAGE" else kept).append(c)
+    by_fact = {}
+    for c in cov:
+        g = by_fact.setdefault(c["fact"], {"fact": c["fact"], "sites": [],
+                                           "gained": 0, "lost": 0})
+        g["sites"].append(c["site"])
+        # Direction, by what the values actually are. Two rows here are not
+        # unknown-to-value at all and must not be counted as if they were:
+        # `wp_checked` is the boolean coverage FLAG (False -> True is coverage
+        # gained), and `status` is a consequence of other facts becoming
+        # visible, with a real value on both sides. Counting those as "lost"
+        # is what the first render did -- it showed `wp_checked  -  48` in the
+        # LOST column on the run where coverage went from nothing to 48 sites.
+        if c["fact"] == "wp_checked":
+            g["gained" if c["after"] is True else "lost"] += 1
+        elif c["before"] == UNKNOWN and c["after"] != UNKNOWN:
+            g["gained"] += 1
+        elif c["after"] == UNKNOWN and c["before"] != UNKNOWN:
+            g["lost"] += 1
+    for g in by_fact.values():
+        g["sites"].sort()
+    return kept, sorted(by_fact.values(), key=lambda g: -len(g["sites"]))
 
 
 # --------------------------------------------------------------------------
