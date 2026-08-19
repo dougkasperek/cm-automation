@@ -38,6 +38,10 @@ on:
         description: "Ingest this run into history/ and push it back to main"
         type: boolean
         default: true
+      publish_dashboard:
+        description: "Publish the dashboard to the Cloudflare Worker"
+        type: boolean
+        default: false
 
   # Validate the scripts themselves on every PR that touches them. This runs
   # the mock harness only - no secrets, no network, no Pantheon.
@@ -264,3 +268,76 @@ jobs:
 
       - name: Ingest, render and push
         run: ./scripts/persist-ledger.sh /tmp/ci-reports "Pantheon health check, ${{ inputs.run_mode }}"
+
+  # -------------------------------------------------------------------------
+  # Publish the dashboard to Cloudflare.
+  #
+  # AFTER persist-ledger, deliberately. Publishing before it would ship a page
+  # rendered from a ledger that does not yet contain the run that just
+  # finished, so the live dashboard would sit one scan behind every time and
+  # nothing on the page would say so.
+  #
+  # `needs.persist-ledger` also means this is skipped whenever persist_ledger
+  # is off. That is correct: with no ingest there is nothing new to publish.
+  #
+  # contents:read only. This job renders and PUTs over HTTPS; it has no reason
+  # to touch the repo, and persist-ledger already holds the write permission.
+  #
+  # Default OFF until the Worker, the R2 bucket, the hostname and the Access
+  # policy exist. See docs/DASHBOARD.md.
+  # -------------------------------------------------------------------------
+  publish-dashboard:
+    name: Publish dashboard
+    needs: persist-ledger
+    if: >-
+      always()
+      && inputs.publish_dashboard
+      && needs.persist-ledger.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # persist-ledger pushed the ingested run to main a moment ago, so check
+      # main out FRESH rather than reusing the workspace. Without ref: main
+      # this would render the commit the workflow started from - the one
+      # WITHOUT this run's observations, which is the bug this job's ordering
+      # exists to avoid.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # A missing secret must stop the job with a readable message rather than
+      # letting the script fail on an unbound variable ten lines later. The
+      # publish URL is not a secret and is fine in a variable; the token is.
+      - name: Check publish credentials
+        env:
+          FLEET_PUBLISH_URL: ${{ vars.FLEET_PUBLISH_URL }}
+          FLEET_PUBLISH_TOKEN: ${{ secrets.FLEET_PUBLISH_TOKEN }}
+        run: |
+          set -uo pipefail
+          missing=""
+          [ -z "${FLEET_PUBLISH_URL}" ]   && missing="$missing FLEET_PUBLISH_URL(variable)"
+          [ -z "${FLEET_PUBLISH_TOKEN}" ] && missing="$missing FLEET_PUBLISH_TOKEN(secret)"
+          if [ -n "$missing" ]; then
+            echo "::error::publish_dashboard is on but$missing is not set. Set them in repo settings, or turn publish_dashboard off."
+            exit 1
+          fi
+
+      - name: Render and publish
+        env:
+          FLEET_PUBLISH_URL: ${{ vars.FLEET_PUBLISH_URL }}
+          FLEET_PUBLISH_TOKEN: ${{ secrets.FLEET_PUBLISH_TOKEN }}
+        # $GITHUB_STEP_SUMMARY is a runner env var, so it is read in the shell
+        # rather than through a ${{ }} context that does not exist.
+        run: FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh
+
+      # The summary is written BY THE SCRIPT, via FLEET_PUBLISH_SUMMARY. This
+      # file's own rule is that it does platform glue only, and the first draft
+      # of this step broke that by inlining a Python heredoc -- which also
+      # broke the YAML, because a heredoc terminator at column 0 ends the block
+      # scalar. Glue passes a path; the script decides what to say.

@@ -5,12 +5,19 @@
  * DELIBERATELY SMALL. It has no idea what a Pantheon site is, does no
  * classification, and holds no business logic. It reads two objects out of R2
  * and returns them. Everything that decides what a site's state means lives in
- * scripts/render-fleet-dashboard.py, so the dashboard is identical whether it
- * is opened as a local file or served from here.
+ * scripts/lib/severity.py, so the dashboard is identical whether it is opened
+ * as a local file or served from here.
+ *
+ * NOTHING IN THIS FILE CHANGED on 2026-08-19, and that is the point: the
+ * dashboard moved from a single-scan render to a ledger-backed one, and the
+ * Worker did not need to know. It serves bytes.
  *
  * Routes
  *   GET /                  -> R2 fleet/dashboard.html
- *   GET /api/fleet-scan    -> R2 fleet/latest.json   ({stamp, kind, rows})
+ *   GET /api/fleet-scan    -> R2 fleet/latest.json
+ *                             {"schema":"fleet-dashboard/2", ...} since
+ *                             2026-08-19. The old {stamp, kind, rows} shape is
+ *                             gone; consumers should check `schema`.
  *   GET /healthz           -> plain "ok", for uptime checks
  *   PUT /api/publish/<key> -> upload, requires the PUBLISH_TOKEN secret
  *
@@ -75,12 +82,17 @@ async function serve(env, key, contentType) {
   if (!obj) {
     // A missing dashboard is a setup problem, so say so rather than 404ing
     // silently and leaving someone guessing.
+    // This message names the CURRENT command on purpose. It pointed at
+    // render-fleet-dashboard.py until 2026-08-19, which would have talked
+    // whoever hit this page into publishing the wrong dashboard - a
+    // single-scan snapshot instead of the ledger view.
     const msg = key.endsWith(".html")
-      ? "No dashboard published yet. Run:\n\n" +
-        "  python3 scripts/render-fleet-dashboard.py <scan.json> \\\n" +
-        "      -o dashboard.html --emit-data latest.json --live-url /api/fleet-scan\n\n" +
-        "then upload both to the R2 bucket under fleet/.\n"
-      : "No scan data published yet at " + key + "\n";
+      ? "No dashboard published yet. From the cm-automation repo:\n\n" +
+        "  FLEET_PUBLISH_URL=<this hostname> FLEET_PUBLISH_TOKEN=<PUBLISH_TOKEN> \\\n" +
+        "      ./scripts/publish-dashboard.sh\n\n" +
+        "It renders from the ledger in history/ and takes no scan file.\n" +
+        "Use --dry-run first to look at the page before it goes live.\n"
+      : "No fleet data published yet at " + key + "\n";
     return new Response(msg, { status: 404, headers: { "Content-Type": "text/plain", ...SEC } });
   }
   return new Response(obj.body, {

@@ -41,7 +41,8 @@ Two decisions that follow from it, both made 2026-08-18:
 | Ledger | 8 runs, both tools, every row resolving |
 | Dashboard | 84 sites, real WordPress versions, verified both schemes |
 | CI writes to the ledger | built, **never yet exercised** - see below |
-| Tests | ledger **106**, severity **53**, mock harness **32**, email **58** |
+| Tests | ledger **106**, severity **68**, mock harness **32**, email **58** |
+| Publish path | **rewired to the ledger 2026-08-19.** Blocked only on Cloudflare setup |
 | Severity | **rebuilt 2026-08-19**, `scripts/lib/severity.py`. See `docs/SEVERITY.md` |
 
 ### THE FIRST REAL RESULTS, 2026-08-19
@@ -165,14 +166,21 @@ fleet change. The run rescores to **2 CRIT / 32 WARN / 13 OK / 32 UNKNOWN /
 ruling. **One thing is left open there: the scanner still scores with its own
 inline rules, so its digest and its CI exit code disagree with the dashboard.**
 
-**3. Deploy to Cloudflare.** Two parts, and the first is not obvious:
-`publish-dashboard.sh` renders with **`render-fleet-dashboard.py`**, the v1
-single-scan renderer, and feeds the Worker's `/api/fleet-scan` route. Both
-predate the ledger. **Deploying today publishes the wrong dashboard.** Rewire
-them to `render-dashboard.py` first — and decide whether the Worker keeps a JSON
-route at all, since the ledger dashboard is self-contained and fetches nothing.
-Then the hostname (suggest `fleet.thudstaff.com`) and **its own Access policy** —
-the deck's allowlist is partners-only and must not include developers.
+**3. Deploy to Cloudflare. THE CODE IS DONE; the Cloudflare side is not.**
+`publish-dashboard.sh` was rewired to `render-dashboard.py` on 2026-08-19 and
+now takes **no scan file** — it renders from the ledger. `--emit-data` writes
+the JSON feed from the same model object as the page, so `/api/fleet-scan`
+stayed and serves `{"schema":"fleet-dashboard/2", ...}`. A `publish-dashboard`
+job exists in the workflow, **default off**, running after `persist-ledger`.
+
+**What is left is all in Doug's Cloudflare and GitHub settings**, in this order:
+Worker `cm-fleet` via `wrangler deploy`, R2 binding `FLEET` -> `dash-data`,
+`PUBLISH_TOKEN` secret, hostname (suggest `fleet.thudstaff.com`), **its own
+Access policy** — the deck's allowlist is partners-only and must not include
+developers. Then repo variable `FLEET_PUBLISH_URL` and repo secret
+`FLEET_PUBLISH_TOKEN`, then flip `publish_dashboard` on. Full walkthrough is
+`docs/DASHBOARD.md`. **Run `./scripts/publish-dashboard.sh --dry-run` and look
+at the page before any of it.**
 
 **4. Turn on `persist_ledger` and then the schedule.** See the permissions
 decision above.

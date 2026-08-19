@@ -28,10 +28,12 @@ is a ladder rather than a switch. See `docs/DESIGN-REVISIT.md`.
 | `scripts/fleet-email-dns.py` | nothing | SPF, DKIM, DMARC for all 78 sites, any host |
 | `scripts/pantheon-fleet-healthcheck.sh` | Pantheon machine token | plan, PHP, backup age, upstream drift; SSH adds WP core/plugin/theme |
 | `scripts/fleet-ledger.py` | nothing | history, change detection, the delta digest |
-| `scripts/render-dashboard.py` | nothing | **the fleet dashboard**, read from the ledger, one self-contained HTML file |
+| `scripts/render-dashboard.py` | nothing | **the fleet dashboard**, read from the ledger, one self-contained HTML file (+ `--emit-data` for the JSON feed) |
+| `scripts/lib/severity.py` | nothing | **decides CRIT/WARN/OK.** The only place that does. See `docs/SEVERITY.md` |
+| `scripts/publish-dashboard.sh` | publish URL + token | renders from the ledger and PUTs the page and feed to the Worker. `--dry-run` to look first |
 | `scripts/build-fleet-inventory.py` | nothing | seeds the authoritative 84-site inventory (the join key) |
 | `scripts/serve-dashboard.py` | nothing | watches `reports/`, fills in live while a scan runs |
-| `scripts/render-fleet-dashboard.py` | nothing | scan JSON to self-contained HTML |
+| `scripts/render-fleet-dashboard.py` | nothing | scan JSON to HTML. Feeds the LIVE view only. **Not what gets published** |
 | `scripts/extract-audit-workbook.py` | openpyxl | the manual workbook to `data/fleet-email-inventory.json` |
 
 ## Design rules
