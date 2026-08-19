@@ -1,0 +1,42 @@
+# wrangler.toml for the cm-fleet Worker.
+#
+# Written 2026-08-19. docs/DASHBOARD.md said "deploy with wrangler, not by
+# hand-pasting" since the file was created, but no wrangler config existed, so
+# the instruction could not be followed. Hand-pasting is how a deployed Worker
+# silently drifts from the version in git, which has already bitten this
+# account once (see the [removed] habit).
+#
+# Deploy from this directory:
+#
+#   cd ci/cloudflare && wrangler deploy
+#
+# `main` resolves relative to THIS file, which is why the command has a cd in
+# it rather than a -c flag.
+
+name = "cm-fleet"
+main = "cm-fleet-worker.js"
+compatibility_date = "2026-08-19"
+
+# account_id is deliberately absent. Wrangler picks it up from your login, and
+# committing it to a repo that may later move to an org is a value that goes
+# stale silently. If wrangler asks, select the clevermethod account.
+
+# The Worker reads and writes ONLY under the fleet/ prefix, so sharing the
+# bucket with [removed] is safe. Bucket verified to exist 2026-08-19.
+[[r2_buckets]]
+binding = "FLEET"
+bucket_name = "dash-data"
+
+# PUBLISH_TOKEN is a SECRET and must never appear here. Set it with:
+#
+#   wrangler secret put PUBLISH_TOKEN
+#
+# Without it the PUT route returns 503 and the dashboard is upload-only.
+
+# The hostname. Uncomment and set the zone once fleet.thudstaff.com is the
+# decided name, so the route lives in git rather than only in the dashboard.
+# Adding it here is better than clicking, for the same drift reason as above.
+#
+# [[routes]]
+# pattern = "fleet.thudstaff.com"
+# custom_domain = true
