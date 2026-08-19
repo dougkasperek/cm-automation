@@ -52,6 +52,12 @@ bucket_name = "dash-data"
 pattern = "fleet.thudstaff.com"
 custom_domain = true
 
-# Step 3 of the above. Leave this commented until Access is PROVEN working on
-# the custom domain; uncommenting it early removes the URL you are testing from.
-# workers_dev = false
+# ENABLED 2026-08-19, after the back door was DEMONSTRATED rather than assumed:
+# an external sandbox with no Cloudflare session, no cookies and no credentials
+# fetched the full fleet JSON from the workers.dev URL - all 84 sites, their
+# WordPress versions, backup gaps and PHP end-of-life status - while
+# fleet.thudstaff.com was correctly returning a 302 to the Access login.
+#
+# Access protects hostnames in a zone. It cannot protect *.workers.dev. Leaving
+# this on meant the Access policy was decorative.
+workers_dev = false

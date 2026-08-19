@@ -314,15 +314,18 @@ jobs:
       # A missing secret must stop the job with a readable message rather than
       # letting the script fail on an unbound variable ten lines later. The
       # publish URL is not a secret and is fine in a variable; the token is.
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+
       - name: Check publish credentials
         env:
-          FLEET_PUBLISH_URL: ${{ vars.FLEET_PUBLISH_URL }}
-          FLEET_PUBLISH_TOKEN: ${{ secrets.FLEET_PUBLISH_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -uo pipefail
           missing=""
-          [ -z "${FLEET_PUBLISH_URL}" ]   && missing="$missing FLEET_PUBLISH_URL(variable)"
-          [ -z "${FLEET_PUBLISH_TOKEN}" ] && missing="$missing FLEET_PUBLISH_TOKEN(secret)"
+          [ -z "${CLOUDFLARE_API_TOKEN}" ]  && missing="$missing CLOUDFLARE_API_TOKEN(secret)"
+          [ -z "${CLOUDFLARE_ACCOUNT_ID}" ] && missing="$missing CLOUDFLARE_ACCOUNT_ID(variable)"
           if [ -n "$missing" ]; then
             echo "::error::publish_dashboard is on but$missing is not set. Set them in repo settings, or turn publish_dashboard off."
             exit 1
@@ -330,8 +333,9 @@ jobs:
 
       - name: Render and publish
         env:
-          FLEET_PUBLISH_URL: ${{ vars.FLEET_PUBLISH_URL }}
-          FLEET_PUBLISH_TOKEN: ${{ secrets.FLEET_PUBLISH_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          FLEET_PUBLIC_URL: ${{ vars.FLEET_PUBLISH_URL }}
         # $GITHUB_STEP_SUMMARY is a runner env var, so it is read in the shell
         # rather than through a ${{ }} context that does not exist.
         run: FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh
