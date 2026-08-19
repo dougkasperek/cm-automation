@@ -41,7 +41,8 @@ Two decisions that follow from it, both made 2026-08-18:
 | Ledger | 8 runs, both tools, every row resolving |
 | Dashboard | 84 sites, real WordPress versions, verified both schemes |
 | CI writes to the ledger | built, **never yet exercised** - see below |
-| Tests | ledger **90**, mock harness **32**, email **58**. All offline |
+| Tests | ledger **106**, severity **53**, mock harness **32**, email **58** |
+| Severity | **rebuilt 2026-08-19**, `scripts/lib/severity.py`. See `docs/SEVERITY.md` |
 
 ### THE FIRST REAL RESULTS, 2026-08-19
 
@@ -115,7 +116,26 @@ Also: `fleet-ledger.py` and `render-dashboard.py` were committed
 **non-executable**, so the `./scripts/...` commands in `SSH-KEY-SETUP.md` step 7
 failed with *Permission denied*. Mode fixed on five scripts.
 
-### Uncommitted on Doug's Mac right now
+### Uncommitted on Doug's Mac right now, 2026-08-19 (severity work)
+
+```
+scripts/lib/severity.py      new    the only place severity is computed
+docs/SEVERITY.md             new
+test/test-severity.py        new    53 checks
+scripts/fleet-ledger.py             COVERAGE class, re-derived scoring,
+                                    cohort-run baselines, one PHP table
+scripts/render-dashboard.py         fleet health + review queue sections
+data/fleet-inventory.json           cm-whitelabel production:false;
+                                    stale observed_status removed from 6 records
+test/test-ledger.py                 named-run fixtures, 106 checks
+fleet.html                          re-rendered
+```
+
+**`test/run-local-test.sh` has NOT been run against these changes** -- it
+exceeds the desktop bridge's 45s timeout. The scanner was not touched, so it
+should be unaffected, but run it before pushing.
+
+### Uncommitted on Doug's Mac, earlier
 
 ```
 docs/CI-LEDGER.md            new
@@ -131,18 +151,19 @@ five scripts with a corrected exec bit
 
 ## Do this next, in order
 
-**1. Triage `cm-whitelabel`.** Does it resolve publicly? If yes it is an exposed
-unpatched WordPress install carrying clevermethod's name. If it is dark scratch,
-decommission it and the finding closes. Same question for `hoffmanscheese`,
-which has a 721-day backup gap either way.
+**1. ~~Triage `cm-whitelabel`.~~ CLOSED 2026-08-19.** Doug: temp non-public
+site, not a concern. Marked `production: false` in the inventory, so it is
+still scanned and still shown on its own row but does not count toward fleet
+health. **`hoffmanscheese` is still open** — 721-day backup gap, 29 plugin
+updates, and one of the two remaining CRITs.
 
-**2. Recalibrate severity. THIS IS THE NEXT BUILD TASK.** 33 CRIT, 15 WARN,
-**0 healthy**. Every site carries at least one pending Pantheon upstream commit
-(34 have two, 14 have one), so the fleet-wide floor is WARN, and any pending
-core update makes it CRIT. A model where 63% of the fleet is CRIT and nothing is
-OK cannot be used to decide what to look at first. **Not bad data — a threshold
-problem that only became visible once real WordPress state arrived.** Fix it
-before a developer or Tor sees the page.
+**2. ~~Recalibrate severity.~~ DONE 2026-08-19. See `docs/SEVERITY.md`.**
+Scoring moved to `scripts/lib/severity.py` and is now re-derived at RENDER time
+from the ledger, so thresholds can change without a rules move reporting as a
+fleet change. The run rescores to **2 CRIT / 32 WARN / 13 OK / 32 UNKNOWN /
+3 SKIP / 1 FROZEN**, with `cm-whitelabel` excluded by a `production: false`
+ruling. **One thing is left open there: the scanner still scores with its own
+inline rules, so its digest and its CI exit code disagree with the dashboard.**
 
 **3. Deploy to Cloudflare.** Two parts, and the first is not obvious:
 `publish-dashboard.sh` renders with **`render-fleet-dashboard.py`**, the v1
@@ -218,6 +239,11 @@ Six times now, a number read confidently and was wrong:
 | `terminus auth:whoami` exit 0 | authenticated | no session at all; CI never once logged in |
 | the digest's `Scanned **3**` | three sites scanned | one; ssh ate the rest of the list |
 | `cm-whitelabel` core `up-to-date` | patched | 6.9.4, below the wp2shell fix |
+| severity `0 healthy` | the fleet is in crisis | one rule on a never-zero fact |
+| `wp_version` absent in an old run | 48 sites changed version | the fact did not exist yet |
+| the coverage table's `wp_checked` | 48 sites went dark | 48 sites became visible |
+| `php_support()` with no date | PHP 7.4 is supported | a rule failing OPEN |
+| 35 `SKIP` on the first render | nothing there to check | 32 sites nobody has ever scanned |
 
 Every one was a confident-looking value standing in for an absence or a
 misreading. **Only two were caught by code. The rest were caught by a person
@@ -232,6 +258,7 @@ opposite.
 | file | what it holds |
 |---|---|
 | `docs/DATA-MODEL.md` | the inventory and ledger the dashboard reads. Start here |
+| `docs/SEVERITY.md` | **how CRIT/WARN/OK are decided, and the `production` flag** |
 | `docs/CI-LEDGER.md` | how CI writes to the ledger, and why it did not before |
 | `docs/DASHBOARD-V2.md` | the dashboard, and why there are two renderers |
 | `docs/SSH-KEY-SETUP.md` | full mode, now proven working |
@@ -247,6 +274,13 @@ opposite.
 - **Which GitHub account or org long term.** `dougkasperek` is personal.
 - **Whether the two renderers ever merge.** Only if the live view learns to read
   the ledger mid-scan. Not needed yet.
-- **Version-stamping the tool per run.** When the MEANING of a fact changes, the
-  first diff afterwards reports it as a fleet change. Adding `wp_version` will do
-  exactly this on the first full-mode fleet run. Still not built.
+- ~~**Version-stamping the tool per run.**~~ **Solved differently, 2026-08-19.**
+  It happened exactly as predicted -- the first full-mode run reported 325
+  changes, 274 of which were facts becoming visible for the first time. Rather
+  than stamp a version, severity is now re-derived for BOTH sides of a diff
+  with the current rules, and a new `COVERAGE` change class collapses
+  unknown-boundary crossings to one line per fact. The same run now reports 11.
+- **Whether the scanner should score at all.** It still does, with its own
+  inline rules, so its digest and its CI exit code disagree with the dashboard.
+  Fixing it means a CLI mode on `severity.py` and a change to what fails a
+  build. See the end of `docs/SEVERITY.md`.

@@ -24,6 +24,12 @@ L = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(L)
 
 TODAY = datetime.date(2026, 8, 17)
+
+# Named committed runs. Positional indexes into an append-only ledger are a
+# fixture that moves under the test; these do not.
+FULL_FLEET_RUNS = ("health-2026-08-16_1725", "health-2026-08-17_0726",
+                   "health-2026-08-19_0002")
+QUIET_PAIR = ("health-2026-08-16_1725", "health-2026-08-17_0726")
 PASS, FAIL = [], []
 
 
@@ -56,7 +62,10 @@ def row(site, **kw):
 def to_obs(rows, run_id="r"):
     out = {}
     for r in rows:
-        rec = {"run_id": run_id, "observed_at": "2026-08-17T00:00:00", "site": r["site"]}
+        # site_id as well as site: real ledger rows carry both, and a fixture
+        # that omits one lets a lookup keyed on it pass by accident.
+        rec = {"run_id": run_id, "observed_at": "2026-08-17T00:00:00",
+               "site": r["site"], "site_id": r["site"]}
         for k in L.OBSERVED:
             rec[k] = L.fact(r, k)
         for k in L.DERIVED:
@@ -84,6 +93,10 @@ tmp = tempfile.mkdtemp()
 try:
     inv_path = os.path.join(ROOT, "data", "fleet-inventory.json")
     inv_arg = inv_path if os.path.exists(inv_path) else None
+    # The human decisions severity has to join on. Named INV so it does not
+    # collide with the INVENTORY-class change list further down this file.
+    INV = ({x["site_id"]: x for x in json.load(open(inv_path))["sites"]}
+           if inv_arg else {})
     if have_reports:
         # reports/ is a working directory, not a fixture. It holds whatever the
         # last local scan produced, including one-site cohort runs from SSH
@@ -106,9 +119,19 @@ try:
     health_runs = [r for r in runs if r.get("source", "health") == "health"]
     check("the committed ledger holds both real health runs",
           len(health_runs) >= 2, str([r["run_id"] for r in health_runs]))
-    check("52 observations per committed health run",
-          all(r["site_count"] == 52 for r in health_runs),
-          str([r["site_count"] for r in health_runs]))
+    # NOT "every health run has 52 sites". The ledger is APPEND-ONLY, so any
+    # assertion shaped like "all runs" or "the last two runs" is pinned to a
+    # fixture that grows, and it went red the moment the 2026-08-19 full-fleet
+    # run landed beside three one- and three-site debugging runs. This is the
+    # reports/ trap from the handoff, in history/. Pin to NAMED runs instead.
+    by_id = {r["run_id"]: r for r in health_runs}
+    for rid in FULL_FLEET_RUNS:
+        check("committed run %s is the 52-site fleet it claims to be" % rid,
+              by_id.get(rid, {}).get("site_count") == 52,
+              str(by_id.get(rid, {}).get("site_count")))
+    check("cohort runs are kept, not mistaken for fleet runs",
+          any(r["site_count"] < 52 for r in health_runs),
+          "the one- and three-site debugging runs should still be in the ledger")
     # Both tools reach the committed ledger. Before 2026-08-18 they did not:
     # the file in git held health rows only, while the dashboard beside it had
     # been rendered from a ledger with email in it that was never committed.
@@ -120,21 +143,32 @@ try:
           str([(r["run_id"], r.get("sites_not_in_inventory")) for r in runs
                if r.get("sites_not_in_inventory")]))
 
-    if len(health_runs) < 2:
-        print("  SKIPPED diff: fewer than two health runs available.")
-    else:
-        p = L.rows_for(obs, health_runs[-2]["run_id"])
-        c = L.rows_for(obs, health_runs[-1]["run_id"])
-        ch = L.diff_runs(p, c, TODAY)
+    # The quiet answer, against the two api-only fleet runs 14h apart that the
+    # digest design was argued from. Named, not positional.
+    a, b = QUIET_PAIR
+    if a in by_id and b in by_id:
+        pr = L.rows_for(obs, a)
+        cr = L.rows_for(obs, b)
+        ch = L.diff_runs(pr, cr, TODAY, INV)
         check("real diff finds exactly one change", len(ch) == 1, json.dumps(ch))
         check("that change is hoffmanscheese backup age",
               ch and ch[0]["site"] == "hoffmanscheese" and ch[0]["fact"] == "db_backup_age_days")
         check("it is classed DRIFT, not an alert", ch and ch[0]["class"] == "DRIFT")
         check("rendered `notes` is NOT diffed (no double report)",
               all(x["fact"] != "notes" for x in ch))
-        check("upstream group counts 38, incl. the 2 CRIT rows the old model hid",
-              any(g["cause"].startswith("One pending") and len(g["sites"]) == 38
-                  for g in L.standing(c, TODAY)))
+    else:
+        print("  SKIPPED quiet-pair diff: %s / %s not in the ledger." % QUIET_PAIR)
+
+    # The full-mode run. Every site carries 1 or 2 pending upstream commits --
+    # this is the fact that used to score the entire fleet WARN, and it is why
+    # it is now informational. The group still exists; it is a planning item.
+    full = L.rows_for(obs, FULL_FLEET_RUNS[-1])
+    if full:
+        grp = [g for g in L.standing(full, TODAY) if g["cause"].startswith("One pending")]
+        check("the upstream group covers every measurable site in the full run",
+              grp and len(grp[0]["sites"]) == 48, str(len(grp[0]["sites"]) if grp else None))
+        check("upstream is filed as DRIFT, not RISK",
+              grp and grp[0]["axis"] == "DRIFT", str(grp[0]["axis"] if grp else None))
 finally:
     shutil.rmtree(tmp)
 
@@ -161,9 +195,14 @@ ch = L.diff_runs(base, m, TODAY)
 check("a new pending commit reads ONSET", any(c["site"] == "alpha" and c["class"] == "ONSET" for c in ch))
 
 # backup threshold crossing both ways
-m = to_obs([row("alpha", db_backup_age_days=9, status="CRIT"), row("bravo", upstream_pending=1, status="WARN"), row("charlie", db_backup_age_days=800, status="CRIT")], "r2")
+# The threshold is SEV.BACKUP_CRIT_DAYS, read from the severity module rather
+# than written as a literal, so retuning it does not silently invalidate this.
+m = to_obs([row("alpha", db_backup_age_days=L.BACKUP_CRIT_DAYS + 1, status="CRIT"), row("bravo", upstream_pending=1, status="WARN"), row("charlie", db_backup_age_days=800, status="CRIT")], "r2")
 ch = L.diff_runs(base, m, TODAY)
-check("backup crossing the 2-day line is TRANSITION", any(c["site"] == "alpha" and c["fact"] == "db_backup_age_days" and c["class"] == "TRANSITION" for c in ch))
+check("backup crossing the %d-day line is TRANSITION" % L.BACKUP_CRIT_DAYS, any(c["site"] == "alpha" and c["fact"] == "db_backup_age_days" and c["class"] == "TRANSITION" for c in ch))
+m = to_obs([row("alpha", db_backup_age_days=L.BACKUP_CRIT_DAYS - 1), row("bravo", upstream_pending=1, status="WARN"), row("charlie", db_backup_age_days=800, status="CRIT")], "r2")
+ch = L.diff_runs(base, m, TODAY)
+check("a backup age still inside the line is not a transition", not any(c["site"] == "alpha" and c["fact"] == "db_backup_age_days" and c["class"] == "TRANSITION" for c in ch))
 m = to_obs([row("alpha"), row("bravo", upstream_pending=1, status="WARN"), row("charlie", db_backup_age_days=0, status="WARN")], "r2")
 ch = L.diff_runs(base, m, TODAY)
 check("a backup finally taken is TRANSITION, not DRIFT", any(c["site"] == "charlie" and c["fact"] == "db_backup_age_days" and c["class"] == "TRANSITION" for c in ch))
@@ -185,7 +224,52 @@ check("a PHP version change is always reported", any(c["fact"] == "php_version" 
 m = to_obs([row("alpha", wp_checked=True, plugin_updates=3, status="WARN"), row("bravo", upstream_pending=1, status="WARN"), row("charlie", db_backup_age_days=800, status="CRIT")], "r2")
 ch = L.diff_runs(base, m, TODAY)
 check("gaining deep-scan coverage is reported", any(c["fact"] == "wp_checked" for c in ch))
-check("unknown -> a number is TRANSITION, not ONSET", any(c["fact"] == "plugin_updates" and c["class"] == "TRANSITION" for c in ch), json.dumps([c for c in ch if c["fact"] == "plugin_updates"]))
+# Crossing the unknown boundary is COVERAGE: the tool started being able to
+# see the fact. It must never read as ONSET ("3 new plugin updates appeared"),
+# and since 2026-08-19 it is also no longer TRANSITION, because 48 sites
+# gaining six facts each on the first full-mode run is one event.
+check("unknown -> a number is COVERAGE, never ONSET", any(c["fact"] == "plugin_updates" and c["class"] == "COVERAGE" for c in ch), json.dumps([c for c in ch if c["fact"] == "plugin_updates"]))
+check("gaining coverage never reads as a new problem", not any(c["fact"] == "plugin_updates" and c["class"] == "ONSET" for c in ch))
+_kept, _cov = L.collapse_coverage(ch)
+check("coverage rows collapse to one line per fact",
+      all(c["class"] != "COVERAGE" for c in _kept) and _cov and _cov[0]["gained"] >= 1,
+      json.dumps(_cov))
+
+# A fact that did not EXIST in the older run. Runs predating a fact carry no
+# key for it, and reading that as None rather than unknown is what made the
+# first full-mode run report wp_version as 48 separate fleet changes.
+_old = to_obs([row("alpha")], "r1")
+for _r in _old.values():
+    _r.pop("wp_version", None)
+_new = to_obs([row("alpha", wp_checked=True, wp_version="7.0.4")], "r2")
+_ch = L.diff_runs(_old, _new, TODAY)
+check("a fact absent from an older run is unknown, not None",
+      any(c["fact"] == "wp_version" and c["class"] == "COVERAGE" for c in _ch),
+      json.dumps([c for c in _ch if c["fact"] == "wp_version"]))
+
+# A status move caused ONLY by facts becoming visible is coverage, not a
+# transition. This fired 31 times on the first full-mode run, on sites whose
+# upstream counter happened to tick in the same run.
+_b = to_obs([row("alpha", upstream_pending=1)], "r1")
+for _r in _b.values():
+    _r.pop("wp_version", None)
+_a = to_obs([row("alpha", upstream_pending=2, wp_checked=True,
+                 wp_version="7.0.3", wp_core_update="7.0.4")], "r2")
+_ch = L.diff_runs(_b, _a, TODAY)
+_st = [c for c in _ch if c["fact"] == "status"]
+check("a status move driven only by new visibility is COVERAGE",
+      _st and _st[0]["class"] == "COVERAGE", json.dumps(_st))
+check("...even when a non-scoring fact moved in the same run",
+      any(c["fact"] == "upstream_pending" for c in _ch))
+
+# And a status move driven by a fact the score actually reads IS a transition.
+_a2 = to_obs([row("alpha", db_backup_age_days=L.BACKUP_CRIT_DAYS + 5)], "r2")
+for _r in _a2.values():
+    _r.pop("wp_version", None)
+_ch2 = L.diff_runs(_b, _a2, TODAY)
+_st2 = [c for c in _ch2 if c["fact"] == "status"]
+check("a status move driven by a scoring fact is TRANSITION",
+      _st2 and _st2[0]["class"] == "TRANSITION", json.dumps(_st2))
 
 # the fabricated-zero fix itself
 print("\n-- the scanner's fabricated zeros are refused at ingest --")
@@ -198,10 +282,42 @@ check("a deep-scanned genuine 0 IS preserved", L.fact(deep, "plugin_updates") ==
 check("upstream_pending is NOT coerced (it is an API fact, always observed)", L.fact(apionly, "upstream_pending") == 0)
 check("db_backup_age_days is NOT coerced (also an API fact)", L.fact(row("z", db_backup_age_days=5), "db_backup_age_days") == 5)
 
-# rule change: derived status moves with no observed change
+# Rule change. Severity is now RE-DERIVED for both sides of a diff with the
+# CURRENT rules, which is the point of moving it out of the scanner: retuning a
+# threshold moves both sides together and reports NOTHING, rather than flagging
+# all 52 sites as changed with no observed fact behind it.
+print("\n-- a rules change is not a fleet change --")
 m = to_obs([row("alpha", status="WARN"), row("bravo", upstream_pending=1, status="WARN"), row("charlie", db_backup_age_days=800, status="CRIT")], "r2")
 ch = L.diff_runs(base, m, TODAY)
-check("status moving with no observed change is RULE_CHANGE", any(c["site"] == "alpha" and c["class"] == "RULE_CHANGE" for c in ch))
+check("the scanner's stored status is IGNORED, so changing it reports nothing",
+      not any(c["site"] == "alpha" for c in ch), json.dumps([c for c in ch if c["site"] == "alpha"]))
+
+# RULE_CHANGE still fires, for the one case that genuinely is a scoring move
+# with no observed fact behind it: a human flipping `production` in the
+# inventory takes the site out of the fleet numbers.
+_inv_before = {"charlie": {"production": None, "in_workbook": True}}
+_inv_after = {"charlie": {"production": False, "in_workbook": True}}
+same = to_obs([row("alpha"), row("bravo", upstream_pending=1, status="WARN"), row("charlie", db_backup_age_days=800, status="CRIT")], "r2")
+check("scoring charlie in is CRIT", L.score(same["charlie"], _inv_before)["status"] == "CRIT")
+check("flipping production does not silence the score, only the counting",
+      L.score(same["charlie"], _inv_after)["status"] == "CRIT"
+      and L.score(same["charlie"], _inv_after)["production"] is False)
+
+print("\n-- a cohort run is not a baseline --")
+# Debugging leaves one- and three-site runs in an append-only ledger. Diffing a
+# 3-site cohort against the 52-site fleet run after it reported the other 49 as
+# "absent -> present" and made the dashboard headline read 51.
+_runs = [{"run_id": "r1", "source": "health"},
+         {"run_id": "cohort", "source": "health"},
+         {"run_id": "r2", "source": "health"}]
+_obs = ([dict(o, run_id="r1") for o in to_obs([row("alpha"), row("bravo"), row("charlie")], "r1").values()]
+        + [dict(o, run_id="cohort") for o in to_obs([row("alpha")], "cohort").values()]
+        + [dict(o, run_id="r2") for o in to_obs([row("alpha"), row("bravo"), row("charlie")], "r2").values()])
+_p, _c = L.previous_run_of_same_source(_runs, obs=_obs)
+check("a strict-subset run is skipped as a baseline", _p["run_id"] == "r1", str(_p))
+check("...and the current run is still the newest", _c["run_id"] == "r2")
+_p2, _ = L.previous_run_of_same_source(_runs)
+check("without obs the old positional behaviour is unchanged", _p2["run_id"] == "cohort")
 
 # ------------------------------------------------------------- 3. unknown rules
 print("\n-- unknown is never folded into yes or no --")

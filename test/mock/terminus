@@ -151,7 +151,11 @@ JSON
     # passed here while every real full-mode scan - laptop and CI alike -
     # silently stopped after ONE site and reported the requested count.
     # A mock that is politer than production certifies bugs as fixed.
-    cat >/dev/null 2>&1 || true
+    # ...but only when stdin is not a terminal. Draining a TTY blocks forever,
+    # so running this mock by hand from an interactive shell would hang on
+    # every call. The harness sets stdin to /dev/null so the drain still runs
+    # there and the regression stays covered.
+    [ -t 0 ] || cat >/dev/null 2>&1 || true
     se="${1:-}"
     # If the env preflight is working, this must NEVER be reached for
     # pfannenbergpartners. If it is, the run will hang - which is exactly the
