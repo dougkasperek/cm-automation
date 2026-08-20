@@ -6,6 +6,45 @@ a rule, or explaining a number on the dashboard to anyone.
 
 ---
 
+## Axes, added 2026-08-20
+
+**Scoring is per axis.** An axis is a question, not a workflow:
+
+| axis | question |
+|---|---|
+| `health` | is this site being maintained -- backups, PHP, WordPress, plugins |
+| `consent` | does the homepage fire trackers before anyone consents |
+
+`evaluate()` returns:
+
+- `status` / `reasons` -- the **health** axis. These two always agree, so a
+  caller can never read an OK status next to a WARN reason.
+- `axes` -- `{axis: {status, reasons}}` for every axis.
+- `all_reasons` -- the union, each entry tagged with its `axis`.
+
+`summarise()` returns `counts` (health, the fleet headline) plus `axes` with
+the same population counted on every axis.
+
+**Why.** One status per site was answering two unrelated questions. On
+2026-08-19, 38 of 70 WARN sites carried a consent finding and 7 were WARN for
+consent alone, so running the consent sweep moved the fleet-health number while
+nothing about maintenance had changed. Same shape as `upstream_pending`: a rule
+from one question ranking sites on another.
+
+**Adding a rule means adding its axis to `AXIS_OF_CODE`.** `axis_of()` raises
+rather than defaulting -- a new rule silently landing on health would recreate
+the bug this split fixed. Map by the question the finding answers, never by the
+tool that found it: `coverage_partial` comes from the consent sweep and is a
+health reason.
+
+**Terminal states are global.** FROZEN, UNKNOWN and SKIP describe the site, not
+a question, so they are stamped onto every axis -- and are not shown per axis on
+the page, because "3 sites are SKIP for consent" is meaningless.
+
+**The consent axis is UNKNOWN unless the sweep loaded the page.** Unmeasured is
+not clean; this is the HTTP 403 bug one layer up.
+
+
 ## The problem it replaced
 
 The first full-fleet full-mode scan, 52 sites, scored under the old model:

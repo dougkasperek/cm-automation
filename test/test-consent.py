@@ -299,23 +299,31 @@ try:
               for x in (s_clean, s_leak, s_notool, s_cm)),
           repr([x["status"] for x in (s_clean, s_leak, s_notool, s_cm)]))
 
+    # AXES, 2026-08-20. A consent finding now scores the CONSENT axis and
+    # leaves health alone. It has to be read off `axes["consent"]`, because
+    # `reasons` deliberately carries only what agrees with the top-level
+    # status. Asserting against `all_reasons` here would pass even if the axis
+    # split were wired up backwards.
     check("trackers firing before consent is a WARN, not a CRIT",
-          s_leak["status"] == "WARN"
+          s_leak["axes"]["consent"]["status"] == "WARN"
           and any(r["code"] == "consent_pre_consent_trackers"
-                  for r in s_leak["reasons"]), repr(s_leak))
+                  for r in s_leak["axes"]["consent"]["reasons"]), repr(s_leak))
     check("...and the reason names the trackers, so nobody has to open the scan",
-          any("MS Clarity" in r["text"] for r in s_leak["reasons"]))
+          any("MS Clarity" in r["text"]
+              for r in s_leak["axes"]["consent"]["reasons"]))
     check("...and describes what was observed rather than reaching a verdict",
-          all("compliant" not in r["text"].lower() for r in s_leak["reasons"]))
+          all("compliant" not in r["text"].lower()
+              for r in s_leak["all_reasons"]))
 
     check("no consent tooling detected is a WARN",
-          any(r["code"] == "consent_no_tooling" for r in s_notool["reasons"]),
+          any(r["code"] == "consent_no_tooling"
+              for r in s_notool["axes"]["consent"]["reasons"]),
           repr(s_notool))
 
     check("consent-mode denied pings alone are NOT reported as a leak, or every "
           "correctly configured site would fail",
           not any(r["code"] == "consent_pre_consent_trackers"
-                  for r in s_cm["reasons"]), repr(s_cm))
+                  for r in s_cm["all_reasons"]), repr(s_cm))
 
     # A page that would not load scores nothing, but says so.
     check("a page the sweep could not load raises no consent WARN, because a "
@@ -354,17 +362,48 @@ try:
           s_both["status"] == "OK", repr(s_both))
 
     # And the leak still scores once health facts exist.
+    #
+    # CHANGED 2026-08-20 and this is the whole point of the axis split: a
+    # consent leak no longer drags the HEALTH status down. It used to, which is
+    # why the fleet-health headline moved when the consent sweep ran and
+    # nothing about maintenance had changed.
+    #
+    # The risk in making this change is that the finding quietly disappears
+    # instead of moving, so both halves are asserted together: health is OK AND
+    # consent is WARN AND the finding is still there to be read.
     s_leak_both = score(d_leak, healthy)
-    check("a consent leak still WARNs on a site that is otherwise healthy",
-          s_leak_both["status"] == "WARN"
+    check("a consent leak leaves the HEALTH status alone",
+          s_leak_both["status"] == "OK"
+          and s_leak_both["axes"]["health"]["status"] == "OK",
+          repr(s_leak_both["status"]))
+    check("...but is NOT lost: it scores WARN on the consent axis",
+          s_leak_both["axes"]["consent"]["status"] == "WARN"
           and any(r["code"] == "consent_pre_consent_trackers"
-                  for r in s_leak_both["reasons"]), repr(s_leak_both))
+                  for r in s_leak_both["axes"]["consent"]["reasons"]),
+          repr(s_leak_both["axes"]["consent"]))
+    check("...and still appears in all_reasons, tagged with its axis",
+          any(r["code"] == "consent_pre_consent_trackers"
+              and r["axis"] == "consent" for r in s_leak_both["all_reasons"]))
+    check("a health finding never lands on the consent axis",
+          all(r["axis"] == "health"
+              for r in score(d_blocked, dict(healthy, db_backup_age_days=900)
+                             )["axes"]["health"]["reasons"]))
+    check("an unmeasured site is UNKNOWN on the consent axis, never OK",
+          s_blocked["axes"]["consent"]["status"] == "UNKNOWN",
+          repr(s_blocked["axes"]["consent"]))
+    check("a clean measured site IS OK on the consent axis",
+          s_clean["axes"]["consent"]["status"] == "OK",
+          repr(s_clean["axes"]["consent"]))
 
     # Security still outranks consent.
     s_leak_crit = score(d_leak, dict(healthy, php_version="7.4"))
     check("a security CRIT still outranks a consent WARN, so the CRIT list "
           "stays a security list",
           s_leak_crit["status"] == "CRIT", repr(s_leak_crit["status"]))
+    check("...and the consent axis is unaffected by the security CRIT, "
+          "because they answer different questions",
+          s_leak_crit["axes"]["consent"]["status"] == "WARN",
+          repr(s_leak_crit["axes"]["consent"]["status"]))
 
     # ------------------------------------------------------------------
     # Standing findings: grouped by cause, like everything else on the page.
