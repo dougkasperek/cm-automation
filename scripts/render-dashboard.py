@@ -199,6 +199,24 @@ def build_model(history_dir, inventory_path, today):
         coverage.append(("Cookie consent (public homepage, needs a browser)",
                          (len(seen), len(cr))))
 
+    # Nexcess estate discovery. Deliberately NOT gated on `"nexcess" in
+    # latest` like the three blocks above -- as of 2026-08-20 no Nexcess run
+    # has ever completed, and a run-gated line would simply never appear.
+    # That is the exact bug this box exists to prevent: it would list three
+    # sources and stay silent about a fourth one that has never run, and a
+    # new viewer would have no way to tell "not covered" from "not built".
+    # The denominator is drawn from the INVENTORY (which sites are hosted on
+    # Nexcess), not from ledger rows, so this reads "0 of 21" honestly today
+    # and moves the moment a real scan lands. See CLAUDE.md, "Adding a
+    # workflow to the suite", step 5 -- every future source's coverage line
+    # must follow this shape, not the `if source in latest` shape above.
+    nexcess_sites = [s for s in sites if s.get("host") == "CM Nexcess"]
+    if nexcess_sites:
+        nx_known = sum(1 for s in nexcess_sites
+                        if s.get("nexcess_app_version") not in (None, L.UNKNOWN))
+        coverage.append(("Nexcess estate (PHP, WordPress version, via the portal API)",
+                         (nx_known, len(nexcess_sites))))
+
     unreconciled = [s for s in sites
                     if s.get("in_workbook") is False or s.get("reconciliation")]
 
