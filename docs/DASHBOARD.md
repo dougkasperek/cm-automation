@@ -1,6 +1,9 @@
 # Fleet dashboard: live demo, then hosting
 
-**Updated 2026-08-19. What gets PUBLISHED changed; the live local demo did not.**
+**Updated 2026-08-20.** The publish path and the Access section were rewritten
+from what is actually configured, checked in the Cloudflare dashboard that day.
+Before 2026-08-20 this document still described a `PUBLISH_TOKEN` HTTP publish
+route that had been deleted on 2026-08-19.
 
 There are **two renderers, deliberately**, and confusing them is how this
 document was wrong for a month:
@@ -67,7 +70,7 @@ hosted path below is the better answer for anything beyond a live demo.
 | `scripts/lib/severity.py` | decides CRIT/WARN/OK. The only place that does. See `docs/SEVERITY.md` |
 | `scripts/render-fleet-dashboard.py` | one scan JSON in, HTML out. Feeds the LIVE view only |
 | `scripts/serve-dashboard.py` | watches a reports dir, re-renders on change, serves it. Stdlib only |
-| `scripts/publish-dashboard.sh` | render from the ledger, then PUT both artifacts to the Worker |
+| `scripts/publish-dashboard.sh` | render from the ledger, then upload both artifacts straight to R2 with `wrangler r2 object put` |
 | `ci/cloudflare/cm-fleet-worker.js` | serves the page and the feed out of R2. No business logic |
 
 ```bash
@@ -132,30 +135,40 @@ drift from the version in git, which has already bitten this account once.
 `main` resolves relative to the toml, which is why the command has a `cd` in it.
 
 **2. R2 is already bound** by the config above: binding `FLEET`, bucket
-`dash-data` (verified to exist 2026-08-19). The Worker reads and writes only
-under the `fleet/` prefix, so it cannot collide with what `cm-dash` keeps there.
+`dash-data` (verified to exist 2026-08-19, re-checked 2026-08-20). The Worker
+only READS, and only under the `fleet/` prefix, so it cannot collide with what
+`cm-dash` keeps in the same bucket.
 
-**3. Add the publish secret.**
+**3. Route a hostname.** `fleet.thudstaff.com`. Do not serve this from
+`cm.thudstaff.com`.
 
-```bash
-cd ci/cloudflare
-wrangler secret put PUBLISH_TOKEN     # paste the output of: openssl rand -hex 32
-```
+This is already in `ci/cloudflare/wrangler.toml` as a `[[routes]]` block with
+`custom_domain = true`, so `wrangler deploy` attaches it. The hostname lives in
+git for the same drift reason as the Worker itself.
 
-It is a secret, so it is set this way and never written into `wrangler.toml`.
-Without it the publish route returns 503 and the dashboard is upload-only.
+**There is no publish secret and no publish route.** Both were removed
+2026-08-19. If you find yourself running `wrangler secret put PUBLISH_TOKEN`,
+you are following an old version of this document. See "Why the write route
+went" below.
 
-**4. Route a hostname.** Suggested: `fleet.thudstaff.com`. Do not serve this
-from `cm.thudstaff.com`.
+**4. Turn off the `workers.dev` URL, and prove it.** `wrangler.toml` sets
+`workers_dev = false`. Cloudflare Access protects hostnames in a zone; it
+**cannot** protect a `*.workers.dev` URL, so a Worker behind Access on its
+custom domain is still served unauthenticated on `cm-fleet.<subdomain>.workers.dev`
+to anyone who has the URL. This was demonstrated, not assumed: an external
+sandbox with no Cloudflare session fetched the full fleet JSON from the
+workers.dev URL while `fleet.thudstaff.com` correctly returned a 302 to the
+Access login.
 
-Prefer doing it in `wrangler.toml` rather than clicking. There is a commented
-`[[routes]]` block at the bottom of that file; uncomment it and redeploy, so the
-hostname lives in git for the same drift reason as the Worker itself.
+Verify in the dashboard after deploying: Workers & Pages -> cm-fleet ->
+Domains. Both the Production and Preview `workers.dev` toggles must be off.
+**Checked 2026-08-20: off on all five Workers on this account.**
 
-**5. Put it behind Access, with the right policy.** See the next section, which
-is the part that actually decides whether this works for your purpose.
+**5. Put it behind Access.** See the next section for what is actually
+configured today.
 
-**6. Publish.** Note it takes **no scan file** -- it renders from the ledger.
+**6. Publish.** It takes **no scan file** -- it renders from the ledger, and it
+writes to R2 directly rather than through the Worker.
 
 ```bash
 # look at it first
@@ -163,74 +176,104 @@ is the part that actually decides whether this works for your purpose.
 open reports/publish-preview/dashboard.html
 
 # then for real
-export FLEET_PUBLISH_URL=https://fleet.thudstaff.com
-export FLEET_PUBLISH_TOKEN=<the PUBLISH_TOKEN value>
+export CLOUDFLARE_API_TOKEN=<a token with Workers R2 Storage: Edit>
+export CLOUDFLARE_ACCOUNT_ID=<see: wrangler whoami>
 ./scripts/publish-dashboard.sh
 ```
 
-**7. Let CI do it.** The `Pantheon Fleet Health Check` workflow has a
-`publish_dashboard` input, **default off**. Turn it on once the above works by
-hand. It needs two repo settings:
+**7. Let CI do it.** Publishing is the reusable workflow
+`.github/workflows/_publish-dashboard.yml`, called by the email, Nexcess and
+consent workflows with `secrets: inherit`. The Pantheon workflow still has its
+own inline copy. It needs two repo settings:
 
 | where | name | value |
 |---|---|---|
-| Settings, Secrets and variables, Actions, **Variables** | `FLEET_PUBLISH_URL` | `https://fleet.thudstaff.com` |
-| Settings, Secrets and variables, Actions, **Secrets** | `FLEET_PUBLISH_TOKEN` | the `PUBLISH_TOKEN` value |
+| Settings, Secrets and variables, Actions, **Secrets** | `CLOUDFLARE_API_TOKEN` | a token with Workers R2 Storage: Edit, scoped to ONE account |
+| Settings, Secrets and variables, Actions, **Variables** | `CLOUDFLARE_ACCOUNT_ID` | the account id |
+| Settings, Secrets and variables, Actions, **Variables** | `FLEET_PUBLISH_URL` | `https://fleet.thudstaff.com` (display only, in the run summary) |
 
-The publish job runs **after** `persist-ledger`, and checks out `main` fresh.
+Note which is a secret and which is a variable. The workflow's "Check publish
+credentials" step fails loudly if either is missing, rather than letting the
+script die on an unbound variable ten lines later.
+
+The publish job runs **after** `persist-ledger` and checks out `main` fresh.
 Both matter: publishing first would ship a page rendered from a ledger that does
 not yet hold the run that just finished, so the live dashboard would sit one
 scan behind forever and nothing on the page would say so.
 
-It also requires `persist_ledger` to be on. With no ingest there is nothing new
-to publish.
+---
+
+## Why the write route went
+
+Until 2026-08-19 the Worker had a `PUT /api/publish/<key>` route guarded by a
+`PUBLISH_TOKEN` bearer check, and `publish-dashboard.sh` uploaded through it.
+
+That route sat on a hostname behind Cloudflare Access, so a machine publishing
+had to clear Access with a service token **and** a correctly ordered Service
+Auth policy, just to reach a bearer-token check it would then also have to pass.
+Two auth layers, one of which a machine cannot satisfy without extra
+configuration, guarding an operation the R2 API already authenticates on its
+own.
+
+Writing to the bucket directly with `wrangler r2 object put` removed the whole
+problem, and left the Worker with **no write endpoint on a public hostname at
+all**. Do not add one back without a reason that survives that sentence.
+
+**2026-08-20: the deployed Worker had not caught up.** The repo change landed
+after the last `wrangler deploy`, so production still had the `PUT` route and
+still had `PUBLISH_TOKEN` set as a secret -- meaning the route answered rather
+than returning 503. Nothing was exposed, because Access fronts the hostname and
+`workers.dev` is off, but a write path existed that the docs and `CLAUDE.md`
+both said did not. **After changing this Worker, re-read the deployed code
+(`wrangler deployments view`, or the dashboard's Edit code view) and confirm it
+is what you committed.**
 
 ---
 
-## Access: read this before sharing the link
+## Access: what is configured
 
-The deck at `cm.thudstaff.com` sits behind a Cloudflare Access allowlist of
-three people, Doug, Matt and Brian. That is correct for the deck, which contains
-partner economics, rate cards and the ownership discussion.
+**Measured 2026-08-20 in the Cloudflare Zero Trust dashboard.** All five
+Workers on this account have a custom hostname, an Access application, and
+`workers.dev` disabled.
 
-**Your developers are not on that list, and should not be added to it.** If this
-dashboard is served from the deck's hostname or reuses the deck's policy, either
-Tor cannot open the link, or he can open the partner deck. Both are bad.
+| Worker | hostname | Access application | policy |
+|---|---|---|---|
+| cm-fleet | fleet.thudstaff.com | fleet | `fleet viewers` |
+| cm-dash | dash.thudstaff.com | dash | `dkmhbp` |
+| cm-deck | cm.thudstaff.com | cm | `dkmhbp` |
+| sowgen | sowgen.thudstaff.com | cm SOWgen | `dkmhbp` |
+| cmcom-staging | cmcom.thudstaff.com | cmcom | `dkmhbp` |
 
-So: a separate hostname with its own Access application and its own policy that
-includes the dev team. That is a five-minute job in the Zero Trust dashboard,
-and it is the actual prerequisite for showing anyone this page.
+- `fleet viewers` -- doug.kasperek, matt.hasselback, brian.phillips,
+  victoria.brake, nick.federico.
+- `dkmhbp` -- doug.kasperek, matt.hasselback, brian.phillips. This is the deck's
+  policy, and it is correct that the fleet dashboard does **not** reuse it: the
+  deck holds partner economics, rate cards and the ownership discussion, and the
+  developers who need the fleet page must not be added to it.
+- Every policy's action is `Allow`. **There are no Bypass policies and no Access
+  service tokens**, which is what makes the header check in `cm-dash` safe --
+  see below.
+- The R2 bucket `dash-data` has no custom domain and its Public Development URL
+  is disabled, so R2 is not a way around Access either.
 
-If you want it visible to the whole company, an Access policy of "emails ending
-in @clevermethod.com" is the simplest correct rule. The dashboard contains no
-client-confidential data, only your own fleet's plugin inventory, but it is
-still internal infrastructure detail and should not be public.
+A reusable policy named `all-cm-emails` exists and is attached to zero
+applications. If you want the fleet page visible to everyone at clevermethod,
+that is the rule to attach; the page holds no client-confidential data, only
+your own fleet's inventory.
 
-For CI publishing, create an Access **service token** and let the Worker route
-bypass Access for it, or skip the HTTP publish path entirely and upload with
-`wrangler r2 object put` from the runner instead.
+**Why `workers.dev` staying off is load-bearing beyond this Worker.** `cm-dash`
+authenticates its `/api/save` endpoint solely on the
+`Cf-Access-Authenticated-User-Email` header. That header is only trustworthy on
+a hostname where Access is the *only* route in -- on a `workers.dev` URL a
+client can simply send the header itself. `cm-dash/wrangler.toml` does not pin
+`workers_dev = false`, so a future `wrangler deploy` of it can re-open that
+door.
+
+**Do not create an Access service token for CI.** Nothing in this suite needs
+one any more; the publish path talks to the R2 API and never touches the
+hostname.
 
 ---
-
-## Wiring it into CI
-
-One step at the end of the scan job, after artifacts are uploaded:
-
-```yaml
-      - name: Publish dashboard
-        if: always()
-        env:
-          FLEET_PUBLISH_URL: ${{ vars.FLEET_PUBLISH_URL }}
-          FLEET_PUBLISH_TOKEN: ${{ secrets.FLEET_PUBLISH_TOKEN }}
-        run: |
-          SCAN="$(ls -1 reports/*.json | tail -n1)"
-          [ -n "$SCAN" ] && ./scripts/publish-dashboard.sh "$SCAN"
-```
-
-The Azure DevOps equivalent is the same two env vars and the same one script
-call, which is the reason the publishing logic is in a shell script rather than
-in the workflow file.
-
 ---
 
 ## Design decisions worth not undoing

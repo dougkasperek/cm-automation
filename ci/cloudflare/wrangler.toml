@@ -17,22 +17,6 @@ name = "cm-fleet"
 main = "cm-fleet-worker.js"
 compatibility_date = "2026-08-19"
 
-# account_id is deliberately absent. Wrangler picks it up from your login, and
-# committing it to a repo that may later move to an org is a value that goes
-# stale silently. If wrangler asks, select the clevermethod account.
-
-# The Worker reads and writes ONLY under the fleet/ prefix, so sharing the
-# bucket with cm-dash is safe. Bucket verified to exist 2026-08-19.
-[[r2_buckets]]
-binding = "FLEET"
-bucket_name = "dash-data"
-
-# PUBLISH_TOKEN is a SECRET and must never appear here. Set it with:
-#
-#   wrangler secret put PUBLISH_TOKEN
-#
-# Without it the PUT route returns 503 and the dashboard is upload-only.
-
 # ---------------------------------------------------------------------------
 # The hostname, and the workers.dev back door
 # ---------------------------------------------------------------------------
@@ -43,21 +27,53 @@ bucket_name = "dash-data"
 # names 84 client sites, their backup gaps and their unpatched versions, that
 # is the whole exposure with none of the protection.
 #
-# Uncomment the route, deploy, put Access on the hostname, PROVE Access works
-# in a private window, and only THEN set workers_dev = false and deploy again.
-# Doing it in that order means a misconfigured Access policy cannot lock you
-# out of your own dashboard, because workers.dev is still there while you test.
+# DEMONSTRATED, not assumed, on 2026-08-19: an external sandbox with no
+# Cloudflare session, no cookies and no credentials fetched the full fleet JSON
+# from the workers.dev URL - all 84 sites, their WordPress versions, backup gaps
+# and PHP end-of-life status - while fleet.thudstaff.com was correctly returning
+# a 302 to the Access login.
 #
+# ORDER MATTERS if you ever rebuild this: create the route, deploy, put Access
+# on the hostname, PROVE Access works in a private window, and only THEN turn
+# workers_dev off and deploy again. That way a misconfigured Access policy
+# cannot lock you out of your own dashboard, because workers.dev is still there
+# while you test.
+#
+# ---------------------------------------------------------------------------
+# THIS KEY MUST STAY ABOVE THE [[routes]] HEADER.
+# ---------------------------------------------------------------------------
+# It lived BELOW it from 2026-08-19 until 2026-08-20, and in TOML every bare key
+# after a table header belongs to that table - so wrangler read this as a
+# property of the ROUTE, not of the Worker, and refused to deploy:
+#
+#   Expected "routes" to be an array of ... objects with the shape
+#   { pattern, custom_domain, zone_id | zone_name, enabled, previews_enabled }
+#
+# Nobody saw that error for a day because no deploy was attempted in between,
+# which also means this setting had NEVER been applied by wrangler. The
+# workers.dev toggles being off in the dashboard on 2026-08-20 was a manual
+# click, not this file. Same family as everything in CLAUDE.md's table: the
+# config said one thing and production was set by something else.
+workers_dev = false
+
 [[routes]]
 pattern = "fleet.thudstaff.com"
 custom_domain = true
 
-# ENABLED 2026-08-19, after the back door was DEMONSTRATED rather than assumed:
-# an external sandbox with no Cloudflare session, no cookies and no credentials
-# fetched the full fleet JSON from the workers.dev URL - all 84 sites, their
-# WordPress versions, backup gaps and PHP end-of-life status - while
-# fleet.thudstaff.com was correctly returning a 302 to the Access login.
+# account_id is deliberately absent. Wrangler picks it up from your login, and
+# committing it to a repo that may later move to an org is a value that goes
+# stale silently. If wrangler asks, select the clevermethod account.
+
+# The Worker only READS, and only under the fleet/ prefix, so sharing the
+# bucket with cm-dash is safe. Bucket verified to exist 2026-08-19,
+# re-checked 2026-08-20 (no custom domain, public dev URL disabled).
+[[r2_buckets]]
+binding = "FLEET"
+bucket_name = "dash-data"
+
+# THIS WORKER HAS NO SECRETS. There used to be a PUBLISH_TOKEN guarding a
+# PUT /api/publish/ route; both were deleted 2026-08-19. If a `PUBLISH_TOKEN`
+# still shows under Settings -> Variables and secrets, it is a leftover from
+# before that change and should be deleted:
 #
-# Access protects hostnames in a zone. It cannot protect *.workers.dev. Leaving
-# this on meant the Access policy was decorative.
-workers_dev = false
+#   wrangler secret delete PUBLISH_TOKEN --name cm-fleet
