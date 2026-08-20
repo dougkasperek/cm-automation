@@ -401,6 +401,73 @@ for _a in sorted(FACT_FAMILIES):
                               % (_a, _b, sorted(_overlap)))
 
 
+# ---------------------------------------------------------------------------
+# COVERAGE: what "this run actually measured this site" means, per source.
+# ---------------------------------------------------------------------------
+# ONE definition, used by three callers that must never disagree:
+#
+#   1. ingest()                      -> stores `deep_scanned` on the run
+#   2. previous_run_of_same_source() -> decides what is a comparable baseline
+#   3. ingest()'s drop check         -> notices a run that saw less than the
+#                                       run before it
+#
+# It cost a day to learn that this has to be in one place. Until 2026-08-20 it
+# was in two: ingest computed `deep_scanned` from a per-source predicate, while
+# the baseline guard tested whether the previous run's SITE SET was a strict
+# subset. For health those agree, because a cohort run genuinely has fewer
+# rows. For consent they do not -- the sweep writes a row for all 78 sites
+# whether or not the page loaded, so a 38-site run and a 54-site run have
+# IDENTICAL site sets. The guard saw two comparable full runs, two CI runs at
+# 38 replaced a laptop run at 54 on the live dashboard, and nothing anywhere
+# said so.
+#
+# A ROW EXISTS is not A SITE WAS MEASURED. Everything below keys on the second.
+MEASURED = {
+    # `wp_checked` IS the health coverage flag. An api-only run reaches every
+    # site's control plane but reads no WordPress, so it measures nothing in
+    # this family -- which is why the baseline rule below has to treat "this
+    # run measured nothing" as a different MODE, not as a partial look.
+    "health":    lambda r: r.get("wp_checked") is True,
+    # The page actually loaded. An HTTP 403 block page is NOT a measurement.
+    # That exact bug shipped once and made 23 sites look clean.
+    "consent":   lambda r: r.get("consent_scan_ok") is True,
+    # The control plane described the site, rather than merely listing it.
+    "nexcess":   lambda r: r.get("nexcess_app_version") not in (None, UNKNOWN),
+    # DKIM needs a selector to be known, so it is the email fact that
+    # distinguishes "looked" from "could not look".
+    "email-dns": lambda r: r.get("dkim_present") is True,
+}
+
+
+def measured_count(rows, source):
+    """How many of `rows` this source actually measured. Never a row count."""
+    pred = MEASURED.get(source)
+    if pred is None:
+        # A new source with no coverage predicate must NOT silently report full
+        # coverage; that is the failure this whole module exists to prevent.
+        # Failing loudly at ingest is the cheapest place to catch it.
+        raise KeyError(
+            "source %r has no entry in MEASURED in scripts/fleet-ledger.py. "
+            "Add one before ingesting it: without a coverage definition every "
+            "run of this source reports as fully covered and no coverage drop "
+            "can ever be detected." % (source,))
+    return sum(1 for r in rows if pred(r))
+
+
+def measured_sites(obs, run_id, source):
+    """The set of sites this run MEASURED. None if the source has no rule."""
+    pred = MEASURED.get(source)
+    if pred is None:
+        return None
+    return set(o["site"] for o in obs if o["run_id"] == run_id and pred(o))
+
+
+# How a run of each source describes itself. `health` is the exception: it has
+# two real modes and which one it was is a property of the coverage, not of the
+# tool, so it is derived rather than looked up.
+RUN_MODE = {"consent": "browser", "nexcess": "api-estate", "email-dns": "dns"}
+
+
 def ingest(reports_dir, history_dir, inventory=None):
     obs_path = os.path.join(history_dir, "observations.jsonl")
     runs_path = os.path.join(history_dir, "runs.jsonl")
@@ -408,12 +475,21 @@ def ingest(reports_dir, history_dir, inventory=None):
         os.makedirs(history_dir)
 
     seen = set()
+    # The newest already-ingested run of each source, so a run that measured
+    # LESS than the one before it can be noticed at the moment it lands.
+    # runs.jsonl is append-ordered, so the last record per source is the one to
+    # compare against.
+    last_by_source = {}
     if os.path.exists(runs_path):
         with open(runs_path) as fh:
             for line in fh:
                 line = line.strip()
-                if line:
-                    seen.add(json.loads(line)["run_id"])
+                if not line:
+                    continue
+                rec = json.loads(line)
+                seen.add(rec["run_id"])
+                if rec.get("source"):
+                    last_by_source[rec["source"]] = rec
 
     by_host, by_domain, inv_recs = load_inventory(inventory)
 
@@ -431,6 +507,8 @@ def ingest(reports_dir, history_dir, inventory=None):
         files = []
 
     added_runs, added_obs, skipped = 0, 0, 0
+    # Runs that measured fewer sites than the previous run of the same source.
+    coverage_drops = []
     # Rows whose identifier matched no inventory entry, accumulated across every
     # run in this ingest. Each run already records its own list, but a value
     # written into a file nobody reads is not a warning. The caller gets a count
@@ -460,30 +538,32 @@ def ingest(reports_dir, history_dir, inventory=None):
                       file=sys.stderr)
                 continue
 
-            source = rows[0]["source"] if rows else "unknown"
+            if not rows:
+                # An empty report is an absence, not a zero-coverage run.
+                # Recording it would put a run in the ledger claiming it
+                # measured nothing, which is a different statement.
+                print("  skip (no rows): %s" % os.path.basename(path),
+                      file=sys.stderr)
+                continue
+
+            source = rows[0]["source"]
             # Coverage is a property of the RUN and is what makes an OK
-            # trustworthy or not. Store it once here so no later reader
-            # has to re-infer it.
+            # trustworthy or not. Computed from the ONE definition above, which
+            # the baseline guard and the drop check also read, so the three can
+            # never disagree about what "measured" means.
+            #
+            # Health used to count this off the raw `payload` rather than the
+            # normalised rows. Verified identical across all seven health runs
+            # in the ledger on 2026-08-20 before the two were merged.
+            deep = measured_count(rows, source)
+            # Written as a statement, not a chained conditional expression.
+            # The one-liner `"full" if deep else "api-only" if source ==
+            # "health" else RUN_MODE[source]` parses right-associatively and
+            # labels every covered consent run "full". Caught before it ran.
             if source == "health":
-                deep = sum(1 for r in payload if r.get("wp_checked") is True)
                 mode = "full" if deep else "api-only"
-            elif source == "consent":
-                # Coverage here means "the page actually loaded". A site that
-                # would not load is counted as not covered, so `deep_scanned`
-                # never overstates the sweep.
-                deep = sum(1 for r in rows if r["consent_scan_ok"] is True)
-                mode = "browser"
-            elif source == "nexcess":
-                # For this source, coverage means "the control plane told us
-                # what version of WordPress is installed". A site the API
-                # listed but would not describe is counted as not covered, so
-                # `deep_scanned` never overstates what was actually learned.
-                deep = sum(1 for r in rows
-                           if r["nexcess_app_version"] != UNKNOWN)
-                mode = "api-estate"
             else:
-                deep = sum(1 for r in rows if r["dkim_present"] is True)
-                mode = "dns"
+                mode = RUN_MODE[source]
             unresolved = [r for r in rows
                           if r.get("site_id") and r["site_id"] not in inv_recs]
             meta.update({
@@ -499,6 +579,33 @@ def ingest(reports_dir, history_dir, inventory=None):
             if unresolved:
                 unresolved_by_run[meta["run_id"]] = sorted(
                     r["site_id"] for r in unresolved)
+            # A run that measured fewer sites than the previous run of the
+            # same source. THE RUN IS STILL INGESTED -- the ledger is
+            # append-only and a degraded measurement is still a measurement.
+            # Refusing to record an observation because it is inconvenient is
+            # the opposite of what this tool is for. What must not happen is
+            # that it lands QUIETLY.
+            #
+            # 2026-08-19: two CI consent runs at 38 of 78 landed after a laptop
+            # run at 54, and because the dashboard renders the latest run per
+            # source, the live page silently lost 16 measured sites. All three
+            # runs wrote 78 rows over 78 sites, so nothing about the shape of
+            # the data told the good run from the bad one.
+            prev = last_by_source.get(source)
+            if (prev is not None
+                    and isinstance(prev.get("deep_scanned"), int)
+                    and deep < prev["deep_scanned"]):
+                coverage_drops.append({
+                    "run_id": meta["run_id"],
+                    "source": source,
+                    "deep_scanned": deep,
+                    "site_count": len(rows),
+                    "previous_run_id": prev["run_id"],
+                    "previous_deep_scanned": prev["deep_scanned"],
+                    "lost": prev["deep_scanned"] - deep,
+                })
+            last_by_source[source] = meta
+
             runs_fh.write(json.dumps(meta, sort_keys=True) + "\n")
             added_runs += 1
 
@@ -520,6 +627,7 @@ def ingest(reports_dir, history_dir, inventory=None):
         "ledger": obs_path,
         "unresolved_by_run": unresolved_by_run,
         "unresolved_count": sum(len(v) for v in unresolved_by_run.values()),
+        "coverage_drops": coverage_drops,
     }
 
 
@@ -567,13 +675,34 @@ def previous_run_of_same_source(runs, idx=-1, obs=None):
     curr = runs[idx]
     src = curr.get("source")
     curr_sites = _sites_in(obs, curr["run_id"]) if obs is not None else None
+    # None when the source has no coverage rule, in which case rule 2 below
+    # cannot be applied and rule 1 stands on its own.
+    curr_measured = measured_sites(obs, curr["run_id"], src) if obs is not None else None
     for r in reversed(runs[:idx if idx != -1 else len(runs) - 1]):
         if r.get("source") != src:
             continue
         if curr_sites is not None:
-            prev_sites = _sites_in(obs, r["run_id"])
-            if prev_sites < curr_sites:      # strict subset: a cohort run
+            # Rule 1, since 2026-08-19: a candidate whose ROW set is a strict
+            # subset is a cohort run -- a partial look, not a statement that
+            # the rest of the fleet vanished.
+            if _sites_in(obs, r["run_id"]) < curr_sites:
                 continue
+            # Rule 2, added 2026-08-20: same rows, fewer MEASUREMENTS. Consent
+            # writes a row for every site whether or not the page loaded, so a
+            # 38-of-78 run and a 54-of-78 run are indistinguishable under rule
+            # 1. Diffing the good run against the bad one is what produced 97
+            # facts "crossing the unknown boundary" on 17 sites -- coverage
+            # churn dressed up as fleet change.
+            #
+            # The empty-set exception is load-bearing. An api-only health run
+            # measures ZERO sites in the wp_checked family while still being a
+            # complete look at every site's control plane. That is a different
+            # MODE, not a partial look, and excluding it as a baseline would
+            # discard the only comparable run in seven of this ledger's runs.
+            if curr_measured is not None:
+                prev_measured = measured_sites(obs, r["run_id"], src)
+                if prev_measured and prev_measured < curr_measured:
+                    continue
         return r, curr
     return None, curr
 
@@ -1212,6 +1341,11 @@ def main():
                          "whatever key each tool uses, so a site observed by "
                          "two tools gets two histories. Escape hatch for "
                          "tests; not for real data.")
+    ap.add_argument("--allow-coverage-drop", action="store_true",
+                    help="ingest a run that measured FEWER sites than the "
+                         "previous run of the same source without failing. "
+                         "The run is stored either way; this only decides "
+                         "whether the exit code says so.")
     ap.add_argument("--fail-on-unresolved", action="store_true",
                     help="exit non-zero if any ingested row matched no "
                          "inventory entry. For CI, where nobody is reading "
@@ -1250,6 +1384,33 @@ def main():
             print("Either add them to %s, or map them via host_site_name."
                   % a.inventory, file=sys.stderr)
             if a.fail_on_unresolved:
+                return 1
+
+        # Coverage going DOWN is a defect in the run. Coverage going up is
+        # routine and says nothing. Direction is the whole point: the tool
+        # already classified both as "COVERAGE" and suppressed them as noise,
+        # which is why a 16-site loss reached the live dashboard unremarked.
+        if res["coverage_drops"]:
+            print("", file=sys.stderr)
+            print("COVERAGE DROPPED. A run measured fewer sites than the run "
+                  "before it:", file=sys.stderr)
+            for d in res["coverage_drops"]:
+                print("  %s  %d of %d measured, was %d in %s  (-%d)"
+                      % (d["run_id"], d["deep_scanned"], d["site_count"],
+                         d["previous_deep_scanned"], d["previous_run_id"],
+                         d["lost"]), file=sys.stderr)
+            print("", file=sys.stderr)
+            print("The run(s) WERE ingested; the ledger is append-only and a "
+                  "degraded measurement is still a measurement.", file=sys.stderr)
+            print("But the dashboard renders the LATEST run per source, so "
+                  "publishing now would replace a better", file=sys.stderr)
+            print("measurement with a worse one and nothing on the page would "
+                  "say so.", file=sys.stderr)
+            print("", file=sys.stderr)
+            print("Re-run the scan from somewhere less likely to be blocked, "
+                  "or pass --allow-coverage-drop", file=sys.stderr)
+            print("if the drop is real and expected.", file=sys.stderr)
+            if not a.allow_coverage_drop:
                 return 1
         return 0
 
