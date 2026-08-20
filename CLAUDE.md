@@ -54,6 +54,29 @@ run a workflow.**
 Cloudflare API token, the Pantheon machine token and the runner SSH key are
 GitHub Actions secrets. `wrangler.toml` carries no credentials.
 
+**Editing `ci/cloudflare/` does not change what is running.** A Worker only
+changes when someone runs `wrangler deploy`, and Claude cannot. On 2026-08-20 an
+audit found the deployed `cm-fleet` was a day behind the repo: the write route
+removed on 2026-08-19 was still live, and `PUBLISH_TOKEN` was still set on it,
+so it answered rather than returning 503. **Never describe the Worker's
+behaviour from its source file.** Read the deployed code back --
+`wrangler deployments view`, the dashboard's Edit code view, or the Cloudflare
+MCP `workers_get_worker_code` -- and say which one you looked at.
+
+**Access protects hostnames, never `*.workers.dev`.** Every Worker must pin
+`workers_dev = false` in its own config, not just have the toggle off in the
+dashboard, because wrangler defaults it to TRUE when the key is absent and the
+next deploy silently re-opens it. **And `workers_dev` is a TOP-LEVEL key: it
+must appear above the first `[table]` or `[[array]]` header in the file, or TOML
+silently makes it a property of that table.** In `ci/cloudflare/wrangler.toml`
+it sat below `[[routes]]` for a day and had therefore never been applied at all;
+the off toggles in the dashboard were a manual click. Parse the file before
+believing it -- `python3 -c "import tomllib; print(tomllib.load(open('wrangler.toml','rb')))"`
+-- rather than reading the line and assuming it lands where it looks like it
+lands. Measured state of all five hostnames, the
+Access policies and the API tokens is in project memory,
+`fleet_cloudflare_access.md`.
+
 ---
 
 ## The one bug this project keeps making
@@ -80,6 +103,8 @@ eleven times:
 | 23 sites "no banner, no trackers" | HTTP 403 block pages; `ok` meant the navigation did not throw |
 | a current-looking dashboard | three of four workflows ingested and never published |
 | `js.cookie.min.js` in `cmpScripts` | a WooCommerce helper, not a consent manager |
+| the Worker is read-only, no write route, no secrets | true of the repo; the DEPLOYED Worker still had `PUT /api/publish/` and its `PUBLISH_TOKEN` |
+| `workers_dev = false` is pinned in `wrangler.toml` | it sat below `[[routes]]`, so TOML made it a key of the ROUTE. Wrangler had never applied it and refused to deploy the first time anyone tried |
 
 The thirteenth was our own diagnostic: `probe` printed one word for a DNS
 failure, a TLS trust failure and a dead host alike, and sent Doug looking at

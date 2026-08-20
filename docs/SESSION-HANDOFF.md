@@ -14,6 +14,36 @@ written down.
 71, nexcess 88, consent 59. All five workflow files match their staging copies.
 `fleet.thudstaff.com` is LIVE and published by CI.
 
+### RESOLVED 2026-08-20: cm-fleet redeployed, write route and secret gone
+
+A Cloudflare audit found the live `cm-fleet` still had the `PUT /api/publish/`
+route removed from the repo on 2026-08-19, with `PUBLISH_TOKEN` still set, so
+the route answered rather than returning 503. Nothing was ever exposed -- Access
+fronts the hostname and `workers.dev` is off -- but the Worker's own header,
+`CLAUDE.md` and `docs/DASHBOARD.md` all described a production that did not
+exist.
+
+**Fixed and VERIFIED the same day**, each by reading the deployed artifact back
+rather than the file that was supposed to produce it:
+
+- deployed code re-read through the Cloudflare API: no `publish()`, no PUT
+  branch, matches the repo
+- `PUBLISH_TOKEN` deleted; Settings -> Variables and secrets is now empty
+- `workers.dev` off on Production and Preview, `fleet.thudstaff.com` the only
+  route -- and now set BY the config rather than by a dashboard click
+
+The first `wrangler deploy` attempt failed and that failure was the real finding:
+`workers_dev = false` sat below the `[[routes]]` header, so TOML made it a key
+of the route and **wrangler had never applied it**. Moved above the first table
+header and verified by parsing with `tomllib`. Same fix applied to
+`[removed]/wrangler.toml`, which had never set the key at all.
+
+**Still open from that audit:** [removed], [removed] and [removed] have no
+wrangler config in the connected folders, so nothing pins `workers_dev` for
+them; and all three Cloudflare API tokens are no-expiry USER tokens on Doug's
+personal account, one of them scoped to All accounts. Full measured state in
+project memory, `fleet_cloudflare_access.md`.
+
 ### Tomorrow, in order
 
 1. **Re-run the consent sweep from Doug's Mac and republish.** The newest run in
