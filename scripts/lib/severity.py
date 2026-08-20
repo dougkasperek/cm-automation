@@ -154,6 +154,64 @@ COVERAGE_FACTS = HEALTH_FACTS + NEXCESS_FACTS + CONSENT_FACTS
 ORDER = ["CRIT", "WARN", "OK", "UNKNOWN", "SKIP", "FROZEN"]
 
 
+# ---------------------------------------------------------------------------
+# AXES
+# ---------------------------------------------------------------------------
+# Added 2026-08-20. Until today one status per site answered TWO unrelated
+# questions -- is this site maintained, and does it leak trackers before
+# consent -- and the second silently drove the first. 38 of 70 WARN sites had a
+# consent reason and 7 were WARN for consent ALONE, so the fleet-health
+# headline moved when the consent sweep ran and nothing about maintenance had
+# changed. That is the same shape as `upstream_pending`: a rule from one
+# question ranking sites on another.
+#
+# An axis is a QUESTION, not a workflow. `coverage_partial` comes from the
+# consent sweep -- it fires when the sweep is the only thing that ever saw a
+# site -- but it answers "do we know this site's health", so it is a HEALTH
+# reason. Map by what the finding is about, never by which tool found it.
+#
+# Same vocabulary on every axis, per CLAUDE.md: an axis with no measurement
+# reads UNKNOWN, never OK. A second set of state names would be a second
+# answer.
+AXES = ("health", "consent")
+
+AXIS_OF_CODE = {
+    "wp_below_floor":              "health",
+    "php_eol":                     "health",
+    "backup_missing":              "health",
+    # A conditional code -- `add(crit, "backup_missing" if ... else
+    # "backup_stale", ...)`. A grep for add(bucket, "literal") misses it, which
+    # is exactly why axis_of() raises instead of defaulting.
+    "backup_stale":                "health",
+    "backup_aging":                "health",
+    "core_update":                 "health",
+    "plugin_backlog":              "health",
+    "wp_version_unknown":          "health",
+    "wp_version_disagreement":     "health",
+    "nexcess_app_version_unknown": "health",
+    # Fires on the consent sweep, ANSWERS a health question. See above.
+    "coverage_partial":            "health",
+    "consent_pre_consent_trackers": "consent",
+    "consent_no_tooling":           "consent",
+}
+
+
+def axis_of(code):
+    """Which question does this finding answer?
+
+    Raises for an unmapped code rather than defaulting to health. A new rule
+    that silently lands on the health axis would re-create exactly the bug
+    this split was built to fix, and it would do it quietly.
+    """
+    try:
+        return AXIS_OF_CODE[code]
+    except KeyError:
+        raise KeyError(
+            "severity code %r has no axis. Add it to AXIS_OF_CODE -- a rule "
+            "with no axis cannot be scored, and defaulting it to health is "
+            "how consent came to drive the health headline." % (code,))
+
+
 def _version(v):
     """Parse a dotted version to a tuple, or None if it is not one.
 
@@ -450,17 +508,62 @@ def evaluate(site, today=None):
     if plugins is not None and 0 < plugins < PLUGIN_WARN_COUNT:
         info.append("%d plugin update(s) pending" % plugins)
 
-    if crit:
-        return _result("CRIT", crit, warn, site, info)
-    if warn:
-        return _result("WARN", [], warn, site, info)
-    return _result("OK", [], [], site, info)
+    return _result(None, crit, warn, site, info)
 
 
 def _result(status, crit, warn, site, info=None):
-    reasons = ([dict(r, level="CRIT") for r in crit]
-               + [dict(r, level="WARN") for r in warn])
-    return {"status": status, "reasons": reasons, "info": info or [],
+    """Build the result, splitting findings across axes.
+
+    `status=None` means "derive it": each axis is scored from its OWN reasons,
+    and the top-level `status` is the HEALTH axis. Callers wanting the consent
+    answer read `axes["consent"]`.
+
+    A non-None `status` is a TERMINAL state -- FROZEN, UNKNOWN, SKIP -- which
+    is a statement about the whole site rather than about one question, so it
+    is stamped onto every axis. A frozen site is not "frozen for health and
+    unknown for consent".
+
+    `reasons` carries the HEALTH reasons only, so it always agrees with
+    `status`. The union is `all_reasons`, every entry tagged with its axis. Two
+    fields rather than one because a caller reading `reasons` and `status`
+    together must never see an OK status sitting next to a WARN reason.
+    """
+    reasons = ([dict(r, level="CRIT", axis=axis_of(r["code"])) for r in crit]
+               + [dict(r, level="WARN", axis=axis_of(r["code"])) for r in warn])
+
+    if status is not None:
+        axes = dict((a, {"status": status, "reasons": []}) for a in AXES)
+        return {"status": status, "reasons": [], "all_reasons": [],
+                "axes": axes, "info": info or [],
+                "production": is_production(site)}
+
+    axes = {}
+    for a in AXES:
+        mine = [r for r in reasons if r["axis"] == a]
+        if any(r["level"] == "CRIT" for r in mine):
+            st = "CRIT"
+        elif mine:
+            st = "WARN"
+        else:
+            st = "OK"
+        axes[a] = {"status": st, "reasons": mine}
+
+    # The consent axis is UNKNOWN unless the sweep actually loaded the page.
+    # `consent_scan_ok` is present on every consent row INCLUDING rows the
+    # sweep could not read, so its presence means "the sweep tried" and its
+    # value says whether the look succeeded. Without this, a site the sweep was
+    # refused by scores OK on consent -- 23 sites reading "no banner, no
+    # trackers" off an HTTP 403 block page, which is the bug the sweep itself
+    # shipped with on 2026-08-19. Unmeasured is not clean.
+    if site.get("consent_scan_ok") is not True and not axes["consent"]["reasons"]:
+        axes["consent"]["status"] = "UNKNOWN"
+
+    health = axes["health"]
+    return {"status": health["status"],
+            "reasons": health["reasons"],
+            "all_reasons": reasons,
+            "axes": axes,
+            "info": info or [],
             "production": is_production(site)}
 
 
@@ -496,16 +599,24 @@ def summarise(sites, today=None):
     """
     counts = {k: 0 for k in ORDER}
     excluded = {k: 0 for k in ORDER}
+    # Per-axis totals, added 2026-08-20 with the axis split. `counts` is the
+    # HEALTH axis and stays the fleet headline; `axes` carries every axis
+    # including health, so a caller can render one tile group per question
+    # without re-deriving anything. Non-production sites are excluded from
+    # every axis on the same rule, not just from health.
+    axis_counts = dict((a, {k: 0 for k in ORDER}) for a in AXES)
     excluded_sites, unreviewed = [], []
     for s in sites:
         r = s.get("severity") or evaluate(s, today)
         if r["production"]:
             counts[r["status"]] += 1
+            for a in AXES:
+                axis_counts[a][r["axes"][a]["status"]] += 1
         else:
             excluded[r["status"]] += 1
             excluded_sites.append(s.get("site_id"))
         if needs_review(s):
             unreviewed.append(s.get("site_id"))
-    return {"counts": counts, "excluded": excluded,
+    return {"counts": counts, "excluded": excluded, "axes": axis_counts,
             "excluded_sites": sorted(x for x in excluded_sites if x),
             "unreviewed": sorted(x for x in unreviewed if x)}

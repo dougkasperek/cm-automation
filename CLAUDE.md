@@ -213,6 +213,25 @@ facts plus the inventory's `production` flag, evaluated at render time so
 retuning a threshold rescores all history instead of reporting as a fleet
 change. Full rationale in `docs/SEVERITY.md`. Two rules worth restating:
 
+**Scoring is per AXIS, since 2026-08-20.** An axis is a QUESTION -- `health`
+(is this site maintained) and `consent` (does it leak trackers) -- and a site
+has a status on each independently. `evaluate()` returns `status` and `reasons`
+for the HEALTH axis, `axes` for all of them, and `all_reasons` as the tagged
+union. Before the split, 38 of 70 WARN sites carried a consent finding and 7
+were WARN for consent alone, so the fleet-health headline moved when the
+consent sweep ran and nothing about maintenance had changed.
+
+- **Map a code by the QUESTION it answers, never by the tool that found it.**
+  `coverage_partial` fires on the consent sweep and is a HEALTH reason,
+  because it says "no health evidence exists for this site".
+- **`axis_of()` raises for an unmapped code.** Defaulting to health is how
+  consent came to drive the health headline, and it would do it silently. The
+  guard immediately caught `backup_stale`, a conditional code that a grep for
+  `add(bucket, "literal")` misses.
+- **A terminal state -- FROZEN, UNKNOWN, SKIP -- is a statement about the SITE
+  and lands on every axis.** And never show terminal states per axis card: "3
+  sites are SKIP for consent" is not a thing. Found by looking at the page.
+
 - **A fact that is true of every site ranks nothing.** `upstream_pending` was a
   WARN and no site could ever be healthy. PHP 8.2 expiring is the same shape:
   46 sites share it, so it is a planning item, not a per-site warning.

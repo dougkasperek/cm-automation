@@ -311,6 +311,36 @@ if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.
     check("feed has one entry per site on the page",
           len(_data["sites"]) == len(_m["sites"]) == 84, str(len(_data["sites"])))
 
+    # THE PAGE AND THE FEED MUST AGREE ON EVERY AXIS, not just on health.
+    # v1's page and JSON feed were built by two code paths and drifted; the
+    # axis split doubles the number of numbers that can drift, so the guard
+    # covers each axis rather than assuming health stands for all of them.
+    for _axis in S.AXES:
+        _chips = _re.findall(
+            r'data-state="[A-Z]*" data-consent="([A-Z]*)"', _html)
+        if _axis != "consent":
+            continue
+        _page = {}
+        for _c in _chips:
+            if _c:
+                _page[_c] = _page.get(_c, 0) + 1
+        _feed = {}
+        for _srow in _data["sites"]:
+            _st = (_srow.get("axes") or {}).get("consent", {}).get("status")
+            if _st:
+                _feed[_st] = _feed.get(_st, 0) + 1
+        check("the consent COLUMN agrees with the consent axis in the feed",
+              _page == _feed, "page=%s feed=%s" % (_page, _feed))
+
+    check("every site row carries a consent status in the feed",
+          all("axes" in _srow and "consent" in _srow["axes"]
+              for _srow in _data["sites"]))
+    check("the site table has a Consent column at all",
+          "<th>Consent</th>" in _html)
+    check("an unmeasured consent cell says WHY rather than sitting blank, "
+          "because a blank consent cell reads as nothing to fix",
+          ("UNKNOWN" not in _html) or ("cellnote" in _html))
+
     # Every count in the feed must appear in the rendered HTML next to its
     # state chip. If the page said 2 CRIT and the feed said 33, only a person
     # opening both would ever notice.
@@ -378,6 +408,96 @@ if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.
                 if s["site_id"] in _nohealth and s["status"] == "OK"]))
 else:
     print("skip  feed checks (renderer or ledger unavailable)")
+
+
+def _raises(fn, exc):
+    try:
+        fn()
+    except exc:
+        return True
+    return False
+
+
+
+# ---------------------------------------------------------------------------
+# AXES
+# ---------------------------------------------------------------------------
+# One status per site used to answer two questions at once, and the consent
+# sweep silently moved the fleet-health headline. These pin the SEPARATION,
+# never a count -- a new source is entitled to move any number here.
+print()
+print("-- axes: one status per question --")
+
+import re as _re
+
+_src = open(os.path.join(os.path.dirname(__file__),
+                         "..", "scripts", "lib", "severity.py")).read()
+_codes = set()
+for _expr in _re.findall(r"add\((?:crit|warn),(.*?),", _src, _re.S):
+    _codes |= set(_re.findall(r'"([a-z_0-9]+)"', _expr))
+check("every severity code in the module has an axis",
+      _codes and all(c in S.AXIS_OF_CODE for c in _codes),
+      "unmapped: %s" % sorted(c for c in _codes if c not in S.AXIS_OF_CODE))
+check("...and the check found the conditional code too, not just the literals",
+      "backup_stale" in _codes)
+check("an unmapped code RAISES rather than defaulting to health",
+      _raises(lambda: S.axis_of("not_a_real_code"), KeyError))
+
+# A terminal state is a statement about the SITE, so it lands on every axis.
+# Without this a frozen site reads "frozen for health, OK for consent".
+for _term, _site in (("FROZEN", {"frozen": True}),
+                     ("UNKNOWN", {"site_id": "nobody-looked"})):
+    _r = S.evaluate(_site, TODAY)
+    check("a %s site is %s on EVERY axis, not just health" % (_term, _term),
+          _r["status"] == _term
+          and all(_r["axes"][a]["status"] == _term for a in S.AXES),
+          repr(_r["axes"]))
+
+# The split must not lose a finding. `reasons` agrees with `status`;
+# `all_reasons` is the union and every entry is tagged.
+_leaky = {"php_version": "8.2", "wp_checked": True, "wp_version": "7.0.2",
+          "db_backup_age_days": 1, "plugin_updates": 0, "wp_core_update": "up-to-date",
+          "upstream_pending": 0, "frozen": False,
+          "consent_scan_ok": True, "consent_banner_detected": False,
+          "consent_pre_trackers": 3}
+_r = S.evaluate(_leaky, TODAY)
+check("health stays OK when only consent has findings",
+      _r["status"] == "OK" and _r["reasons"] == [], repr(_r["status"]))
+check("...and consent is WARN, so the finding moved rather than vanishing",
+      _r["axes"]["consent"]["status"] == "WARN")
+check("all_reasons is the union of every axis",
+      len(_r["all_reasons"])
+      == sum(len(_r["axes"][a]["reasons"]) for a in S.AXES))
+check("every reason carries the axis it was scored on",
+      all("axis" in x for x in _r["all_reasons"]))
+check("`reasons` never disagrees with `status`: no WARN reason under an OK",
+      not (_r["status"] == "OK" and _r["reasons"]))
+
+# summarise() must count the same population on every axis, or one card on the
+# page silently describes a different fleet than the one beside it.
+_fleet = [{"site_id": "a", **_leaky},
+          {"site_id": "b", "frozen": True},
+          {"site_id": "c"},
+          {"site_id": "d", "php_version": "7.4", "wp_checked": True,
+           "db_backup_age_days": 900, "frozen": False}]
+_s = S.summarise(_fleet, TODAY)
+check("summarise reports per-axis counts",
+      set(_s["axes"]) == set(S.AXES), repr(sorted(_s["axes"])))
+_tot = sum(_s["counts"].values())
+check("every axis counts the SAME population, so two cards cannot describe "
+      "different fleets",
+      all(sum(_s["axes"][a].values()) == _tot for a in S.AXES),
+      repr({a: sum(_s["axes"][a].values()) for a in S.AXES}))
+check("the top-level counts ARE the health axis",
+      _s["counts"] == _s["axes"]["health"])
+
+# The consent axis must never claim OK for a site it could not see. This is the
+# HTTP 403 bug the sweep shipped with, one layer up.
+_blocked = dict(_leaky, consent_scan_ok=False, consent_banner_detected=None,
+                consent_pre_trackers=None)
+check("a site the sweep could not load is UNKNOWN on consent, never OK",
+      S.evaluate(_blocked, TODAY)["axes"]["consent"]["status"] == "UNKNOWN")
+
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

@@ -253,6 +253,12 @@ def emit_data(m):
                "status": sev.get("status"),
                "counts_toward_fleet": sev.get("production", True),
                "reasons": sev.get("reasons", []),
+               # Per-axis statuses, added 2026-08-20. `status` and `reasons`
+               # above are the HEALTH axis, so a consumer that wants the
+               # consent answer for a site must be able to read it here rather
+               # than re-deriving it from the fact columns -- re-deriving is
+               # how the page and the feed came to disagree in v1.
+               "axes": sev.get("axes", {}),
                "info": sev.get("info", []),
                "sources": sorted(s.get("sources") or []),
                "workbook_claims": s.get("claimed") or {}}
@@ -349,6 +355,31 @@ input,select{font:13px inherit;padding:7px 10px;border:1px solid var(--line);bor
 details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:13px}
 .foot{color:var(--ink2);font-size:12px;margin-top:34px;border-top:1px solid var(--line);padding-top:14px}
 @media(max-width:700px){.hero{font-size:40px}td,th{font-size:12.5px}}
+
+/* --- the suite scoreboard, 2026-08-20 -------------------------------- */
+.suite{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:26px}
+.wfcard{display:flex;flex-direction:column;gap:10px}
+.wfhead{font-size:17px;font-weight:650;letter-spacing:-.01em}
+.wfblurb{font-size:13px;line-height:1.45;color:var(--ink2)}
+.wfstates{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;margin-top:2px}
+.wfstate{display:flex;align-items:baseline;gap:6px}
+.wfn{font-size:22px;font-weight:640;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.wfcov{margin-top:auto;padding-top:4px}
+.wfbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.wfbar i{display:block;height:100%;border-radius:3px}
+.wfbar i.good{background:var(--good)}
+.wfbar i.info{background:var(--info)}
+.wfbar i.bad{background:var(--bad)}
+.wfcovlab{font-size:12.5px;color:var(--ink2);margin-top:5px}
+.wfnote{font-size:12.5px;line-height:1.5;color:var(--ink2);border-top:1px solid var(--line);padding-top:9px}
+.wfdetail{display:flex;flex-direction:column;gap:5px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.wfrow b{color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums}
+.wfmini{display:flex;flex-direction:column;gap:9px;margin:2px 0 4px}
+.wfminirow{display:grid;grid-template-columns:46px 1fr 48px;align-items:center;gap:9px;font-size:12.5px;color:var(--ink2)}
+.wfminilab{font-weight:600;color:var(--ink)}
+.wfmininum{text-align:right;font-variant-numeric:tabular-nums}
+.cellnote{font-size:11px;line-height:1.35;color:var(--ink2);margin-top:3px;max-width:150px}
+.wfminirow .wfbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:block}
 """)
     return "".join(out)
 
@@ -409,10 +440,167 @@ def render(m):
           '<div class=note>%s</div></div>' % (e(lab), e(val), e(note)))
     A('</div>')
 
-    # --- fleet health -----------------------------------------------------
+    # --- the suite ---------------------------------------------------------
+    # ONE TILE GROUP PER QUESTION, added 2026-08-20.
+    #
+    # Until today the page led with a single status row that mixed two
+    # unrelated questions. 38 of 70 WARN sites carried a consent finding and 7
+    # were WARN for consent alone, so "fleet health" moved when the consent
+    # sweep ran and nothing about maintenance had changed -- while consent
+    # itself had no headline anywhere and survived as three rows inside
+    # "Still true". Both problems are the same problem.
+    #
+    # ONLY THE ANSWER STATES ARE SHOWN PER CARD. SKIP and FROZEN are terminal
+    # states of the SITE, not of a question, so repeating them on every card
+    # says "3 sites are SKIP for consent", which is not a thing. They are
+    # stated once, in the footer of the health card. Caught by looking at the
+    # rendered page, not by a test.
     h = m["health"]
+    ax = h.get("axes") or {}
+    ANSWERS = ["CRIT", "WARN", "OK", "UNKNOWN"]
+
+    def _cov(prefix):
+        for w, (k, n) in m["coverage"]:
+            if w.startswith(prefix):
+                return k, n
+        return None, None
+
+    def _bar(known, of, label):
+        if not of:
+            return ""
+        pct = int(round(100.0 * known / of))
+        tone = "good" if pct >= 90 else ("info" if pct >= 60 else "bad")
+        return ('<div class=wfbar><i class="%s" style="width:%d%%"></i></div>'
+                '<div class=wfcovlab><strong>%d of %d</strong> %s</div>'
+                % (tone, pct, known, of, e(label)))
+
+    A("<h2>The suite</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">One card per question. A site has '
+      'a status on <em>each</em> axis independently: a site can be well '
+      'maintained and still leak trackers, and until 2026-08-20 this page could '
+      'not say that. Scored from the ledger at render time, so changing a '
+      'threshold rescores all of history rather than reporting as a fleet '
+      'change.</p>')
+    A('<div class=suite>')
+
+    def card(title, blurb, counts_map, cov, detail=None, note=None):
+        A('<div class="card wfcard">')
+        A('<div class=wfhead>%s</div>' % e(title))
+        A('<div class=wfblurb>%s</div>' % blurb)
+        if counts_map:
+            A('<div class=wfstates>')
+            for st in ANSWERS:
+                n = counts_map.get(st, 0)
+                if not n and st in ("CRIT", "UNKNOWN"):
+                    continue
+                A('<div class=wfstate>%s<span class=wfn>%s</span></div>'
+                  % (chip(st, STATE_TONE.get(st, "muted")), e(n)))
+            A('</div>')
+        if detail:
+            A('<div class=wfdetail>%s</div>' % detail)
+        A('<div class=wfcov>%s</div>' % cov)
+        if note:
+            A('<div class=wfnote>%s</div>' % note)
+        A('</div>')
+
+    # HEALTH ----------------------------------------------------------------
+    nh = len([x for x in m["sites"]
+              if any(r.get("code") == "coverage_partial"
+                     for r in (x.get("severity") or {}).get("reasons", []))])
+    k, n = _cov("Pantheon platform facts")
+    terminal = []
+    for st in ("SKIP", "FROZEN"):
+        c = h["counts"].get(st, 0)
+        if c:
+            terminal.append("%d %s" % (c, st.lower()))
+    if h["excluded_sites"]:
+        terminal.append("%d excluded as non-production" % len(h["excluded_sites"]))
+    hcodes = {}
+    for x in m["sites"]:
+        for r in ((x.get("severity") or {}).get("axes", {})
+                  .get("health", {}).get("reasons", [])):
+            hcodes[r["code"]] = hcodes.get(r["code"], 0) + 1
+    hbits = []
+    for codes, label in (
+            (("backup_missing", "backup_stale", "backup_aging"),
+             "have no recent database backup"),
+            (("core_update",), "are behind on WordPress core"),
+            (("plugin_backlog",), "have a plugin backlog"),
+            (("php_eol",), "run PHP past end of security support")):
+        c = sum(hcodes.get(x, 0) for x in codes)
+        if c:
+            hbits.append('<span class=wfrow><b>%d</b> %s</span>' % (c, e(label)))
+    card("Fleet health",
+         "Is this site being maintained: backups, PHP, WordPress, plugins.",
+         ax.get("health") or h["counts"], _bar(k, n, "Pantheon platform facts"),
+         detail="".join(hbits) or None,
+         note=("<strong>%d site(s) have been looked at but have NO health "
+               "evidence</strong> — no backup age, no plugin or theme count. "
+               "They score WARN for that reason alone, and this is the coverage "
+               "number to watch.%s"
+               % (nh, ("<br>Plus " + ", ".join(terminal) + ".") if terminal else "")))
+
+    # CONSENT ---------------------------------------------------------------
+    # The status split alone does not say what to DO. 38 WARN is two different
+    # conversations: a site with no tooling at all, and a site whose tooling is
+    # installed and not working. The second is worse and is invisible in a
+    # single count.
+    def _n_standing(frag):
+        for g in m["standing"]:
+            if frag in g["cause"]:
+                return len(g.get("sites") or [])
+        return 0
+    leaks_with = _n_standing("tooling present, but trackers fire")
+    leaks_without = _n_standing("Trackers fire before consent, and no consent")
+    notool = _n_standing("No consent tooling detected")
+    k, n = _cov("Cookie consent")
+    card("Cookie consent",
+         "Does the homepage fire trackers before anyone consents.",
+         ax.get("consent"), _bar(k, n, "homepages the sweep could load"),
+         detail=(
+             '<span class=wfrow><b>%d</b> fire trackers before consent</span>'
+             '<span class=wfrow><b>%d</b> of those have consent tooling '
+             'installed that is not stopping them</span>'
+             '<span class=wfrow><b>%d</b> have no consent tooling at all</span>'
+             % (leaks_with + leaks_without, leaks_with, notool)),
+         note="Never CRIT by design: CRIT stays a security tier so it remains a "
+              "list somebody works through. <strong>UNKNOWN is a site that "
+              "refused the scanner, not a clean site.</strong> Technical "
+              "observations, not legal conclusions.")
+
+    # EMAIL / DNS -----------------------------------------------------------
+    # No per-site status: this answers a question about a DOMAIN. It still gets
+    # a card, because leaving a live workflow off the strip reads as "we do not
+    # do that" -- and it shows its three coverage fractions where the other
+    # cards show states, so the card is comparable rather than half empty.
+    email_causes = [g for g in m["standing"]
+                    if g["axis"] == "RISK"
+                    and ("DMARC" in g["cause"] or "SPF" in g["cause"]
+                         or "aligned" in g["cause"])]
+    A('<div class="card wfcard">')
+    A('<div class=wfhead>Email DNS</div>')
+    A('<div class=wfblurb>Can this domain send mail that authenticates.</div>')
+    A('<div class=wfmini>')
+    for label, prefix in (("SPF", "SPF"), ("DKIM", "DKIM"), ("DMARC", "DMARC")):
+        k, n = _cov(prefix)
+        if n:
+            pct = int(round(100.0 * k / n))
+            tone = "good" if pct >= 90 else ("info" if pct >= 60 else "bad")
+            A('<div class=wfminirow><span class=wfminilab>%s</span>'
+              '<span class=wfbar><i class="%s" style="width:%d%%"></i></span>'
+              '<span class=wfmininum>%d/%d</span></div>'
+              % (e(label), tone, pct, k, n))
+    A('</div>')
+    A('<div class=wfnote>Scored per DOMAIN, not per site, so it has no column '
+      'in the fleet table below and no status of its own. <strong>%d open '
+      'cause(s)</strong>, listed under Still true.</div>' % len(email_causes))
+    A('</div>')
+
+    A('</div>')
+
+    # --- fleet health -----------------------------------------------------
     counts, excl = h["counts"], h["excluded"]
-    A("<h2>Fleet health</h2>")
+    A("<h2>What the states mean</h2>")
     A('<p class=sub style="margin:-4px 0 10px">Scored from the ledger at render '
       'time, not at scan time. Thresholds are named constants in '
       '<code>scripts/lib/severity.py</code>; changing one rescores every run in '
@@ -571,7 +759,12 @@ def render(m):
 
     # --- the fleet --------------------------------------------------------
     A("<h2>Every site</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">Blank cells are not tidy, they are '
+    A('<p class=sub style="margin:-4px 0 10px"><strong>Health and Consent are '
+      'independent</strong> — a site can be well maintained and still leak '
+      'trackers, and the two filters combine, so "OK health, WARN consent" is a '
+      'query you can run. A consent cell reading UNKNOWN is a site that refused '
+      'the scanner, not a clean one. '
+      'Blank cells are not tidy, they are '
       'the point: <strong>not checked</strong> means no scan has looked, and '
       '<em>per host</em> means the hosting control plane reported it rather '
       'than a scan reading it off the site, and '
@@ -581,9 +774,10 @@ def render(m):
     A('<div class=filters>'
       '<input id=q placeholder="Filter by site name" autocomplete=off>'
       '<select id=host><option value="">All hosts</option></select>'
-      '<select id=state><option value="">All states</option></select></div>')
+      '<select id=state><option value="">All health states</option></select>'
+      '<select id=consent><option value="">All consent states</option></select></div>')
     A('<div class=card style="overflow-x:auto"><table id=fleet>'
-      "<tr><th>Site</th><th>Host</th><th>State</th><th>PHP</th>"
+      "<tr><th>Site</th><th>Host</th><th>Health</th><th>Consent</th><th>PHP</th>"
       "<th>Newest backup</th><th>Upstream</th>"
       "<th>WP version</th><th>WP core</th><th>Plugins</th><th>Themes</th>"
       "<th>SPF</th><th>DKIM</th><th>DMARC sending</th><th>DMARC from</th>"
@@ -683,17 +877,52 @@ def render(m):
                        chip("workbook says %s" % claim, "bad")))
         return e(v)
 
+    def consent_cell(s):
+        """The consent axis for one site, with the vendor when there is one.
+
+        UNKNOWN here means the sweep was refused or could not load the page.
+        It is rendered as UNKNOWN and captioned, never left blank: a blank cell
+        in a consent column reads as "nothing to fix", which is the exact bug
+        the sweep shipped with -- 23 HTTP 403 block pages scored as clean.
+        """
+        ax = (s.get("severity") or {}).get("axes", {}).get("consent") or {}
+        st = ax.get("status")
+        if not st:
+            return '<span class=quiet>—</span>'
+        cell = chip(st, STATE_TONE.get(st, "muted"))
+        if st == "UNKNOWN":
+            code = s.get("consent_http_status")
+            why = ("HTTP %s" % code) if isinstance(code, int) else "not reached"
+            return cell + '<div class=cellnote>%s</div>' % e(why)
+        vendor = s.get("consent_banner_vendor")
+        pre = s.get("consent_pre_trackers")
+        bits = []
+        if vendor and vendor not in (None, "none", L.UNKNOWN):
+            bits.append(e(vendor))
+        elif st != "OK":
+            bits.append("no tooling")
+        try:
+            if int(pre) > 0:
+                bits.append("%d before consent" % int(pre))
+        except (TypeError, ValueError):
+            pass
+        if bits:
+            cell += '<div class=cellnote>%s</div>' % " · ".join(bits)
+        return cell
+
     for s in m["sites"]:
         st = s.get("status")
         state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
+        cst = ((s.get("severity") or {}).get("axes", {})
+               .get("consent") or {}).get("status") or ""
         claim = s.get("claimed") or {}
-        A('<tr data-site="%s" data-host="%s" data-state="%s">'
-          "<td><code>%s</code></td><td class=quiet>%s</td><td>%s</td>"
+        A('<tr data-site="%s" data-host="%s" data-state="%s" data-consent="%s">'
+          "<td><code>%s</code></td><td class=quiet>%s</td><td>%s</td><td>%s</td>"
           "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
           "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
-          % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""),
-             e(s["site_id"]), e(s.get("host") or "—"), state,
+          % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""), e(cst),
+             e(s["site_id"]), e(s.get("host") or "—"), state, consent_cell(s),
              observed(s.get("php_version"), claim.get("php_version"),
                       s.get("nexcess_php_version")),
              backup(s.get("db_backup_age_days")),
@@ -729,15 +958,18 @@ def render(m):
       rows.map(function(r){return r.dataset.host}).filter(function(v,i,a){return a.indexOf(v)===i}));
  opts(document.getElementById('state'),
       rows.map(function(r){return r.dataset.state}).filter(function(v,i,a){return a.indexOf(v)===i}));
+ opts(document.getElementById('consent'),
+      rows.map(function(r){return r.dataset.consent}).filter(function(v,i,a){return a.indexOf(v)===i}));
  function apply(){
    var q=document.getElementById('q').value.toLowerCase(),
        h=document.getElementById('host').value,
-       s=document.getElementById('state').value;
+       s=document.getElementById('state').value,
+       c=document.getElementById('consent').value;
    rows.forEach(function(r){
      r.style.display=(!q||r.dataset.site.indexOf(q)>-1)&&(!h||r.dataset.host===h)
-       &&(!s||r.dataset.state===s)?'':'none';});
+       &&(!s||r.dataset.state===s)&&(!c||r.dataset.consent===c)?'':'none';});
  }
- ['q','host','state'].forEach(function(id){
+ ['q','host','state','consent'].forEach(function(id){
    var el=document.getElementById(id);
    el.addEventListener('input',apply);el.addEventListener('change',apply);});
 })();
