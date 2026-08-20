@@ -37,6 +37,20 @@ remediation. Applying updates stays human-gated until the read-only scan has
 been trusted for several cycles. There is no write path and adding one is a
 product decision, not an implementation detail.
 
+**Claude edits files with asserted replacements, never a raw computed slice.**
+On 2026-08-20 a patch built its needle as `s[s.index(START):s.index(END)]`
+where END occurred EARLIER in the file than START. Python returns `""` for
+that, `str.replace("", x)` inserts `x` between every character, and
+`render-dashboard.py` went from 58KB to **58MB of one function repeated ten
+thousand times**. Everything else in the file was gone. It was recoverable only
+because the work had been committed twenty minutes earlier.
+
+So: a replacement helper must assert the needle is non-empty, that it is
+present, and that the result actually changed; a slice helper must assert
+`end > start`. Both guards were added the same day and the ordering assert
+fired on the very next run, on a different anchor. **Commit before a
+mechanical rewrite of a file, not after.**
+
 **Claude must not run any git command that writes the index.** Not `commit`,
 and not `add`, `reset` or `update-index`. Even a bare `git status` leaves a
 `.git/index.lock` on the mounted volume, and Claude cannot delete files there.

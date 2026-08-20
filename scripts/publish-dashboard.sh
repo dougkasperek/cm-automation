@@ -94,10 +94,66 @@ if [ ! -f "$INVENTORY" ]; then
   exit 1
 fi
 
+# CREDENTIALS: a token if there is one, otherwise your wrangler login.
+#
+# CI must use a token -- there is no browser on a runner to log in with. A
+# LAPTOP already has a wrangler OAuth session (it is what `wrangler deploy`
+# uses), and requiring a token there meant re-pasting a 53-character secret
+# into every new shell. That is friction that ends with the token in a dotfile.
+# Added 2026-08-20 after exactly that happened twice in one session.
+#
+# Precedence is wrangler's, not ours: wrangler prefers CLOUDFLARE_API_TOKEN
+# over the OAuth session whenever the variable is set, so all this block does
+# is decide whether to REQUIRE it. A junk token still fails, and fails with a
+# 401 rather than falling back -- which is correct. A publish that silently
+# used a different identity than the one you named would be worse than one
+# that stops.
 if [ "$DRY_RUN" -eq 0 ]; then
-  : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is not set (needs R2 read+write on the account)}"
-  : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID is not set (see: wrangler whoami)}"
   require_tools wrangler || exit 1
+  WHO="${TMPDIR:-/tmp}/cm-whoami.$$"
+
+  if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+    AUTH_AS="CLOUDFLARE_API_TOKEN"
+    : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID is not set (see: wrangler whoami)}"
+  else
+    # No token. Fall back to the logged-in session, but PROVE it exists first
+    # rather than letting the upload fail later with a 401 that reads like a
+    # permissions problem when it is really "you are not logged in".
+    if ! wrangler whoami >"$WHO" 2>&1; then
+      err "no CLOUDFLARE_API_TOKEN, and wrangler is not logged in either."
+      err ""
+      err "  Either:  wrangler login                     (laptop, opens a browser)"
+      err "  or:      export CLOUDFLARE_API_TOKEN=...    (CI, or a headless box)"
+      err ""
+      awk 'NR<=6 {print "        " $0}' "$WHO" >&2 2>/dev/null || true
+      rm -f "$WHO"
+      exit 1
+    fi
+    AUTH_AS="your wrangler login"
+
+    if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+      # wrangler whoami prints account ids in a table; pull one out so the
+      # caller does not have to know it. If the login can reach more than one
+      # account, wrangler cannot guess and neither can this script. Picking the
+      # first would be a confident value standing in for a decision, and it
+      # would publish to the wrong account without saying so.
+      n_acct="$(grep -o -E '[0-9a-f]{32}' "$WHO" | sort -u | wc -l | tr -d ' ')"
+      if [ "$n_acct" = "1" ]; then
+        CLOUDFLARE_ACCOUNT_ID="$(grep -o -E '[0-9a-f]{32}' "$WHO" | head -n1)"
+        export CLOUDFLARE_ACCOUNT_ID
+        log "Using account $CLOUDFLARE_ACCOUNT_ID from your wrangler login."
+      else
+        err "your wrangler login can reach $n_acct accounts, so this script"
+        err "will not pick one. Set CLOUDFLARE_ACCOUNT_ID explicitly."
+        err "Candidates:"
+        grep -o -E '[0-9a-f]{32}' "$WHO" | sort -u | awk '{print "        " $0}' >&2
+        rm -f "$WHO"
+        exit 1
+      fi
+    fi
+    rm -f "$WHO"
+  fi
+  log "Authenticating with $AUTH_AS."
 fi
 
 # Where the objects land. The Worker reads exactly these two keys, so changing
