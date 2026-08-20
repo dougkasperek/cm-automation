@@ -337,6 +337,52 @@ if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.
               for _srow in _data["sites"]))
     check("the site table has a Consent column at all",
           "<th>Consent</th>" in _html)
+
+    # --- Eastern time ---------------------------------------------------
+    # The ledger stores UTC. The page prints Eastern, 12-hour, ALWAYS labelled.
+    # An unlabelled timestamp is a confident-looking value standing in for a
+    # missing one: the 10:57 sweep rendered as "14:57" and read as afternoon.
+    check("a UTC stamp renders as Eastern 12-hour with the zone named",
+          R.when("2026-08-20T14:57:00") == "Aug 20, 10:57 AM EDT",
+          R.when("2026-08-20T14:57:00"))
+    check("...and winter is EST, not EDT",
+          R.when("2026-01-15T14:57:00") == "Jan 15, 9:57 AM EST",
+          R.when("2026-01-15T14:57:00"))
+    check("...and a UTC time before 05:00 belongs to the PREVIOUS Eastern day",
+          R.when("2026-08-20T00:30:00") == "Aug 19, 8:30 PM EDT",
+          R.when("2026-08-20T00:30:00"))
+    check("noon and midnight do not render as 0:00",
+          R.when("2026-08-20T16:00:00").startswith("Aug 20, 12:00 PM")
+          and R.when("2026-08-20T04:00:00").startswith("Aug 20, 12:00 AM"),
+          "%s / %s" % (R.when("2026-08-20T16:00:00"), R.when("2026-08-20T04:00:00")))
+    check("an unparseable stamp is shown as-is, never as a plausible time",
+          R.when("not-a-date") == "not-a-date" and R.when(None) == "unknown")
+
+    # The hand-rolled DST rule exists because zoneinfo raises with no tzdata,
+    # and that failure would land in CI. Cross-check it whenever tzdata IS
+    # present, so the fallback cannot quietly drift from the real rule.
+    try:
+        from zoneinfo import ZoneInfo as _ZI
+        _NY, _UTC = _ZI("America/New_York"), _ZI("UTC")
+        _bad, _d = [], _dt.datetime(2026, 1, 1)
+        while _d < _dt.datetime(2028, 1, 1):
+            _mine, _zone = R.eastern(_d)
+            _real = _d.replace(tzinfo=_UTC).astimezone(_NY)
+            if (_mine != _real.replace(tzinfo=None)
+                    or _zone != _real.strftime("%Z")):
+                _bad.append(_d)
+            _d += _dt.timedelta(hours=1)
+        check("the hand-rolled Eastern rule matches zoneinfo hour by hour "
+              "across two years and four DST transitions",
+              not _bad, "%d mismatch(es), first at %s"
+              % (len(_bad), _bad[0] if _bad else "-"))
+    except ImportError:
+        print("skip  zoneinfo unavailable, cannot cross-check the DST rule")
+
+    check("the page labels every run time with a zone",
+          _html.count("EDT") + _html.count("EST") >= len(_data["runs"]),
+          "%d zone label(s) for %d run(s)"
+          % (_html.count("EDT") + _html.count("EST"), len(_data["runs"])))
     check("an unmeasured consent cell says WHY rather than sitting blank, "
           "because a blank consent cell reads as nothing to fix",
           ("UNKNOWN" not in _html) or ("cellnote" in _html))

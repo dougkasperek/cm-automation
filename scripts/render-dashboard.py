@@ -138,8 +138,11 @@ def build_model(history_dir, inventory_path, today):
                     m[k] = v
     for site_id, rec in inv.items():
         m = merged.setdefault(site_id, {"site_id": site_id, "sources": []})
-        # The workbook's last known values, carried but NEVER mixed in with
-        # observations. A human typing 7.0.2 into a spreadsheet is a claim; a
+        # The workbook's last known values. NO LONGER RENDERED as of
+        # 2026-08-20 -- see observed() -- but still carried here because
+        # `in_workbook` below feeds severity's review queue, and because
+        # deleting inventory data to change a display is the wrong lever.
+        # A human typing 7.0.2 into a spreadsheet is a claim; a
         # scan reading it off the site is a fact. The table shows both and says
         # which is which.
         m["claimed"] = rec.get("workbook_last_known") or {}
@@ -261,7 +264,11 @@ def emit_data(m):
                "axes": sev.get("axes", {}),
                "info": sev.get("info", []),
                "sources": sorted(s.get("sources") or []),
-               "workbook_claims": s.get("claimed") or {}}
+               # `workbook_claims` was dropped from the feed 2026-08-20 with
+               # the workbook columns. The inventory still holds the values and
+               # `in_workbook` still feeds severity's review queue; they are
+               # simply no longer published as though they were evidence.
+               }
         for k in EMIT_FACTS:
             row[k] = s.get(k)
         sites.append(row)
@@ -298,6 +305,66 @@ def emit_data(m):
         "coverage": [{"what": w, "known": k, "of": n} for w, (k, n) in m["coverage"]],
         "inventory_count": m["inventory_count"],
     }
+
+
+
+# ---------------------------------------------------------------------------
+# EASTERN TIME
+# ---------------------------------------------------------------------------
+# The ledger stores `observed_at` in UTC, because a stamp is made with
+# `date -u` and a run can happen on a laptop in Buffalo or a GitHub runner in
+# Virginia. The PAGE is read by people in one timezone, and until 2026-08-20 it
+# printed the raw UTC value with no marker at all -- so a sweep Doug ran at
+# 10:57 in the morning rendered as "14:57" and looked like an afternoon run.
+# A timestamp with no zone is a confident-looking value standing in for a
+# missing one, same as everything else in CLAUDE.md's table.
+#
+# The rule is hand-rolled rather than delegated to zoneinfo because zoneinfo
+# raises when the system has no tzdata, which slim containers routinely do not
+# have -- and that failure would land in CI, not here. The test cross-checks it
+# against zoneinfo hour by hour whenever zoneinfo IS available, so the fallback
+# cannot quietly drift from the real rule.
+def _second_sunday_march(y):
+    d = datetime.date(y, 3, 8)
+    return d + datetime.timedelta(days=(6 - d.weekday()) % 7)
+
+
+def _first_sunday_november(y):
+    d = datetime.date(y, 11, 1)
+    return d + datetime.timedelta(days=(6 - d.weekday()) % 7)
+
+
+def eastern(utc_dt):
+    """UTC datetime -> (local datetime, 'EDT'|'EST').
+
+    EDT (UTC-4) from 02:00 local on the second Sunday in March to 02:00 local
+    on the first Sunday in November; EST (UTC-5) otherwise. The boundaries are
+    evaluated in UTC (07:00Z and 06:00Z), which is what the rule actually says
+    and avoids needing the offset to decide the offset.
+    """
+    y = utc_dt.year
+    start = datetime.datetime.combine(_second_sunday_march(y),
+                                      datetime.time(7, 0))
+    end = datetime.datetime.combine(_first_sunday_november(y),
+                                    datetime.time(6, 0))
+    if start <= utc_dt < end:
+        return utc_dt - datetime.timedelta(hours=4), "EDT"
+    return utc_dt - datetime.timedelta(hours=5), "EST"
+
+
+def when(observed_at):
+    """Ledger timestamp -> 'Aug 20, 10:57 AM EDT'. Never silently unlabelled."""
+    if not observed_at:
+        return "unknown"
+    try:
+        utc = datetime.datetime.strptime(observed_at[:19], "%Y-%m-%dT%H:%M:%S")
+    except (ValueError, TypeError):
+        return str(observed_at)
+    local, zone = eastern(utc)
+    hh = local.strftime("%I").lstrip("0") or "12"
+    return "%s %s, %s:%s %s %s" % (local.strftime("%b"), local.day, hh,
+                                   local.strftime("%M"),
+                                   local.strftime("%p"), zone)
 
 
 def css():
@@ -379,6 +446,23 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:13px}
 .wfminilab{font-weight:600;color:var(--ink)}
 .wfmininum{text-align:right;font-variant-numeric:tabular-nums}
 .cellnote{font-size:11px;line-height:1.35;color:var(--ink2);margin-top:3px;max-width:150px}
+/* --- compressed masthead, 2026-08-20 --------------------------------- */
+.masthead{margin-bottom:12px}
+.topband{display:grid;grid-template-columns:minmax(190px,0.8fr) minmax(300px,1.5fr);
+ gap:26px;align-items:center;padding:16px 20px;margin-bottom:10px}
+.topband .hero{font-size:46px;margin:0}
+.topband .hero-sub{font-size:13px;line-height:1.45;margin-top:2px}
+.topside{display:grid;gap:0}
+.toprow{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:baseline;
+ font-size:12.5px;line-height:1.45;color:var(--ink2);
+ padding:7px 0;border-bottom:1px solid var(--line)}
+.toprow:last-child{border-bottom:0;padding-bottom:0}
+.toprow:first-child{padding-top:0}
+.toprow b{color:var(--ink);font-size:16px;font-weight:640;text-align:right;
+ font-variant-numeric:tabular-nums}
+.runline{font-size:12.5px;color:var(--ink2);margin:0 0 26px}
+.runline b{color:var(--ink);font-weight:600}
+@media(max-width:720px){.topband{grid-template-columns:1fr;gap:16px}}
 .wfminirow .wfbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:block}
 """)
     return "".join(out)
@@ -395,50 +479,55 @@ def render(m):
     A('<meta name=viewport content="width=device-width,initial-scale=1">')
     A("<title>clevermethod fleet</title><style>%s</style>" % css())
     A('<div class=wrap>')
-    A("<h1>clevermethod fleet</h1>")
-    srcs = ", ".join("%s %s" % (s, r["observed_at"].replace("T", " "))
-                     for s, r in sorted(m["latest"].items()))
-    A('<p class=sub>%d sites in the inventory. Latest runs: %s. Read-only.</p>'
-      % (m["inventory_count"], e(srcs)))
-
-    # --- hero: the one number the page leads with -------------------------
+    # --- masthead ----------------------------------------------------------
+    # COMPRESSED 2026-08-20. The hero card and a four-tile KPI row together ate
+    # roughly 490px before the first workflow card, so on a laptop the suite
+    # scoreboard -- the thing the page is now organised around -- started below
+    # the fold. Context that never changes (how many sites, how many hosts, how
+    # many tools) belongs in a line of text, not in tiles the size of the
+    # numbers that DO change.
+    risk = [g for g in m["standing"] if g["axis"] == "RISK"]
     pushable = [c for c in m["changes"] if c["class"] not in L.QUIET_CLASSES]
     drift = [c for c in m["changes"] if c["class"] == "DRIFT"]
-    A('<div class=card>')
-    A('<div class=hero>%d</div>' % len(pushable))
-    if pushable:
-        A('<div class=hero-sub>change(s) needing a decision since the previous run '
-          'of each tool.</div>')
-    else:
-        A('<div class=hero-sub>changes needing a decision since the previous run of '
-          'each tool. The fleet is stable; the standing findings below are unchanged.</div>')
-    if drift:
-        A('<div class=hero-sub style="margin-top:6px">%d counter(s) moved on findings '
-          'already open, suppressed as noise.</div>' % len(drift))
-    if m["coverage_changes"]:
-        n = sum(len(g["sites"]) for g in m["coverage_changes"])
-        A('<div class=hero-sub style="margin-top:6px">%d fact(s) crossed the '
-          'unknown boundary on %d site(s). That is this tool\'s coverage '
-          'changing, not the fleet\'s. Summarised below, not counted '
-          'here.</div>'
-          % (n, len(set(x for g in m["coverage_changes"] for x in g["sites"]))))
+    nhosts = len({s.get("host") for s in m["sites"] if s.get("host")})
+
+    A('<div class=masthead>')
+    A("<h1>clevermethod fleet</h1>")
+    A('<p class=sub style="margin:2px 0 0">%d sites across %d hosts &middot; %d tools '
+      'feeding one ledger &middot; read-only</p>' % (m["inventory_count"], nhosts,
+                                              len(m["latest"])))
     A('</div>')
 
-    # --- kpi row ----------------------------------------------------------
-    risk = [g for g in m["standing"] if g["axis"] == "RISK"]
-    A('<div class=kpis>')
-    for lab, val, note in [
-        ("Sites tracked", len(m["sites"]), "across %d host(s)" %
-         len({s.get("host") for s in m["sites"] if s.get("host")})),
-        ("Open risk causes", len(risk), "grouped by cause, not by site"),
-        ("Needs reconciling", len(m["unreconciled"]),
-         "in one source but not the other"),
-        ("Tools feeding the ledger", len(m["latest"]),
-         "one history per site regardless"),
-    ]:
-        A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
-          '<div class=note>%s</div></div>' % (e(lab), e(val), e(note)))
+    A('<div class="card topband">')
+    A('<div class=topmain>')
+    A('<div class=hero>%d</div>' % len(pushable))
+    A('<div class=hero-sub>%s</div>'
+      % ("change(s) needing a decision since the previous run of each tool."
+         if pushable else
+         "changes needing a decision. The fleet is stable; the standing "
+         "findings below are unchanged."))
     A('</div>')
+
+    A('<div class=topside>')
+    cov_n = sum(len(g["sites"]) for g in m["coverage_changes"])
+    cov_sites = len(set(x for g in m["coverage_changes"] for x in g["sites"]))
+    for val, label in [
+        (len(risk), "open risk causes, grouped by cause not by site"),
+        (len(m["unreconciled"]), "sites in one source but not the other"),
+        (len(drift), "counters moved on findings already open, suppressed"),
+        (cov_n, "facts crossed the unknown boundary on %d site(s) &mdash; this "
+                "tool&rsquo;s coverage changing, not the fleet&rsquo;s" % cov_sites),
+    ]:
+        if not val:
+            continue
+        A('<div class=toprow><b>%s</b><span>%s</span></div>' % (e(val), label))
+    A('</div>')
+    A('</div>')
+
+    # Latest runs, in the timezone the people reading this are actually in.
+    A('<p class=runline>Latest runs &mdash; %s</p>'
+      % " &middot; ".join("<b>%s</b> %s" % (e(src), e(when(r.get("observed_at"))))
+                   for src, r in sorted(m["latest"].items())))
 
     # --- the suite ---------------------------------------------------------
     # ONE TILE GROUP PER QUESTION, added 2026-08-20.
@@ -477,8 +566,8 @@ def render(m):
     A("<h2>The suite</h2>")
     A('<p class=sub style="margin:-4px 0 10px">One card per question. A site has '
       'a status on <em>each</em> axis independently: a site can be well '
-      'maintained and still leak trackers, and until 2026-08-20 this page could '
-      'not say that. Scored from the ledger at render time, so changing a '
+      'maintained and still leak trackers. Scored from the ledger at render '
+      'time, so changing a '
       'threshold rescores all of history rather than reporting as a fleet '
       'change.</p>')
     A('<div class=suite>')
@@ -767,10 +856,10 @@ def render(m):
       'Blank cells are not tidy, they are '
       'the point: <strong>not checked</strong> means no scan has looked, and '
       '<em>per host</em> means the hosting control plane reported it rather '
-      'than a scan reading it off the site, and '
-      '<em>claimed</em> means the value comes from the manual workbook and has '
-      'never been verified. WordPress core, plugin and theme status needs the '
-      'SSH-based full scan, which is not wired up yet.</p>')
+      'than a scan reading it off the site. Every value here was measured; '
+      'nothing on this page is copied from the manual workbook. WordPress '
+      'core, plugin and theme status needs the SSH-based full scan, which is '
+      'not wired up yet.</p>')
     A('<div class=filters>'
       '<input id=q placeholder="Filter by site name" autocomplete=off>'
       '<select id=host><option value="">All hosts</option></select>'
@@ -812,83 +901,81 @@ def render(m):
             return chip("%d days ago" % d, "good")
         return chip("%d days ago" % d, "bad")
 
-    # Three tiers of evidence, strongest first, and the cell says which tier it
-    # is showing. Added 2026-08-19 with the Nexcess source, because rendering
-    # the page with control-plane facts in the ledger showed 21 sites whose PHP
-    # and WordPress versions had just been MEASURED still displaying the
-    # workbook's unverified claim -- the measurement was in the ledger, scoring
-    # correctly, and invisible on the page. Same family as every other entry in
-    # CLAUDE.md's table, pointed the other way: an absence standing in for a
-    # value this time.
+    # TWO tiers of evidence, strongest first, and the cell says which tier it is
+    # showing. There were three until 2026-08-20; the workbook's typed claim was
+    # the third and is gone. See observed() for why.
     #
     #   read off the site by WP-CLI     plain text, no qualifier
     #   reported by the hosting API     "per host", muted qualifier
-    #   typed into the audit workbook   "claimed", muted, whole cell quiet
     #   none of the above               "not checked"
-    def observed(v, claim=None, plane=None):
-        """An observed value, or an explicit gap. Neither a control-plane
-        reading nor a workbook claim ever fills the gap silently."""
-        if v not in (None, L.UNKNOWN):
-            return e(v)
-        if plane not in (None, L.UNKNOWN, ""):
-            return ('<span title="Reported by the hosting control plane, not '
-                    'read off the site itself. Stronger than the workbook, '
-                    'weaker than a WP-CLI reading.">%s <em class=quiet>per '
-                    'host</em></span>' % e(plane))
-        if claim:
-            return ('<span class=quiet title="From the manual workbook. '
-                    'Not verified by any scan.">%s <em>claimed</em></span>' % e(claim))
-        return '<span class=quiet>not checked</span>'
+    #
+    # The tiers exist because of 2026-08-19: rendering the page with
+    # control-plane facts in the ledger showed 21 sites whose PHP and WordPress
+    # versions had just been MEASURED while the cell still displayed something
+    # else. The measurement was in the ledger, scoring correctly, and invisible
+    # on the page. Labelling which tier a cell is showing is what fixed it, and
+    # that is the part worth keeping.
+    def observed(v, plane=None):
+        """A measured value, or an explicit absence. Never a claim.
 
-    def wp_version_cell(v, claim, plane=None):
-        """Observed WordPress version against the workbook's claim.
+        THE WORKBOOK COLUMN WAS REMOVED 2026-08-20. Doug: "we don't need to
+        compete with the old way." Every cell used to carry a second, muted
+        value from the manual audit spreadsheet, and a mismatch drew a red
+        "workbook says 7.0.2" chip. That comparison was the point while the
+        workbook was still the system of record and the open question was
+        whether this tool could be trusted. It has been, so the comparison is
+        now two numbers competing for a reader's attention in one cell, and the
+        older one is not evidence.
 
-        This is the comparison the project exists to make. The workbook asserts
-        7.0.2 fleet-wide and, until 2026-08-18, nothing had ever read the actual
-        version off a single site. One month after wp2shell - an RCE whose only
-        fix was that upgrade - a site not on 7.0.2 is the most important thing
-        this page can show, so a disagreement is called out rather than left for
-        a reader to spot by comparing two columns.
+        What survives is the distinction that is still real: a value read off
+        the SITE versus a value the hosting CONTROL PLANE reports. Both are
+        measurements, of different strengths, and a reader needs to know which
+        one they are looking at.
+
+        `in_workbook` is untouched and still feeds severity's review queue --
+        "nobody ever wrote this site down" remains the strongest signal in the
+        production-ruling backlog. This change is display only.
         """
-        if v in (None, L.UNKNOWN) and plane not in (None, L.UNKNOWN, ""):
-            # The control plane answered where WP-CLI has not run. This is the
-            # only evidence that exists for the 21 Nexcess sites, and it is the
-            # evidence that answers the wp2shell question for them, so it is
-            # shown -- qualified, and still compared against the workbook.
-            cell = ('%s <em class=quiet title="Reported by the hosting control '
-                    'plane, not read off the site itself.">per host</em>'
-                    % e(plane))
-            if claim and str(plane) != str(claim):
-                cell += " " + chip("workbook says %s" % claim, "bad")
-            return cell
         if v in (None, L.UNKNOWN):
-            if claim:
-                return ('<span class=quiet title="From the manual workbook. '
-                        'Not verified by any scan.">%s <em>claimed</em></span>'
-                        % e(claim))
+            if plane not in (None, L.UNKNOWN):
+                return ('<span title="Reported by the hosting control plane, '
+                        'not read off the site itself.">%s <em>per host</em>'
+                        '</span>' % e(plane))
             return '<span class=quiet>not checked</span>'
-        if claim and str(v) != str(claim):
-            # chip(), not a bare span: there is no chip-bad class, and the
-            # palette is only legal in light mode because every chip carries a
-            # visible text label. "workbook says X" is that label.
-            return ('%s <span title="The manual workbook records %s for this '
-                    'site. The scan read %s off the site itself.">%s</span>'
-                    % (e(v), e(claim), e(v),
-                       chip("workbook says %s" % claim, "bad")))
+        return e(v)
+
+    def wp_version_cell(v, plane=None):
+        """The WordPress version, and where it was read from.
+
+        Two evidence tiers, strongest first: read off the site by WP-CLI, or
+        reported by the hosting control plane. The third tier -- the workbook's
+        typed claim -- was removed 2026-08-20.
+
+        A control-plane version is still qualified rather than shown bare. It
+        is weaker evidence than `wp core version`, and the severity model
+        scores CRIT on it deliberately, so a reader deciding whether to go and
+        look at a site needs to know which kind of answer they have.
+        """
+        if v in (None, L.UNKNOWN):
+            if plane not in (None, L.UNKNOWN):
+                return ('<span title="Reported by the hosting control plane, '
+                        'not read off the site by WP-CLI.">%s <em>per host</em>'
+                        '</span>' % e(plane))
+            return '<span class=quiet>not checked</span>'
         return e(v)
 
     def consent_cell(s):
         """The consent axis for one site, with the vendor when there is one.
 
-        UNKNOWN here means the sweep was refused or could not load the page.
-        It is rendered as UNKNOWN and captioned, never left blank: a blank cell
-        in a consent column reads as "nothing to fix", which is the exact bug
-        the sweep shipped with -- 23 HTTP 403 block pages scored as clean.
+        UNKNOWN here means the sweep was refused or could not load the page. It
+        is rendered as UNKNOWN and captioned, never left blank: a blank cell in
+        a consent column reads as "nothing to fix", which is the exact bug the
+        sweep shipped with -- 23 HTTP 403 block pages scored as clean.
         """
         ax = (s.get("severity") or {}).get("axes", {}).get("consent") or {}
         st = ax.get("status")
         if not st:
-            return '<span class=quiet>—</span>'
+            return '<span class=quiet>&mdash;</span>'
         cell = chip(st, STATE_TONE.get(st, "muted"))
         if st == "UNKNOWN":
             code = s.get("consent_http_status")
@@ -907,7 +994,7 @@ def render(m):
         except (TypeError, ValueError):
             pass
         if bits:
-            cell += '<div class=cellnote>%s</div>' % " · ".join(bits)
+            cell += '<div class=cellnote>%s</div>' % " &middot; ".join(bits)
         return cell
 
     for s in m["sites"]:
@@ -915,7 +1002,6 @@ def render(m):
         state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
         cst = ((s.get("severity") or {}).get("axes", {})
                .get("consent") or {}).get("status") or ""
-        claim = s.get("claimed") or {}
         A('<tr data-site="%s" data-host="%s" data-state="%s" data-consent="%s">'
           "<td><code>%s</code></td><td class=quiet>%s</td><td>%s</td><td>%s</td>"
           "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
@@ -923,20 +1009,13 @@ def render(m):
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""), e(cst),
              e(s["site_id"]), e(s.get("host") or "—"), state, consent_cell(s),
-             observed(s.get("php_version"), claim.get("php_version"),
-                      s.get("nexcess_php_version")),
+             observed(s.get("php_version"), s.get("nexcess_php_version")),
              backup(s.get("db_backup_age_days")),
              e(s.get("upstream_pending", "—")),
-             wp_version_cell(s.get("wp_version"), claim.get("wp_version"),
-                             s.get("nexcess_app_version")),
-             # No workbook claim is passed here on purpose. The workbook
-             # records a VERSION; this column answers whether an update is
-             # PENDING. Showing "7.0.2 claimed" in an update-pending column
-             # answered a question nobody asked, in the one place a reader
-             # most needs a straight answer.
+             wp_version_cell(s.get("wp_version"), s.get("nexcess_app_version")),
              observed(s.get("wp_core_update")),
-             observed(s.get("plugin_updates"), claim.get("plugins_utd")),
-             observed(s.get("theme_updates"), claim.get("themes_utd")),
+             observed(s.get("plugin_updates")),
+             observed(s.get("theme_updates")),
              yn(s.get("spf_present")), e(s.get("dkim_selector") or "—"),
              yn(s.get("dmarc_at_sending_present")), yn(s.get("dmarc_at_from_present")),
              yn(s.get("relaxed_aligned"))))
