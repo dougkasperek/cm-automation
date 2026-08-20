@@ -545,6 +545,139 @@ src = open(os.path.join(ROOT, "scripts", "fleet-ledger.py")).read()
 check("stdlib only, no third-party imports", "import requests" not in src and "import pandas" not in src)
 check("no shell out to date/timeout", "subprocess" not in src)
 
+
+
+# ---------------------------------------------------------------------------
+# COVERAGE DROPS
+# ---------------------------------------------------------------------------
+# 2026-08-19: two CI consent runs at 38 of 78 landed after a laptop run at 54.
+# The dashboard renders the LATEST run per source, so the live page silently
+# lost 16 measured sites and stayed that way for a day.
+#
+# The existing baseline guard could not catch it. It tested whether the
+# previous run's SITE SET was a strict subset, and the consent sweep writes a
+# row for every site whether or not the page loaded -- so 38-of-78 and
+# 54-of-78 have IDENTICAL site sets. A row exists is not a site was measured.
+#
+# These assert the PROPERTY, never a count: no fleet numbers are pinned here,
+# per the standing rule about tests that pin a value a new source may move.
+print()
+print("-- a run that measured less than the one before it --")
+
+
+def _consent_report(path, sites):
+    """sites: [(domain, ok)] -> a consent-sweep payload on disk."""
+    json.dump({
+        "kind": "consent-sweep",
+        "sites": [{"domain": d, "ok": ok, "status": 200 if ok else 403,
+                   "bannerDetected": ok, "bannerVendor": "OneTrust" if ok else None,
+                   "preConsentTrackers": [], "finalUrl": "https://%s/" % d}
+                  for d, ok in sites],
+    }, open(path, "w"))
+
+
+_cov = tempfile.mkdtemp()
+try:
+    hist = os.path.join(_cov, "history")
+    reports = os.path.join(_cov, "reports")
+    os.makedirs(hist)
+    os.makedirs(reports)
+
+    doms = ["a.com", "b.com", "c.com", "d.com"]
+    inv = os.path.join(_cov, "inv.json")
+    json.dump({"sites": [{"site_id": d, "domain": d} for d in doms]},
+              open(inv, "w"))
+
+    # Run 1: every site measured.
+    _consent_report(os.path.join(reports, "fleet-consent-2026-08-01_0100.json"),
+                    [(d, True) for d in doms])
+    res = L.ingest(reports, hist, inventory=inv)
+    check("the first run of a source cannot be a drop",
+          res["coverage_drops"] == [], str(res["coverage_drops"]))
+
+    # Run 2: same four rows, but two of them did not load. This is the exact
+    # shape of the failure -- the row count does not move at all.
+    _consent_report(os.path.join(reports, "fleet-consent-2026-08-01_0200.json"),
+                    [("a.com", True), ("b.com", True),
+                     ("c.com", False), ("d.com", False)])
+    res = L.ingest(reports, hist, inventory=inv)
+    drops = res["coverage_drops"]
+    check("fewer sites MEASURED is a drop, even with the row count unchanged",
+          len(drops) == 1, str(drops))
+    check("the drop names what was lost and what it was measured against",
+          bool(drops) and drops[0]["lost"] > 0
+          and drops[0]["previous_run_id"] == "consent-2026-08-01_0100",
+          str(drops))
+    check("the degraded run is STILL ingested, because the ledger is append-only",
+          res["runs_added"] == 1)
+
+    # Run 3: recovered. Coverage going UP is routine and must stay silent, or
+    # the check becomes noise and gets ignored. Direction is the whole point.
+    _consent_report(os.path.join(reports, "fleet-consent-2026-08-01_0300.json"),
+                    [(d, True) for d in doms])
+    res = L.ingest(reports, hist, inventory=inv)
+    check("coverage going back UP is not reported",
+          res["coverage_drops"] == [], str(res["coverage_drops"]))
+
+    # And the baseline guard: the recovered run must not be diffed against the
+    # degraded one, or its recovery renders as the fleet changing.
+    runs, obs = L.load_ledger(hist)
+    i = [n for n, r in enumerate(runs) if r["run_id"] == "consent-2026-08-01_0300"][0]
+    prev, _ = L.previous_run_of_same_source(runs, i, obs)
+    check("a recovered run skips the degraded run as a baseline",
+          prev is not None and prev["run_id"] == "consent-2026-08-01_0100",
+          "chose %s" % (prev["run_id"] if prev else None))
+
+    # The empty-set exception. An api-only health run measures ZERO sites in
+    # the wp_checked family while still being a complete look at every site's
+    # control plane. That is a different MODE, not a partial look, and
+    # excluding it as a baseline would discard the only comparable run for
+    # seven of the runs in the real ledger.
+    hist2 = os.path.join(_cov, "history2")
+    reports2 = os.path.join(_cov, "reports2")
+    os.makedirs(hist2)
+    os.makedirs(reports2)
+    inv2 = os.path.join(_cov, "inv2.json")
+    json.dump({"sites": [{"site_id": "s1", "domain": "s1.com", "host_site_name": "s1"},
+                         {"site_id": "s2", "domain": "s2.com", "host_site_name": "s2"}]},
+              open(inv2, "w"))
+    json.dump([row("s1"), row("s2")],
+              open(os.path.join(reports2, "fleet-health-2026-08-01_0100.json"), "w"))
+    L.ingest(reports2, hist2, inventory=inv2)
+    json.dump([row("s1", wp_checked=True), row("s2", wp_checked=True)],
+              open(os.path.join(reports2, "fleet-health-2026-08-01_0200.json"), "w"))
+    res = L.ingest(reports2, hist2, inventory=inv2)
+    check("api-only -> full is coverage going UP, not a drop",
+          res["coverage_drops"] == [], str(res["coverage_drops"]))
+    runs, obs = L.load_ledger(hist2)
+    prev, _ = L.previous_run_of_same_source(runs, len(runs) - 1, obs)
+    check("an api-only run is still a usable baseline for a full run",
+          prev is not None and prev["run_id"] == "health-2026-08-01_0100",
+          "chose %s" % (prev["run_id"] if prev else None))
+
+    # One definition, three readers. If MEASURED and deep_scanned ever drift,
+    # the guard silently stops guarding -- which is exactly how the original
+    # bug survived: two places disagreed about what "measured" meant.
+    runs, obs = L.load_ledger(hist)
+    agree = all(
+        len(L.measured_sites(obs, r["run_id"], r["source"])) == r["deep_scanned"]
+        for r in runs)
+    check("deep_scanned and MEASURED cannot disagree about what was measured",
+          agree)
+
+    # A source with no coverage rule must fail loudly rather than report full
+    # coverage, or adding the fifth workflow reintroduces the blind spot.
+    raised = False
+    try:
+        L.measured_count([{"site_id": "x"}], "a-source-with-no-rule")
+    except KeyError:
+        raised = True
+    check("a source with no coverage rule is refused, not assumed complete",
+          raised)
+finally:
+    shutil.rmtree(_cov, ignore_errors=True)
+
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))

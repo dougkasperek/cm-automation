@@ -105,6 +105,7 @@ eleven times:
 | `js.cookie.min.js` in `cmpScripts` | a WooCommerce helper, not a consent manager |
 | the Worker is read-only, no write route, no secrets | true of the repo; the DEPLOYED Worker still had `PUT /api/publish/` and its `PUBLISH_TOKEN` |
 | `workers_dev = false` is pinned in `wrangler.toml` | it sat below `[[routes]]`, so TOML made it a key of the ROUTE. Wrangler had never applied it and refused to deploy the first time anyone tried |
+| a consent run covering the fleet | all four wrote 78 rows over 78 sites; one measured 54 and two measured 38 |
 
 The thirteenth was our own diagnostic: `probe` printed one word for a DNS
 failure, a TLS trust failure and a dead host alike, and sent Doug looking at
@@ -118,6 +119,17 @@ whose PHP and WordPress versions had just been measured still displayed the
 workbook's unverified claim. The measurement was in the ledger and scoring
 correctly, and invisible. Same family, pointed the other way — an absence
 standing in for a value.
+
+**And coverage has a DIRECTION.** Coverage going up is routine and says
+nothing. Coverage going DOWN is a defect in the run, and until 2026-08-20 both
+were classified `COVERAGE` and suppressed as noise together. That is how two CI
+consent runs at 38 of 78 replaced a laptop run at 54 on the live dashboard and
+sat there for a day. Coverage is now defined once, in `MEASURED` in
+`fleet-ledger.py`, and read by three callers that must never disagree:
+`deep_scanned` at ingest, the baseline guard, and the drop check. **A row
+exists is not a site was measured** -- the consent sweep writes a row for every
+site whether or not the page loaded, so the good run and the bad one were
+indistinguishable by every count on the page.
 
 So: **unknown is a value, never folded into yes or no.** When adding a fact or
 a rule, state what it shows when the answer is unknown, and whether a reader
@@ -138,7 +150,10 @@ of scripts:
 2. **Add a `source` and a fact family** in `fleet-ledger.py`. The fact-name
    collision guard will refuse two sources claiming the same fact name — that
    assert exists because merging unrelated measurements onto one timeline is
-   silent and unrecoverable.
+   silent and unrecoverable. **Add its `MEASURED` predicate in the same
+   change.** `measured_count` REFUSES a source with no coverage rule rather
+   than reporting it fully covered, because a source that always looks
+   complete can never report a coverage drop.
 3. **Add severity codes to `scripts/lib/severity.py`.** Same vocabulary, same
    module. A second scorer is two answers.
 4. **Its own CI workflow.** Credential-free checks run on every push; anything

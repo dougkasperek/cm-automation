@@ -91,10 +91,20 @@ instead of default headless Chrome. That turns "allowlist these IPs" into
 non-browser UA may be blocked harder, not less.
 
 ### Also open
-- Nothing warns when a run sees FEWER sites than the previous run of the same
-  source. The ledger already refuses to diff against a lower-coverage baseline;
-  the same idea belongs in the persist step. This gap is how the CI coverage
-  drop went unnoticed until two scan files were compared by hand.
+- ~~Nothing warns when a run sees FEWER sites than the previous run of the same
+  source.~~ **BUILT 2026-08-20.** Coverage is now defined once in `MEASURED`
+  (`fleet-ledger.py`) and read by three callers: `deep_scanned` at ingest, the
+  baseline guard, and a new drop check. Ingest prints what was lost and exits
+  non-zero unless `--allow-coverage-drop`; the run is still stored, because the
+  ledger is append-only and a degraded measurement is still a measurement.
+  Ten tests, verified to fail against the previous code first. The claim in the
+  old note that "the ledger already refuses to diff against a lower-coverage
+  baseline" was **wrong**: that guard tested the ROW set, and the consent sweep
+  writes a row for every site whether or not the page loaded, so a 38-of-78 run
+  and a 54-of-78 run were identical to it.
+  **Still not built:** publish-dashboard.sh does not refuse to publish on a
+  drop, and the page does not say when the run it rendered covered less than
+  the one before it.
 - `hitsfoundation.org` fails TLS negotiation outright. Unrelated to consent.
 - `pantheon-fleet-healthcheck.yml` still has its own inline publish job; folding
   it into `_publish-dashboard.yml` is a tidy-up.
