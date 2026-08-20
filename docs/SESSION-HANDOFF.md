@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, end of day.** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-20.** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,58 +8,79 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-19, end of day
+## PICK UP HERE — 2026-08-20, end of day
 
-**Everything is committed and the tree is clean.** Tests: ledger 107, severity
-71, nexcess 88, consent 59. All five workflow files match their staging copies.
-`fleet.thudstaff.com` is LIVE and published by CI.
+**Everything is committed and the tree is clean at `cad4e4f`.** Tests: severity
+96, consent 65, ledger 117, nexcess 88.
 
-### RESOLVED 2026-08-20: cm-fleet redeployed, write route and secret gone
+**THE LIVE PAGE IS STALE.** `fleet.thudstaff.com` was last published before any
+of today's UI work, so it still shows the single-status dashboard. First action
+tomorrow:
 
-A Cloudflare audit found the live `cm-fleet` still had the `PUT /api/publish/`
-route removed from the repo on 2026-08-19, with `PUBLISH_TOKEN` still set, so
-the route answered rather than returning 503. Nothing was ever exposed -- Access
-fronts the hostname and `workers.dev` is off -- but the Worker's own header,
-`CLAUDE.md` and `docs/DASHBOARD.md` all described a production that did not
-exist.
+```
+./scripts/publish-dashboard.sh          # no token needed now, see below
+```
 
-**Fixed and VERIFIED the same day**, each by reading the deployed artifact back
-rather than the file that was supposed to produce it:
+It will ask for `CLOUDFLARE_ACCOUNT_ID` (`8ae221977ecb4518fecaffed03972e11`)
+because Doug's wrangler login can reach two accounts and the script refuses to
+guess.
 
-- deployed code re-read through the Cloudflare API: no `publish()`, no PUT
-  branch, matches the repo
-- `PUBLISH_TOKEN` deleted; Settings -> Variables and secrets is now empty
-- `workers.dev` off on Production and Preview, `fleet.thudstaff.com` the only
-  route -- and now set BY the config rather than by a dashboard click
+### What changed today
 
-The first `wrangler deploy` attempt failed and that failure was the real finding:
-`workers_dev = false` sat below the `[[routes]]` header, so TOML made it a key
-of the route and **wrangler had never applied it**. Moved above the first table
-header and verified by parsing with `tomllib`. Same fix applied to
-`cm-dash/wrangler.toml`, which had never set the key at all.
+**Scoring is per AXIS.** `health` and `consent` are separate questions with
+separate statuses. Health had been silently driven by consent: 38 of 70 WARN
+sites carried a consent finding and 7 were WARN for consent alone.
 
-**Still open from that audit:** cm-deck, sowgen and cmcom-staging have no
-wrangler config in the connected folders, so nothing pins `workers_dev` for
-them; and all three Cloudflare API tokens are no-expiry USER tokens on Doug's
-personal account, one of them scoped to All accounts. Full measured state in
-project memory, `fleet_cloudflare_access.md`.
+| | before | after |
+|---|---|---|
+| health | 2 CRIT / 70 WARN / 7 OK | **2 CRIT / 63 WARN / 14 OK** |
+| consent | (none) | **0 CRIT / 38 WARN / 16 OK / 25 UNKNOWN** |
+
+Read `docs/SEVERITY.md` and project memory `fleet_axes.md` before touching the
+scorer. An axis is a QUESTION, not a workflow, and `axis_of()` raises for an
+unmapped code rather than defaulting to health.
+
+**The page leads with one card per question**, then the detail sections. The
+site table has a captioned Consent column and a second filter that combines
+with the first. The masthead was compressed so all three cards clear the fold.
+Run times render in Eastern, 12-hour, always zone-labelled.
+
+**The workbook columns are gone** from the page and the feed. Doug: "we don't
+need to compete with the old way." `in_workbook` still feeds the
+production-ruling queue and the inventory still holds the values.
+
+**Coverage drops are caught at ingest.** A run that measured fewer sites than
+the previous run of the same source prints what was lost and exits non-zero
+unless `--allow-coverage-drop`. The run is still stored; the ledger is
+append-only. See `fleet_coverage_guard.md`.
+
+**Cloudflare was audited and cm-fleet was redeployed.** The deployed Worker had
+been a day behind the repo, still carrying the `PUT /api/publish/` route and
+its `PUBLISH_TOKEN`. Both gone, verified by reading the deployed artifact back.
+
+**`publish-dashboard.sh` no longer demands a token on a laptop** — it falls
+back to the wrangler OAuth session. CI still uses the token.
 
 ### Tomorrow, in order
 
-1. **Re-run the consent sweep from Doug's Mac and republish.** The newest run in
-   the ledger is the CI one, which saw only 38 of 78 sites, so the live page is
-   currently missing 16 measured sites including `hoosierfeeder.com`'s leak.
-   ```
-   node scripts/consent/run-sweep.mjs --inventory data/fleet-inventory.json \
-     --out reports --stamp "$(date -u +%Y-%m-%d_%H%M)" --concurrency 4
-   python3 scripts/fleet-ledger.py ingest --reports ./reports --history ./history
-   CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... ./scripts/publish-dashboard.sh
-   ```
-2. **Ask Pantheon to allowlist the consent scanner.** 20 blocked sites, one
+1. **Publish** (above). Then open the page and look at it.
+2. **The publish-side coverage-drop guard.** Ingest fails loudly now, but
+   ingest and publish can happen in separate sessions, so this is the layer
+   that would actually have stopped 2026-08-19. `fleet-consent.yml` has
+   `publish_dashboard` defaulting to TRUE, which is why the commented-out
+   `schedule:` block must stay commented until this exists.
+3. **Pin `workers_dev = false` on cm-deck, sowgen and cmcom-staging.** Their
+   toggles are off by hand; no config holds them there, so a `wrangler deploy`
+   re-opens the back door. Their wrangler files are not in any connected
+   folder — find them, or confirm those Workers are hand-pasted.
+4. **The API tokens.** All three are no-expiry USER tokens on Doug's personal
+   Cloudflare account. `github-deploy-cm-deck` is scoped to **All accounts**
+   and can reach `clevermethod, Inc.` too. Delete or re-scope it; move the CI
+   token to an Account token with an expiry.
+5. **Ask Pantheon to allowlist the consent scanner.** 20 blocked sites, one
    conversation, on an account clevermethod owns. See "the 403s" below.
-3. **Send `docs/NEXCESS-SUPPORT.md`.** Unchanged and still blocking.
-4. **Build Asana routing.** The last unbuilt step of deck slide 16, and now
-   there is real material to route.
+6. **Send `docs/NEXCESS-SUPPORT.md`.** Unchanged and still blocking.
+7. **Asana routing.** The last unbuilt step of deck slide 16.
 
 ### The 403s, split by host — this is the finding, not "the scanner is blocked"
 
@@ -78,12 +99,6 @@ blocker when it is two small ones.**
 - **Pantheon is a bot rule.** 20 blocked from both IPs, identically. Not about
   where the request comes from. Pantheon is clevermethod's own account.
 
-**DO NOT enable the consent workflow's `schedule:` block until Pantheon
-allowlists.** A CI run sees 38 sites where a laptop sees 54, and the dashboard
-renders the LATEST run per source, so every scheduled run would replace a
-better measurement with a worse one. Zero sites were recovered by running in
-CI; it is a strict subset.
-
 **Worth doing with the allowlist request:** give the scanner an identifying
 User-Agent (`cm-automation-consent-scan/1.0 (+url; read-only; contact)`)
 instead of default headless Chrome. That turns "allowlist these IPs" into
@@ -91,24 +106,23 @@ instead of default headless Chrome. That turns "allowlist these IPs" into
 non-browser UA may be blocked harder, not less.
 
 ### Also open
-- ~~Nothing warns when a run sees FEWER sites than the previous run of the same
-  source.~~ **BUILT 2026-08-20.** Coverage is now defined once in `MEASURED`
-  (`fleet-ledger.py`) and read by three callers: `deep_scanned` at ingest, the
-  baseline guard, and a new drop check. Ingest prints what was lost and exits
-  non-zero unless `--allow-coverage-drop`; the run is still stored, because the
-  ledger is append-only and a degraded measurement is still a measurement.
-  Ten tests, verified to fail against the previous code first. The claim in the
-  old note that "the ledger already refuses to diff against a lower-coverage
-  baseline" was **wrong**: that guard tested the ROW set, and the consent sweep
-  writes a row for every site whether or not the page loaded, so a 38-of-78 run
-  and a 54-of-78 run were identical to it.
-  **Still not built:** publish-dashboard.sh does not refuse to publish on a
-  drop, and the page does not say when the run it rendered covered less than
-  the one before it.
+
+- Standing findings still group by RISK / COVERAGE / PLANNING / DRIFT rather
+  than by axis, so consent findings share one list with health and email.
 - `hitsfoundation.org` fails TLS negotiation outright. Unrelated to consent.
-- `pantheon-fleet-healthcheck.yml` still has its own inline publish job; folding
-  it into `_publish-dashboard.yml` is a tidy-up.
+- `pantheon-fleet-healthcheck.yml` still has its own inline publish job;
+  folding it into `_publish-dashboard.yml` is a tidy-up.
 - The 5 sites needing a production ruling, and the human triage queue.
+- `reports/fleet-preview.html` is scratch in a gitignored directory.
+
+### One incident worth reading
+
+A patch script destroyed `scripts/render-dashboard.py` mid-session: it built a
+replacement needle from `s[s.index(START):s.index(END)]` where END occurred
+earlier in the file than START. Python returns `""`, `str.replace("", x)`
+inserts x between every character, and the file went from 58KB to 58MB.
+Recovered from the commit made twenty minutes earlier. **Commit before a
+mechanical rewrite of a file, not after.** The rule is now in `CLAUDE.md`.
 
 ---
 
@@ -202,7 +216,7 @@ operating layer**, and the next two pieces are:
 
 ---
 
-## WHAT SHIPPED TODAY, 2026-08-19
+## WHAT SHIPPED 2026-08-19 (the day before)
 
 **The dashboard is live at `https://fleet.thudstaff.com`**, behind Cloudflare
 Access, updated automatically by CI. That was the goal of the whole build.
