@@ -120,6 +120,7 @@ eleven times:
 | the Worker is read-only, no write route, no secrets | true of the repo; the DEPLOYED Worker still had `PUT /api/publish/` and its `PUBLISH_TOKEN` |
 | `workers_dev = false` is pinned in `wrangler.toml` | it sat below `[[routes]]`, so TOML made it a key of the ROUTE. Wrangler had never applied it and refused to deploy the first time anyone tried |
 | a consent run covering the fleet | all four wrote 78 rows over 78 sites; one measured 54 and two measured 38 |
+| the coverage box lists three sources | a fourth, Nexcess, existed and had never once run, with nothing on the page saying so — the box only appended a line `if source in latest`, so a source with zero runs was never `in latest` and simply never appeared |
 
 The thirteenth was our own diagnostic: `probe` printed one word for a DNS
 failure, a TLS trust failure and a dead host alike, and sent Doug looking at
@@ -154,7 +155,7 @@ measurement over an inference, and re-check that your measurement is live.
 
 ## Adding a workflow to the suite
 
-Four things, in this order. Skipping any of them is how a suite becomes a pile
+Five things, in this order. Skipping any of them is how a suite becomes a pile
 of scripts:
 
 1. **Reconcile its site list against `data/fleet-inventory.json` FIRST.** Every
@@ -172,9 +173,20 @@ of scripts:
    module. A second scorer is two answers.
 4. **Its own CI workflow.** Credential-free checks run on every push; anything
    needing secrets is manual until it has been trusted for several cycles.
+5. **Add a coverage line for it in `render-dashboard.py`'s coverage box —
+   present from the day the source is registered, not gated on whether it
+   has ever produced a run.** Nexcess got a real `source` in the ledger on
+   2026-08-19 and no coverage line, because the box only appended a line
+   `if "<source>" in latest`. A source with zero runs is never `in latest`,
+   so the box listed three sources and stayed silent about the fourth — a
+   new viewer had no way to tell "not covered" from "not built". Base the
+   denominator on the **inventory** (which sites this source is expected to
+   reach), never on ledger rows, so the line reads "0 of N" honestly before
+   the first run and moves the moment a real scan lands. See the Nexcess
+   block in `render-dashboard.py` for the pattern to copy.
 
 The ledger, diff, dashboard and **severity** need no changes for a new provider
-beyond the four steps above. They are keyed on site identity, not on host or
+beyond the five steps above. They are keyed on site identity, not on host or
 tool. **The RENDERER is the exception and the claim used to say otherwise.**
 **A workflow that writes to the ledger MUST also publish.** Until 2026-08-19
 only the Pantheon workflow did, so the email, Nexcess and consent workflows each
