@@ -117,7 +117,19 @@ back to the wrangler OAuth session. CI still uses the token.
    Both are fine **only** because Access is the sole route in. On a
    `workers.dev` URL the header is client-supplied, so the pin is not
    hardening — it is the whole control.
-4. **The API tokens.** All three are no-expiry USER tokens on Doug's personal
+3b. **`cm-deck` addressed 2026-08-22, without adding a config.** The Worker is
+   dashboard-managed by an explicit earlier decision, and a `wrangler.toml`
+   declaring bindings nobody can enumerate could drop one on the next deploy.
+   Instead the constraint is written into `deploy.sh` and
+   `.github/workflows/deploy.yml` — the two files someone would touch — so the
+   risk is no longer silent. Also fixed a comment in `cf-worker-r2.js` naming
+   bucket `deck-assets`, which does not exist; the account has only
+   `cm-deck-assets` and `dash-data`. That is the line someone would copy into
+   a config. **The dashboard toggle remains the only live control — re-check
+   it after any change to that Worker.**
+
+4. **The API tokens — audited 2026-08-22, and one instruction here was
+   wrong.** All three are no-expiry USER tokens on Doug's personal
    Cloudflare account. `github-deploy-cm-deck` is scoped to **All accounts**
    and can reach `clevermethod, Inc.` too. Delete or re-scope it; move the CI
    token to an Account token with an expiry.
