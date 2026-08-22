@@ -828,6 +828,81 @@ check("the alarm is a non-zero exit, not just a log line",
       "COVERAGE DROPPED" in _persist and "exit 1" in _persist)
 
 
+# ---------------------------------------------------------------------------
+# THE PUBLISH SIDE OF THE COVERAGE GUARD
+# ---------------------------------------------------------------------------
+# ingest fails loudly on a drop, and in CI that is enough because publish is
+# gated on the persist job succeeding. It is NOT enough anywhere else: ingest
+# and publish can happen in different sessions, and `publish-dashboard.sh` run
+# by hand renders the LATEST run per source with nothing anywhere saying that
+# run saw less than the one before it. That is how 2026-08-19 happened, and
+# the ingest-side guard would not have caught it.
+#
+# So the RENDERER has to be able to say it. Same definition as ingest -- the
+# `deep_scanned` recorded on the run -- because a fourth opinion about what
+# "measured" means is the exact defect this whole area exists to prevent.
+print()
+print("-- the renderer can tell that the latest run saw less than the last one --")
+
+
+def _run(run_id, source, observed_at, deep, rows=78):
+    return {"run_id": run_id, "source": source, "observed_at": observed_at,
+            "deep_scanned": deep, "site_count": rows}
+
+
+check("no runs is not a regression",
+      L.coverage_regressions([]) == [])
+
+check("a source's FIRST run cannot be a regression",
+      L.coverage_regressions([_run("c-1", "consent", "2026-08-01T01:00:00", 54)]) == [])
+
+_reg = L.coverage_regressions([
+    _run("c-1", "consent", "2026-08-01T01:00:00", 54),
+    _run("c-2", "consent", "2026-08-01T02:00:00", 50)])
+check("the latest run measuring FEWER sites is a regression",
+      len(_reg) == 1 and _reg[0]["source"] == "consent", json.dumps(_reg))
+check("...and it names both runs and what was lost",
+      bool(_reg) and _reg[0]["run_id"] == "c-2"
+      and _reg[0]["previous_run_id"] == "c-1" and _reg[0]["lost"] == 4,
+      json.dumps(_reg))
+
+check("coverage going UP is not a regression",
+      L.coverage_regressions([
+          _run("c-1", "consent", "2026-08-01T01:00:00", 50),
+          _run("c-2", "consent", "2026-08-01T02:00:00", 54)]) == [])
+
+check("equal coverage is not a regression",
+      L.coverage_regressions([
+          _run("c-1", "consent", "2026-08-01T01:00:00", 54),
+          _run("c-2", "consent", "2026-08-01T02:00:00", 54)]) == [])
+
+# Only the LATEST run of each source matters here. A drop three runs ago that
+# has since recovered is history, not a reason to hold up today's page.
+check("a drop that has since recovered is not reported",
+      L.coverage_regressions([
+          _run("c-1", "consent", "2026-08-01T01:00:00", 54),
+          _run("c-2", "consent", "2026-08-01T02:00:00", 38),
+          _run("c-3", "consent", "2026-08-01T03:00:00", 54)]) == [])
+
+# Sources are independent: one tool having a bad run says nothing about another.
+_mixed = L.coverage_regressions([
+    _run("c-1", "consent", "2026-08-01T01:00:00", 54),
+    _run("h-1", "health", "2026-08-01T01:30:00", 48),
+    _run("c-2", "consent", "2026-08-01T02:00:00", 50),
+    _run("h-2", "health", "2026-08-01T02:30:00", 48)])
+check("a drop in one source does not implicate another",
+      len(_mixed) == 1 and _mixed[0]["source"] == "consent", json.dumps(_mixed))
+
+# The api-only exception, same as everywhere else. A health run that measures
+# zero sites in the wp_checked family is a different MODE, not a worse look,
+# and flagging it would put a permanent warning on the page for normal
+# operation -- the `upstream_pending` mistake in another costume.
+check("full -> api-only is a MODE change, not a coverage regression",
+      L.coverage_regressions([
+          dict(_run("h-1", "health", "2026-08-01T01:00:00", 48), mode="full"),
+          dict(_run("h-2", "health", "2026-08-01T02:00:00", 0), mode="api-only")]) == [])
+
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))

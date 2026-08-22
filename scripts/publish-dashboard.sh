@@ -65,6 +65,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HISTORY="${FLEET_HISTORY_DIR:-$REPO_ROOT/history}"
 INVENTORY="${FLEET_INVENTORY:-$REPO_ROOT/data/fleet-inventory.json}"
 DRY_RUN=0
+ALLOW_DROP=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -74,6 +75,11 @@ while [ $# -gt 0 ]; do
     # Use this to LOOK at the page before it goes live. Six of the nine bugs
     # this project has found were caught by a person reading a rendered page.
     --dry-run)   DRY_RUN=1; shift ;;
+    # Publish even though the latest run of a source measured fewer sites
+    # than the run before it. Deliberately a flag and not a prompt: the
+    # answer should be recorded in whatever ran this, not typed once and
+    # forgotten.
+    --allow-coverage-drop) ALLOW_DROP=1; shift ;;
     -h|--help)   sed -n '2,40p' "$0"; exit 0 ;;
     *) err "unknown argument: $1"; err "this script takes no scan file; it renders from the ledger"; exit 1 ;;
   esac
@@ -168,6 +174,49 @@ if [ "$DRY_RUN" -eq 1 ]; then
 else
   WORK="$(mktemp -d)"
   trap 'rm -rf "$WORK"' EXIT
+fi
+
+# Coverage going DOWN, checked BEFORE anything is uploaded.
+#
+# ingest already refuses a drop, and in CI that is enough because the publish
+# job is gated on the persist job succeeding. It is not enough here: ingest and
+# publish can happen in different sessions, and this script renders the LATEST
+# run per source. That is how two 38-of-78 consent runs replaced a 54-of-78 run
+# on the live page for a day.
+#
+# The rendered page SAYS SO too -- see render-dashboard.py -- because a page
+# that shows a worse view honestly is fine and a page that shows it silently is
+# not. This check is the second line: it stops the replacement happening at all
+# unless somebody said to.
+DROPS="$(python3 - "$HISTORY" "$SCRIPT_DIR" <<'PYEOF'
+import importlib.util, os, sys
+spec = importlib.util.spec_from_file_location(
+    "ledger", os.path.join(sys.argv[2], "fleet-ledger.py"))
+L = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(L)
+runs, _ = L.load_ledger(sys.argv[1])
+for g in L.coverage_regressions(runs):
+    print("%s: %d of %d measured, was %d in %s (-%d)"
+          % (g["source"], g["deep_scanned"], g["site_count"] or 0,
+             g["previous_deep_scanned"], g["previous_run_id"], g["lost"]))
+PYEOF
+)" || { err "could not check coverage; nothing published"; exit 1; }
+
+if [ -n "$DROPS" ]; then
+  err ""
+  err "COVERAGE DROPPED. The latest run of a source measured fewer sites than the run before it:"
+  printf '%s\n' "$DROPS" | sed 's/^/  /' >&2
+  err ""
+  err "Publishing now would replace a better measurement with a worse one on the live page."
+  err "The rendered page does say so, but the number people read would still go backwards."
+  err ""
+  if [ "$ALLOW_DROP" -eq 1 ]; then
+    err "--allow-coverage-drop was passed; publishing anyway."
+    err ""
+  else
+    err "Re-run the scan, or pass --allow-coverage-drop if the drop is real and expected."
+    exit 1
+  fi
 fi
 
 log "Rendering from the ledger at $HISTORY ..."
