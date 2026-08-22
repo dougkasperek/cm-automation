@@ -13,6 +13,45 @@ sites.
 **What we need:** API-token requests to `https://portal.nexcess.net/api/v1/*`
 to reach the API instead of a Cloudflare managed challenge.
 
+### Re-verified live 2026-08-22
+
+Support's first question is usually "is this still happening?", so this block
+is dated and reproducible. Every request below carried a deliberately invalid
+token — the challenge is served before the token is read, so no credential is
+needed to reproduce this, and none was used.
+
+| base URL | result |
+|---|---|
+| `https://portal.nexcess.net/api` | HTTP 403, `server: cloudflare`, `cf-mitigated: challenge` |
+| `https://portal.nexcess.net` | HTTP 403, same |
+| `https://sites-portal.nexcess.com/api` | HTTP 200, but the portal SPA's HTML, not JSON |
+| `https://api.nexcess.net` | does not resolve |
+
+The precise signal is the response header **`cf-mitigated: challenge`** with
+`server: cloudflare`, which is more specific than the `Just a moment...` body
+and is the string your edge team will recognise.
+
+Two facts from the same pass:
+
+- **Not User-Agent fingerprinting.** `cm-automation/fleet-nexcess (read-only)`
+  and a conventional `Chrome/140` desktop string received byte-identical
+  challenges.
+- **Not a single bad edge node.** The two requests were answered by different
+  Cloudflare PoPs — `cf-ray` ending `-EWR` and `-ORD`. This is policy, not a
+  misbehaving cache.
+
+Both HTTP clients were re-tested from one source IP: Python `urllib` and
+`curl`/OpenSSL, challenged identically.
+
+Reproduce with `./scripts/fleet-nexcess.py probe`.
+
+**What this pass did NOT re-test**, so the dated block is not read as covering
+more than it does: the comparison against a logged-in browser on the same IP
+(`{"message":"Unauthorized"}`) is from the original 2026-08-19 investigation
+and was not repeated. It is the one claim below that rests on a browser
+session rather than on a scripted request, and if Nexcess disputes it, re-run
+that specific check before arguing the point.
+
 ### Draft message
 
 > We use a Nexcess Client Portal API token to run a read-only inventory of our
@@ -32,6 +71,11 @@ to reach the API instead of a Cloudflare managed challenge.
 > HTTP clients with different TLS stacks (Python's `urllib` and `curl`/OpenSSL)
 > from the same source IP on which a browser succeeds. So this is not a
 > fingerprint we can change from our side.
+>
+> The response carries `cf-mitigated: challenge` with `server: cloudflare`.
+> Re-verified 2026-08-22, and answered by two different Cloudflare PoPs
+> (`cf-ray` ending `-EWR` and `-ORD`), so this is a standing policy on the
+> zone rather than one misbehaving edge node.
 >
 > Three questions:
 >
@@ -64,6 +108,8 @@ answer that for the whole estate in a single read-only pass.
 | the challenge is a TLS-fingerprint problem we can change | **ruled out** — Python `urllib` and `curl`/OpenSSL are challenged identically |
 | the challenge is our IP | **unlikely** — a browser on the same IP is served normally |
 | the token is bad | **ruled out** — the challenge is served before the token is read |
+| a single misbehaving edge node | **ruled out** 2026-08-22 — two Cloudflare PoPs (`-EWR`, `-ORD`) challenge identically |
+| the challenge has since cleared | **no** — re-verified live 2026-08-22, still `cf-mitigated: challenge` |
 
 The pattern that remains: **Cloudflare challenges any client that has not
 solved its JavaScript challenge and therefore holds no `cf_clearance` cookie.**
