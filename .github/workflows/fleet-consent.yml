@@ -115,12 +115,37 @@ jobs:
         run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
 
       - name: Sweep
+        # --headless IS PASSED EXPLICITLY, and it is a known compromise.
+        #
+        # The scanner defaults to HEADED since 2026-08-22, because headless
+        # cannot load a site behind a bot challenge and cannot see Hotjar or
+        # Meta Pixel on ANY site -- both detect automation and decline to fire.
+        # A headless run undercounts, and low reads as an all-clear.
+        #
+        # But headed needs a display, and a GitHub runner has none: without
+        # this flag the browser fails to launch here and the job dies on an
+        # obscure Playwright error. So CI keeps doing what it did before, and
+        # the run LABELS ITSELF `chromium-headless` so nothing downstream
+        # mistakes it for a full look:
+        #
+        #   - the dashboard prints "these numbers are a floor, not a total"
+        #   - the ledger refuses to diff it against a headed run
+        #   - a coverage drop against the last laptop run blocks the publish
+        #
+        # THE REAL FIX is xvfb -- a virtual screen -- so this can run headed
+        # here too. Deliberately not done yet: it is unproven on a runner, and
+        # the standing decision is laptop-first. Until then, a trustworthy
+        # consent sweep comes from a laptop:
+        #
+        #   node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"
         run: |
+          echo "::warning::This CI sweep runs HEADLESS and undercounts trackers. It cannot see sites behind a bot challenge, or Hotjar/Meta Pixel anywhere. Run the sweep from a laptop for a trustworthy result; see docs/CONSENT.md, 'The instrument'."
           node scripts/consent/run-sweep.mjs \
             --inventory data/fleet-inventory.json \
             --out reports \
             --stamp "${{ steps.stamp.outputs.value }}" \
             --concurrency "${{ inputs.concurrency || '4' }}" \
+            --headless \
             ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }} \
             | tee /tmp/sweep.txt
 
