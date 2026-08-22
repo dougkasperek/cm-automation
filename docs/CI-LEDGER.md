@@ -40,6 +40,18 @@ anything is allowed to fail. An unrecognised site is a real finding and it does
 raise the alarm, but it raises it after the data is safe, never instead. Failing
 first would discard the run that discovered the problem.
 
+**Both post-push alarms follow that rule, and the second one nearly did not.**
+The coverage-drop guard added 2026-08-20 makes `ingest` exit 1. The script runs
+under `set -e`, so a bare call to it died *at ingest* — before add, commit and
+push, and without retrying. On an ephemeral runner that means the degraded run
+which raised the alarm was the one run guaranteed never to reach the ledger,
+and the ledger cannot be regenerated. Ingest is therefore called with
+`--allow-coverage-drop`, and the drop is reported at the bottom of the script
+alongside the unresolved-site alarm. **The publish job is gated on this job
+succeeding**, so a drop still stops `fleet.thudstaff.com` being replaced by a
+worse view — it no longer costs the observations to do it. Any future guard
+added to `ingest` has to enter the same way: store first, exit code last.
+
 **Conflicts are avoided, not resolved.** Two appends to one JSONL rebase badly.
 On every attempt the script resets to the current remote head and re-ingests
 onto it. `ingest` is idempotent on `run_id`, so this is always safe and cannot

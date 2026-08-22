@@ -54,6 +54,14 @@ the previous run of the same source prints what was lost and exits non-zero
 unless `--allow-coverage-drop`. The run is still stored; the ledger is
 append-only. See `fleet_coverage_guard.md`.
 
+**...but in CI that exit code was throwing the run away, fixed 2026-08-22.**
+`persist-ledger.sh` runs under `set -e` and called `ingest` bare, so the
+non-zero exit killed the script before add/commit/push and without retrying.
+On an ephemeral runner the degraded run that raised the alarm was the one run
+guaranteed never to reach the ledger. It now passes `--allow-coverage-drop`
+and reports the drop after the push, with the other post-push alarm. Publish
+is gated on the persist job succeeding, so a drop still blocks the page.
+
 **Cloudflare was audited and cm-fleet was redeployed.** The deployed Worker had
 been a day behind the repo, still carrying the `PUT /api/publish/` route and
 its `PUBLISH_TOKEN`. Both gone, verified by reading the deployed artifact back.

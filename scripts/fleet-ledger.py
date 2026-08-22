@@ -438,6 +438,53 @@ MEASURED = {
     "email-dns": lambda r: r.get("dkim_present") is True,
 }
 
+# The FACT each source's coverage turns on, as a name rather than a predicate.
+# MEASURED above decides what a run measured; this decides how a MOVE in that
+# fact is classified, and the two must name the same fact or the tool reports
+# its own blindness as fleet news.
+#
+# `wp_checked` was here alone from the first full-mode run, when one event --
+# deep-scan coverage arriving -- turned into 48 rows of "what changed".
+# `consent_scan_ok` is the identical fact for the consent sweep and was left
+# out, so when a WAF blocked four sites on 2026-08-20 the one event was
+# reported three ways: six consent facts went to UNKNOWN and collapsed
+# correctly, while this flag and the status explaining it each became a
+# TRANSITION. 8 of the 14 headline "changes needing a decision" were the
+# scanner losing sight of a site.
+#
+# `consent_http_status` rides along because it describes what the SCANNER got,
+# not what the site is: a 200 becoming a 403 is the sweep being refused, and
+# on its own it is never a statement about how the site is maintained.
+#
+# Adding a fifth source means adding its flag here in the same change as its
+# MEASURED entry. test-ledger.py asserts every name in this tuple classifies
+# as COVERAGE.
+COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok", "consent_http_status")
+
+# Which DIRECTION a move in one of those flags went. True means coverage was
+# gained; False means it went dark.
+#
+# These facts carry a real value on BOTH sides -- True/False, 200/403 -- so
+# they never touch the UNKNOWN token, and the gained/lost tally in
+# collapse_coverage() below cannot infer direction from the values the way it
+# does for every other fact. Without an entry here a flag reports "moved on 4
+# sites" and an em dash in both columns, which reads as nothing having
+# happened on the one line that explains all the others.
+#
+# `wp_checked` has needed this since the first full-mode run, when it rendered
+# `wp_checked  -  48` in the LOST column on the run where coverage went from
+# nothing to 48 sites. Adding a flag above without adding it here reintroduces
+# that; test-ledger.py asserts no coverage line reports a move with no
+# direction.
+COVERAGE_DIRECTION = {
+    "wp_checked":          lambda before, after: after is True,
+    "consent_scan_ok":     lambda before, after: after is True,
+    # The sweep saw the site only on a 2xx. Anything else is an error page,
+    # which is the whole reason `ok` was redefined to require one.
+    "consent_http_status": lambda before, after: (isinstance(after, int)
+                                                  and 200 <= after < 300),
+}
+
 
 def measured_count(rows, source):
     """How many of `rows` this source actually measured. Never a row count."""
@@ -756,10 +803,12 @@ def classify(site, key, before, after, prev_row, curr_row, today):
     if UNKNOWN in (before, after) and before != after:
         return "COVERAGE"
 
-    # `wp_checked` IS the coverage flag. A run going api-only -> full flips it
-    # on every site at once; that is one event and belongs in the coverage
-    # summary, not as 48 rows in "what changed".
-    if key == "wp_checked":
+    # These facts ARE their source's coverage flag: they say whether the tool
+    # could see the site, never how the site is. A run going api-only -> full
+    # flips `wp_checked` on every site at once, and a WAF flips
+    # `consent_scan_ok` on everything it blocks; each is one event and belongs
+    # in the coverage summary, not as a row per site in "what changed".
+    if key in COVERAGE_FLAGS:
         return "COVERAGE"
 
     if key in COUNTERS:
@@ -950,15 +999,16 @@ def collapse_coverage(changes):
         g = by_fact.setdefault(c["fact"], {"fact": c["fact"], "sites": [],
                                            "gained": 0, "lost": 0})
         g["sites"].append(c["site"])
-        # Direction, by what the values actually are. Two rows here are not
-        # unknown-to-value at all and must not be counted as if they were:
-        # `wp_checked` is the boolean coverage FLAG (False -> True is coverage
-        # gained), and `status` is a consequence of other facts becoming
-        # visible, with a real value on both sides. Counting those as "lost"
-        # is what the first render did -- it showed `wp_checked  -  48` in the
-        # LOST column on the run where coverage went from nothing to 48 sites.
-        if c["fact"] == "wp_checked":
-            g["gained" if c["after"] is True else "lost"] += 1
+        # Direction, by what the values actually are. The coverage FLAGS are
+        # not unknown-to-value moves at all and must not be counted as if they
+        # were, so each one states its own direction in COVERAGE_DIRECTION
+        # above. `status` deliberately has no entry: it is a consequence of
+        # other facts becoming visible, with a real value on both sides, and
+        # calling it gained or lost would be inventing a direction for
+        # something that only ever moved because its inputs did.
+        _dir = COVERAGE_DIRECTION.get(c["fact"])
+        if _dir is not None:
+            g["gained" if _dir(c["before"], c["after"]) else "lost"] += 1
         elif c["before"] == UNKNOWN and c["after"] != UNKNOWN:
             g["gained"] += 1
         elif c["after"] == UNKNOWN and c["before"] != UNKNOWN:
