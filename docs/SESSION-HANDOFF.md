@@ -77,10 +77,46 @@ back to the wrangler OAuth session. CI still uses the token.
    that would actually have stopped 2026-08-19. `fleet-consent.yml` has
    `publish_dashboard` defaulting to TRUE, which is why the commented-out
    `schedule:` block must stay commented until this exists.
-3. **Pin `workers_dev = false` on cm-deck, sowgen and cmcom-staging.** Their
-   toggles are off by hand; no config holds them there, so a `wrangler deploy`
-   re-opens the back door. Their wrangler files are not in any connected
-   folder — find them, or confirm those Workers are hand-pasted.
+3. ~~**Pin `workers_dev = false` on cm-deck, sowgen and cmcom-staging.**~~
+   **MOSTLY DONE — measured 2026-08-22 by parsing every config, not by
+   reading the line.** Four of the five Workers on this account pin it:
+
+   | Worker | config | `workers_dev` |
+   |---|---|---|
+   | `cm-fleet` | `ci/cloudflare/wrangler.toml` | pinned `false`, top-level |
+   | `sowgen` | `~/dev/sowgen/wrangler.toml` | pinned `false`, top-level |
+   | `cm-dash` | `…/Partner Dashboard/cm-dash/wrangler.toml` | pinned `false`, top-level |
+   | `cmcom-staging` | `…/clevermethod-com-2026/04-New Site Build/Active/cm-staging/wrangler.jsonc` | pinned `false` (JSON, no TOML ordering trap) |
+   | **`cm-deck`** | **none exists** | **nothing pins it** |
+
+   `sowgen` and `cm-dash` were already done and this note never caught up.
+   Each was verified with `tomllib` / a JSON parse, so the TOML ordering trap
+   is ruled out rather than eyeballed.
+
+   **The remaining gap is `cm-deck`, and it is the one holding
+   partner-confidential material.** `~/dev/cm-deck` has no wrangler config at
+   all; `deploy.sh` only does `wrangler r2 object put`, never `wrangler
+   deploy`, so the Worker is dashboard-managed and its toggle is held by
+   nothing but a manual click. Adding a `wrangler.toml` is NOT a free fix —
+   creating one where none existed changes how the Worker can be deployed, and
+   a wrong `main` would ship the wrong code. Decide deliberately: either add a
+   correct config that pins it, or write the dashboard-managed status into
+   `deploy.sh` so the next person knows the toggle is the only control.
+
+   **Why the pin is load-bearing, confirmed by reading the DEPLOYED code of
+   both Workers on 2026-08-22.** Neither `cm-dash` nor `cm-deck` has any
+   authentication of its own worth the name:
+
+   - `cm-dash` `/api/save` accepts ANY non-empty
+     `Cf-Access-Authenticated-User-Email` and writes to R2 on it.
+     `/api/harvest`, `/api/asana`, `/api/financials` and `/api/notes` check
+     nothing at all, and the financial seed data is compiled into the Worker.
+   - `cm-deck` gates `analytics.html` and `/api/stats` on that same header
+     starting with `doug`. `/api/harvest` and `/api/asana` check nothing.
+
+   Both are fine **only** because Access is the sole route in. On a
+   `workers.dev` URL the header is client-supplied, so the pin is not
+   hardening — it is the whole control.
 4. **The API tokens.** All three are no-expiry USER tokens on Doug's personal
    Cloudflare account. `github-deploy-cm-deck` is scoped to **All accounts**
    and can reach `clevermethod, Inc.` too. Delete or re-scope it; move the CI
