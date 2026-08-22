@@ -131,8 +131,24 @@ back to the wrangler OAuth session. CI still uses the token.
 4. **The API tokens — audited 2026-08-22, and one instruction here was
    wrong.** All three are no-expiry USER tokens on Doug's personal
    Cloudflare account. `github-deploy-cm-deck` is scoped to **All accounts**
-   and can reach `clevermethod, Inc.` too. Delete or re-scope it; move the CI
-   token to an Account token with an expiry.
+   and can reach `clevermethod, Inc.` too. **RE-SCOPE it, do NOT delete it** —
+   this line used to say "delete or re-scope", and delete is wrong:
+   `cm-deck/.github/workflows/deploy.yml` uses `CLOUDFLARE_API_TOKEN` on every
+   push to main, so deleting it breaks deck deploys. It needs R2 write on ONE
+   account, not all of them.
+
+   | credential | scope | last used | expiry |
+   |---|---|---|---|
+   | `cm-fleet r2 publisher` | 1 account, R2 only | Aug 22 | none |
+   | `Cloudflare Agent Token` | +20 perms, **all zones** | Jul 18 | none |
+   | `github-deploy-cm-deck` | **all accounts**, R2 write | Jul 18 | none |
+   | **Global API Key** | everything, cannot be scoped | — | none |
+
+   `cm-fleet r2 publisher` is correctly scoped and is the only one in active
+   use; it needs an expiry, nothing else. The Agent Token is auto-created by
+   Cloudflare Ask AI, carries 20+ permissions across all zones, and has not
+   been used in a month — revoke unless Ask AI is in active use. The Global API
+   Key cannot be scoped at all; check nothing depends on it, then roll it.
 5. ~~**Ask Pantheon to allowlist the consent scanner.**~~ **WITHDRAWN
    2026-08-22 — Pantheon is not the blocker and this request would have done
    nothing.** All 20 answer from Cloudflare with a bot challenge; the request
