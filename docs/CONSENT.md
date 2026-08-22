@@ -177,8 +177,17 @@ a TLS finding in its own right, not a consent one.
 
 **23 sites answer HTTP 403 to a headless browser.** They are UNMEASURED, and
 they are also a finding about the fleet: a third of clevermethod's sites refuse
-a plain automated client. Getting the scanner allowlisted is one decision
-covering all 23.
+a plain automated client.
+
+**It is NOT one decision, and it is not Pantheon's.** Measured 2026-08-22 by
+reading response headers, which nobody had done: all 20 blocked CM Pantheon
+sites answer `server: cloudflare` with `cf-mitigated: challenge`. Zero reach
+Pantheon, so Pantheon has nothing to allowlist. Being Cloudflare-fronted is not
+itself the trigger — `celticindustrialservices.com` is behind Cloudflare,
+returns 200, and shows a Pantheon `x-styx-req-id` — so this is per-zone bot
+settings. Those zones use at least four different DNS providers (Cloudflare,
+Network Solutions, managed-ip, MediaTemple), so there is no one account and no
+one owner. See `docs/SESSION-HANDOFF.md`, "The 403s".
 
 ### The geo question, checked rather than assumed
 

@@ -129,6 +129,7 @@ eleven times:
 | `js.cookie.min.js` in `cmpScripts` | a WooCommerce helper, not a consent manager |
 | the Worker is read-only, no write route, no secrets | true of the repo; the DEPLOYED Worker still had `PUT /api/publish/` and its `PUBLISH_TOKEN` |
 | `workers_dev = false` is pinned in `wrangler.toml` | it sat below `[[routes]]`, so TOML made it a key of the ROUTE. Wrangler had never applied it and refused to deploy the first time anyone tried |
+| Pantheon is blocking the scanner; ask them to allowlist it | a CLOUDFLARE bot challenge on 20 client zones. Zero requests reached Pantheon. Nobody had read a response header before the action item was written down |
 | a consent run covering the fleet | all four wrote 78 rows over 78 sites; one measured 54 and two measured 38 |
 | the coverage box lists three sources | a fourth, Nexcess, existed and had never once run, with nothing on the page saying so — the box only appended a line `if source in latest`, so a source with zero runs was never `in latest` and simply never appeared |
 
