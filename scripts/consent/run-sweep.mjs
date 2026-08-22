@@ -125,14 +125,44 @@ function scanOnce(domain) {
   });
 }
 
+// A NAVIGATION THAT DID NOT THROW IS NOT A SITE THAT WAS SEEN.
+//
+// The first real sweep, 2026-08-19, found 23 of 78 sites answering HTTP 403 --
+// a WAF refusing the headless client. Every one recorded "no banner, no
+// trackers", because that is what an error page contains, and the
+// classification read all 23 as clean. Thirty per cent of the fleet reported as
+// having nothing to fix, on the evidence of a block page.
+//
+// So `ok` means the scanner SAW THE SITE, and that requires a 2xx.
+//
+// APPLIED HERE, in scan(), NOT in the summary loop. It used to run after every
+// worker had finished, so the live progress line printed `ok` for a site that
+// had returned 403 and only the summary corrected it. A four-site run on
+// 2026-08-22 logged "ok" four times and then "scanned 0 of 4". The rule was
+// right and ran too late to reach the line a person actually watches -- which
+// is the same defect it exists to prevent, in our own output.
+//
+// It also means the retry below reacts to a 403, instead of treating it as
+// success and never retrying.
+function markSeen(r) {
+  const twoXX = typeof r.status === 'number' && r.status >= 200 && r.status < 300;
+  if (r.ok && !twoXX) {
+    r.ok = false;
+    r.error = r.error || ('HTTP ' + r.status + ': the server refused the request, so the '
+      + 'scanner saw an error page rather than the site');
+    r.httpBlocked = true;
+  }
+  return r;
+}
+
 // One retry, and the retry is recorded. A site that only ever answers on the
 // second attempt is a different thing from one that answers first time, and
 // hiding that would make an intermittent site look stable.
 async function scan(domain) {
-  let r = await scanOnce(domain);
+  let r = markSeen(await scanOnce(domain));
   if (!r.ok) {
     const first = r.error;
-    r = await scanOnce(domain);
+    r = markSeen(await scanOnce(domain));
     r.retried = true;
     if (!r.ok && !r.error) r.error = first;
   }
@@ -199,24 +229,6 @@ for (const r of results) {
   r.realPreConsentTrackers = real.map(t => t.tracker).sort();
   r.bannerDetected = Boolean(r.bannerVendor) || Boolean(r.genericBannerVisible);
 
-  // A NAVIGATION THAT DID NOT THROW IS NOT A SITE THAT WAS SEEN.
-  //
-  // The first real sweep, 2026-08-19, found 23 of 78 sites answering HTTP 403 —
-  // a WAF refusing the headless client. Every one recorded "no banner, no
-  // trackers", because that is what an error page contains, and the
-  // classification read all 23 as clean. Thirty per cent of the fleet reported
-  // as having nothing to fix, on the evidence of a block page.
-  //
-  // So `ok` means the scanner SAW THE SITE, and that requires a 2xx. This is
-  // the same mistake as the Nexcess probe calling an HTTP 200 a site list
-  // without reading the body, found the same way: by running it.
-  const twoXX = typeof r.status === 'number' && r.status >= 200 && r.status < 300;
-  if (r.ok && !twoXX) {
-    r.ok = false;
-    r.error = r.error || ('HTTP ' + r.status + ': the server refused the request, so the '
-      + 'scanner saw an error page rather than the site');
-    r.httpBlocked = true;
-  }
 }
 
 const scan_out = {

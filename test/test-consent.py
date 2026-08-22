@@ -535,6 +535,23 @@ _sweep_src2 = open(os.path.join(ROOT, "scripts", "consent",
 check("the sweep ABORTS when it asked for headed and got headless, rather than "
       "labelling headless numbers as headed",
       "browserActual" in _sweep_src2 and "process.exit" in _sweep_src2)
+
+# The 2xx rule has to apply BEFORE the per-site progress line, not only in the
+# summary afterwards.
+#
+# Found 2026-08-22 by reading a real run's output: the live log said
+#   [1/4] 42northbrewing.com ok
+# for four sites that had all returned HTTP 403, and only the summary at the
+# end said `scanned 0 of 4`. The rule existed and was correct -- it just ran
+# too late to reach the line a person actually watches.
+#
+# That is this project's own bug, in its own console output: `ok` printed over
+# a block page. Assert the ORDER, because presence was never the problem.
+_seen_at = _sweep_src2.find("HTTP ' + r.status")
+_log_at = _sweep_src2.find("] ${s.domain}")
+check("a site is downgraded on a non-2xx BEFORE the progress line prints it",
+      0 < _seen_at < _log_at,
+      "2xx check at %d, progress line at %d" % (_seen_at, _log_at))
 check("the sweep records the METHOD on the run, so the ledger can refuse to "
       "diff across a change of instrument",
       "chromium-headed" in _sweep_src2 and "method" in _sweep_src2)
