@@ -222,8 +222,49 @@ zones the client does, and only the second group is a conversation.
 `cm-automation-consent-scan/1.0` UA to turn "allowlist these IPs" into
 "allowlist this string". Against Cloudflare Bot Management a non-browser UA
 scores **worse**, not better — the old note half-suspected this and now we know
-the blocker. What works there is a WAF skip rule matched on something
-verifiable: a custom header carrying a shared secret, or the source IP.
+the blocker.
+
+**A skip rule may not be available at all, corrected 2026-08-22 against
+Cloudflare's docs.** The first version of this note said the fix was "a WAF
+skip rule on a custom header or source IP". That is true only on **Pro and
+above**. Cloudflare's own documentation is explicit:
+
+> You cannot bypass or skip Bot Fight Mode using WAF custom rules or Page
+> Rules... it operates in a separate evaluation pipeline where *Skip*,
+> *Bypass*, and *Allow* actions have no effect.
+
+**Bot Fight Mode is the FREE-plan feature, and it has no exception mechanism
+of any kind** — not by header, not by IP, not by user agent. On a free zone the
+only choices are to turn Bot Fight Mode off (weakening the client's bot
+protection) or upgrade that zone to Pro. Both are the client's decision and
+one of them costs money.
+
+**So the diagnostic that decides everything is which FEATURE is challenging,
+per zone.** Cloudflare dashboard → the zone → Analytics → Events tab → the
+**Service** field on a blocked request:
+
+| Service says | Plan | Fix |
+|---|---|---|
+| `Bot Fight Mode` | Free | **No exception possible.** Turn it off, or upgrade to Pro. |
+| `Super Bot Fight Mode` | Pro+ | Custom rule, action *Skip*, target *All Super Bot Fight Mode rules*. Straightforward. |
+| a custom or managed rule | any | Adjust that rule. |
+
+Until that field has been read for a given zone, nobody knows whether that
+zone is fixable, cheap, or a paid upgrade. Do not promise a client a fix
+before reading it.
+
+**Whether this is worth doing at all is a real question.** The original note
+sized it as "one conversation". It is now: per zone, get access, read the
+Service field, then a decision that may cost money or weaken their security —
+across up to 20 zones spanning four DNS providers. Weigh that against simply
+reporting those sites as UNMEASURED, which the dashboard already does
+honestly, and against the reframe below.
+
+**The reframe worth considering.** "This site challenges automated clients" is
+itself a finding worth telling a client, independent of consent. The same rule
+blocks uptime monitors, accessibility scanners, SEO crawlers and partner
+integrations. That is a conversation with value on its own, where "please let
+our scanner in" is a favour we are asking for.
 
 **This is a repeat of a documented failure.** CLAUDE.md's table already
 carries `the token was rejected | a Cloudflare challenge; the token was never
