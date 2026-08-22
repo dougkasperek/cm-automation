@@ -405,9 +405,28 @@ if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.
           _feed["cm-whitelabel"]["counts_toward_fleet"] is False)
     check("...and still carrying its real CRIT status",
           _feed["cm-whitelabel"]["status"] == "CRIT")
+    # The PROPERTY, not the code that happened to fire the day this was
+    # written. This pinned `wp_below_floor` and went red on 2026-08-22 when a
+    # health scan could not read cm-whitelabel's WordPress version: the site
+    # was still CRIT, on a 2149-day-old backup, and the feed still said why --
+    # the test was asserting WHICH reason rather than THAT there was one.
+    #
+    # Same family as the standing rule about pinning fleet counts. A scan is
+    # entitled to move which rule fires on a given site; it is not entitled to
+    # produce a CRIT with no CRIT-level reason behind it, and that is the thing
+    # worth guarding.
+    _crit_reasons = [r for r in _feed["cm-whitelabel"]["reasons"]
+                     if r["level"] == "CRIT"]
     check("feed states WHY a site is CRIT, not just that it is",
-          any(r["code"] == "wp_below_floor"
-              for r in _feed["cm-whitelabel"]["reasons"]))
+          bool(_crit_reasons),
+          "status CRIT with no CRIT-level reason: %s"
+          % _feed["cm-whitelabel"]["reasons"])
+    check("...and no site in the feed is CRIT with nothing behind it",
+          all(any(r["level"] == "CRIT" for r in s["reasons"])
+              for s in _data["sites"] if s["status"] == "CRIT"),
+          str([s["site_id"] for s in _data["sites"]
+               if s["status"] == "CRIT"
+               and not any(r["level"] == "CRIT" for r in s["reasons"])]))
     check("feed publishes the thresholds it was scored with",
           _data["severity_rules"]["wp_security_floor"] == "7.0.2"
           and _data["severity_rules"]["backup_crit_days"] == S.BACKUP_CRIT_DAYS)
