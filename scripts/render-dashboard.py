@@ -225,6 +225,12 @@ def build_model(history_dir, inventory_path, today):
         "sites": sites, "coverage": coverage, "inventory_count": len(inv),
         "unreconciled": unreconciled, "health": health,
         "coverage_changes": coverage_changes,
+        # The latest run of a source measured fewer sites than the run before
+        # it. Stated on the page rather than used to refuse a render: a page
+        # that quietly shows a worse view is the failure; a page that shows it
+        # and SAYS SO is not. publish-dashboard.sh reads the same function to
+        # decide its exit code.
+        "coverage_regressions": L.coverage_regressions(runs),
         "generated": today.isoformat(),
     }
 
@@ -842,6 +848,28 @@ def render(m):
     A("<h2>How much of this is actually known</h2>")
     A('<p class=sub style="margin:-4px 0 10px">A green row is only worth as much '
       'as the coverage behind it. Unknown is shown as unknown, never as a pass.</p>')
+
+    # A coverage number that went DOWN. Directly above the coverage box,
+    # because without it that box states a smaller number in the same
+    # confident type as a larger one and nothing distinguishes "this is what
+    # we can see" from "this is less than we could see yesterday". Two CI
+    # consent runs at 38 of 78 replaced a laptop run at 54 on 2026-08-19 and
+    # sat there for a day with every number on the page internally consistent.
+    for g in m["coverage_regressions"]:
+        A('<div class="card" style="border-left:3px solid var(--bad);'
+          'margin-bottom:10px">'
+          '<div><b>Coverage went DOWN for %s.</b> This run measured %d of %d '
+          'sites; the run before it measured %d. %d site(s) that were visible '
+          'are not visible now.</div>'
+          '<div class=quiet style="margin-top:6px">The page below reflects the '
+          'newer, smaller measurement, because it is the most recent one. That '
+          'is not the same as the fleet getting worse &mdash; it is this tool '
+          'seeing less. Re-run the scan before reading anything into a number '
+          'that moved. (%s, against %s)</div></div>'
+          % (e(g["source"]), g["deep_scanned"], g["site_count"] or 0,
+             g["previous_deep_scanned"], g["lost"],
+             e(g["run_id"]), e(g["previous_run_id"])))
+
     A("<div class=card>")
     for label, (known, total) in m["coverage"]:
         pct = (100.0 * known / total) if total else 0

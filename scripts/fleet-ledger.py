@@ -692,6 +692,59 @@ def load_ledger(history_dir):
     return runs, obs
 
 
+def coverage_regressions(runs):
+    """Sources whose LATEST run measured fewer sites than the run before it.
+
+    THE PUBLISH SIDE of the coverage guard. `ingest` already refuses a drop,
+    and in CI that is sufficient because the publish job is gated on the
+    persist job succeeding. It is not sufficient anywhere else: ingest and
+    publish can happen in different sessions, and `publish-dashboard.sh` run by
+    hand renders the LATEST run per source with nothing on the page saying that
+    run saw less than the one before it. That is exactly how two 38-of-78
+    consent runs replaced a 54-of-78 run on the live dashboard for a day.
+
+    Reads `deep_scanned` off the run record -- the SAME number ingest computed
+    from MEASURED. A fourth opinion about what "measured" means is the specific
+    defect this whole area exists to prevent, so this deliberately does not
+    recompute it from observations.
+
+    Only the latest run of each source is considered. A drop three runs ago
+    that has since recovered is history, not a reason to hold up today's page.
+
+    Returns [] when everything is fine, so a caller can treat truthiness as
+    "something to say".
+    """
+    by_source = {}
+    for r in sorted(runs, key=lambda x: x["observed_at"]):
+        by_source.setdefault(r.get("source"), []).append(r)
+
+    out = []
+    for source, rs in sorted(by_source.items()):
+        if source is None or len(rs) < 2:
+            continue
+        curr, prev = rs[-1], rs[-2]
+        c, p = curr.get("deep_scanned"), prev.get("deep_scanned")
+        if not isinstance(c, int) or not isinstance(p, int) or c >= p:
+            continue
+        # A health run going full -> api-only measures zero in the wp_checked
+        # family while still being a complete look at every site's control
+        # plane. That is a different MODE, not a worse look, and flagging it
+        # would put a standing warning on the page for normal operation --
+        # `upstream_pending` in another costume.
+        if curr.get("mode") and prev.get("mode") and curr["mode"] != prev["mode"]:
+            continue
+        out.append({
+            "source": source,
+            "run_id": curr["run_id"],
+            "deep_scanned": c,
+            "site_count": curr.get("site_count"),
+            "previous_run_id": prev["run_id"],
+            "previous_deep_scanned": p,
+            "lost": p - c,
+        })
+    return out
+
+
 def previous_run_of_same_source(runs, idx=-1, obs=None):
     """The newest run, and the most recent earlier COMPARABLE run of the same tool.
 
