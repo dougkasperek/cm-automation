@@ -678,6 +678,156 @@ finally:
     shutil.rmtree(_cov, ignore_errors=True)
 
 
+# ---------------------------------------------------------------------------
+# THE COVERAGE FLAG OF EVERY SOURCE, NOT JUST HEALTH
+# ---------------------------------------------------------------------------
+# `wp_checked` IS health coverage, and classify() has said so since the first
+# full-mode run turned one event into 48 rows of "what changed".
+#
+# `consent_scan_ok` is the SAME KIND OF FACT for the consent sweep -- it is
+# literally the predicate MEASURED["consent"] uses -- and it was left out. So a
+# WAF blocking four sites reported the one event three ways: six consent facts
+# went to UNKNOWN and collapsed correctly, while `consent_scan_ok` and
+# `consent_http_status` each became a TRANSITION in "changes needing a
+# decision". On the 2026-08-20 ledger that was 8 of 14 headline changes, all of
+# them the scanner losing sight of a site rather than a site getting worse.
+#
+# These assert the PROPERTY -- a site the sweep stopped being able to load
+# produces no pushable change -- not a count, so a new consent fact cannot
+# silently reintroduce the noise.
+print()
+print("-- a site the scanner stopped being able to see is coverage, not a change --")
+
+
+def _consent_row(site, ok):
+    """A ledger-shaped consent row, matching what _consent_rows() writes."""
+    if ok:
+        return {"site": site, "site_id": site, "source": "consent",
+                "consent_scan_ok": True,
+                "consent_banner_vendor": "OneTrust",
+                "consent_banner_detected": True,
+                "consent_pre_trackers": 0,
+                "consent_pre_tracker_names": "none",
+                "consent_mode_denied": False,
+                "consent_http_status": 200,
+                "consent_final_url": "https://%s/" % site}
+    # A failed row: every observation unknown, the status kept because it is
+    # the reason. This is exactly what _consent_rows() produces.
+    r = {"site": site, "site_id": site, "source": "consent",
+         "consent_scan_ok": False, "consent_http_status": 403}
+    for k in L.CONSENT_OBSERVED:
+        r.setdefault(k, L.UNKNOWN)
+    return r
+
+
+_blocked = L.diff_runs({"x.com": _consent_row("x.com", True)},
+                       {"x.com": _consent_row("x.com", False)}, TODAY)
+_scan_ok = [c for c in _blocked if c["fact"] == "consent_scan_ok"]
+_status = [c for c in _blocked if c["fact"] == "consent_http_status"]
+
+check("consent_scan_ok is the consent coverage flag, so it classifies as COVERAGE",
+      bool(_scan_ok) and _scan_ok[0]["class"] == "COVERAGE",
+      json.dumps(_scan_ok))
+check("...and so does the HTTP status that explains it",
+      bool(_status) and _status[0]["class"] == "COVERAGE",
+      json.dumps(_status))
+check("a site the sweep lost produces NO change needing a decision",
+      all(c["class"] in L.QUIET_CLASSES for c in _blocked),
+      json.dumps([c for c in _blocked if c["class"] not in L.QUIET_CLASSES]))
+
+# The other direction must stay just as quiet, or a site coming back reads as
+# the fleet improving when it is only the scanner recovering.
+_recovered = L.diff_runs({"x.com": _consent_row("x.com", False)},
+                         {"x.com": _consent_row("x.com", True)}, TODAY)
+check("...and neither does a site the sweep got back",
+      all(c["class"] in L.QUIET_CLASSES for c in _recovered),
+      json.dumps([c for c in _recovered if c["class"] not in L.QUIET_CLASSES]))
+
+# ...and the coverage SUMMARY has to show which way it went. A fact whose
+# values are real on both sides -- a boolean flag, an HTTP status -- never
+# touches the UNKNOWN token, so the gained/lost tally counted neither and the
+# line rendered as an em dash in both columns. Four sites went dark and the row
+# explaining it read as though nothing had happened. This is the same defect
+# `wp_checked` was special-cased for after it showed `wp_checked  -  48` in the
+# LOST column on the run where coverage went from nothing to 48 sites.
+_kept_b, _cov_b = L.collapse_coverage(_blocked)
+_by_fact = {g["fact"]: g for g in _cov_b}
+check("a coverage flag going dark is counted as LOST, not as neither",
+      _by_fact.get("consent_scan_ok", {}).get("lost") == 1,
+      json.dumps(_by_fact.get("consent_scan_ok")))
+check("...and so is the HTTP status that went with it",
+      _by_fact.get("consent_http_status", {}).get("lost") == 1,
+      json.dumps(_by_fact.get("consent_http_status")))
+
+_kept_r, _cov_r = L.collapse_coverage(_recovered)
+_by_fact_r = {g["fact"]: g for g in _cov_r}
+check("a site coming back is counted as GAINED",
+      _by_fact_r.get("consent_scan_ok", {}).get("gained") == 1
+      and _by_fact_r.get("consent_http_status", {}).get("gained") == 1,
+      json.dumps([_by_fact_r.get("consent_scan_ok"),
+                  _by_fact_r.get("consent_http_status")]))
+
+# No coverage line may be silent about direction, or the summary says a fact
+# moved on N sites and refuses to say which way.
+_silent = [g["fact"] for g in _cov_b + _cov_r
+           if g["gained"] == 0 and g["lost"] == 0]
+check("no coverage line reports a move without a direction",
+      not _silent, str(_silent))
+
+# The guard that stops this recurring for source number five. Every source
+# whose coverage is decided by ONE named fact must have that fact treated as
+# coverage by classify(), or its next outage becomes fleet news again.
+_COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok")
+_unclassified = [f for f in _COVERAGE_FLAGS
+                 if L.classify("s", f, True, False, {}, {}, TODAY) != "COVERAGE"]
+check("every named coverage flag is classified as coverage",
+      not _unclassified, str(_unclassified))
+
+
+# ---------------------------------------------------------------------------
+# THE PERSIST PATH MUST NOT DROP THE RUN IT IS REPORTING ON
+# ---------------------------------------------------------------------------
+# persist-ledger.sh runs under `set -euo pipefail`. The coverage-drop guard
+# makes `ingest` exit 1, so a bare call to it kills the script AT INGEST --
+# before git add, commit and push, and without retrying. The CI runner is
+# ephemeral, so the observations are lost: the degraded run that raised the
+# alarm is exactly the run that never reaches the ledger.
+#
+# That inverts the file's own header contract, which is worth quoting because
+# it is the design: "Data is persisted BEFORE anything is allowed to fail...
+# Failing first would throw away the run that discovered the problem."
+#
+# The shape that works is the one already used for the unresolved-sites alarm
+# at the bottom of that file: do the work, push, THEN fail. A source contract
+# rather than a behavioural test because the behaviour needs a git remote.
+print()
+print("-- persist-ledger.sh persists before it fails --")
+
+_persist = open(os.path.join(ROOT, "scripts", "persist-ledger.sh")).read()
+# Join shell line-continuations first. Matching a single physical line is a
+# test that breaks when somebody wraps the command, which says nothing about
+# whether the flag is there.
+_persist_joined = _persist.replace("\\\n", " ")
+_ingest_line = [l for l in _persist_joined.splitlines()
+                if "fleet-ledger.py ingest" in l and not l.strip().startswith("#")]
+check("persist-ledger.sh calls ingest exactly once",
+      len(_ingest_line) == 1, str(_ingest_line))
+check("ingest is called with --allow-coverage-drop, so a degraded run is still committed",
+      bool(_ingest_line) and "--allow-coverage-drop" in _ingest_line[0],
+      str(_ingest_line))
+
+# Ordering, not just presence. Committing after the alarm would be the same
+# bug with extra steps.
+_push_at = _persist.find("git push")
+_drop_at = _persist.find("--allow-coverage-drop")
+_alarm_at = _persist.find("COVERAGE DROPPED")
+check("the coverage-drop alarm is raised AFTER the push, never instead of it",
+      _alarm_at > _push_at > _drop_at > 0,
+      "drop=%d push=%d alarm=%d" % (_drop_at, _push_at, _alarm_at))
+check("the alarm is a non-zero exit, not just a log line",
+      "COVERAGE DROPPED" in _persist and "exit 1" in _persist)
+
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))

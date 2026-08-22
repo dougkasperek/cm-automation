@@ -15,6 +15,20 @@
 # instead of committing them. Failing first would throw away the run that
 # discovered the problem.
 #
+# THAT APPLIES TO THE COVERAGE-DROP GUARD TOO, and for a day it did not. The
+# guard added on 2026-08-20 makes `ingest` exit 1 when a run measured fewer
+# sites than the run before it. This script runs under `set -e`, so a bare call
+# to ingest died right there -- before git add, commit and push, and without
+# retrying. The runner is ephemeral, so the degraded run that raised the alarm
+# was the one run guaranteed never to reach the ledger, and the ledger is the
+# one asset here that cannot be regenerated.
+#
+# So ingest is called with --allow-coverage-drop, which stores the run and
+# exits 0, and the drop is reported at the bottom with the other post-push
+# alarms. The publish job is gated on this job succeeding, so a drop still
+# stops fleet.thudstaff.com being replaced by a worse view -- it just no
+# longer costs the observations to do it.
+#
 # Conflicts are avoided rather than resolved. Two appends to one JSONL rebase
 # badly, so on every attempt this resets to the current remote head and
 # re-ingests onto it. ingest is idempotent on run_id, so that is always safe and
@@ -41,6 +55,12 @@ fi
 git config user.name  "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+# Ingest's own output, kept so the coverage-drop verdict survives the push.
+# Outside the worktree on purpose: the loop below does `git reset --hard` on
+# every attempt.
+INGEST_LOG="$(mktemp)"
+trap 'rm -f "$INGEST_LOG"' EXIT
+
 pushed=""
 for attempt in $(seq 1 "$ATTEMPTS"); do
   # Start from the current remote head every time. Anything this loop built on
@@ -52,7 +72,12 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   # Invoked through python3 rather than ./scripts/... on purpose: the mode
   # bit on these two files was lost once already, and a CI job is a bad place
   # to discover it.
-  python3 scripts/fleet-ledger.py ingest --reports "$REPORTS"
+  # --allow-coverage-drop: STORE the run, exit 0, and let the check at the
+  # bottom of this file decide the exit code. Without it, `set -e` kills the
+  # script here and the run is lost. The drop is not being ignored; it is
+  # being reported after the data is safe.
+  python3 scripts/fleet-ledger.py ingest --reports "$REPORTS" \
+    --allow-coverage-drop 2>&1 | tee "$INGEST_LOG"
   python3 scripts/render-dashboard.py --out fleet.html
 
   if git diff --quiet -- history/ fleet.html; then
@@ -89,3 +114,14 @@ if ! python3 scripts/render-dashboard.py --out /tmp/ledger-verify.html --strict;
   exit 1
 fi
 echo "ledger verified"
+
+# Coverage going DOWN is a defect in the run. Reported here, last, for the same
+# reason the unresolved-site alarm is: the observations are committed by this
+# point, so saying so costs nothing. The publish job needs this job to succeed,
+# so exiting non-zero is what stops a worse measurement replacing a better one
+# on the live page.
+if grep -q "COVERAGE DROPPED" "$INGEST_LOG"; then
+  echo "::error::coverage dropped: this run measured fewer sites than the run before it. The observations WERE committed; the dashboard was not published, because publishing would replace a better measurement with a worse one. Re-run the scan from somewhere less likely to be blocked, or ingest locally with --allow-coverage-drop if the drop is real and expected."
+  grep -A 3 "COVERAGE DROPPED" "$INGEST_LOG" || true
+  exit 1
+fi

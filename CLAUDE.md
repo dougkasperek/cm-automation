@@ -18,11 +18,21 @@ a second scoring model or a second site list.
 | **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
 | Asana routing | not built. The missing shared plumbing |
 
-**The scoreboard is the UNKNOWN count on the dashboard** — sites no scan has
-ever reached. It is **32 today, measured 2026-08-19**. That number falling is
-what progress looks like. The Nexcess discovery workflow is built and should
-take it to 11, but **no Nexcess API call has been made yet, so 32 is still the
-real number.** Do not quote 11 until a live run has produced it.
+**The scoreboard is the HEALTH-COVERAGE count on the dashboard** — sites that
+have been looked at but have **no health evidence**: no backup age, no plugin
+or theme count. It is **32, measured 2026-08-22**, and it is the number printed
+under the fleet-health card. That number falling is what progress looks like.
+The Nexcess discovery workflow is built and should take it to 11, but **no
+Nexcess API call has been made yet, so 32 is still the real number.** Do not
+quote 11 until a live run has produced it.
+
+**It used to be the UNKNOWN count, and quoting UNKNOWN today is wrong.**
+UNKNOWN answers "has ANY scan reached this site", and the consent sweep reaches
+all 78 domains, so **UNKNOWN is 0** and the health card no longer renders an
+UNKNOWN row at all. The two were the same figure by coincidence until
+2026-08-19; they are different questions. See the `UNKNOWN: 0` row in the table
+below — this paragraph is what that row was about, and it sat here
+contradicting it for two days.
 
 **Every rule below cost something to learn.** Nothing here is general good
 practice; it is all scar tissue. If a rule seems obvious, read the sentence
@@ -165,10 +175,17 @@ of scripts:
 2. **Add a `source` and a fact family** in `fleet-ledger.py`. The fact-name
    collision guard will refuse two sources claiming the same fact name — that
    assert exists because merging unrelated measurements onto one timeline is
-   silent and unrecoverable. **Add its `MEASURED` predicate in the same
-   change.** `measured_count` REFUSES a source with no coverage rule rather
-   than reporting it fully covered, because a source that always looks
-   complete can never report a coverage drop.
+   silent and unrecoverable. **Add its `MEASURED` predicate AND its
+   `COVERAGE_FLAGS` entry in the same change.** `measured_count` REFUSES a
+   source with no coverage rule rather than reporting it fully covered,
+   because a source that always looks complete can never report a coverage
+   drop. `COVERAGE_FLAGS` is the other half: it names the FACT that predicate
+   reads, so `classify()` scores a move in it as the tool's coverage changing
+   rather than as fleet news. `consent_scan_ok` had a MEASURED entry and no
+   COVERAGE_FLAGS entry for two days, and when a WAF blocked four sites the
+   one event was reported three ways — 8 of the 14 headline "changes needing
+   a decision" were the scanner losing sight of a site, not a site getting
+   worse. Both halves, one change.
 3. **Add severity codes to `scripts/lib/severity.py`.** Same vocabulary, same
    module. A second scorer is two answers.
 4. **Its own CI workflow.** Credential-free checks run on every push; anything
@@ -289,11 +306,11 @@ reads the ledger and is what gets published. Do not delete either.
 ## Testing
 
 ```bash
-python3 test/test-ledger.py       # 106
-python3 test/test-severity.py     #  70
+python3 test/test-ledger.py       # 126
+python3 test/test-severity.py     #  96
 python3 test/test-email-dns.py    #  58   (needs dnspython)
 python3 test/test-nexcess.py      #  88   offline, no API call
-python3 test/test-consent.py      #  59   offline, no browser
+python3 test/test-consent.py      #  65   offline, no browser
 ./test/run-local-test.sh          #  32   1-3 min, silent, two mock sites hang
                                   #       on purpose. Never run it through the
                                   #       device bridge: 45s timeout.
