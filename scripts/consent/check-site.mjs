@@ -62,7 +62,14 @@ const BANNER_VENDORS = [
 // proven on a runner.
 const browserMode = process.argv[3] === 'headless' ? 'headless' : 'headed';
 
-const result = { domain, browserMode, finalUrl: null, ok: false, error: null,
+// What was REQUESTED (browserMode) and what we actually GOT (browserActual)
+// are recorded separately. In CI headed only works because xvfb supplies a
+// virtual screen; if that is missing the run could otherwise produce headless
+// numbers wearing a headed label, which is this project's signature bug with
+// our own handwriting on it. A headless Chromium says `HeadlessChrome/...` in
+// its User-Agent and a headed one says `Chrome/...`, so the browser itself is
+// the witness.
+const result = { domain, browserMode, browserActual: null, finalUrl: null, ok: false, error: null,
   bannerVendor: null, bannerVisible: false, genericBannerVisible: false,
   preConsentTrackers: [], consentModeDenied: false, scripts: [], scannedAt: new Date().toISOString() };
 
@@ -89,6 +96,11 @@ try {
     const u = req.url();
     for (const t of TRACKER_PATTERNS) if (t.re.test(u)) hits.push({ tracker: t.name, url: u.slice(0, 220) });
   });
+  // Read before navigating: it is a property of the browser, not the site, and
+  // it must be recorded even when the page then fails to load.
+  const ua = await page.evaluate(() => navigator.userAgent);
+  result.browserActual = /headless/i.test(ua) ? 'headless' : 'headed';
+
   const resp = await page.goto('https://' + domain, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await page.waitForTimeout(9000); // let tag managers and late tags fire
   result.finalUrl = page.url();

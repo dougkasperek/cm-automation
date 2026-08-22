@@ -387,6 +387,29 @@ node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"
 ```
 
 Headed needs a display. On a laptop that means visible browser windows for the
-duration of the run. CI is **not** wired for this yet: it needs `xvfb`, which
-has not been proven on a runner, so `fleet-consent.yml` is unchanged and should
-not be triggered expecting headed results.
+duration of the run.
+
+**CI runs headed too, since 2026-08-22.** `fleet-consent.yml` installs `xvfb` —
+a virtual screen — and runs the sweep under `xvfb-run -a`. No `--headless`
+anywhere.
+
+### How CI can ship a browser change nobody ran on a runner first
+
+**Asking for headed is not the same as getting it.** If xvfb were missing, or
+`DISPLAY` unset, or a runner image changed, the browser could come up headless
+and every number would be an undercount wearing a `chromium-headed` label — this
+project's signature bug, in our own handwriting.
+
+So the browser is asked what it actually is. A headless Chromium reports
+`HeadlessChrome/...` in its User-Agent; a headed one reports `Chrome/...`.
+`check-site.mjs` records `browserActual` alongside the requested `browserMode`,
+and `run-sweep.mjs` checks them on the first result and **exits 3** if they
+disagree, before a single row reaches the ledger.
+
+Two smaller things that had to be true for that guard to work:
+
+- The Sweep step sets `set -eo pipefail`. It did not before, so the pipeline's
+  exit code was `tee`'s and *any* failure of the sweep — including this abort —
+  would have passed the step.
+- `xvfb-run --help` is checked at install time, so a missing package fails on
+  the install step with a readable message rather than deep inside the sweep.

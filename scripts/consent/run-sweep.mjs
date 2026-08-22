@@ -139,6 +139,28 @@ async function scan(domain) {
   return r;
 }
 
+// ASKED FOR IS NOT GOT. Checked on the first result that carries an answer,
+// then never again -- one launch decides it for the whole run.
+//
+// If headed was requested and the browser came up headless, every number after
+// this point would be an undercount labelled `chromium-headed`: wrong, and
+// wrong in the direction that reads as an all-clear, under a label we wrote
+// ourselves. In CI that happens the moment xvfb is missing or DISPLAY is
+// unset. Abort rather than write it to an append-only ledger.
+let verified = false;
+function verifyBrowser(r) {
+  if (verified || !r || !r.browserActual) return;
+  verified = true;
+  if (r.browserActual === browserModeWanted()) return;
+  console.error('');
+  console.error(`ABORTING: asked for a ${browserModeWanted()} browser and got ${r.browserActual}.`);
+  console.error('Every result from this run would be an undercount carrying the wrong label.');
+  console.error('On a server this means no display: install xvfb and run under `xvfb-run -a`,');
+  console.error('or pass --headless deliberately and accept that the numbers are a floor.');
+  process.exit(3);
+}
+function browserModeWanted() { return HEADLESS ? 'headless' : 'headed'; }
+
 const results = [];
 const queue = [...roster];
 let done = 0;
@@ -147,6 +169,7 @@ async function worker() {
   while (queue.length) {
     const s = queue.shift();
     const r = await scan(s.domain);
+    verifyBrowser(r);
     r.site_id = s.site_id;
     r.host = s.host;
     r.client = s.client;
@@ -215,6 +238,7 @@ const scan_out = {
     ok: Boolean(r.ok),
     error: r.error || null,
     retried: Boolean(r.retried),
+    browserActual: r.browserActual || null,
     status: r.status ?? null,
     httpBlocked: Boolean(r.httpBlocked),
     finalUrl: r.finalUrl || null,
