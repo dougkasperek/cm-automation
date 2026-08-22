@@ -13,7 +13,7 @@ a second scoring model or a second site list.
 |---|---|
 | Pantheon fleet health | live, CI, 52 sites |
 | Email DNS (all hosts) | live, CI, 78 sites, no credentials |
-| Cookie consent, headed | live, 77 of 78 sites. CI headed via xvfb, unproven on a runner |
+| Cookie consent, headed | live, 77 of 78 sites. CI headed via xvfb, **proven on a runner 2026-08-22** |
 | **Nexcess estate discovery** | **built; BLOCKED ON NEXCESS.** Cloudflare challenge. `docs/NEXCESS-SUPPORT.md` |
 | Nexcess SSH deep scan | not built. Gated on the account-level-SSH-key answer |
 | **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
