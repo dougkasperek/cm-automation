@@ -510,8 +510,31 @@ check("the mode is a CLI ARGUMENT, not a second environment variable",
 check("a single-site run says which instrument produced it",
       "browserMode" in _check_src)
 
+# ASKING FOR HEADED IS NOT THE SAME AS GETTING IT.
+#
+# In CI the browser runs headed only because xvfb supplies a virtual screen.
+# If xvfb is missing, or DISPLAY is unset, or a future runner image changes,
+# the launch either fails outright or -- worse -- succeeds in some fallback and
+# the sweep quietly produces headless numbers labelled `chromium-headed`. That
+# is the whole bug family this project keeps finding: a confident label over an
+# absence, except here the label would be one we wrote ourselves.
+#
+# The browser can be asked what it actually is. A headless Chromium reports
+# `HeadlessChrome/...` in its User-Agent; a headed one reports `Chrome/...`.
+# So the scanner records what it GOT, not only what was ASKED FOR, and the
+# sweep refuses to continue when they disagree.
+check("the scanner reports what the browser ACTUALLY is, not just what was "
+      "requested",
+      "browserActual" in _check_src)
+check("...derived from the browser's own User-Agent, which is the only thing "
+      "that can contradict the request",
+      "Headless" in _check_src and "userAgent" in _check_src)
+
 _sweep_src2 = open(os.path.join(ROOT, "scripts", "consent",
                                 "run-sweep.mjs")).read()
+check("the sweep ABORTS when it asked for headed and got headless, rather than "
+      "labelling headless numbers as headed",
+      "browserActual" in _sweep_src2 and "process.exit" in _sweep_src2)
 check("the sweep records the METHOD on the run, so the ledger can refuse to "
       "diff across a change of instrument",
       "chromium-headed" in _sweep_src2 and "method" in _sweep_src2)

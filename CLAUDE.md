@@ -13,6 +13,7 @@ a second scoring model or a second site list.
 |---|---|
 | Pantheon fleet health | live, CI, 52 sites |
 | Email DNS (all hosts) | live, CI, 78 sites, no credentials |
+| Cookie consent, headed | live, 77 of 78 sites. CI headed via xvfb, unproven on a runner |
 | **Nexcess estate discovery** | **built; BLOCKED ON NEXCESS.** Cloudflare challenge. `docs/NEXCESS-SUPPORT.md` |
 | Nexcess SSH deep scan | not built. Gated on the account-level-SSH-key answer |
 | **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
@@ -68,11 +69,20 @@ If a lock appears, `mv` it: `mkdir -p _to_delete && mv .git/index.lock
 _to_delete/`. Then tell Doug to remove that folder. Leaving a lock behind means
 his next commit fails with no explanation. **Claude edits files; Doug runs git.**
 
-**`.github/` cannot be written through the device bridge.** Workflow edits land
-in `ci/github-actions/` and Doug copies them across. Those two have already
-diverged once, with the live workflow demanding a secret that had been deleted
-for a code path that no longer existed. **Diff them before telling anyone to
-run a workflow.**
+**`.github/workflows/` is the ONLY copy of a workflow. Edit it directly.**
+
+Until 2026-08-22 there was a second copy in `ci/github-actions/`, because
+`.github/` could not be written through the device bridge. That mirror was
+**gitignored**, so it was never version-controlled — the documented process said
+"edit here, copy across" while "here" was a scratch directory nobody else could
+see. The two diverged once already, with the live workflow demanding a secret
+that had been deleted for a code path that no longer existed.
+
+The mirror is gone. `.github/` is writable in this repo; all five files were
+verified byte-identical before it was deleted. **If a future environment cannot
+write `.github/`, say so and stop — do not recreate a second copy.** A mirror of
+the thing that actually runs is a place for the two to disagree, and the copy
+that loses is always the one nobody is looking at.
 
 **Secrets live in GitHub, never in the repo.** Keeper is unavailable. The
 Cloudflare API token, the Pantheon machine token and the runner SSH key are

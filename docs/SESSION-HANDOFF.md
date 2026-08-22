@@ -177,8 +177,16 @@ setting and measured. Full methodology in `docs/CONSENT.md`, "The instrument".
 Pixel on ANY site, so the 50 sites it *could* read were undercounted too. This
 was never only about the 28.
 
-**Still open:** `fleet-consent.yml` is not wired for `xvfb`, so CI cannot run
-headed yet. Run the sweep from the laptop until that is proven on a runner.
+**CI wired for xvfb 2026-08-22**, so scheduled/manual CI sweeps run headed
+too. It ships without having been executed on a runner, which is only
+acceptable because the sweep verifies its own browser: it reads the User-Agent
+on the first result and exits 3 if it asked for headed and got headless, before
+anything reaches the ledger. **The first CI run is still the real test** — watch
+it, and if it exits 3 the message names the cause.
+
+The `schedule:` block stays commented out. The publish-side coverage guard now
+exists, but a cron sweep should not be enabled in the same change as an
+unproven CI browser.
 
 ### The 403s, split by host — the headless-era measurements
 

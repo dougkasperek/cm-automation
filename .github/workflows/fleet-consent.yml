@@ -105,47 +105,53 @@ jobs:
         # and can never be a network problem or a site being down.
         run: python3 test/test-consent.py
 
-      - name: Install Playwright and Chromium
+      - name: Install Playwright, Chromium and a virtual display
+        # xvfb is a virtual screen. The scanner runs a HEADED browser, which
+        # draws real windows and therefore needs a display; a runner has none.
+        # `--with-deps` installs the browser's OS libraries but does not
+        # reliably provide an X server, so xvfb is installed explicitly rather
+        # than hoped for.
         run: |
+          set -eo pipefail
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends xvfb
+          xvfb-run --help >/dev/null 2>&1 || { echo "::error::xvfb-run is not available; the sweep cannot run headed"; exit 1; }
 
       - name: Stamp
         id: stamp
         run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
 
       - name: Sweep
-        # --headless IS PASSED EXPLICITLY, and it is a known compromise.
+        # HEADED, under a virtual screen. No --headless here on purpose.
         #
-        # The scanner defaults to HEADED since 2026-08-22, because headless
-        # cannot load a site behind a bot challenge and cannot see Hotjar or
-        # Meta Pixel on ANY site -- both detect automation and decline to fire.
-        # A headless run undercounts, and low reads as an all-clear.
+        # A headless browser cannot load a site behind a bot challenge -- 27 of
+        # the 28 sites this sweep could not see load headed -- and cannot see
+        # Hotjar or Meta Pixel on ANY site, because both detect automation and
+        # decline to fire. Headless numbers are a floor, and low is the
+        # direction that reads as an all-clear. See docs/CONSENT.md, "The
+        # instrument", for the measurements.
         #
-        # But headed needs a display, and a GitHub runner has none: without
-        # this flag the browser fails to launch here and the job dies on an
-        # obscure Playwright error. So CI keeps doing what it did before, and
-        # the run LABELS ITSELF `chromium-headless` so nothing downstream
-        # mistakes it for a full look:
+        # `set -eo pipefail` is load-bearing and was missing before. Without it
+        # the exit code of this pipeline is tee's, so run-sweep.mjs could fail
+        # -- including the abort below -- and the step would still pass.
         #
-        #   - the dashboard prints "these numbers are a floor, not a total"
-        #   - the ledger refuses to diff it against a headed run
-        #   - a coverage drop against the last laptop run blocks the publish
-        #
-        # THE REAL FIX is xvfb -- a virtual screen -- so this can run headed
-        # here too. Deliberately not done yet: it is unproven on a runner, and
-        # the standing decision is laptop-first. Until then, a trustworthy
-        # consent sweep comes from a laptop:
-        #
-        #   node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"
+        # THE SWEEP VERIFIES ITSELF. Asking for headed is not the same as
+        # getting it: if xvfb were missing or DISPLAY unset, the browser could
+        # come up headless and every number would be an undercount wearing a
+        # `chromium-headed` label we wrote ourselves. run-sweep.mjs reads the
+        # browser's own User-Agent on the first result and exits 3 if it
+        # disagrees with what was asked for. That is why this can ship without
+        # having been run on a runner first -- it fails loudly rather than
+        # quietly producing wrong data.
         run: |
-          echo "::warning::This CI sweep runs HEADLESS and undercounts trackers. It cannot see sites behind a bot challenge, or Hotjar/Meta Pixel anywhere. Run the sweep from a laptop for a trustworthy result; see docs/CONSENT.md, 'The instrument'."
-          node scripts/consent/run-sweep.mjs \
+          set -eo pipefail
+          xvfb-run -a node scripts/consent/run-sweep.mjs \
             --inventory data/fleet-inventory.json \
             --out reports \
             --stamp "${{ steps.stamp.outputs.value }}" \
             --concurrency "${{ inputs.concurrency || '4' }}" \
-            --headless \
             ${{ inputs.only != '' && format('--only {0}', inputs.only) || '' }} \
             | tee /tmp/sweep.txt
 
