@@ -91,7 +91,9 @@ back to the wrangler OAuth session. CI still uses the token.
    never reaches Pantheon. It is per-zone Cloudflare settings across at least
    four different DNS providers, so there is no one conversation and no one
    owner. See "The 403s" below for what replaces it.
-6. **Send `docs/NEXCESS-SUPPORT.md`.** Unchanged and still blocking.
+6. ~~**Send `docs/NEXCESS-SUPPORT.md`.**~~ **SENT 2026-08-22**, both questions
+   in one ticket. Now waiting on Nexcess, not on us. Do not re-send. Record
+   their answers per "When they answer" in that file.
 7. **Asana routing.** The last unbuilt step of deck slide 16.
 
 ### The 403s, split by host — this is the finding, not "the scanner is blocked"

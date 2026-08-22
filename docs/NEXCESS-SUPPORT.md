@@ -6,6 +6,12 @@ code here. Send them together — they are the same conversation.
 Account: clevermethod, Inc. Nexcess account ID 82607. 21 Managed WordPress
 sites.
 
+> **STATUS: SENT 2026-08-22.** Both questions went in as one ticket. This file
+> is now a record of what was asked and the evidence behind it, not an action
+> item — **do not send it again.** If Nexcess replies, follow "When they
+> answer" at the bottom. If they have not replied within a week, chase the
+> ticket rather than opening a second one.
+
 ---
 
 ## Question 1: the API is behind a bot challenge (BLOCKING NOW)
