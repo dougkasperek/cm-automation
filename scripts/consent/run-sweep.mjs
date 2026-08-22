@@ -25,6 +25,10 @@
 //   node scripts/consent/run-sweep.mjs \
 //     --inventory data/fleet-inventory.json --out reports \
 //     --stamp "$(date -u +%Y-%m-%d_%H%M)" [--concurrency 4] [--only a.com,b.com]
+//
+// Runs a HEADED browser, so it needs a display: on a laptop that means visible
+// windows for the duration. `--headless` opts out and is kept only for a
+// display-less environment; it UNDERCOUNTS, and the run records which was used.
 
 import { execFile } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -42,14 +46,30 @@ function arg(name, fallback = null) {
 const INVENTORY = arg('inventory', 'data/fleet-inventory.json');
 const OUT = arg('out', 'reports');
 const STAMP = arg('stamp');
-// Parallel headless browsers. Default 4, and raising it is a worse trade than
-// it looks: 23 of ~78 sites already answer 403 to a headless client, and more
-// concurrency makes a WAF likelier to treat the sweep as a crawl. A blocked
-// site is UNMEASURED, so speed is bought with coverage -- the one thing this
-// tool produces. The run is ~4 minutes at 4 anyway, because each site carries a
-// fixed 9-second settle that no amount of parallelism removes.
+// Parallel browsers. Default 4. Verified headed at 4 on 2026-08-22: 12 sites
+// in 6 seconds, no instability.
+//
+// The old note here argued against raising it because "23 of ~78 sites already
+// answer 403 to a headless client". That premise is gone -- those 403s were a
+// bot challenge that headless could never pass and headed passes, not a WAF
+// reacting to crawl rate. Raising it is still a poor trade for a different
+// reason: a blocked site is UNMEASURED, so speed would be bought with the one
+// thing this tool produces. The run is ~4 minutes at 4 regardless, because each
+// site carries a fixed 9-second settle that no parallelism removes.
 const CONCURRENCY = Number(arg('concurrency', '4'));
 const ONLY = arg('only');
+
+// HEADED unless --headless is passed. See check-site.mjs for the measurements:
+// headless cannot load 27 of the 28 sites behind a bot challenge, and cannot
+// see Hotjar or Meta Pixel on ANY site because those two detect automation and
+// decline to fire. A headless run is therefore an undercount, and low is the
+// direction that reads as an all-clear.
+//
+// The mode is recorded on the run as `method`, because the ledger must never
+// diff a headed run against a headless one: the tracker counts are not
+// comparable, and 4-becoming-6 is new visibility, not a new problem.
+const HEADLESS = process.argv.includes('--headless');
+const METHOD = HEADLESS ? 'chromium-headless' : 'chromium-headed';
 
 if (!STAMP) {
   console.error('--stamp is required (UTC, YYYY-MM-DD_HHMM).');
@@ -86,6 +106,7 @@ if (ONLY) {
 }
 
 console.error(`roster: ${roster.length} scannable, ${skipped.length} skipped, from ${INVENTORY}`);
+console.error(`browser: ${METHOD}${HEADLESS ? '  (UNDERCOUNTS -- see check-site.mjs)' : ''}`);
 
 // ---------------------------------------------------------------------------
 // Scan
@@ -93,7 +114,8 @@ console.error(`roster: ${roster.length} scannable, ${skipped.length} skipped, fr
 
 function scanOnce(domain) {
   return new Promise(res => {
-    execFile('node', [CHECKER, domain], { timeout: 120000, maxBuffer: 8 * 1024 * 1024 },
+    execFile('node', HEADLESS ? [CHECKER, domain, 'headless'] : [CHECKER, domain],
+      { timeout: 120000, maxBuffer: 8 * 1024 * 1024 },
       (err, stdout) => {
         if (stdout) {
           try { return res(JSON.parse(stdout.trim().split('\n').pop())); } catch (_) { /* fall through */ }
@@ -176,7 +198,12 @@ for (const r of results) {
 
 const scan_out = {
   kind: 'consent-sweep',
-  schema: 'consent-sweep/1',
+  // Bumped to /2 on 2026-08-22 with the move to a headed browser. The payload
+  // gained `method`, and the numbers changed MEANING: a /1 run is a floor, a
+  // /2 headed run is a total. A consumer that treats them as the same series
+  // will read new visibility as a regression.
+  schema: 'consent-sweep/2',
+  method: METHOD,
   roster_source: INVENTORY,
   run_stamp: STAMP,
   eligible: roster.length,
@@ -218,7 +245,7 @@ const leaking = ok.filter(s => s.preConsentTrackers.length > 0);
 const noTooling = ok.filter(s => !s.bannerDetected);
 
 console.log('');
-console.log('Consent coverage sweep');
+console.log(`Consent coverage sweep  (${METHOD})`);
 console.log(`  roster            ${roster.length} scannable, ${skipped.length} with no domain`);
 console.log(`  scanned           ${ok.length} of ${roster.length}`);
 console.log(`  could not scan    ${failed.length}   (never counts as a pass)`);

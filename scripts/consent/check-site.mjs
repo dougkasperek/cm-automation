@@ -4,7 +4,12 @@
 import { chromium } from 'playwright';
 
 const domain = process.argv[2];
-if (!domain) { console.error('usage: node check-site.mjs <domain>'); process.exit(2); }
+if (!domain) {
+  console.error('usage: node check-site.mjs <domain> [headless]');
+  console.error('Default is HEADED. Headless cannot see sites behind a bot');
+  console.error('challenge, and misses trackers that detect automation.');
+  process.exit(2);
+}
 
 const TRACKER_PATTERNS = [
   { name: 'GA4 collect',        re: /google-analytics\.com\/(g|j)\/collect|analytics\.google\.com\/g\/collect/ },
@@ -33,7 +38,31 @@ const BANNER_VENDORS = [
 // the direction that reads as an all-clear. If a site is ever suspected of
 // firing later than this, raise it here rather than concluding the site is
 // clean.
-const result = { domain, finalUrl: null, ok: false, error: null,
+// HEADED BY DEFAULT. Headless is an explicit opt-out, and that default is the
+// whole point of this block.
+//
+// Measured 2026-08-22, six sites across five configurations. Headless bundled
+// Chromium, headless real Chrome (`channel: 'chrome'`), and headless with
+// --disable-blink-features=AutomationControlled all scored 0 of 6 against
+// sites behind a Cloudflare bot challenge. Headed scored 6 of 6 -- bundled
+// Chromium and real Chrome alike. So the variable is HEADLESS, not the browser
+// binary, not the User-Agent and not the source IP. Across all 28 sites the
+// sweep could not see, 27 load headed. (The 28th, hitsfoundation.org, fails
+// TLS negotiation: a real finding, and not this one.)
+//
+// AND IT IS NOT ONLY A COVERAGE PROBLEM. On blockclub.co, which headless could
+// already see, headless reports 4 pre-consent trackers and headed reports 6,
+// reproducibly. Hotjar and Meta Pixel run their own headless detection and
+// decline to fire, so headless cannot see them on ANY site. Every headless
+// number was a floor, not a total -- an undercount, in the direction that
+// reads as an all-clear.
+//
+// Headed needs a display. On a laptop that means visible windows; in CI it
+// means xvfb, which is deliberately not wired up yet because it has not been
+// proven on a runner.
+const browserMode = process.argv[3] === 'headless' ? 'headless' : 'headed';
+
+const result = { domain, browserMode, finalUrl: null, ok: false, error: null,
   bannerVendor: null, bannerVisible: false, genericBannerVisible: false,
   preConsentTrackers: [], consentModeDenied: false, scripts: [], scannedAt: new Date().toISOString() };
 
@@ -41,9 +70,16 @@ const result = { domain, finalUrl: null, ok: false, error: null,
 // Playwright find its own install. The pilot hardcoded a container path, which
 // works in exactly one environment and fails on a laptop with an error that
 // reads like a Playwright bug rather than a wrong path.
-const launchOpts = process.env.PLAYWRIGHT_CHROMIUM_PATH
-  ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
-  : {};
+//
+// This stays the ONLY environment variable this file reads. test-consent.py
+// asserts that, because a scanner that reads the environment is a scanner that
+// can read a credential. The mode is an argument for the same reason.
+const launchOpts = {
+  headless: browserMode === 'headless',
+  ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+    ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+    : {}),
+};
 const browser = await chromium.launch(launchOpts);
 try {
   const ctx = await browser.newContext({ locale: 'en-US', viewport: { width: 1366, height: 900 } });

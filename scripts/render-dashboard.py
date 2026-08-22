@@ -231,6 +231,15 @@ def build_model(history_dir, inventory_path, today):
         # and SAYS SO is not. publish-dashboard.sh reads the same function to
         # decide its exit code.
         "coverage_regressions": L.coverage_regressions(runs),
+        # Which instrument produced the consent numbers on this page, and
+        # whether it just changed. Both drive a notice; see render().
+        "consent_method": (latest.get("consent") or {}).get("method"),
+        "consent_method_changed": bool(
+            "consent" in latest
+            and (latest["consent"].get("method")
+                 != next((r.get("method") for r in reversed(by_source.get("consent", [])[:-1])),
+                         None))
+            and len(by_source.get("consent", [])) > 1),
         "generated": today.isoformat(),
     }
 
@@ -855,6 +864,42 @@ def render(m):
     # we can see" from "this is less than we could see yesterday". Two CI
     # consent runs at 38 of 78 replaced a laptop run at 54 on 2026-08-19 and
     # sat there for a day with every number on the page internally consistent.
+    # The instrument, stated when it is not the one that sees everything.
+    #
+    # A headless browser cannot load a site behind a bot challenge, and cannot
+    # see Hotjar or Meta Pixel on ANY site, because both detect automation and
+    # decline to fire. Measured 2026-08-22 on blockclub.co: 4 trackers headless,
+    # 6 headed, reproducibly. So a headless number is a FLOOR, and a floor
+    # printed in the same confident type as a total reads as a total.
+    #
+    # Retires itself the moment a headed run lands.
+    if m["consent_method"] != "chromium-headed":
+        A('<div class="card" style="border-left:3px solid var(--bad);'
+          'margin-bottom:10px">'
+          '<div><b>These consent numbers are a floor, not a total.</b> They were '
+          'taken with a headless browser, which cannot load a site behind a bot '
+          'challenge and cannot see trackers that detect automation &mdash; '
+          'Hotjar and Meta Pixel among them.</div>'
+          '<div class=quiet style="margin-top:6px">Measured on one site that '
+          'headless could already read: 4 trackers headless, 6 headed. Every '
+          'count below may be low, and none of them is high. Re-run the sweep '
+          'to replace this.</div></div>')
+    elif m["consent_method_changed"]:
+        # The other half. The first headed run reports MORE trackers on many
+        # sites at once, and every one was already firing. The ledger refuses
+        # to diff across instruments so it produces no false ONSET rows, but a
+        # person comparing this page to yesterday's still needs telling.
+        A('<div class="card" style="border-left:3px solid var(--info);'
+          'margin-bottom:10px">'
+          '<div><b>The instrument changed: these consent numbers are not '
+          'comparable to the previous run.</b> The sweep now uses a headed '
+          'browser, which sees trackers a headless one cannot.</div>'
+          '<div class=quiet style="margin-top:6px">A higher tracker count here '
+          'is new visibility, not a fleet regression. Nothing started firing '
+          '&mdash; we started being able to see it. The previous run is '
+          'deliberately not used as a baseline, so no change below is derived '
+          'from comparing the two.</div></div>')
+
     for g in m["coverage_regressions"]:
         A('<div class="card" style="border-left:3px solid var(--bad);'
           'margin-bottom:10px">'

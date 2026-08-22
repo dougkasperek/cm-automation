@@ -160,7 +160,27 @@ back to the wrangler OAuth session. CI still uses the token.
    their answers per "When they answer" in that file.
 7. **Asana routing.** The last unbuilt step of deck slide 16.
 
-### The 403s, split by host — this is the finding, not "the scanner is blocked"
+### The 403s — SOLVED 2026-08-22. The variable was HEADLESS.
+
+**The scanner now runs headed and 27 of the 28 blocked sites load.** No vendor
+conversation, no allowlist, no client access, no per-zone work. One setting.
+
+Everything below is kept because the route to the wrong answer is worth
+reading: the notes said Pantheon was blocking us and the fix was an allowlist
+request; the blocker was a Cloudflare bot challenge on the clients' own zones;
+the remedy for that would have been a WAF Skip rule, which Bot Fight Mode does
+not support on a free plan; and the actual answer was none of those. Three
+wrong answers were written down as action items before anyone changed one
+setting and measured. Full methodology in `docs/CONSENT.md`, "The instrument".
+
+**The bigger half of that finding:** headless also could not see Hotjar or Meta
+Pixel on ANY site, so the 50 sites it *could* read were undercounted too. This
+was never only about the 28.
+
+**Still open:** `fleet-consent.yml` is not wired for `xvfb`, so CI cannot run
+headed yet. Run the sweep from the laptop until that is proven on a runner.
+
+### The 403s, split by host — the headless-era measurements
 
 | host | blocked from a laptop | blocked from CI | of |
 |---|---|---|---|

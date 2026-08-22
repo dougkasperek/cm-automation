@@ -179,6 +179,10 @@ a TLS finding in its own right, not a consent one.
 they are also a finding about the fleet: a third of clevermethod's sites refuse
 a plain automated client.
 
+**RESOLVED 2026-08-22: the scanner now runs HEADED, and 27 of the 28 load.**
+See "The instrument" below. Everything in this section remains true of the
+headless era and is kept because it is how the wrong answer was reached.
+
 **It is NOT one decision, and it is not Pantheon's.** Measured 2026-08-22 by
 reading response headers, which nobody had done: all 20 blocked CM Pantheon
 sites answer `server: cloudflare` with `cf-mitigated: challenge`. Zero reach
@@ -305,3 +309,84 @@ It calls the shared `_publish-dashboard.yml` after persisting, so the ledger and
 ingest revealed that three of four workflows updated the ledger and left the
 live page showing older data — a stale dashboard that looks current is worse
 than an obviously missing one.
+
+
+---
+
+## The instrument
+
+**The sweep runs a HEADED browser. Headless is an explicit opt-out and it
+undercounts.** This is the single most important thing on this page, because
+the previous default was wrong in the direction that reads as an all-clear.
+
+Measured 2026-08-22, six sites across five configurations:
+
+| configuration | sites loading |
+|---|---|
+| headless bundled Chromium (the old default) | 0 of 6 |
+| headless + `--disable-blink-features=AutomationControlled` | 0 of 6 |
+| headless real Chrome (`channel: "chrome"`) | 0 of 6 |
+| **headed bundled Chromium** | **6 of 6** |
+| headed real Chrome | 6 of 6 |
+
+The variable is **headless**. Not the browser binary, not the User-Agent, not
+the source IP -- laptop and CI runs were blocked identically. Across all 28
+sites the sweep could not see, **27 load headed**. The 28th,
+`hitsfoundation.org`, fails TLS negotiation and is a separate finding.
+
+**And it was never only a coverage problem.** On `blockclub.co`, a site
+headless could already read, two runs each way:
+
+```
+headless  n=4  DoubleClick, GA4, LinkedIn, MS Clarity
+headed    n=6  DoubleClick, GA4, Hotjar, LinkedIn, MS Clarity, Meta Pixel
+```
+
+Hotjar and Meta Pixel run their own headless detection and decline to fire.
+A headless browser cannot see them on **any** site. So every count from the
+headless era is a floor, not a total, on all 50 sites it could read as well as
+the 28 it could not.
+
+### Why the ledger will not compare the two
+
+A headed run reports more trackers on many sites at once, and every one was
+already firing. Diffed against a headless run that is a wave of ONSET rows:
+new problems that are not new. `COVERAGE` does not catch it, because these
+values never touch the `unknown` token -- 4 became 6.
+
+So the run carries a `method`, and `previous_run_of_same_source()` refuses a
+candidate whose method differs. The first headed run finds no baseline and
+emits no diff. Sources with no `method` at all -- health, email-dns, nexcess --
+compare exactly as before, which is what keeps health's load-bearing
+`api-only -> full` exception intact.
+
+### Authorization
+
+Running headed makes automated traffic indistinguishable from a person's. What
+makes that legitimate is that these are clevermethod's own client sites under
+management contract. There are no stealth plugins, no fingerprint spoofing and
+no challenge solving anywhere in this workflow -- it is a real browser doing
+what a real browser does, and the read-only contract above is unchanged.
+
+Two things follow, and they are decisions rather than code:
+
+1. **Say so.** "We run automated read-only scans of your public pages" belongs
+   in the service description. Becoming undetectable quietly is not the same as
+   being welcome.
+2. **Prefer being allowed to being unflagged.** Where a client zone is
+   Cloudflare Pro or above, a WAF custom rule with the *Skip* action naming the
+   scanner is better than passing unnoticed. On the Free plan there is no such
+   mechanism -- Bot Fight Mode runs outside the Ruleset Engine and cannot be
+   skipped at all -- which is why the allowlist request that was queued for a
+   month would never have worked.
+
+### Running it
+
+```bash
+node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"
+```
+
+Headed needs a display. On a laptop that means visible browser windows for the
+duration of the run. CI is **not** wired for this yet: it needs `xvfb`, which
+has not been proven on a runner, so `fleet-consent.yml` is unchanged and should
+not be triggered expecting headed results.

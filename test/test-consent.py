@@ -471,6 +471,54 @@ check("a failed scan is retried once, and the retry is recorded rather than "
 check("a navigation that did not throw is not treated as a site that was seen: "
       "the sweep requires a 2xx",
       "twoXX" in _sweep_code and "httpBlocked" in _sweep_code)
+# ---------------------------------------------------------------------------
+# THE INSTRUMENT
+# ---------------------------------------------------------------------------
+# Measured 2026-08-22 over 6 sites x 5 browser configurations: HEADLESS is the
+# only variable that matters. Headless bundled Chromium, headless real Chrome,
+# and headless with the anti-automation flag all score 0 of 6 against sites
+# behind a Cloudflare bot challenge; headed scores 6 of 6, bundled Chromium and
+# real Chrome alike. 27 of the 28 blocked sites load headed.
+#
+# And it is not only a coverage problem. On blockclub.co -- a site headless
+# could ALREADY see -- headless reports 4 pre-consent trackers and headed
+# reports 6, reproducibly. Hotjar and Meta Pixel run their own headless
+# detection and decline to fire, so headless cannot see them on ANY site. Every
+# headless number is a floor, not a total, and low is the direction that reads
+# as an all-clear.
+#
+# So headed is the DEFAULT and headless is an explicit opt-out. A default that
+# silently under-reports is the shape of every row in CLAUDE.md's table.
+print()
+print("-- the browser runs headed, because headless cannot see some trackers --")
+
+# The PROPERTY is "headless only happens when it is asked for", so the rule
+# that decides it is what to assert. The first version of this check looked for
+# the literal `headless: false`, which the correct implementation
+# (`headless: browserMode === 'headless'`) does not contain -- a test asserting
+# a spelling rather than a behaviour, which is the same mistake as pinning a
+# fleet count.
+check("headless happens only when explicitly asked for: the mode is decided by "
+      "an argument, defaulting to headed",
+      "process.argv[3] === 'headless'" in _check_src,
+      "the headless decision is not gated on an explicit argument")
+check("...and nothing launches headless unconditionally",
+      "headless: true" not in _check_src)
+check("the mode is a CLI ARGUMENT, not a second environment variable",
+      _check_src.replace("process.env.PLAYWRIGHT_CHROMIUM_PATH", "").count("process.env") == 0,
+      "a second env var would break the no-credentials guard above")
+check("a single-site run says which instrument produced it",
+      "browserMode" in _check_src)
+
+_sweep_src2 = open(os.path.join(ROOT, "scripts", "consent",
+                                "run-sweep.mjs")).read()
+check("the sweep records the METHOD on the run, so the ledger can refuse to "
+      "diff across a change of instrument",
+      "chromium-headed" in _sweep_src2 and "method" in _sweep_src2)
+check("...and the payload schema is bumped, because the numbers changed meaning",
+      "consent-sweep/2" in _sweep_src2)
+
+
 check("the consent-related script srcs are kept, so 'no CMP' and 'a CMP we do "
       "not recognise' stay distinguishable",
       "cmpScripts" in _sweep_code)
