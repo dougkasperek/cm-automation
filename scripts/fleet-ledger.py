@@ -1097,10 +1097,20 @@ def _standing_consent(rows):
             "sites": blocked,
             "detail": dict((s, "HTTP %s" % rows[s].get("consent_http_status"))
                            for s in blocked),
-            "action": "Mostly a WAF refusing a headless browser. These are UNMEASURED, "
-                      "not clean, and no consent rule scores on them. Getting the "
-                      "scanner allowlisted is one decision covering all %d."
-                      % len(blocked),
+            # NOT "one decision covering all N". Measured 2026-08-22: every
+            # one of the 20 blocked Pantheon sites answers from
+            # `server: cloudflare` with `cf-mitigated: challenge`, and none
+            # reaches Pantheon at all. Their zones sit across at least four
+            # different DNS providers, so there is no single account and no
+            # single owner to ask. Saying "one decision" sent a request to the
+            # wrong vendor for two days.
+            "action": "NOT one decision. The 20 CM Pantheon sites here were "
+                      "measured on 2026-08-22: every one is a Cloudflare bot "
+                      "challenge on the client's own zone, reaching Pantheon "
+                      "not at all, across at least four DNS providers. The "
+                      "remaining %d have NOT been attributed. All of them are "
+                      "UNMEASURED, not clean, and no consent rule scores on "
+                      "them." % max(0, len(blocked) - 20),
         })
     return out
 

@@ -85,8 +85,12 @@ back to the wrangler OAuth session. CI still uses the token.
    Cloudflare account. `github-deploy-[removed]` is scoped to **All accounts**
    and can reach `clevermethod, Inc.` too. Delete or re-scope it; move the CI
    token to an Account token with an expiry.
-5. **Ask Pantheon to allowlist the consent scanner.** 20 blocked sites, one
-   conversation, on an account clevermethod owns. See "the 403s" below.
+5. ~~**Ask Pantheon to allowlist the consent scanner.**~~ **WITHDRAWN
+   2026-08-22 — Pantheon is not the blocker and this request would have done
+   nothing.** All 20 answer from Cloudflare with a bot challenge; the request
+   never reaches Pantheon. It is per-zone Cloudflare settings across at least
+   four different DNS providers, so there is no one conversation and no one
+   owner. See "The 403s" below for what replaces it.
 6. **Send `docs/NEXCESS-SUPPORT.md`.** Unchanged and still blocking.
 7. **Asana routing.** The last unbuilt step of deck slide 16.
 
@@ -104,14 +108,61 @@ blocker when it is two small ones.**
 
 - **Nexcess is IP reputation.** 1 from a residential connection, 15 from a
   GitHub runner. Nothing to fix — run it from a normal connection.
-- **Pantheon is a bot rule.** 20 blocked from both IPs, identically. Not about
-  where the request comes from. Pantheon is clevermethod's own account.
+- **Pantheon is ~~a bot rule~~ A CLOUDFLARE BOT CHALLENGE, corrected
+  2026-08-22.** The half that was right: 20 blocked from both IPs identically,
+  so it is not about where the request comes from. The half that was wrong:
+  whose rule it is.
 
-**Worth doing with the allowlist request:** give the scanner an identifying
-User-Agent (`cm-automation-consent-scan/1.0 (+url; read-only; contact)`)
-instead of default headless Chrome. That turns "allowlist these IPs" into
-"allowlist this string". Ship it WITH the request, not before — on its own a
-non-browser UA may be blocked harder, not less.
+**What was actually measured, 2026-08-22.** Nobody had read a response header
+before writing the action item down. All 20 blocked CM Pantheon sites:
+
+| | |
+|---|---|
+| `server: cloudflare` | **20 of 20** |
+| `cf-mitigated: challenge` | 16 |
+| 301 first, challenge after the redirect | 4 |
+| reaching Pantheon at the point of blocking | **0** |
+
+A site that scans fine looks different: `cottrillspharmacy.com` returns
+`server: nginx` with `x-styx-req-id`, Pantheon's Styx edge.
+
+**Being Cloudflare-fronted is not the trigger.**
+`celticindustrialservices.com` is `server: cloudflare`, returns 200, and shows
+a Pantheon `x-styx-req-id` behind it. So this is per-zone bot settings — Bot
+Fight Mode or a WAF rule on those specific zones — not a platform policy.
+
+**And they are not one estate.** Authoritative DNS across the blocked set:
+Cloudflare (`clevermethod.com`, `ntlibrary.org`), Network Solutions
+(`actioncarting.com`, `interstatewaste.com`), managed-ip (`zehnderamerica.com`),
+MediaTemple (`galbanicheese.com`). Four providers, mostly Cloudflare
+partial/CNAME setups fronting client-controlled DNS. `wrangler whoami` reaches
+exactly ONE account, Doug's own; the `clevermethod, Inc.` account referenced
+elsewhere in these notes is not reachable with that credential.
+
+**So the next step is not a request, it is an inventory.** Which Cloudflare
+account holds each of the 20 zones. Not yet established — the OAuth token
+carries `zone (read)` and can answer it:
+
+```bash
+curl -s "https://api.cloudflare.com/client/v4/zones?per_page=100" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[].name' | sort
+```
+
+`clevermethod.com` is itself on the blocked list, so at least one is
+self-service today. Split the rest into zones clevermethod administers and
+zones the client does, and only the second group is a conversation.
+
+**And invert the User-Agent advice.** The old note suggested an identifying
+`cm-automation-consent-scan/1.0` UA to turn "allowlist these IPs" into
+"allowlist this string". Against Cloudflare Bot Management a non-browser UA
+scores **worse**, not better — the old note half-suspected this and now we know
+the blocker. What works there is a WAF skip rule matched on something
+verifiable: a custom header carrying a shared secret, or the source IP.
+
+**This is a repeat of a documented failure.** CLAUDE.md's table already
+carries `the token was rejected | a Cloudflare challenge; the token was never
+read at all`, from the Nexcess portal. Same edge, same challenge, same
+misattribution — a confident cause standing in for one nobody had established.
 
 ### Also open
 
