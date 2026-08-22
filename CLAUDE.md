@@ -125,6 +125,8 @@ eleven times:
 | `the token was rejected` | a Cloudflare challenge; the token was never read at all |
 | `UNKNOWN: 0` | the coverage scoreboard, silently zeroed by a source that is not health |
 | 23 sites "no banner, no trackers" | HTTP 403 block pages; `ok` meant the navigation did not throw |
+| `4 trackers` on a site the sweep COULD see | 6. Hotjar and Meta Pixel detect automation and decline to fire, so a headless browser cannot see them on ANY site. Every headless count was a floor printed as a total |
+| Pantheon blocks the scanner, and the fix is an allowlist | a Cloudflare bot challenge, and the variable was HEADLESS. Headed loads 27 of the 28 "blocked" sites. Three separate wrong answers were written down before anyone changed one setting and measured |
 | a current-looking dashboard | three of four workflows ingested and never published |
 | `js.cookie.min.js` in `cmpScripts` | a WooCommerce helper, not a consent manager |
 | the Worker is read-only, no write route, no secrets | true of the repo; the DEPLOYED Worker still had `PUT /api/publish/` and its `PUBLISH_TOKEN` |

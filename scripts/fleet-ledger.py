@@ -613,12 +613,25 @@ def ingest(reports_dir, history_dir, inventory=None):
                 mode = RUN_MODE[source]
             unresolved = [r for r in rows
                           if r.get("site_id") and r["site_id"] not in inv_recs]
+            # `mode` is the coverage SHAPE (full / api-only / browser).
+            # `method` is the INSTRUMENT that produced it, and it is a separate
+            # field on purpose: the consent sweep moved from a headless browser
+            # to a headed one on 2026-08-22, which changes what the numbers
+            # MEAN without changing their shape. Folding the two together would
+            # drag health's load-bearing api-only -> full baseline exception
+            # into a rule that has nothing to do with it.
+            #
+            # Only sources that actually have more than one instrument declare
+            # this. A run with no `method` compares to other runs with no
+            # `method` exactly as it always did.
+            method = payload.get("method") if isinstance(payload, dict) else None
             meta.update({
                 "source_file": os.path.basename(path),
                 "source": source,
                 "site_count": len(rows),
                 "deep_scanned": deep,
                 "mode": mode,
+                **({"method": method} if method else {}),
                 # Rows that matched no inventory entry. Never silently dropped:
                 # an unknown site is the highest-signal finding there is.
                 "sites_not_in_inventory": sorted(r["site_id"] for r in unresolved),
@@ -803,6 +816,25 @@ def previous_run_of_same_source(runs, idx=-1, obs=None):
                 prev_measured = measured_sites(obs, r["run_id"], src)
                 if prev_measured and prev_measured < curr_measured:
                     continue
+        # Rule 3, added 2026-08-22: a run taken with a DIFFERENT INSTRUMENT is
+        # not a baseline, whatever its coverage.
+        #
+        # The consent sweep moved from a headless browser to a headed one. That
+        # was not a tuning change: headless cannot see Hotjar or Meta Pixel at
+        # all, because both detect automation and decline to fire. On
+        # blockclub.co headless reports 4 pre-consent trackers and headed
+        # reports 6, reproducibly, and all six were always firing.
+        #
+        # Diffed against a headless run, the first headed run is a wave of
+        # ONSET rows: new problems that are not new. COVERAGE does not catch it
+        # because these values never touch the UNKNOWN token -- 4 became 6.
+        #
+        # Absent vs absent is comparable; absent vs present is NOT. So the
+        # first headed run correctly finds no baseline and emits no diff, and
+        # health / email-dns / nexcess -- which declare no method at all --
+        # compare exactly as they did before.
+        if r.get("method") != curr.get("method"):
+            continue
         return r, curr
     return None, curr
 

@@ -903,6 +903,90 @@ check("full -> api-only is a MODE change, not a coverage regression",
           dict(_run("h-2", "health", "2026-08-01T02:00:00", 0), mode="api-only")]) == [])
 
 
+# ---------------------------------------------------------------------------
+# A CHANGE OF INSTRUMENT IS NOT A CHANGE IN THE FLEET
+# ---------------------------------------------------------------------------
+# The consent sweep moved from headless to headed on 2026-08-22 because
+# headless cannot see trackers that detect automation -- Hotjar and Meta Pixel
+# decline to fire for it. So the first headed run reports MORE trackers on
+# many sites at once, and every one of them was already firing.
+#
+# Diffed against a headless run that is a wave of ONSET rows: new problems that
+# are not new. That is the same false alarm the COVERAGE class exists to
+# prevent, arriving through a door COVERAGE does not cover, because these
+# values never touch the UNKNOWN token -- 4 trackers became 6.
+#
+# `mode` is the coverage SHAPE (full / api-only / browser). `method` is the
+# INSTRUMENT. They are separate because conflating them would drag the health
+# source's load-bearing api-only -> full baseline exception into this.
+print()
+print("-- a run taken with a different instrument is not a baseline --")
+
+
+def _mrun(run_id, source, observed_at, deep, method=None, rows=78):
+    r = {"run_id": run_id, "source": source, "observed_at": observed_at,
+         "deep_scanned": deep, "site_count": rows, "mode": "browser"}
+    if method is not None:
+        r["method"] = method
+    return r
+
+
+def _cobs(run_id, trackers):
+    """A consent observation LIST -- previous_run_of_same_source takes a list,
+    and to_obs() returns a site-keyed dict of HEALTH facts, so neither shape
+    fits here."""
+    return [{"run_id": run_id, "observed_at": "2026-08-17T00:00:00",
+             "site": "a.com", "site_id": "a.com", "source": "consent",
+             "consent_scan_ok": True,
+             "consent_banner_detected": True,
+             "consent_pre_trackers": trackers,
+             "consent_pre_tracker_names": "GA4" if trackers else "none"}]
+
+
+_obs_hl = _cobs("c-1", 4)
+_obs_hd = _cobs("c-2", 6)
+
+_runs_x = [_mrun("c-1", "consent", "2026-08-01T01:00:00", 78),
+           _mrun("c-2", "consent", "2026-08-02T01:00:00", 78, "chromium-headed")]
+_prev, _curr = L.previous_run_of_same_source(_runs_x, obs=_obs_hl + _obs_hd)
+check("a headed run does NOT take a headless run as its baseline",
+      _prev is None, "chose %s" % (_prev["run_id"] if _prev else None))
+
+# ...and therefore the tracker jump is never reported as fleet movement. This
+# is the assertion that actually matters; the one above is how it is achieved.
+_changes = (L.diff_runs(L.rows_for(_obs_hl, "c-1"), L.rows_for(_obs_hd, "c-2"), TODAY)
+            if _prev is not None else [])
+check("...so 4 trackers becoming 6 is never reported as a new problem",
+      not [c for c in _changes if c["class"] in ("ONSET", "TRANSITION")],
+      json.dumps(_changes))
+
+# Two headed runs ARE comparable. Without this the source could never diff
+# again, which would be a worse failure than the one being fixed.
+_runs_y = [_mrun("c-2", "consent", "2026-08-02T01:00:00", 78, "chromium-headed"),
+           _mrun("c-3", "consent", "2026-08-03T01:00:00", 78, "chromium-headed")]
+_prev3, _ = L.previous_run_of_same_source(
+    _runs_y, obs=_cobs("c-2", 6) + _cobs("c-3", 6))
+check("two runs on the SAME instrument still compare",
+      _prev3 is not None and _prev3["run_id"] == "c-2",
+      "chose %s" % (_prev3["run_id"] if _prev3 else None))
+
+# The health regression guard. Health runs declare no method at all, so nothing
+# about them may change -- api-only -> full is a MODE move and must still find
+# its baseline. That exception is load-bearing for seven runs in the real
+# ledger.
+_runs_h = [{"run_id": "h-1", "source": "health", "observed_at": "2026-08-01T01:00:00",
+            "deep_scanned": 0, "site_count": 2, "mode": "api-only"},
+           {"run_id": "h-2", "source": "health", "observed_at": "2026-08-02T01:00:00",
+            "deep_scanned": 2, "site_count": 2, "mode": "full"}]
+_obs_h = (list(to_obs([row("s1"), row("s2")], "h-1").values())
+          + list(to_obs([row("s1", wp_checked=True),
+                         row("s2", wp_checked=True)], "h-2").values()))
+_prevh, _ = L.previous_run_of_same_source(_runs_h, obs=_obs_h)
+check("a source that declares NO method is unaffected: api-only is still a "
+      "baseline for full",
+      _prevh is not None and _prevh["run_id"] == "h-1",
+      "chose %s" % (_prevh["run_id"] if _prevh else None))
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))
