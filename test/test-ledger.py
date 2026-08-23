@@ -1355,6 +1355,15 @@ check("...and nothing is left rounded except the state dot",
 # separation and the obvious green+amber pair was rejected; [removed]'s
 # --good #0E7A55 / --red #B4392F have not been through that, and there colour
 # is decorative while here it carries the finding.
+# Light only, matching [removed]. A dark variant was a second palette to keep in
+# step and a second set of ratios to re-measure. The explicit body background
+# is what stops the page inheriting a dark host ground once the media query is
+# gone -- without it this ink renders on someone else's black.
+check("the page declares no dark variant",
+      "prefers-color-scheme" not in _page)
+check("...and paints its own ground, so it cannot inherit a dark one",
+      "background:var(--surface)" in _page.replace(" ", " "))
+
 check("the severity palette stays ours, not [removed]'s",
       "#1baf7a" in _page and "#eb6834" in _page and "#2a78d6" in _page
       and "#0e7a55" not in _page.lower() and "#b4392f" not in _page.lower())

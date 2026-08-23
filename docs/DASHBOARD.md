@@ -248,9 +248,15 @@ and in [removed] colour is decorative while here it carries the finding. **Do no
 unify these two sets by eye.** `test-ledger.py` asserts both halves: that the
 chrome matches and that the severity hues are still ours.
 
-`--strong` is [removed]'s `--navy`, renamed for its ROLE. It is the structural
-dark, so in dark mode it has to become light; a token called "navy" that
-renders pale is how a palette starts lying.
+**This page is light only.** There was a dark variant and it was removed the
+same day: [removed] ships light only, so a dark mode here was the one place the
+two apps could not look alike, and it was a second palette to keep in step
+with a second set of contrast ratios to re-measure whenever a colour moved.
+The page therefore does not consult `prefers-color-scheme` at all, and
+`body{background}` is load-bearing rather than decorative — without it the
+page inherits the host's ground and renders this ink on someone else's black.
+
+`--strong` is [removed]'s `--navy`, renamed for its ROLE rather than its hue.
 
 **Chips were the one place the two systems could not simply merge.** [removed]'s
 `.pill` is solid navy with white text. Filling ours the same way puts white on
@@ -258,7 +264,7 @@ the validated green at 2.8:1. So the chip keeps its tint, takes [removed]'s
 uppercase 800-weight typography and square corner, and the LABEL is mixed
 toward `--ink` for contrast while the DOT keeps the exact validated hue — a
 swatch carries no text and has no ratio to meet. Measured after the change:
-5.4 to 7.3 in light, 6.7 to 7.9 in dark.
+5.38 to 7.34.
 
 ---
 

@@ -71,14 +71,18 @@ PALETTE = {
               "surface": "#efefea", "card": "#ffffff", "panel2": "#f6f6f1",
               "ink": "#241e31", "ink2": "#6e6879", "faint": "#9c98a5",
               "strong": "#1c122d", "line": "#d9d8d0", "line2": "#e7e6df"},
-    # [removed] ships light only. These are its counterparts, keeping the same
-    # purple-cast neutrals rather than the warm grey this page used before, so
-    # the two apps still look related with the lights off.
-    "dark": {"good": "#199e70", "bad": "#d95926", "info": "#3987e5", "muted": "#8d9199",
-             "surface": "#17151c", "card": "#201d28", "panel2": "#1c1a23",
-             "ink": "#edeaf2", "ink2": "#a29cb0", "faint": "#7a7486",
-             "strong": "#edeaf2", "line": "#332e3d", "line2": "#2a2733"},
 }
+
+# LIGHT ONLY, from 2026-08-23. There was a dark counterpart and it is gone.
+#
+# [removed] ships light only, so a dark mode here was the one place the two apps
+# could not look alike -- and it was a second palette to keep in step, with a
+# second set of contrast ratios to re-measure every time a colour moved.
+#
+# The page therefore paints its own ground explicitly and does not consult
+# prefers-color-scheme at all. That is deliberate rather than an omission: a
+# page with no background of its own inherits whatever the host is painting,
+# which on a dark browser theme means this page's ink on someone else's black.
 
 STATE_TONE = {
     "CRIT": "bad", "WARN": "info", "OK": "good", "ERROR": "info",
@@ -493,15 +497,15 @@ def css():
     out = [":root{"]
     for k, v in PALETTE["light"].items():
         out.append("--%s:%s;" % (k, v))
-    out.append("}@media(prefers-color-scheme:dark){:root{")
-    for k, v in PALETTE["dark"].items():
-        out.append("--%s:%s;" % (k, v))
-    out.append("}}")
+    out.append("}")
     out.append("""
 *{box-sizing:border-box}
 /* Type stack, sizes and the square-cornered, uppercase-label treatment are
    [removed]'s, so the two apps read as one product. Radius is 0 throughout
    there; the only thing kept round here is the state dot, which is a dot. */
+/* `background` here is load-bearing, not decoration: this page declares no
+   dark variant, so without an explicit ground it would inherit the host's and
+   render this ink on someone else's black. */
 body{margin:0;padding:28px 20px 64px;background:var(--surface);color:var(--ink);
  font:14px/1.5 "Helvetica Neue",Helvetica,Inter,-apple-system,BlinkMacSystemFont,
  "Segoe UI",Arial,sans-serif}
