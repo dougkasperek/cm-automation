@@ -1,0 +1,403 @@
+<title>Reading the Fleet Page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  /* Palette inherited from scripts/render-dashboard.py PALETTE. Do not swap the
+     state colours for brand colours without re-running validate_palette.js --
+     the deck's own severity green and amber fail colourblind separation at
+     protan delta-E 3.8. WARN is blue here for that reason, not amber. */
+  :root {
+    --ground:  #faf7f2;
+    --card:    #ffffff;
+    --ink:     #232320;
+    --ink2:    #5c5b55;
+    --line:    #ece5da;
+    --good:    #1baf7a;
+    --bad:     #eb6834;
+    --info:    #2a78d6;
+    --muted:   #8d9199;
+    --rule-strong: #d9cfc0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #1a1a19;
+      --card:   #232320;
+      --ink:    #f5f0e8;
+      --ink2:   #a09e96;
+      --line:   #383835;
+      --good:   #199e70;
+      --bad:    #d95926;
+      --info:   #3987e5;
+      --muted:  #8d9199;
+      --rule-strong: #4a4a46;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1a1a19;
+    --card:   #232320;
+    --ink:    #f5f0e8;
+    --ink2:   #a09e96;
+    --line:   #383835;
+    --good:   #199e70;
+    --bad:    #d95926;
+    --info:   #3987e5;
+    --muted:  #8d9199;
+    --rule-strong: #4a4a46;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 4rem 1.5rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 43rem; margin: 0 auto; display: flex; flex-direction: column; gap: 3.25rem; }
+
+  /* ---- masthead ---- */
+  .masthead { display: flex; flex-direction: column; gap: 1rem; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink2); margin: 0;
+  }
+  h1 {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: clamp(1.9rem, 5.5vw, 2.6rem); font-weight: 600;
+    letter-spacing: -0.035em; line-height: 1.1; margin: 0; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.08rem; color: var(--ink2); margin: 0; text-wrap: pretty; }
+
+  /* ---- sections ---- */
+  section { display: flex; flex-direction: column; gap: 1rem; }
+  section > h2 {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.06rem; font-weight: 600; letter-spacing: -0.02em;
+    margin: 0; padding-top: 1.75rem; border-top: 1px solid var(--line);
+    text-wrap: balance;
+  }
+  p { margin: 0; text-wrap: pretty; }
+  strong { font-weight: 600; }
+  .note { color: var(--ink2); font-size: 0.94rem; }
+
+  /* ---- state chips ----
+     The colour is carried by a swatch, never as a fill behind white text:
+     white on the validated green computes to 2.8:1 and on the orange to 3.2:1,
+     both below AA at this size. The swatch needs no contrast ratio because it
+     carries no text, and the label keeps full ink contrast in both themes. */
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.4em;
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.09em;
+    color: var(--ink); white-space: nowrap;
+  }
+  .chip::before {
+    content: ""; width: 0.66em; height: 0.66em; border-radius: 2px;
+    flex: none; background: var(--muted);
+  }
+  .chip.crit::before { background: var(--bad); }
+  .chip.warn::before { background: var(--info); }
+  .chip.ok::before   { background: var(--good); }
+
+  /* ---- state legend ---- */
+  .states { display: flex; flex-direction: column; gap: 0; }
+  .state-row {
+    display: grid; grid-template-columns: 5.4rem 3.1rem 1fr;
+    gap: 0.9rem; align-items: baseline;
+    padding: 0.6rem 0; border-bottom: 1px solid var(--line);
+  }
+  .state-row:first-child { border-top: 1px solid var(--line); }
+  .state-count {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink2);
+    font-size: 0.92rem;
+  }
+  .state-meaning { font-size: 0.96rem; }
+
+  /* ---- the three cards ---- */
+  .cards { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .card {
+    border-top: 1px solid var(--line); padding: 1rem 0;
+    display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .card:last-child { border-bottom: 1px solid var(--line); }
+  .card-name {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .card-q { font-size: 0.96rem; color: var(--ink2); }
+  .card-now {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.84rem; font-variant-numeric: tabular-nums;
+    display: flex; flex-wrap: wrap; gap: 0.5rem 0.85rem; align-items: baseline;
+  }
+
+  /* ---- callout ---- */
+  .callout {
+    background: var(--card); border: 1px solid var(--rule-strong);
+    border-radius: 2px; padding: 1.3rem 1.4rem;
+    display: flex; flex-direction: column; gap: 0.7rem;
+  }
+
+  /* ---- freshness table ---- */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.5rem 0.9rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+  th {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink2); border-bottom-color: var(--rule-strong);
+    white-space: nowrap;
+  }
+  td.mono {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  td.never { color: var(--ink2); }
+
+  ul { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  li::marker { color: var(--muted); }
+
+  footer {
+    border-top: 1px solid var(--line); padding-top: 1.5rem;
+    color: var(--ink2); font-size: 0.88rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em; background: var(--card);
+    border: 1px solid var(--line); border-radius: 3px; padding: 0.05em 0.32em;
+  }
+  a { color: inherit; text-decoration-color: var(--muted); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; border-radius: 2px; }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">clevermethod &middot; fleet.thudstaff.com</p>
+    <h1>Reading the Fleet Page</h1>
+    <p class="standfirst">
+      One page showing how 84 client sites across 6 hosts are actually doing —
+      backups, WordPress versions, tracker leakage, mail authentication. It
+      replaces the audit spreadsheet. Everything on it was measured by a script,
+      not typed by a person.
+    </p>
+  </header>
+
+  <section>
+    <h2>First thing to know: it never touches a client site</h2>
+    <p>
+      Every tool feeding this page is <strong>read-only</strong>. Nothing updates
+      a plugin, edits a file or changes a setting anywhere. It looks and it
+      records. Applying fixes stays a human decision, made somewhere else.
+    </p>
+    <p class="note">
+      So you can click anything on the page without consequence. The worst you
+      can do is read a stale number.
+    </p>
+  </section>
+
+  <section>
+    <h2>Three cards, three separate questions</h2>
+    <p>
+      Each card answers one question, and a site gets a status on each
+      <em>independently</em>. A site can be beautifully maintained and still leak
+      trackers. Don't read one card's status as the site's overall grade — there
+      isn't one.
+    </p>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card-name">FLEET HEALTH</span>
+        <span class="card-q">Is this site being maintained — backups, PHP, WordPress, plugins?</span>
+        <span class="card-now">
+          <span><span class="chip crit">CRIT</span> 2</span>
+          <span><span class="chip warn">WARN</span> 73</span>
+          <span><span class="chip ok">OK</span> 4</span>
+          <span class="note">+ 3 skip, 1 frozen</span>
+        </span>
+      </div>
+
+      <div class="card">
+        <span class="card-name">COOKIE CONSENT</span>
+        <span class="card-q">Does the homepage fire trackers before anyone consents?</span>
+        <span class="card-now">
+          <span><span class="chip warn">WARN</span> 48</span>
+          <span><span class="chip ok">OK</span> 21</span>
+          <span><span class="chip unknown">UNKNOWN</span> 10</span>
+        </span>
+        <span class="note">
+          41 fire trackers before consent; 44 have no consent tooling at all.
+          Never CRIT by design — CRIT stays a security tier so it remains a list
+          somebody works through. These are technical observations, not legal
+          conclusions.
+        </span>
+      </div>
+
+      <div class="card">
+        <span class="card-name">EMAIL DNS</span>
+        <span class="card-q">Can this domain send mail that authenticates?</span>
+        <span class="card-now">
+          <span>SPF 72/78</span>
+          <span>DKIM 70/78</span>
+          <span>DMARC 78/78</span>
+        </span>
+        <span class="note">
+          Scored per <em>domain</em>, not per site, so it has no column in the
+          big table at the bottom.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the colours mean</h2>
+    <p class="note">
+      Note that WARN is blue, not amber. The obvious green-and-amber pair failed
+      colourblind separation when it was tested, so the page uses a validated set
+      instead.
+    </p>
+    <div class="states">
+      <div class="state-row">
+        <span><span class="chip crit">CRIT</span></span>
+        <span class="state-count">2</span>
+        <span class="state-meaning">act now</span>
+      </div>
+      <div class="state-row">
+        <span><span class="chip warn">WARN</span></span>
+        <span class="state-count">73</span>
+        <span class="state-meaning">schedule it</span>
+      </div>
+      <div class="state-row">
+        <span><span class="chip ok">OK</span></span>
+        <span class="state-count">4</span>
+        <span class="state-meaning">nothing pending that needs a person</span>
+      </div>
+      <div class="state-row">
+        <span><span class="chip skip">SKIP</span></span>
+        <span class="state-count">3</span>
+        <span class="state-meaning">no environment to measure</span>
+      </div>
+      <div class="state-row">
+        <span><span class="chip frozen">FROZEN</span></span>
+        <span class="state-count">1</span>
+        <span class="state-meaning">site frozen by Pantheon</span>
+      </div>
+    </div>
+    <p class="note">
+      Statuses are worked out when the page is drawn, not when the scan ran. So
+      retuning a threshold rescores every run in history at once, instead of
+      looking like 84 sites changed overnight.
+    </p>
+  </section>
+
+  <section>
+    <h2>The one idea worth carrying away</h2>
+    <div class="callout">
+      <p><strong>Not knowing is never shown as a pass.</strong></p>
+      <p>
+        The failure this whole system is built against is a confident-looking
+        value standing in for an absence — <code>plugin_updates: 0</code> when
+        nobody looked, <code>up-to-date</code> when the check timed out. That has
+        happened, repeatedly, and almost every instance was caught by a person
+        reading a page rather than by a test.
+      </p>
+      <p>
+        So coverage sits on the same screen as the answer. A green row is worth
+        exactly as much as the coverage behind it, and the page tells you what
+        that coverage is.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why almost everything is WARN</h2>
+    <p>
+      Because <strong>32 sites have been looked at but have no health evidence
+      at all</strong> — no backup age, no plugin count, no theme count. They
+      score WARN for that reason alone, not because anything is known to be
+      wrong with them.
+    </p>
+    <p>
+      <strong>That 32 is the scoreboard.</strong> It is the number that measures
+      whether this project is working, and watching it fall is what progress
+      looks like. Most of it is sites on a host the scanner cannot reach yet.
+      You can see exactly which ones by filtering the table at the bottom of the
+      page to <em>No health evidence</em>.
+    </p>
+    <p class="note">
+      Among the sites we <em>can</em> see: 42 are behind on WordPress core, 18
+      have a plugin backlog, 2 have no recent database backup, and 1 runs PHP
+      past the end of security support.
+    </p>
+  </section>
+
+  <section>
+    <h2>How fresh is any of this</h2>
+    <p>
+      <strong>Nothing is scheduled yet.</strong> Every number on the page came
+      from a run someone started by hand. The page always says when each tool
+      last ran, so check that line before quoting anything from it.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Source</th><th>Last run</th><th>Coverage</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Health (Pantheon + WP-CLI)</td><td class="mono">Aug 23, 9:21 AM</td><td class="mono">48 of 52</td></tr>
+          <tr><td>Cookie consent</td><td class="mono">Aug 22, 9:09 PM</td><td class="mono">69 of 78</td></tr>
+          <tr><td>Email DNS</td><td class="mono">Aug 22, 9:08 PM</td><td class="mono">78 of 78</td></tr>
+          <tr><td>Nexcess estate</td><td class="mono never">never run</td><td class="mono">0 of 21</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      Nexcess is built but blocked — the host's API is behind a bot challenge.
+      It is listed anyway, reading zero, because a source that is silently
+      missing is indistinguishable from one that found nothing.
+    </p>
+  </section>
+
+  <section>
+    <h2>Where a person is actually needed</h2>
+    <ul>
+      <li>
+        <strong>Needs a decision</strong> lists 5 sites nobody has ruled on —
+        no owner, no answer to whether they count as production. They are treated
+        as production until someone decides, because guessing the other way once
+        hid the worst-maintained site on the fleet.
+      </li>
+      <li>
+        <strong>Sites that do not reconcile</strong> shows sites appearing in one
+        source but not another. Every one of those disagreements has turned out
+        to be worth looking at.
+      </li>
+      <li>
+        <strong>What changed</strong> is the short list since each tool last ran —
+        the part to read if you only read one section.
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>
+      Figures on this page were measured on <strong>23 August 2026</strong> and
+      will drift. The live page is the source of truth.
+    </p>
+    <p>
+      Access is granted per person. If a page asks you to sign in and then says
+      you are not authorised, you need adding to the list — ask Doug.
+    </p>
+  </footer>
+
+</div>
