@@ -345,7 +345,8 @@ consent sweep ran and nothing about maintenance had changed.
 ./scripts/fleet-nexcess.py discover --stamp "$(date -u +%Y-%m-%d_%H%M)"
 node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs npm i
 ./scripts/fleet-ledger.py ingest --reports ./reports --history ./history
-./scripts/render-dashboard.py --out fleet.html                        # the page
+./scripts/render-dashboard.py --out fleet.html \
+    --components-out components.html                                  # both pages
 ./scripts/publish-dashboard.sh --dry-run                              # preview
 ./scripts/serve-dashboard.py --dir ./reports --open                   # live view
 ```

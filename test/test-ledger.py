@@ -1192,6 +1192,77 @@ check("components_checked is deep-only, so an api-only run reads unknown",
              "components_checked") == L.UNKNOWN)
 
 
+
+# ---------------------------------------------------------------------------
+print("\n-- the component catalogue page --")
+
+check("load_components on a missing file is [] , not a traceback",
+      L.load_components("/nonexistent-history-dir") == [])
+
+_tmp = tempfile.mkdtemp()
+try:
+    hist = os.path.join(_tmp, "history")
+    os.makedirs(hist)
+    with open(os.path.join(hist, "components.jsonl"), "w") as fh:
+        for r in ({"run_id": "r1", "site_id": "a.com", "slug": "pods",
+                   "type": "plugin", "version": "3.3.9.1"},
+                  {"run_id": "r2", "site_id": "a.com", "slug": "pods",
+                   "type": "plugin", "version": "3.3.9.1"}):
+            fh.write(json.dumps(r) + "\n")
+    check("load_components narrows to one run when asked",
+          len(L.load_components(hist, "r1")) == 1
+          and len(L.load_components(hist)) == 2)
+finally:
+    shutil.rmtree(_tmp, ignore_errors=True)
+
+# The renderer, driven through its real entry points.
+_rspec = importlib.util.spec_from_file_location(
+    "renderer", os.path.join(ROOT, "scripts", "render-dashboard.py"))
+RD = importlib.util.module_from_spec(_rspec)
+_rspec.loader.exec_module(RD)
+
+_sites = [{"site_id": "a.com", "host": "CM Pantheon"},
+          {"site_id": "b.com", "host": "CM Pantheon"}]
+_rows = [{"site_id": "a.com", "slug": "pods", "type": "plugin",
+          "version": "3.3.9.1", "status": "active", "update_available": False,
+          "update_version": None},
+         {"site_id": "a.com", "slug": "akismet", "type": "plugin",
+          "version": "5.3", "status": "inactive", "update_available": True,
+          "update_version": "5.3.4"}]
+_c = RD.build_components(_rows, _sites, {"a.com"}, _sites)
+check("the catalogue is keyed on (slug, type), not display name",
+      sorted(x["slug"] for x in _c["catalogue"]) == ["akismet", "pods"])
+check("a site with no inventory is NAMED, not just missing from a count",
+      _c["sites_missing"] == ["b.com"], repr(_c))
+check("pending is counted from update_available, not from row count",
+      {x["slug"]: x["pending"] for x in _c["catalogue"]}
+      == {"pods": 0, "akismet": 1})
+
+# THE ABSENCE CASE. An empty catalogue must say so in words. Rendering an
+# empty table would state "this fleet runs no plugins", which is never true
+# and is the exact failure this project keeps making.
+_empty = RD.build_components([], _sites, set(), _sites)
+_m = {"components": _empty, "sites": _sites, "generated": "x",
+      "latest": {}, "coverage": []}
+_html = RD.render_components(_m)
+check("an empty catalogue says no inventory exists, in words",
+      "No component has been inventoried yet" in _html)
+check("...and does not render an empty table as an answer",
+      "<table" not in _html, _html[-300:])
+check("...and the coverage statement still names a denominator",
+      "0 of 2" in _html, _html[:1200])
+
+_full = RD.render_components({"components": _c, "sites": _sites,
+                              "generated": "x",
+                              "latest": {"health": {"run_id": "r1"}},
+                              "coverage": []})
+check("a populated catalogue renders a table",
+      "<table" in _full and "pods" in _full)
+check("...and states coverage before the table",
+      _full.index("can see") < _full.index("<table"))
+check("...and names the uninventoried site on the page",
+      "b.com" in _full)
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))

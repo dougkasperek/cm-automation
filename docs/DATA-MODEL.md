@@ -135,8 +135,11 @@ inventoried site the first time the new scanner runs; without those entries
 that one event lands as ~46 rows of fleet news, which is precisely what
 `wp_checked` did on the first full-mode run.
 
-Nothing reads this file yet. The component page is the next step; see
-`docs/VULN-INTEL-REVIEW.md` section 5.
+Read by `render-dashboard.py --components-out`, which renders the component
+catalogue. The fleet page's plugin count links into it per site, and its
+coverage line is drawn from the INVENTORY (Pantheon sites), not from these
+rows, so an empty ledger reads "0 of 53" rather than rendering an empty
+catalogue as a complete answer.
 
 ### 3. The dashboard
 

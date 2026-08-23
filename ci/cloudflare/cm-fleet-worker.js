@@ -14,6 +14,7 @@
  *
  * Routes
  *   GET /                  -> R2 fleet/dashboard.html
+ *   GET /components        -> R2 fleet/components.html   (added 2026-08-23)
  *   GET /api/fleet-scan    -> R2 fleet/latest.json
  *                             {"schema":"fleet-dashboard/2", ...} since
  *                             2026-08-19. The old {stamp, kind, rows} shape is
@@ -73,6 +74,15 @@ export default {
 
     if (path === "/" || path === "/index.html") {
       return serve(env, PREFIX + "dashboard.html", "text/html; charset=utf-8");
+    }
+
+    // The component catalogue. The fleet page's plugin count links here, so
+    // this route and fleet/components.html must both exist or that link is
+    // dead. Adding a route to this file changes NOTHING until someone runs
+    // `wrangler deploy` from ci/cloudflare -- on 2026-08-20 an audit found the
+    // deployed Worker a full day behind this file.
+    if (path === "/components" || path === "/components.html") {
+      return serve(env, PREFIX + "components.html", "text/html; charset=utf-8");
     }
 
     return new Response("Not found", { status: 404, headers: SEC });

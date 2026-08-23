@@ -789,6 +789,31 @@ def ingest(reports_dir, history_dir, inventory=None):
     }
 
 
+def load_components(history_dir, run_id=None):
+    """Component rows, optionally narrowed to one run.
+
+    An ABSENT file returns [] and that is not the same as "this fleet runs no
+    plugins". components.jsonl does not exist until the first full scan after
+    2026-08-23 has been ingested, so every caller must decide what it shows
+    when there are no rows -- the renderer states coverage from the INVENTORY
+    rather than from these rows, so an empty ledger reads "0 of 53" instead of
+    silently rendering an empty catalogue as a complete one.
+    """
+    path = os.path.join(history_dir, "components.jsonl")
+    if not os.path.exists(path):
+        return []
+    rows = []
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            if run_id is None or r.get("run_id") == run_id:
+                rows.append(r)
+    return rows
+
+
 def load_ledger(history_dir):
     obs_path = os.path.join(history_dir, "observations.jsonl")
     runs_path = os.path.join(history_dir, "runs.jsonl")

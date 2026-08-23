@@ -230,6 +230,42 @@ is what you committed.**
 
 ---
 
+## The component catalogue, `/components`
+
+**Added 2026-08-23.** A second page listing every plugin, mu-plugin and theme
+installed across the fleet, and which sites run each one. Rendered by the same
+script and the same model as the fleet page, so the two cannot disagree:
+
+```bash
+./scripts/render-dashboard.py --out fleet.html --components-out components.html
+```
+
+**It is plugin-major, and that is the whole point.** A per-site view answers
+"what is pending here", which the fleet table's count already answers. The
+question a count cannot answer is "which of our sites run this component, at
+what versions" -- the one that mattered when Pods CVE-2026-19598 was disclosed
+on 2026-08-15 with no patch for about 36 hours. The fleet table's plugin count
+links to `/components?site=<domain>`, so the per-site view is still one click
+away.
+
+**Linked only where an inventory exists.** A site can carry a plugin count from
+a run made before component capture was switched on; a link from that count
+would land on a page with nothing to show. Those cells stay plain text. 47 of
+84 rows are linked today.
+
+**THE WORKER NEEDS DEPLOYING FOR THE ROUTE TO EXIST.** `/components` was added
+to `ci/cloudflare/cm-fleet-worker.js` in the same change, and editing that file
+changes nothing until someone runs `wrangler deploy` from `ci/cloudflare`.
+Until that happens the link on the live fleet page 404s. Claude cannot deploy.
+Read the deployed code back afterwards rather than trusting the source file --
+on 2026-08-20 an audit found the deployed Worker a full day behind the repo.
+
+`publish-dashboard.sh` uploads `components.html` in the SAME loop as
+`dashboard.html`, deliberately: publishing one without the other leaves the
+link dead for however long they are out of step.
+
+---
+
 ## Access: what is configured
 
 **This section is the record.** It used to live in project memory as

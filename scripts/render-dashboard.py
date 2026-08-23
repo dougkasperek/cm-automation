@@ -210,6 +210,19 @@ def build_model(history_dir, inventory_path, today):
     # and moves the moment a real scan lands. See CLAUDE.md, "Adding a
     # workflow to the suite", step 5 -- every future source's coverage line
     # must follow this shape, not the `if source in latest` shape above.
+    # Component inventory. Same shape as the Nexcess line below and for the
+    # same reason: the denominator is the INVENTORY (which sites this scan is
+    # expected to reach), never the component rows themselves. Counting rows
+    # would make an empty ledger read as full coverage of nothing.
+    comp_rows = (L.load_components(history_dir, latest["health"]["run_id"])
+                 if "health" in latest else [])
+    pantheon_sites = [s for s in sites if s.get("host") == "CM Pantheon"]
+    inventoried = set(r["site_id"] for r in comp_rows)
+    if pantheon_sites:
+        coverage.append(("Component inventory (plugins, mu-plugins, themes)",
+                         (len(inventoried & set(s["site_id"] for s in pantheon_sites)),
+                          len(pantheon_sites))))
+
     nexcess_sites = [s for s in sites if s.get("host") == "CM Nexcess"]
     if nexcess_sites:
         nx_known = sum(1 for s in nexcess_sites
@@ -223,6 +236,8 @@ def build_model(history_dir, inventory_path, today):
     return {
         "runs": runs, "latest": latest, "changes": changes, "standing": standing,
         "sites": sites, "coverage": coverage, "inventory_count": len(inv),
+        "components": build_components(comp_rows, sites, inventoried,
+                                       pantheon_sites),
         "unreconciled": unreconciled, "health": health,
         "coverage_changes": coverage_changes,
         # The latest run of a source measured fewer sites than the run before
@@ -271,6 +286,58 @@ EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               "consent_banner_detected", "consent_pre_trackers",
               "consent_pre_tracker_names", "consent_mode_denied",
               "consent_http_status", "consent_final_url")
+
+
+def build_components(rows, sites, inventoried, expected_sites):
+    """Component catalogue, keyed on (slug, type) -- never on display name.
+
+    Plugin-major on purpose. A per-site view answers "what is pending here",
+    which the fleet table already answers with a count. The question a count
+    cannot answer is the one that mattered when Pods CVE-2026-19598 landed on
+    2026-08-20: WHICH sites run this component, at what versions. That is a
+    pivot of the same rows, and it is why this is a page rather than a popout
+    hanging off a table cell.
+    """
+    host = {s["site_id"]: (s.get("host") or "") for s in sites}
+    by = {}
+    for r in rows:
+        k = (r["slug"], r["type"])
+        g = by.setdefault(k, {"slug": r["slug"], "type": r["type"], "installs": []})
+        g["installs"].append(r)
+    cat = []
+    for g in by.values():
+        inst = sorted(g["installs"], key=lambda x: x["site_id"])
+        versions = sorted(set(x.get("version") or L.UNKNOWN for x in inst))
+        cat.append({
+            "slug": g["slug"],
+            "type": g["type"],
+            "sites": len(inst),
+            "versions": versions,
+            "pending": sum(1 for x in inst if x.get("update_available")),
+            "inactive": sum(1 for x in inst if x.get("status") == "inactive"),
+            "installs": [{"site_id": x["site_id"],
+                          "host": host.get(x["site_id"], ""),
+                          "version": x.get("version") or L.UNKNOWN,
+                          "status": x.get("status") or L.UNKNOWN,
+                          "update_available": bool(x.get("update_available")),
+                          "update_version": x.get("update_version")}
+                         for x in inst],
+        })
+    # Most-installed first: a component on 45 sites is the one a CVE would
+    # cost most to answer for.
+    cat.sort(key=lambda c: (-c["sites"], c["slug"].lower()))
+
+    expected = set(s["site_id"] for s in expected_sites)
+    return {
+        "catalogue": cat,
+        "rows": len(rows),
+        "sites_inventoried": sorted(inventoried & expected),
+        # Named, not counted. "5 sites are missing" is a number nobody can act
+        # on; the list is the work.
+        "sites_missing": sorted(expected - inventoried),
+        "expected": sorted(expected),
+        "pending_total": sum(1 for r in rows if r.get("update_available")),
+    }
 
 
 def emit_data(m):
@@ -451,6 +518,18 @@ code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
 input,select{font:13px inherit;padding:7px 10px;border:1px solid var(--line);border-radius:7px;
  background:var(--card);color:var(--ink);min-width:150px}
 .quiet{color:var(--ink2)}
+/* There was no `a` rule at all until 2026-08-23, because until then the page
+   had no links. The component catalogue added 48 of them -- one per
+   inventoried site in the plugin column, plus the back link -- and they all
+   rendered as the browser default rgb(0,0,238) on the dark ground, about 2:1.
+   Mixed toward --ink rather than using --info raw: that darkens the link in
+   light mode and lightens it in dark, so both land above 4.5:1 instead of
+   light mode sitting at 4.1. */
+a{color:color-mix(in srgb,var(--info) 85%,var(--ink));
+ text-decoration-color:color-mix(in srgb,currentColor 45%,transparent);
+ text-underline-offset:2px}
+a:hover{text-decoration-color:currentColor}
+a:focus-visible{outline:2px solid var(--info);outline-offset:2px;border-radius:3px}
 .big-quiet{padding:6px 0 2px;color:var(--ink2);font-size:14px}
 details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:13px}
 .foot{color:var(--ink2);font-size:12px;margin-top:34px;border-top:1px solid var(--line);padding-top:14px}
@@ -1134,6 +1213,22 @@ def render(m):
             return '<span class=quiet>not checked</span>'
         return e(v)
 
+    inventoried = set(m["components"]["sites_inventoried"])
+
+    def plugin_cell(s):
+        """The pending-update count, linked to the component catalogue.
+
+        LINKED ONLY WHERE AN INVENTORY EXISTS. A site can carry a count from a
+        run made before component capture was switched on, and a link from
+        that count would land on a page with nothing to show for it -- a count
+        promising names that were never recorded. Those cells stay plain text.
+        """
+        cell = observed(s.get("plugin_updates"))
+        if s["site_id"] not in inventoried:
+            return cell
+        return ('<a href="/components?site=%s" title="Which plugins, and at '
+                'what versions">%s</a>' % (e(s["site_id"]), cell))
+
     def wp_version_cell(v, plane=None):
         """The WordPress version, and where it was read from.
 
@@ -1209,7 +1304,7 @@ def render(m):
              e(s.get("upstream_pending", "—")),
              wp_version_cell(s.get("wp_version"), s.get("nexcess_app_version")),
              observed(s.get("wp_core_update")),
-             observed(s.get("plugin_updates")),
+             plugin_cell(s),
              observed(s.get("theme_updates")),
              yn(s.get("spf_present")), e(s.get("dkim_selector") or "—"),
              yn(s.get("dmarc_at_sending_present")), yn(s.get("dmarc_at_from_present")),
@@ -1265,12 +1360,238 @@ def render(m):
     return "".join(o)
 
 
+COMPONENT_CSS = """
+.tablewrap{overflow-x:auto}
+#cat th[data-sort]{cursor:pointer;user-select:none;white-space:nowrap}
+#cat th[data-sort]:hover{color:var(--ink)}
+#cat th[data-sort]::after{content:"";opacity:.35;margin-left:5px}
+#cat th.asc::after{content:"\\2191";opacity:1}
+#cat th.desc::after{content:"\\2193";opacity:1}
+#cat td{vertical-align:top}
+#cat summary{cursor:pointer;color:var(--ink2);font-size:12.5px}
+.installs{margin-top:6px;display:flex;flex-direction:column;gap:3px;
+ max-height:230px;overflow-y:auto;padding-right:4px}
+.install{display:flex;gap:8px;align-items:baseline;font-size:12.5px}
+.install .v{font-variant-numeric:tabular-nums;color:var(--ink2)}
+tr.hide{display:none}
+"""
+
+# No framework, no build step, and it degrades to a plain readable table with
+# scripting off -- the filters simply do nothing. Same choice as the fleet
+# page's own filter script.
+COMPONENT_JS = """<script>
+(function(){
+ var rows=[].slice.call(document.querySelectorAll('#cat tr[data-slug]'));
+ var q=document.getElementById('q'), ty=document.getElementById('type'),
+     sc=document.getElementById('scope'), cnt=document.getElementById('count');
+
+ // Deep link: components.html?site=galbanicheese.com arrives from the fleet
+ // table's plugin count, so that cell can still answer the per-site question
+ // in one click.
+ var pre=new URLSearchParams(location.search).get('site');
+ if(pre){ q.value=pre; }
+
+ function apply(){
+   var t=(q.value||'').trim().toLowerCase(), ty_=ty.value, sc_=sc.value, n=0;
+   rows.forEach(function(r){
+     var ok=true;
+     if(t && r.dataset.slug.indexOf(t)<0 &&
+        (' '+r.dataset.sitesList+' ').indexOf(t)<0) ok=false;
+     if(ok && ty_ && r.dataset.type!==ty_) ok=false;
+     if(ok && sc_ && (' '+r.dataset.flags+' ').indexOf(sc_)<0) ok=false;
+     r.classList.toggle('hide', !ok);
+     if(ok) n++;
+   });
+   cnt.textContent = n+' of '+rows.length+' components';
+ }
+ [q,ty,sc].forEach(function(el){
+   el.addEventListener('input', apply); el.addEventListener('change', apply); });
+ apply();
+
+ var tbl=document.getElementById('cat'), dir={};
+ [].slice.call(tbl.querySelectorAll('th[data-sort]')).forEach(function(th){
+   th.addEventListener('click', function(){
+     var k=th.dataset.sort, d=dir[k]=(dir[k]==='asc'?'desc':'asc');
+     [].slice.call(tbl.querySelectorAll('th')).forEach(function(o){
+       o.classList.remove('asc','desc'); });
+     th.classList.add(d);
+     var num={sites:'nSites',vers:'nVers',pending:'nPending'}[k];
+     rows.sort(function(a,b){
+       var va,vb;
+       if(num){ va=+a.dataset[num]; vb=+b.dataset[num]; }
+       else { va=a.dataset[k]||''; vb=b.dataset[k]||''; }
+       if(va<vb) return d==='asc'?-1:1;
+       if(va>vb) return d==='asc'?1:-1;
+       // Stable tiebreak on slug, so equal counts do not shuffle between
+       // clicks and look like the data moved.
+       return a.dataset.slug<b.dataset.slug?-1:1;
+     });
+     rows.forEach(function(r){ tbl.appendChild(r); });
+   });
+ });
+})();
+</script>"""
+
+
+def render_components(m):
+    """The component catalogue, plugin-major.
+
+    A SEPARATE PAGE rather than a popout on the fleet table. A popout lives in
+    a site row, so it can only ever answer "what is pending on this site" --
+    which the count in that row already answers. The question a count cannot
+    answer is "which of our sites run this component, at what versions", and
+    that is the one that mattered when Pods CVE-2026-19598 landed with no
+    patch for ~36 hours. Same rows, pivoted.
+    """
+    c = m["components"]
+    cat = c["catalogue"]
+    o = []
+    A = o.append
+    A("<!doctype html><html lang=en><meta charset=utf-8>")
+    A('<meta name=viewport content="width=device-width,initial-scale=1">')
+    A("<title>clevermethod fleet &mdash; components</title><style>%s%s</style>"
+      % (css(), COMPONENT_CSS))
+    A('<div class=wrap>')
+
+    A('<div class=masthead>')
+    A("<h1>Components</h1>")
+    A('<p class=sub>Every plugin, mu-plugin and theme installed across the '
+      'fleet, and which sites run it. <a href="/">Back to the fleet '
+      'page</a>.</p>')
+    A("</div>")
+
+    # COVERAGE FIRST, and named rather than counted. A search for `pods` that
+    # returns three sites reads as "three sites run pods" unless the page has
+    # already said how much of the fleet it can see. The sites it cannot see
+    # are listed, because "6 sites are missing" is a number nobody can act on.
+    inv_n, exp_n = len(c["sites_inventoried"]), len(c["expected"])
+    tone = "good" if inv_n >= exp_n else "info"
+    A('<div class="card" style="margin-bottom:14px">')
+    A('<div><b>This page can see %d of %d Pantheon sites.</b> '
+      'Nothing here is a statement about the other %d, or about the %d sites '
+      'on other hosts &mdash; no component has ever been listed for them.</div>'
+      % (inv_n, exp_n, exp_n - inv_n,
+         len([x for x in m["sites"] if (x.get("host") or "") != "CM Pantheon"])))
+    if c["sites_missing"]:
+        A('<div class=quiet style="margin-top:6px">Not inventoried: %s</div>'
+          % ", ".join("<code>%s</code>" % e(x) for x in c["sites_missing"]))
+    A('<div class="cov %s" style="margin-top:10px"><div style="color:var(--ink)">'
+      'Component inventory</div><div class=n>%d of %d</div>'
+      '<div class="m meter"><i style="width:%.1f%%"></i></div></div>'
+      % (tone, inv_n, exp_n, (100.0 * inv_n / exp_n) if exp_n else 0))
+    A("</div>")
+
+    if not cat:
+        # An empty catalogue is an ABSENCE, never an empty list rendered as a
+        # complete answer.
+        A('<div class="card"><b>No component has been inventoried yet.</b> '
+          '<span class=quiet>The scanner keeps this from the full (SSH) run '
+          'only, and no such run has been ingested since the inventory was '
+          'switched on. This is not a fleet that runs no plugins.</span></div>')
+        A("</div>")
+        return "\n".join(o)
+
+    A('<div class=kpis style="margin-bottom:14px">')
+    for lab, val, note in (
+            ("distinct components", len(cat),
+             "%d installs across %d sites" % (c["rows"], inv_n)),
+            ("updates pending", c["pending_total"],
+             "%d component(s) have one waiting"
+             % len([x for x in cat if x["pending"]])),
+            ("on more than one site", len([x for x in cat if x["sites"] > 1]),
+             "shared components; a CVE in one is a fleet question"),
+            ("version spread", len([x for x in cat if len(x["versions"]) > 1]),
+             "run at more than one version across the fleet")):
+        A('<div class=kpi><div class=lab>%s</div><div class=val>%d</div>'
+          '<div class=note>%s</div></div>' % (e(lab), val, e(note)))
+    A("</div>")
+
+    A('<div class=filters>')
+    A('<input id=q type=search placeholder="Search component or site&hellip;" '
+      'autocomplete=off>')
+    A('<select id=type><option value="">every type</option>'
+      '<option value=plugin>plugin</option>'
+      '<option value=mu-plugin>mu-plugin</option>'
+      '<option value=theme>theme</option></select>')
+    A('<select id=scope><option value="">every component</option>'
+      '<option value=pending>updates pending</option>'
+      '<option value=spread>more than one version</option>'
+      '<option value=shared>on more than one site</option></select>')
+    A('<span class=quiet id=count style="align-self:center"></span>')
+    A("</div>")
+
+    A('<div class=tablewrap><table id=cat>')
+    A("<tr><th data-sort=slug>Component</th><th data-sort=type>Type</th>"
+      "<th data-sort=sites class=num>Sites</th>"
+      "<th data-sort=vers class=num>Versions</th>"
+      "<th data-sort=pending class=num>Pending</th>"
+      "<th>Where it runs</th></tr>")
+    for x in cat:
+        sites_attr = " ".join(i["site_id"].lower() for i in x["installs"])
+        flags = []
+        if x["pending"]:
+            flags.append("pending")
+        if len(x["versions"]) > 1:
+            flags.append("spread")
+        if x["sites"] > 1:
+            flags.append("shared")
+        A('<tr data-slug="%s" data-type="%s" data-sites-list="%s" '
+          'data-flags="%s" data-n-sites="%d" data-n-vers="%d" '
+          'data-n-pending="%d">'
+          % (e(x["slug"].lower()), e(x["type"]), e(sites_attr),
+             " ".join(flags), x["sites"], len(x["versions"]), x["pending"]))
+        A("<td><code>%s</code></td>" % e(x["slug"]))
+        A("<td class=quiet>%s</td>" % e(x["type"]))
+        A("<td class=num>%d</td>" % x["sites"])
+        # The VERSION SPREAD is the column a count cannot give you: one
+        # component at five versions across the fleet is five different
+        # answers to "are we affected".
+        A('<td class=num>%s</td>'
+          % (("<b>%d</b>" % len(x["versions"])) if len(x["versions"]) > 1
+             else str(len(x["versions"]))))
+        A("<td class=num>%s</td>"
+          % (('<span class="chip info"><span class=dot></span>%d</span>'
+              % x["pending"]) if x["pending"] else '<span class=quiet>0</span>'))
+        A("<td>")
+        A("<details><summary>%d site%s</summary><div class=installs>"
+          % (x["sites"], "" if x["sites"] == 1 else "s"))
+        for i in x["installs"]:
+            bits = [e(i["version"])]
+            if i["update_available"] and i["update_version"]:
+                bits.append("&rarr; %s" % e(i["update_version"]))
+            elif i["update_available"]:
+                bits.append("&rarr; update available")
+            st = ""
+            if i["status"] in ("inactive", "must-use", "parent"):
+                st = ' <span class=quiet>%s</span>' % e(i["status"])
+            A('<div class=install><code>%s</code>'
+              '<span class=v>%s</span>%s</div>'
+              % (e(i["site_id"]), " ".join(bits), st))
+        A("</div></details>")
+        A("</td></tr>")
+    A("</table></div>")
+
+    A('<p class=foot>Generated %s from <code>history/components.jsonl</code>, '
+      'run <code>%s</code>. Read-only. An <span class=quiet>inactive</span> '
+      'plugin is still on disk and is still listed; it is not evidence of '
+      'safety.</p>'
+      % (e(m["generated"]),
+         e((m["latest"].get("health") or {}).get("run_id", "unknown"))))
+    A("</div>")
+    A(COMPONENT_JS)
+    return "\n".join(o)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--history", default="./history")
     ap.add_argument("--inventory", default="./data/fleet-inventory.json")
     ap.add_argument("--out", default="./fleet.html")
+    ap.add_argument("--components-out", metavar="PATH",
+                    help="also render the component catalogue to PATH. The "
+                         "fleet table's plugin count links to it, so publishing "
+                         "one without the other leaves a dead link.")
     ap.add_argument("--emit-data", metavar="PATH",
                     help="also write the same model as JSON, for the Worker's "
                          "/api/fleet-scan route. Built from the model that "
@@ -1285,6 +1606,13 @@ def main():
     m = build_model(a.history, a.inventory, today)
     with open(a.out, "w") as fh:
         fh.write(render(m))
+    if a.components_out:
+        with open(a.components_out, "w") as fh:
+            fh.write(render_components(m))
+        c = m["components"]
+        print("components -> %s  (%d distinct, %d installs, %d of %d sites)"
+              % (a.components_out, len(c["catalogue"]), c["rows"],
+                 len(c["sites_inventoried"]), len(c["expected"])))
     if a.emit_data:
         with open(a.emit_data, "w") as fh:
             json.dump(emit_data(m), fh, indent=1, sort_keys=False)
