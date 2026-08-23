@@ -54,12 +54,30 @@ SEV = L.SEV
 # scripts/validate_palette.js in the dataviz skill: the deck's own severity green
 # and amber fail colourblind separation at protan delta-E 3.8.
 PALETTE = {
+    # Chrome from [removed] (src/form.html) so the company's apps read as one
+    # product: its paper, ink, hairlines and strong ink, not approximated.
+    #
+    # THE SEVERITY COLOURS ARE OURS AND DO NOT COME FROM SOWGEN. good/bad/info
+    # were validated for colourblind separation -- the obvious green+amber pair
+    # was REJECTED at protan delta-E 3.8, which is why WARN is blue here.
+    # [removed]'s --good #0E7A55 / --red #B4392F have not been through that, and
+    # in [removed] colour is decorative while here it carries the finding. Do not
+    # unify these two sets by eye.
+    #
+    # `strong` is [removed]'s --navy, named for its ROLE rather than its hue: it
+    # is the structural dark, and in dark mode it has to become light. A token
+    # called "navy" that renders pale is how a palette starts lying.
     "light": {"good": "#1baf7a", "bad": "#eb6834", "info": "#2a78d6", "muted": "#8d9199",
-              "surface": "#faf7f2", "card": "#ffffff", "ink": "#232320",
-              "ink2": "#5c5b55", "line": "#ece5da"},
+              "surface": "#efefea", "card": "#ffffff", "panel2": "#f6f6f1",
+              "ink": "#241e31", "ink2": "#6e6879", "faint": "#9c98a5",
+              "strong": "#1c122d", "line": "#d9d8d0", "line2": "#e7e6df"},
+    # [removed] ships light only. These are its counterparts, keeping the same
+    # purple-cast neutrals rather than the warm grey this page used before, so
+    # the two apps still look related with the lights off.
     "dark": {"good": "#199e70", "bad": "#d95926", "info": "#3987e5", "muted": "#8d9199",
-             "surface": "#1a1a19", "card": "#232320", "ink": "#f5f0e8",
-             "ink2": "#a09e96", "line": "#383835"},
+             "surface": "#17151c", "card": "#201d28", "panel2": "#1c1a23",
+             "ink": "#edeaf2", "ink2": "#a29cb0", "faint": "#7a7486",
+             "strong": "#edeaf2", "line": "#332e3d", "line2": "#2a2733"},
 }
 
 STATE_TONE = {
@@ -481,46 +499,73 @@ def css():
     out.append("}}")
     out.append("""
 *{box-sizing:border-box}
+/* Type stack, sizes and the square-cornered, uppercase-label treatment are
+   [removed]'s, so the two apps read as one product. Radius is 0 throughout
+   there; the only thing kept round here is the state dot, which is a dot. */
 body{margin:0;padding:28px 20px 64px;background:var(--surface);color:var(--ink);
- font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+ font:14px/1.5 "Helvetica Neue",Helvetica,Inter,-apple-system,BlinkMacSystemFont,
+ "Segoe UI",Arial,sans-serif}
 .wrap{max-width:1180px;margin:0 auto}
-h1{font-size:20px;margin:0 0 2px;font-weight:650}
-h2{font-size:15px;margin:34px 0 10px;font-weight:650;letter-spacing:.01em}
+h1{font-size:25px;margin:0 0 2px;font-weight:800;letter-spacing:-.022em;
+ line-height:1.08;color:var(--strong)}
+h2{font-size:12.5px;margin:34px 0 10px;font-weight:800;letter-spacing:.09em;
+ text-transform:uppercase;color:var(--strong)}
 .sub{color:var(--ink2);font-size:13px;margin:0 0 26px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:0;padding:18px 20px;margin-bottom:14px}
 /* Hero: one per view, >=48px, same sans, proportional figures (never tabular). */
-.hero{font-size:52px;line-height:1.05;font-weight:650;letter-spacing:-.02em;margin:2px 0 4px}
+.hero{font-size:52px;line-height:1.05;font-weight:800;letter-spacing:-.028em;margin:2px 0 4px;
+ color:var(--strong)}
 .hero-sub{color:var(--ink2);font-size:14px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
-.kpi .lab{color:var(--ink2);font-size:12px;margin-bottom:6px}
-.kpi .val{font-size:26px;font-weight:650;letter-spacing:-.01em}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:0;padding:14px 16px}
+.kpi .lab{color:var(--ink2);font-size:10.5px;margin-bottom:6px;font-weight:700;
+ letter-spacing:.07em;text-transform:uppercase}
+.kpi .val{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--strong)}
 .kpi .note{color:var(--ink2);font-size:12px;margin-top:4px}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font-weight:600;color:var(--ink2);font-size:12px;text-transform:uppercase;
- letter-spacing:.04em;padding:0 10px 8px 0;border-bottom:1px solid var(--line)}
+th{text-align:left;font-weight:800;color:var(--ink2);font-size:10.5px;text-transform:uppercase;
+ letter-spacing:.06em;padding:0 10px 8px 0;border-bottom:1px solid var(--line)}
 td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:none}
 td.num{font-variant-numeric:tabular-nums}
-code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+code{font:11.5px/1.55 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:var(--ink)}
 /* Chip: colour is never the only signal. The label is always present. */
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
- white-space:nowrap;padding:2px 9px 2px 7px;border-radius:999px;
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;
+ letter-spacing:.08em;text-transform:uppercase;
+ white-space:nowrap;padding:3px 8px 3px 7px;border-radius:0;
  border:1px solid color-mix(in srgb,currentColor 34%,transparent);
  background:color-mix(in srgb,currentColor 11%,transparent)}
-.chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+/* THE LABEL IS DARKENED, THE DOT IS NOT. The severity hues are validated for
+   colourblind SEPARATION, which is a different test from contrast against a
+   white card: as drawn they measure 2.8:1 (OK) and 3.2:1 (CRIT) as text, and
+   uppercasing them at 10px made that worse. Mixing the text toward --ink
+   lifts both above 4.5 while the dot keeps the exact validated colour -- a
+   swatch carries no text and has no ratio to meet. --ink flips in dark mode,
+   so the same rule darkens on paper and lightens on the dark ground. */
+/* Per-tone, not `.chip{...currentColor...}`. That first attempt lost to the
+   `.good{color:var(--good)}` rule below it: equal specificity, later wins, so
+   the ratios did not move at all. Measured before believing it. */
+.chip.good{color:color-mix(in srgb,var(--good) 62%,var(--ink))}
+.chip.bad{color:color-mix(in srgb,var(--bad) 62%,var(--ink))}
+.chip.info{color:color-mix(in srgb,var(--info) 62%,var(--ink))}
+.chip.muted{color:color-mix(in srgb,var(--muted) 62%,var(--ink))}
+.chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.chip.good .dot{background:var(--good)}
+.chip.bad .dot{background:var(--bad)}
+.chip.info .dot{background:var(--info)}
+.chip.muted .dot{background:var(--muted)}
 .good{color:var(--good)}.bad{color:var(--bad)}.info{color:var(--info)}.muted{color:var(--muted)}
 /* Meter: fill carries state, track is a lighter step of the SAME colour so the
    whole bar reads, per the marks spec. */
-.meter{height:7px;border-radius:999px;background:color-mix(in srgb,currentColor 18%,transparent);
+.meter{height:7px;border-radius:0;background:color-mix(in srgb,currentColor 18%,transparent);
  overflow:hidden;margin-top:7px}
-.meter>i{display:block;height:100%;background:currentColor;border-radius:999px}
+.meter>i{display:block;height:100%;background:currentColor;border-radius:0}
 .cov{display:grid;grid-template-columns:1fr auto;gap:2px 14px;align-items:baseline;margin-bottom:14px}
 .cov .n{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:12.5px}
 .cov .m{grid-column:1/-1}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-input,select{font:13px inherit;padding:7px 10px;border:1px solid var(--line);border-radius:7px;
- background:var(--card);color:var(--ink);min-width:150px}
+input,select{font:inherit;font-size:12px;padding:8px 10px;border:1px solid var(--line);
+ border-radius:0;background:var(--card);color:var(--ink);min-width:150px}
 /* EVERY table gets its own horizontal scroller, not just the site table.
    Measured at 390px on 2026-08-23: five of the six tables sat in plain cards
    with overflow-x:visible, so the whole document scrolled sideways on a
@@ -543,7 +588,7 @@ a{color:color-mix(in srgb,var(--info) 85%,var(--ink));
  text-decoration-color:color-mix(in srgb,currentColor 45%,transparent);
  text-underline-offset:2px}
 a:hover{text-decoration-color:currentColor}
-a:focus-visible{outline:2px solid var(--info);outline-offset:2px;border-radius:3px}
+a:focus-visible{outline:2px solid var(--info);outline-offset:2px;border-radius:0}
 .big-quiet{padding:6px 0 2px;color:var(--ink2);font-size:14px}
 details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:13px}
 .foot{color:var(--ink2);font-size:12px;margin-top:34px;border-top:1px solid var(--line);padding-top:14px}
@@ -557,13 +602,13 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:13px}
 .wfstates{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;margin-top:2px}
 .wfstate{display:flex;align-items:baseline;gap:6px}
 button.wfjump{background:none;border:0;padding:2px 4px;margin:-2px -4px;font:inherit;
-  cursor:pointer;border-radius:6px}
+  cursor:pointer;border-radius:0}
 button.wfjump:hover{background:rgba(0,0,0,.05)}
 button.wfjump:focus-visible{outline:2px solid var(--info);outline-offset:1px}
 .wfn{font-size:22px;font-weight:640;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .wfcov{margin-top:auto;padding-top:4px}
-.wfbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
-.wfbar i{display:block;height:100%;border-radius:3px}
+.wfbar{height:6px;border-radius:0;background:var(--line);overflow:hidden}
+.wfbar i{display:block;height:100%;border-radius:0}
 .wfbar i.good{background:var(--good)}
 .wfbar i.info{background:var(--info)}
 .wfbar i.bad{background:var(--bad)}
@@ -593,7 +638,7 @@ button.wfjump:focus-visible{outline:2px solid var(--info);outline-offset:1px}
 .runline{font-size:12.5px;color:var(--ink2);margin:0 0 26px}
 .runline b{color:var(--ink);font-weight:600}
 @media(max-width:720px){.topband{grid-template-columns:1fr;gap:16px}}
-.wfminirow .wfbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:block}
+.wfminirow .wfbar{height:6px;border-radius:0;background:var(--line);overflow:hidden;display:block}
 """)
     return "".join(out)
 

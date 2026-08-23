@@ -1339,6 +1339,33 @@ check("a non-production row says it is excluded from the counts",
 # which says they arrive on their own. Nothing implements them: no chart code,
 # no threshold, no check. It also argued a line would be "points pretending to
 # be a trend" while printing a run count of 27.
+# House style, borrowed from [removed] so the company's apps read as one product:
+# its paper, ink, hairlines, type stack and square corners. Radius is 0
+# throughout there; the state dot is the one thing kept round, because it is a
+# dot.
+check("the shared chrome matches [removed]: paper, strong ink, square corners",
+      "#efefea" in _page and "--strong:#1c122d" in _page.replace(" ", "")
+      and "border-radius:0" in _page)
+check("...and nothing is left rounded except the state dot",
+      _page.count("border-radius:") - _page.count("border-radius:0")
+      == _page.count("border-radius:50%"),
+      "unexpected non-zero radius in the stylesheet")
+
+# The severity hues are NOT [removed]'s. They were validated for colourblind
+# separation and the obvious green+amber pair was rejected; [removed]'s
+# --good #0E7A55 / --red #B4392F have not been through that, and there colour
+# is decorative while here it carries the finding.
+check("the severity palette stays ours, not [removed]'s",
+      "#1baf7a" in _page and "#eb6834" in _page and "#2a78d6" in _page
+      and "#0e7a55" not in _page.lower() and "#b4392f" not in _page.lower())
+
+# Uppercasing the chips at 10px dropped the label to 2.8:1 (OK) and 3.2:1
+# (CRIT) against a white card. The label is mixed toward --ink; the DOT keeps
+# the exact validated hue, because a swatch carries no text and no ratio.
+check("chip labels are darkened for contrast while the dot keeps the pure hue",
+      "color-mix(in srgb,var(--good) 62%,var(--ink))" in _page
+      and ".chip.good .dot{background:var(--good)}" in _page)
+
 check("the page does not promise a trend chart it cannot draw",
       "Trend charts appear" not in _page and "No trend chart is drawn" in _page)
 

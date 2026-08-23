@@ -230,6 +230,38 @@ is what you committed.**
 
 ---
 
+## House style: the chrome is [removed]'s, the severity colours are not
+
+**Adopted 2026-08-23** so the company's apps read as one product. Taken from
+`[removed]/src/form.html`: the paper (`#efefea`), the purple-cast ink
+(`#241e31`), the hairlines (`#d9d8d0`), the strong ink (`#1c122d`), the
+Helvetica Neue type stack at 14px/1.5, the mono stack at 11.5px, uppercase
+letterspaced 800-weight labels, and **square corners everywhere** — [removed]
+declares `border-radius` exactly twice and both are `0`. The only round thing
+left here is the state dot, because it is a dot.
+
+**The severity colours are deliberately NOT [removed]'s.** `good`, `bad` and
+`info` were validated for colourblind separation, and the obvious green-and-
+amber pair was rejected at protan delta-E 3.8 — which is why WARN is blue.
+[removed]'s `--good #0E7A55` and `--red #B4392F` have not been through that test,
+and in [removed] colour is decorative while here it carries the finding. **Do not
+unify these two sets by eye.** `test-ledger.py` asserts both halves: that the
+chrome matches and that the severity hues are still ours.
+
+`--strong` is [removed]'s `--navy`, renamed for its ROLE. It is the structural
+dark, so in dark mode it has to become light; a token called "navy" that
+renders pale is how a palette starts lying.
+
+**Chips were the one place the two systems could not simply merge.** [removed]'s
+`.pill` is solid navy with white text. Filling ours the same way puts white on
+the validated green at 2.8:1. So the chip keeps its tint, takes [removed]'s
+uppercase 800-weight typography and square corner, and the LABEL is mixed
+toward `--ink` for contrast while the DOT keeps the exact validated hue — a
+swatch carries no text and has no ratio to meet. Measured after the change:
+5.4 to 7.3 in light, 6.7 to 7.9 in dark.
+
+---
+
 ## The component catalogue, `/components`
 
 **Added 2026-08-23.** A second page listing every plugin, mu-plugin and theme
