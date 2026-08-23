@@ -8,18 +8,42 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-22, end of day
+## PICK UP HERE — 2026-08-22, end of day (runs stamped 2026-08-23 UTC)
 
-**Everything is committed, pushed, and the tree is clean at `a4352ff`.** Tests:
-ledger 143, severity 97, email-dns 58, nexcess 88, consent 75, run-local 32.
+**Everything is committed and pushed; the tree is clean.** Tests: ledger 148,
+severity 97, email-dns 58, nexcess 88, consent 75, run-local 32.
 
-**The live page is CURRENT** and shows the consent sweep at **77 of 78**.
+**THE WHOLE SUITE RAN END TO END AND PUBLISHED ITSELF.** Scan, ingest, render,
+publish, no manual step, all three workflows. First time that has happened.
+The live page is current.
 
-**ONE CONSTRAINT, and it is the only thing that can go wrong unattended: do NOT
-trigger `fleet-consent.yml` until Matt replies about the Cloudflare rules.** A
-CI run lands at 69 of 78 and would step the live page down from 77. The cron is
-commented out, so it only runs if somebody presses the button. Nothing to
-change in code; just do not press it.
+| source | run | measured |
+|---|---|---|
+| health | `health-2026-08-23_0111` (**full**) | 48 of 52 |
+| email-dns | `email-dns-2026-08-23_0108` | 70 of 78 |
+| consent | `consent-2026-08-23_0109` | 69 of 78 |
+
+Health **2 CRIT / 70 WARN / 7 OK / 3 SKIP / 1 FROZEN**. Consent **48 WARN /
+21 OK / 10 UNKNOWN** — UNKNOWN was 29 this morning.
+
+**NO STANDING CONSTRAINT ANY MORE.** The previous note here said not to trigger
+`fleet-consent.yml`. That is obsolete: consent is now CI-primary at 69 of 78,
+the baseline reset itself, and CI publishes without help. The 8 sites CI cannot
+reach read UNMEASURED with their HTTP status, which is honest. If Matt adds the
+skip rule, coverage rises to 77 on its own and rising coverage is never blocked.
+
+**Everything is scheduled-ready but nothing is scheduled.** All three crons stay
+commented out. Turning them on is the next real decision, and email-dns is the
+one to do first: credential-free, no browser, no variance.
+
+### Start here tomorrow
+
+1. **Two questions are out and unanswered**: Matt on the Cloudflare rules,
+   Nexcess on the API bot challenge. Check both before starting anything new.
+2. **Items 21 and 22 below are the only known defects**, both about an
+   unmeasured site reading as a healthy one. 22 has an unresolved CAUSE that
+   must be settled before its fix is written.
+3. The rest of the backlog is security housekeeping on the Cloudflare tokens.
 
 ### What changed 2026-08-22
 
