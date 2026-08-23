@@ -1383,29 +1383,76 @@ COMPONENT_JS = """<script>
 (function(){
  var rows=[].slice.call(document.querySelectorAll('#cat tr[data-slug]'));
  var q=document.getElementById('q'), ty=document.getElementById('type'),
-     sc=document.getElementById('scope'), cnt=document.getElementById('count');
+     sc=document.getElementById('scope'), site=document.getElementById('site'),
+     cnt=document.getElementById('count'),
+     banner=document.getElementById('sitebanner'),
+     sname=document.getElementById('sitename'),
+     scount=document.getElementById('sitecount'),
+     clear=document.getElementById('clearsite'),
+     persite=[].slice.call(document.querySelectorAll('.persite'));
 
- // Deep link: components.html?site=galbanicheese.com arrives from the fleet
- // table's plugin count, so that cell can still answer the per-site question
- // in one click.
+ // Deep link. The fleet table's plugin count arrives as
+ // /components?site=galbanicheese.com, so that cell still answers the
+ // per-site question in one click.
  var pre=new URLSearchParams(location.search).get('site');
- if(pre){ q.value=pre; }
+ var notice=document.getElementById('nositenotice');
+ if(pre){
+   var opt=[].slice.call(site.options).find(function(o){
+     return o.value.toLowerCase()===pre.toLowerCase(); });
+   if(opt){
+     site.value=opt.value;
+   } else {
+     // Named but not inventoried. Say which, in words. A bare "0 of 312"
+     // reads as "this site runs no plugins"; it means nobody listed them.
+     q.value=pre;
+     document.getElementById('nositename').textContent=pre;
+     notice.style.display='';
+   }
+ }
 
  function apply(){
-   var t=(q.value||'').trim().toLowerCase(), ty_=ty.value, sc_=sc.value, n=0;
+   var t=(q.value||'').trim().toLowerCase(), ty_=ty.value, sc_=sc.value,
+       si=(site.value||'').toLowerCase(), n=0;
    rows.forEach(function(r){
      var ok=true;
-     if(t && r.dataset.slug.indexOf(t)<0 &&
+     if(si && (' '+r.dataset.sitesList+' ').indexOf(' '+si+' ')<0) ok=false;
+     if(ok && t && r.dataset.slug.indexOf(t)<0 &&
         (' '+r.dataset.sitesList+' ').indexOf(t)<0) ok=false;
      if(ok && ty_ && r.dataset.type!==ty_) ok=false;
      if(ok && sc_ && (' '+r.dataset.flags+' ').indexOf(sc_)<0) ok=false;
      r.classList.toggle('hide', !ok);
      if(ok) n++;
+
+     // Fill the per-site cell from the install row for the selected site.
+     // Read off the same rendered data the table already shows, so the two
+     // cannot disagree.
+     var cell=r.querySelector('td.persite');
+     if(cell){
+       if(ok && si){
+         var ins=r.querySelector('.install[data-site="'+si+'"]');
+         cell.textContent = ins ? ins.dataset.v : '';
+       } else { cell.textContent=''; }
+     }
    });
    cnt.textContent = n+' of '+rows.length+' components';
+
+   persite.forEach(function(el){ el.hidden = !si; });
+   banner.style.display = si ? '' : 'none';
+   if(si){ sname.textContent=site.value; scount.textContent=n; }
+
+   // Keep the URL shareable, without adding a history entry per keystroke.
+   var u=new URL(location.href);
+   if(site.value){ u.searchParams.set('site', site.value); }
+   else { u.searchParams.delete('site'); }
+   history.replaceState(null,'',u);
  }
- [q,ty,sc].forEach(function(el){
+ [q,ty,sc,site].forEach(function(el){
    el.addEventListener('input', apply); el.addEventListener('change', apply); });
+ // The notice describes one arrival, not a standing state: as soon as the
+ // search that produced it is edited, it stops being true.
+ q.addEventListener('input', function(){ notice.style.display='none'; });
+ clear.addEventListener('click', function(ev){
+   ev.preventDefault(); site.value=''; apply(); });
  apply();
 
  var tbl=document.getElementById('cat'), dir={};
@@ -1513,6 +1560,13 @@ def render_components(m):
       '<option value=plugin>plugin</option>'
       '<option value=mu-plugin>mu-plugin</option>'
       '<option value=theme>theme</option></select>')
+    # The site picker. Populated from the sites that HAVE an inventory, not
+    # from the fleet: offering a site whose components were never listed would
+    # produce an empty result that reads as "this site runs nothing".
+    A('<select id=site><option value="">the whole fleet</option>')
+    for sid in c["sites_inventoried"]:
+        A('<option value="%s">%s</option>' % (e(sid), e(sid)))
+    A("</select>")
     A('<select id=scope><option value="">every component</option>'
       '<option value=pending>updates pending</option>'
       '<option value=spread>more than one version</option>'
@@ -1520,8 +1574,38 @@ def render_components(m):
     A('<span class=quiet id=count style="align-self:center"></span>')
     A("</div>")
 
+    # Stated, not implied. When one site is selected the Sites, Versions and
+    # Pending columns still describe the WHOLE FLEET -- `wordpress-seo` reads
+    # "45 sites, 40 pending" whether or not you have filtered to one of them.
+    # A fleet-wide count sitting in a view that looks per-site is the same
+    # failure as a count standing in for an absence, pointed the other way, so
+    # the page says which is which rather than leaving it to be inferred.
+    # A site named in the URL that has NO inventory. Falling back to a text
+    # search leaves "0 of 312 components" on screen, which reads as "this site
+    # runs no plugins" when the truth is that nobody ever listed them. Same
+    # distinction as everywhere else on this page: unknown is not a no.
+    A('<div id=nositenotice class=card style="display:none;margin-bottom:10px;'
+      'border-left:3px solid var(--bad)">'
+      '<div><b><code id=nositename></code> has no component inventory.</b> '
+      'This is not a site with no plugins &mdash; it is a site whose plugins '
+      'have never been listed. Nothing below describes it.</div>'
+      '<div class=quiet style="margin-top:6px">Every DB-backed WP-CLI call '
+      'fails on a site whose database is not installed, and a site outside the '
+      'Pantheon deep scan is never reached at all. See the coverage line '
+      'above.</div></div>')
+
+    A('<div id=sitebanner class=card style="display:none;margin-bottom:10px">'
+      '<div><b>Showing the <span id=sitecount></span> component(s) on '
+      '<code id=sitename></code>.</b> The <em>On this site</em> column is that '
+      'site\'s own version. <b>Sites</b>, <b>Versions</b> and <b>Pending</b> '
+      'stay fleet-wide &mdash; they describe the component across all %d '
+      'inventoried sites, not this one.</div>'
+      '<div style="margin-top:6px"><a href="#" id=clearsite>Show the whole '
+      'fleet again</a></div></div>' % len(c["sites_inventoried"]))
+
     A('<div class=tablewrap><table id=cat>')
     A("<tr><th data-sort=slug>Component</th><th data-sort=type>Type</th>"
+      "<th class=persite hidden>On this site</th>"
       "<th data-sort=sites class=num>Sites</th>"
       "<th data-sort=vers class=num>Versions</th>"
       "<th data-sort=pending class=num>Pending</th>"
@@ -1542,6 +1626,7 @@ def render_components(m):
              " ".join(flags), x["sites"], len(x["versions"]), x["pending"]))
         A("<td><code>%s</code></td>" % e(x["slug"]))
         A("<td class=quiet>%s</td>" % e(x["type"]))
+        A('<td class=persite hidden></td>')
         A("<td class=num>%d</td>" % x["sites"])
         # The VERSION SPREAD is the column a count cannot give you: one
         # component at five versions across the fleet is five different
@@ -1556,17 +1641,23 @@ def render_components(m):
         A("<details><summary>%d site%s</summary><div class=installs>"
           % (x["sites"], "" if x["sites"] == 1 else "s"))
         for i in x["installs"]:
+            # A literal arrow, not &rarr;. The same string goes into the
+            # data-v attribute that the per-site column reads with
+            # textContent, which does not decode entities -- so the entity
+            # rendered as the characters "&rarr;" in that column. The page is
+            # UTF-8; the character is fine in both places.
             bits = [e(i["version"])]
             if i["update_available"] and i["update_version"]:
-                bits.append("&rarr; %s" % e(i["update_version"]))
+                bits.append("\u2192 %s" % e(i["update_version"]))
             elif i["update_available"]:
-                bits.append("&rarr; update available")
+                bits.append("\u2192 update available")
             st = ""
             if i["status"] in ("inactive", "must-use", "parent"):
                 st = ' <span class=quiet>%s</span>' % e(i["status"])
-            A('<div class=install><code>%s</code>'
+            A('<div class=install data-site="%s" data-v="%s"><code>%s</code>'
               '<span class=v>%s</span>%s</div>'
-              % (e(i["site_id"]), " ".join(bits), st))
+              % (e(i["site_id"].lower()), e(" ".join(bits)),
+                 e(i["site_id"]), " ".join(bits), st))
         A("</div></details>")
         A("</td></tr>")
     A("</table></div>")

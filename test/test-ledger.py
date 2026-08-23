@@ -1263,6 +1263,31 @@ check("...and states coverage before the table",
 check("...and names the uninventoried site on the page",
       "b.com" in _full)
 
+# The site picker, added after the first version shipped with only a search
+# box: typing a domain worked but nothing said so.
+check("the picker offers only sites that HAVE an inventory",
+      '<option value="a.com">' in _full
+      and '<option value="b.com">' not in _full, "b.com must not be offered")
+check("...and an option to go back to the whole fleet",
+      "the whole fleet" in _full)
+
+# A fleet-wide count sitting in a view that looks per-site is the same failure
+# as a count standing in for an absence, pointed the other way. The page must
+# SAY which columns are which rather than leave it to be inferred.
+check("a site-filtered view states that Sites/Versions/Pending stay fleet-wide",
+      "stay fleet-wide" in _full and "On this site" in _full)
+
+# ?site=<a site with no inventory> must not leave a bare "0 of 312" on screen,
+# which reads as "this site runs no plugins".
+check("an uninventoried site in the URL is explained, not shown as zero",
+      "has no component inventory" in _full
+      and "not a site with no plugins" in _full)
+
+# textContent does not decode HTML entities, so a &rarr; in the data attribute
+# the per-site column reads rendered as the literal characters "&rarr;".
+check("the version arrow is a character, not an entity",
+      "&rarr;" not in _full, "found &rarr; in rendered output")
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))
