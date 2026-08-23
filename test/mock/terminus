@@ -25,6 +25,24 @@ set -u
 CMD="${1:-}"
 shift || true
 
+# The real thing, trimmed, from galbanicheese.live on 2026-08-23. Pantheon's
+# own wp-native-php-sessions mu-plugin emits these on PHP 8.2, on STDOUT,
+# before WP-CLI's JSON. The call exits 0 and the JSON is intact behind them.
+# strip_noise did not cover these lines, so json_or_empty refused the whole
+# response and the scanner recorded plugin_updates=0 on a site with 15.
+emit_php_notices() {
+  echo "PHP Deprecated:  Return type of Pantheon_Sessions\Session_Handler::open(\$save_path, \$session_name) should either be compatible with SessionHandlerInterface::open(string \$path, string \$name): bool, or the #[\ReturnTypeWillChange] attribute should be used to temporarily suppress the notice in /code/wp-content/mu-plugins/wp-native-php-sessions/inc/class-session-handler.php on line 26"
+  echo "Deprecated: Return type of Pantheon_Sessions\Session_Handler::close() should either be compatible with SessionHandlerInterface::close(): bool, or the #[\ReturnTypeWillChange] attribute should be used to temporarily suppress the notice in /code/wp-content/mu-plugins/wp-native-php-sessions/inc/class-session-handler.php on line 117"
+  echo "PHP Notice:  Undefined index: x in /code/wp-content/mu-plugins/z.php on line 9"
+  # morrison-chs, 2026-08-23. A bare `Warning:` from WP-CLI itself, which the
+  # first pass of PHP-notice patterns did not cover -- so that site alone kept
+  # reading unknown after the others were fixed.
+  echo "Warning: Constant DISALLOW_FILE_MODS already defined in phar:///opt/pantheon/wpcli/wp-cli.phar/vendor/wp-cli/wp-cli/php/WP_CLI/Runner.php(1334) : eval"
+  # And one nobody has ever seen, to prove the fallback in json_or_empty picks
+  # up the payload without anyone adding a pattern for it first.
+  echo "some unpredicted preamble nobody wrote a filter for"
+}
+
 emit_noise() {
   echo "Warning: Permanently added 'appserver.live.abc123.drush.in' to the list of known hosts."
   echo "[notice] Command: appserver.live.abc123 -- wp plugin list"
@@ -82,6 +100,8 @@ case "$CMD" in
  {"name":"frozensite","framework":"wordpress","plan_name":"Sandbox","frozen":true},
  {"name":"pfannenbergpartners","framework":"wordpress","plan_name":"Sandbox","frozen":false},
  {"name":"noisysite","framework":"wordpress","plan_name":"Basic","frozen":false},
+ {"name":"noticysite","framework":"wordpress","plan_name":"Basic","frozen":false},
+ {"name":"dbmissing","framework":"wordpress","plan_name":"Sandbox","frozen":false},
  {"name":"ghostenv","framework":"wordpress","plan_name":"Sandbox","frozen":false},
  {"name":"timeoutsite","framework":"wordpress","plan_name":"Basic","frozen":false},
  {"name":"drupalsite","framework":"drupal9","plan_name":"Performance Small","frozen":false}
@@ -163,6 +183,38 @@ JSON
     case "$se" in
       pfannenbergpartners.*) sleep 600; exit 0 ;;
     esac
+    # THE THREE WAYS A WP-CLI CALL FAILS WHILE THE SCANNER RECORDS A CLEAN
+    # VALUE. Item 22. None of these existed here, so the offline suite could
+    # only ever exercise calls that SUCCEED -- and the whole question is what
+    # happens when one does not. A mock that can only succeed cannot test a
+    # tool whose job is detecting failure.
+    #
+    # Deliberately NOT added to site:list: these are reached by naming them
+    # directly, so no fleet count anywhere moves. run-local-test.sh is
+    # untouched by their existence.
+    case "$se" in
+      # 1. exits non-zero, and the reason is on stderr -- which
+      #    run_with_timeout sends to /dev/null, so the scanner never sees it.
+      wpclifail.*)
+        echo "Error: Could not establish a connection to the remote host." >&2
+        exit 1 ;;
+      # 2. exits ZERO and prints a non-JSON error on stdout. json_or_empty
+      #    rejects it, the scanner's `|| x=""` fires, and the else branch
+      #    writes the clean value. The nastiest of the three: everything about
+      #    it looks like success.
+      wpclijunk.*)
+        echo "Error: This does not seem to be a WordPress installation."
+        exit 0 ;;
+      # 3. hangs. run_capture returns 124, as run_with_timeout does.
+      wpclihang.*) sleep 600; exit 0 ;;
+      # 4. NOT a failure mode of the fleet at all: a name that is not a
+      #    Pantheon site. Real text from 2026-08-23, when the domain was
+      #    passed where the Pantheon site name was wanted. It must never be
+      #    scored in the same column as a fabricated measurement.
+      notasite.*)
+        echo "[error]  Could not locate a site your user may access identified by notasite: A site named notasite was not found." >&2
+        exit 1 ;;
+    esac
     # `core check-update` and `core version` are BOTH `core`, and they answer
     # different questions in different formats: check-update returns JSON about
     # the version AVAILABLE, version returns bare text for the version
@@ -176,9 +228,30 @@ JSON
       esac
     done
     case "$se" in
-      noisysite.*) emit_noise ;;
+      noisysite.*)  emit_noise ;;
+      noticysite.*) emit_php_notices ;;
     esac
     case "$se:$sub:$verb" in
+      # ORDER IS LOAD-BEARING HERE. `case` takes the FIRST match, so every
+      # site-specific pattern must sit above the `*:core:version` catch-all
+      # below. These two were originally added underneath it and were dead --
+      # dbmissing answered 7.0.2 like everything else, and the run-local
+      # assertion caught it. Same shape as the note further down about `core
+      # version` and `core check-update` both being "core".
+      # cm-whitelabel, reproduced. `core version` reads the version off DISK
+      # and needs no database, so it answers 6.9.4 and looks like a healthy
+      # measurement; every call that needs the database exits 1. That split is
+      # what proved the SSH session was fine and the site was not, and it is
+      # why `core version` is the control call in diagnose-wp-calls.sh.
+      dbmissing.*:core:version) echo "6.9.4" ;;
+      dbmissing.*)
+        echo "Error: The site you have requested is not installed."
+        echo "Run \`wp core install\` to create database tables."
+        exit 1 ;;
+      noticysite.*:core:version)      echo "7.0.3" ;;
+      noticysite.*:core:check-update) echo '[{"version":"7.1","update_type":"major"}]' ;;
+      noticysite.*:plugin:*) echo '[{"name":"a"},{"name":"b"},{"name":"c"},{"name":"d"},{"name":"e"},{"name":"f"},{"name":"g"},{"name":"h"},{"name":"i"},{"name":"j"},{"name":"k"},{"name":"l"},{"name":"m"},{"name":"n"},{"name":"o"}]' ;;
+      noticysite.*:theme:*)  echo '[{"name":"t1"},{"name":"t2"},{"name":"t3"}]' ;;
       # Installed version. Plain text, never JSON.
       # coredrift sits on an older release than it reports as available.
       coredrift.*:core:version)   echo "6.8.1" ;;
@@ -193,6 +266,10 @@ JSON
 
       # Version available, JSON. Empty list means none pending.
       coredrift.*:core:check-update) echo '[{"version":"6.9.1","update_type":"major"}]' ;;
+      # Behind the notice wall: a core update and a 15-plugin backlog, the
+      # shape galbanicheese actually had while the ledger recorded 0 and
+      # "up-to-date". If strip_noise regresses, these become 0 again and the
+      # assertions in run-local-test.sh fail.
       plugindrift.*:plugin:*) echo '[{"name":"akismet"},{"name":"wordfence"},{"name":"yoast"}]' ;;
       *:core:*)   echo '[]' ;;
       *:plugin:*) echo '[]' ;;

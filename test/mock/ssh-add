@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+#
+# test/mock/ssh-add
+# Lets the offline suite control whether ssh-agent holds identities.
+#
+# WHY THIS EXISTS: on 2026-08-23 the first real run of diagnose-wp-calls.sh
+# stopped at `Enter passphrase for key '/Users/dougk/.ssh/id_rsa'`. The agent
+# held no identities, so ssh prompted on every call -- and ssh reads that
+# prompt from /dev/tty, which the `< /dev/null` in run_capture does not close.
+# An unanswered prompt is killed by the timeout and reported as a failed call,
+# which would have been recorded as evidence about the FLEET when it was a fact
+# about one laptop.
+#
+# The real state on that machine is the DEFAULT here (no identities), so the
+# suite exercises the bad case unless a test asks for the good one.
+set -u
+
+if [ "${MOCK_SSH_AGENT_KEYS:-0}" = "1" ]; then
+  echo "256 SHA256:AAAAmockmockmock mock-pantheon-key (ED25519)"
+  exit 0
+fi
+echo "The agent has no identities."
+exit 1

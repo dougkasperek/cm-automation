@@ -74,6 +74,33 @@ else
   check "noisysite parsed despite stdout noise" "OK"     "$(status_of "$J" noisysite)"
   check "drupalsite scanned, WP checks n/a"     "n/a"    "$(jq -r '.[]|select(.site=="drupalsite")|.wp_core_update' "$J")"
 
+  # ITEM 22, both halves, added 2026-08-23 after a live diagnosis.
+  #
+  # noticysite: PHP deprecation notices from Pantheon's own mu-plugin land on
+  # STDOUT before WP-CLI's JSON. The call exits 0 and the JSON is intact behind
+  # them. strip_noise did not cover those lines, so json_or_empty refused the
+  # whole response and the scanner recorded its clean defaults. Four real sites
+  # were doing this -- galbanicheese reported 0 plugin updates while WP-CLI had
+  # returned 15, and three sites reported "up-to-date" with WordPress 7.1
+  # waiting. These four assertions are the regression: if strip_noise loses the
+  # notice patterns, they go back to 0 / 0 / up-to-date.
+  n_of() { jq -r --arg s "$1" --arg f "$2" '.[]|select(.site==$s)|.[$f]|tostring' "$J"; }
+  check "noticysite: its own version, not the catch-all's"      "7.0.3" "$(n_of noticysite wp_version)"
+  check "noticysite: plugin count survives the PHP notice wall" "15" "$(n_of noticysite plugin_updates)"
+  check "noticysite: theme count survives it too"               "3"  "$(n_of noticysite theme_updates)"
+  check "noticysite: the pending core update is not lost"       "7.1" "$(n_of noticysite wp_core_update)"
+  check "noticysite: and it is therefore NOT clean"             "CRIT" "$(status_of "$J" noticysite)"
+
+  # dbmissing: cm-whitelabel's shape. `core version` reads the version off disk
+  # and needs no database, so it answers; every call that needs the database
+  # exits 1. The version therefore looks like a healthy measurement while the
+  # three facts beside it are silence. They must read unknown, never clean.
+  check "dbmissing: the on-disk version is still read"      "6.9.4"   "$(n_of dbmissing wp_version)"
+  check "dbmissing: a failed core check is unknown, NOT up-to-date" "unknown" "$(n_of dbmissing wp_core_update)"
+  check "dbmissing: a failed plugin call is null, NOT 0"     "null"   "$(n_of dbmissing plugin_updates)"
+  check "dbmissing: a failed theme call is null, NOT 0"      "null"   "$(n_of dbmissing theme_updates)"
+  check "dbmissing: an unmeasured site does not read OK"     "WARN"   "$(status_of "$J" dbmissing)"
+
   # The observed WordPress version, added 2026-08-18. check-update alone only
   # ever says whether something is PENDING, so a fleet claimed to be on 7.0.2
   # read as "up-to-date" everywhere and the claim stayed unverified.
@@ -90,7 +117,7 @@ else
   # states, and collapsing any two of them is how this project has produced
   # every wrong number it has produced.
   check "frozensite has no wp_version key"      "null"   "$(jq -r '.[]|select(.site=="frozensite")|.wp_version' "$J")"
-  check "site count"                            "10"     "$(jq 'length' "$J")"
+  check "site count"                            "12"     "$(jq 'length' "$J")"
 
   # THE REGRESSION TEST FOR THE 2026-08-18 STDIN BUG.
   # terminus remote:wp spawns ssh, ssh reads stdin, and the per-site loop used
@@ -99,7 +126,7 @@ else
   # reporting the requested count. The loop now reads on fd 3. The mock drains
   # stdin the way ssh does, so this fails if the descriptor is ever taken away.
   M="${J%.json}.md"
-  check "the digest counts rows scanned, not rows requested" "10" \
+  check "the digest counts rows scanned, not rows requested" "12" \
         "$(grep -oE 'Scanned \*\*[0-9]+\*\*' "$M" | grep -oE '[0-9]+')"
   check "and claims no incompleteness when there is none" "0" \
         "$(grep -c 'produced no row at all' "$M")"

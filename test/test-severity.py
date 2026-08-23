@@ -181,6 +181,100 @@ check("presence of a health fact is what counts, not its value",
                   "wp_checked": False})["status"] == "SKIP")
 
 # --------------------------------------------------------------------------
+# ITEM 21. An api-only run establishes NOTHING about WordPress, and until
+# 2026-08-23 that read as 45 healthy sites.
+#
+# The site below is what an api-only scan actually writes: the control plane
+# answered, so PHP and the backup age are real, and every WordPress fact is
+# the token `unknown` with `wp_checked` FALSE. It fell between the two guards
+# meant to catch exactly this -- `wp_version_unknown` needs `wp_checked` True,
+# `coverage_partial` needs health NOT to have seen the site -- so it scored on
+# backup age and PHP alone and reached OK.
+# --------------------------------------------------------------------------
+def apionly(**kw):
+    """A site as an api-only health run records it. Nothing about WordPress."""
+    base = dict(site(), wp_checked=False, wp_version="unknown",
+                wp_core_update="unknown", plugin_updates="unknown",
+                theme_updates="unknown", framework="wordpress")
+    base.update(kw)
+    return base
+
+check("an api-only site does not reach OK: nothing about its WordPress "
+      "was established",
+      S.evaluate(apionly())["status"] == "WARN",
+      S.evaluate(apionly())["status"])
+check("...and it says WHY, with its own code",
+      "wp_unestablished" in [r["code"] for r in S.evaluate(apionly())["reasons"]],
+      str([r["code"] for r in S.evaluate(apionly())["reasons"]]))
+check("wp_unestablished is a HEALTH finding",
+      S.axis_of("wp_unestablished") == "health")
+
+# The two absences stay DISTINCT. "The deep scan ran and could not read it"
+# and "no deep scan ever looked" have different remedies -- go and look at the
+# site, versus run a full scan -- so they must not collapse into one code.
+check("a deep scan that ran and failed still reports wp_version_unknown",
+      codes(wp_version="unknown") == ["wp_version_unknown"],
+      str(codes(wp_version="unknown")))
+check("...and never both codes at once",
+      "wp_unestablished" not in codes(wp_version="unknown"))
+
+# The rule must be silent on a scan that DID its job, or it puts a WARN floor
+# under the whole fleet -- the `upstream_pending` mistake, again.
+check("a fully deep-scanned healthy site is untouched by the new rule",
+      st() == "OK" and "wp_unestablished" not in codes())
+
+# A site whose framework is positively NOT WordPress is exempt: the WordPress
+# question is not a question there, and a rule true of every one of them ranks
+# nothing. An unrecorded framework is NOT exempt -- it fails safe and warns.
+check("a non-WordPress site is exempt from the WordPress rule",
+      "wp_unestablished" not in
+      [r["code"] for r in S.evaluate(apionly(framework="drupal8"))["reasons"]])
+check("an unrecorded framework fails SAFE and still warns",
+      "wp_unestablished" in
+      [r["code"] for r in S.evaluate(apionly(framework=None))["reasons"]])
+
+# --------------------------------------------------------------------------
+# The SAME bug one layer in, found on the first real run after item 22 was
+# fixed. morrison-chs answered `wp core version` (7.0.4) and then failed the
+# three calls that need the database, so its version is known and its UPDATE
+# STATUS is not. `wp_unestablished` tests the version, so it stayed silent, and
+# the site read OK with core, plugin and theme all unknown.
+#
+# The version is not what makes an OK mean anything. "Nothing is pending" is.
+# --------------------------------------------------------------------------
+def halfscanned(**kw):
+    """Version read; the three database-backed calls did not answer."""
+    base = dict(site(), wp_checked=True, wp_version="7.0.4",
+                wp_core_update="unknown", plugin_updates="unknown",
+                theme_updates="unknown", framework="wordpress")
+    base.update(kw)
+    return base
+
+check("a site whose UPDATE STATUS is unknown does not read OK, even with a "
+      "known version",
+      S.evaluate(halfscanned())["status"] == "WARN",
+      S.evaluate(halfscanned())["status"])
+check("...and it has its own code, distinct from wp_unestablished",
+      "wp_update_status_unknown" in
+      [r["code"] for r in S.evaluate(halfscanned())["reasons"]],
+      str([r["code"] for r in S.evaluate(halfscanned())["reasons"]]))
+check("wp_update_status_unknown is a HEALTH finding",
+      S.axis_of("wp_update_status_unknown") == "health")
+check("a core update that could not be read is enough on its own",
+      "wp_update_status_unknown" in
+      [r["code"] for r in S.evaluate(halfscanned(plugin_updates=0,
+                                                 theme_updates=0))["reasons"]])
+check("a plugin count that could not be read is enough on its own",
+      "wp_update_status_unknown" in
+      [r["code"] for r in S.evaluate(halfscanned(wp_core_update="up-to-date"))["reasons"]])
+check("a fully measured site is untouched by it",
+      st() == "OK" and "wp_update_status_unknown" not in codes())
+check("an api-only site reports wp_unestablished, not this one -- the "
+      "remedies differ (run a full scan vs find out why WP-CLI refused)",
+      "wp_update_status_unknown" not in
+      [r["code"] for r in S.evaluate(apionly())["reasons"]])
+
+# --------------------------------------------------------------------------
 # The production flag. Tri-state on purpose, and null must fail SAFE.
 # --------------------------------------------------------------------------
 check("production null counts as production",
@@ -273,6 +367,53 @@ if os.path.exists(hist) and os.path.exists(inv_path):
                                 "pfannenbergsales"], str(res["unreviewed"]))
     check("ledger: a site with a production ruling has left the queue",
           "cm-whitelabel" not in res["unreviewed"])
+
+    # ITEM 21, against the run that exposed it. Two NAMED runs of the same
+    # fleet 38 minutes apart: the first api-only, the second full. The bug is
+    # invisible unless you compare them, which is why it survived -- a full run
+    # lands afterwards and puts the numbers back.
+    #
+    # No fleet COUNT is asserted here. A count is a fixture that a legitimate
+    # change is entitled to move; the PROPERTY is what has to hold.
+    def _score(run_id):
+        out = []
+        for r in [json.loads(l) for l in open(hist)]:
+            if r.get("run_id") != run_id:
+                continue
+            d = dict(r)
+            rec = inv.get(r["site_id"], {})
+            d["production"] = rec.get("production")
+            d["in_workbook"] = rec.get("in_workbook")
+            d["severity"] = S.evaluate(d)
+            out.append(d)
+        return out
+
+    API_ONLY_RUN = "health-2026-08-23_0033"   # 52 sites, no SSH, no WordPress
+    FULL_RUN = "health-2026-08-23_0111"       # the same 52, 38 minutes later
+    _api = _score(API_ONLY_RUN)
+    _full = _score(FULL_RUN)
+    if _api and _full:
+        check("ledger: NO site in an api-only run reads OK -- nothing about "
+              "any site's WordPress was established",
+              not [d["site_id"] for d in _api if d["severity"]["status"] == "OK"],
+              str([d["site_id"] for d in _api
+                   if d["severity"]["status"] == "OK"][:8]))
+        # The other half, and the reason this is a rule and not a blanket
+        # downgrade: when the deep scan DOES establish the version, the rule
+        # goes quiet and sites can be OK again.
+        check("ledger: the full run of the same fleet still has OK sites",
+              any(d["severity"]["status"] == "OK" for d in _full))
+        check("ledger: and the new code is silent on the full run",
+              not any(r["code"] == "wp_unestablished"
+                      for d in _full for r in d["severity"]["all_reasons"]))
+        # The invariant behind both, stated once: OK means measured.
+        _bad = [d["site_id"] for d in _api + _full
+                if d["severity"]["status"] == "OK"
+                and d.get("wp_version") in (None, "unknown", "n/a")]
+        check("ledger: no site reads OK without an established WordPress "
+              "version, in either mode", not _bad, str(_bad))
+    else:
+        print("skip  item-21 runs are not in this ledger")
 else:
     print("skip  ledger checks (history/ or inventory missing)")
 

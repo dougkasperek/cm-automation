@@ -300,19 +300,41 @@ while IFS= read -r site <&3; do
                       | grep -Eom1 '[0-9]+(\.[0-9]+)+')" || wp_version=""
         [ -z "$wp_version" ] && wp_version="unknown"
 
+        # ITEM 22, fixed 2026-08-23. AN EMPTY RESULT AND A FAILED CALL ARE
+        # DIFFERENT ANSWERS AND MUST NOT SHARE A BRANCH.
+        #
+        # These three used to fall to "up-to-date", 0 and 0 whenever
+        # json_or_empty returned nothing -- which happens on a timeout, on a
+        # non-zero exit, AND on output that would not parse. Only a genuine
+        # `[]` means "we looked and nothing is pending". Measured, not
+        # theorised: on 2026-08-23 diagnose-wp-calls.sh found galbanicheese
+        # recording 0 plugin updates while WP-CLI had returned 15, and
+        # cm-whitelabel recording up-to-date on a site whose database is not
+        # installed at all.
+        #
+        # `unknown` and JSON null are what the ledger already reads as "nobody
+        # established this" (see fact() in fleet-ledger.py), so no ingest
+        # change is needed -- and severity's rules all refuse to fire on
+        # unknown, which is the whole point.
         core_json="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- core check-update --format=json | json_or_empty)" || core_json=""
-        if [ -n "$core_json" ] && [ "$core_json" != "[]" ]; then
-          wp_core_update="$(printf '%s' "$core_json" | jq -r '.[0].version // "up-to-date"' 2>/dev/null || echo "unknown")"
+        if [ -z "$core_json" ]; then
+          wp_core_update="unknown"          # the call failed; nobody looked
+        elif [ "$core_json" = "[]" ]; then
+          wp_core_update="up-to-date"       # measured: nothing pending
         else
-          wp_core_update="up-to-date"
+          wp_core_update="$(printf '%s' "$core_json" | jq -r '.[0].version // "up-to-date"' 2>/dev/null || echo "unknown")"
         fi
         pj="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- plugin list --update=available --format=json | json_or_empty)" || pj=""
-        if [ -n "$pj" ] && [ "$pj" != "[]" ]; then
-          plugin_updates="$(printf '%s' "$pj" | jq 'length' 2>/dev/null || echo 0)"
+        if [ -z "$pj" ]; then
+          plugin_updates="null"             # JSON null -> UNKNOWN at ingest
+        else
+          plugin_updates="$(printf '%s' "$pj" | jq 'length' 2>/dev/null || echo null)"
         fi
         tj="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- theme list --update=available --format=json | json_or_empty)" || tj=""
-        if [ -n "$tj" ] && [ "$tj" != "[]" ]; then
-          theme_updates="$(printf '%s' "$tj" | jq 'length' 2>/dev/null || echo 0)"
+        if [ -z "$tj" ]; then
+          theme_updates="null"
+        else
+          theme_updates="$(printf '%s' "$tj" | jq 'length' 2>/dev/null || echo null)"
         fi
       fi
       ;;
@@ -333,11 +355,22 @@ while IFS= read -r site <&3; do
   if [ "$wp_core_update" != "up-to-date" ] && [ "$wp_core_update" != "n/a" ] && [ "$wp_core_update" != "unknown" ]; then
     status="CRIT"; add_note "WP core update available: $wp_core_update"
   fi
-  if [ "$plugin_updates" -gt 0 ]; then
+  # "null" is not a number. Guard before the arithmetic test, or bash prints
+  # "integer expression expected" once per unmeasured site and evaluates it as
+  # false -- which would put an unmeasured site back on the OK path by a
+  # different route than the one just closed.
+  if [ "$plugin_updates" != "null" ] && [ "$plugin_updates" -gt 0 ]; then
     [ "$status" = "OK" ] && status="WARN"; add_note "$plugin_updates plugin update(s)"
   fi
-  if [ "$theme_updates" -gt 0 ]; then
+  if [ "$theme_updates" != "null" ] && [ "$theme_updates" -gt 0 ]; then
     [ "$status" = "OK" ] && status="WARN"; add_note "$theme_updates theme update(s)"
+  fi
+  # The scanner's own status is superseded by severity.py at render time, but
+  # it must still not call an unmeasured site OK in its own JSON and console.
+  if [ "$wp_checked" = "true" ] && { [ "$plugin_updates" = "null" ] \
+       || [ "$theme_updates" = "null" ] || [ "$wp_core_update" = "unknown" ]; }; then
+    [ "$status" = "OK" ] && status="WARN"
+    add_note "WP-CLI did not answer for one or more checks; those read unknown"
   fi
   if [ "$upstream_count" -gt 0 ]; then
     [ "$status" = "OK" ] && status="WARN"; add_note "$upstream_count upstream commit(s) pending"

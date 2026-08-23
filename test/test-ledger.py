@@ -253,12 +253,26 @@ check("a fact absent from an older run is unknown, not None",
 _b = to_obs([row("alpha", upstream_pending=1)], "r1")
 for _r in _b.values():
     _r.pop("wp_version", None)
+# The AFTER row is a deep scan that found nothing wrong, so the status genuinely
+# moves: WARN (nothing about its WordPress was established) -> OK.
+#
+# It used to be a deep scan that found a core update, WARN -> WARN, which stopped
+# exercising this check on 2026-08-23 when `wp_unestablished` landed. `row()`
+# defaults to an api-only row, so the BEFORE side is now WARN too and the status
+# fact no longer moved at all. The fixture was measuring nothing, silently. What
+# has to hold is that coverage ARRIVING is never reported as the fleet changing,
+# in either direction, and OK is the direction that would read as "this site got
+# better" if it were ever classed TRANSITION.
 _a = to_obs([row("alpha", upstream_pending=2, wp_checked=True,
-                 wp_version="7.0.3", wp_core_update="7.0.4")], "r2")
+                 wp_version="7.0.4", wp_core_update="up-to-date",
+                 plugin_updates=0, theme_updates=0)], "r2")
 _ch = L.diff_runs(_b, _a, TODAY)
 _st = [c for c in _ch if c["fact"] == "status"]
 check("a status move driven only by new visibility is COVERAGE",
       _st and _st[0]["class"] == "COVERAGE", json.dumps(_st))
+check("...and it is the api-only -> full move, WARN to OK",
+      _st and (_st[0]["before"], _st[0]["after"]) == ("WARN", "OK"),
+      json.dumps(_st))
 check("...even when a non-scoring fact moved in the same run",
       any(c["fact"] == "upstream_pending" for c in _ch))
 

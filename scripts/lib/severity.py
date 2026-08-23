@@ -115,7 +115,10 @@ SCORING_FACTS = ("frozen", "wp_checked", "wp_version", "php_version",
                  "db_backup_age_days", "wp_core_update", "plugin_updates",
                  "nexcess_app_version", "nexcess_php_version",
                  "consent_scan_ok", "consent_banner_detected",
-                 "consent_pre_trackers")
+                 "consent_pre_trackers",
+                 # Read only to EXEMPT a positively non-WordPress site from
+                 # `wp_unestablished`. It ranks nothing on its own.
+                 "framework")
 
 # The fact names a Pantheon health observation always carries, whatever their
 # values. Presence of ANY of these means the health scanner saw this site.
@@ -187,6 +190,10 @@ AXIS_OF_CODE = {
     "core_update":                 "health",
     "plugin_backlog":              "health",
     "wp_version_unknown":          "health",
+    # The sibling of the above, for the absence NO scan tried to fill.
+    "wp_unestablished":            "health",
+    # The scan asked and WP-CLI would not answer. Different remedy.
+    "wp_update_status_unknown":    "health",
     "wp_version_disagreement":     "health",
     "nexcess_app_version_unknown": "health",
     # Fires on the consent sweep, ANSWERS a health question. See above.
@@ -397,6 +404,65 @@ def evaluate(site, today=None):
     if site.get("wp_checked") is True and wp is None:
         add(warn, "wp_version_unknown",
             "Deep scan ran but the WordPress version could not be read")
+
+    # ITEM 21, added 2026-08-23. The sibling of `coverage_partial`, for the
+    # case that falls between it and the rule above.
+    #
+    # An api-only run reaches every site's control plane and reads no
+    # WordPress at all. `wp_checked` is False, so the rule above -- which means
+    # "a deep scan ran and failed" -- correctly does not fire. And health DID
+    # see the site, so `coverage_partial` does not fire either. The site then
+    # scores on backup age and PHP alone and reaches OK. On the api-only run
+    # `health-2026-08-23_0033` that printed 45 OK while the coverage box on the
+    # same page said "WordPress core, plugins, themes: 0 of 52". The full run
+    # 38 minutes later put it back to 7 OK, which is how it stayed invisible.
+    #
+    # The rule is about the ABSENCE, not about the mode that caused it: a site
+    # whose WordPress status was never established cannot be OK, whichever mode
+    # failed to establish it. api-only is still the supported no-SSH fallback,
+    # so this will recur every time it runs.
+    #
+    # `framework` fails SAFE. Only a positively non-WordPress framework is
+    # exempt -- for those the WordPress question is not a question, and a rule
+    # true of every one of them would rank nothing. An unrecorded framework
+    # warns.
+    fw = site.get("framework")
+    wp_framework = fw in (None, UNKNOWN) or str(fw).startswith("wordpress")
+    # `not nexcess_seen` because `nexcess_app_version_unknown` below says the
+    # same thing about the same site from the control plane's side, and one
+    # finding is enough. Either way the site cannot reach OK.
+    if (health_seen and not nexcess_seen and wp_framework
+            and wp is None and nx_wp is None
+            and site.get("wp_checked") is not True):
+        add(warn, "wp_unestablished",
+            "No scan has established this site's WordPress version, core "
+            "update status or plugin backlog")
+
+    # THE SAME GAP ONE LAYER IN, found on the first run after item 22 shipped.
+    # morrison-chs answered `wp core version` and then failed the three calls
+    # that need the database, so its VERSION is known and its UPDATE STATUS is
+    # not. The rule above tests the version, so it stayed silent and the site
+    # read OK with core, plugin and theme all unknown.
+    #
+    # The version is not what makes an OK mean anything -- "nothing is pending"
+    # is. So a deep-scanned site is not OK while either of the two facts the
+    # score actually reads for maintenance is missing.
+    #
+    # Separate from `wp_unestablished` on purpose: that one means "run a full
+    # scan", this one means "find out why WP-CLI refused on this site". Same
+    # family, different thing to go and do.
+    core_unknown = site.get("wp_core_update") in (None, UNKNOWN)
+    plugins_unknown = _num(site.get("plugin_updates")) is None
+    if (site.get("wp_checked") is True and wp_framework
+            and (core_unknown or plugins_unknown)):
+        missing = []
+        if core_unknown:
+            missing.append("core update status")
+        if plugins_unknown:
+            missing.append("plugin backlog")
+        add(warn, "wp_update_status_unknown",
+            "The deep scan read the WordPress version but could not establish "
+            "the %s" % " or the ".join(missing))
 
     # --- Nexcess control-plane rules ---------------------------------------
     # The API answered for this site but told us nothing about the application

@@ -72,6 +72,28 @@ run_with_timeout() {
 # Filters known non-JSON noise lines out of a Terminus/SSH stdout stream so the
 # remainder can be trusted as JSON.
 #
+# THE PHP NOTICE PATTERNS, added 2026-08-23, cost four sites their real data.
+# Pantheon's own `wp-native-php-sessions` mu-plugin emits ~40 lines of
+# "PHP Deprecated: Return type of Pantheon_Sessions\Session_Handler::open(...)"
+# on PHP 8.2, on stdout, BEFORE WP-CLI's JSON. `wp plugin list` exited 0 and
+# the JSON was intact at the end of it, but json_or_empty saw the notice wall,
+# refused the whole thing, and the scanner wrote its clean default. So four
+# sites recorded `plugin_updates: 0, theme_updates: 0, wp_core_update:
+# up-to-date` while galbanicheese actually had 15 plugin updates, 3 theme
+# updates and WordPress 7.1 waiting.
+#
+# The RUNBOOK has predicted this exact failure since it was written -- "jq parse
+# failures | new noise line not covered by strip_noise | add the pattern here".
+# It was never acted on because there was no symptom to see: the scanner's
+# defaults turned the parse failure into a clean measurement. A missing filter
+# here is only visible once a failed call records `unknown`, which is why that
+# fix and this one shipped together.
+#
+# `Fatal error` is deliberately NOT filtered. A fatal means the call produced
+# nothing usable, and the result SHOULD stay unparseable so it records as
+# unknown. Filtering it would leave an empty string that looks the same as a
+# call that returned nothing -- which is the bug, one layer down.
+#
 # WHY THIS EXISTS: the first live fleet run broke jq because SSH host-key
 # warnings ("Warning: Permanently added ... to the list of known hosts") and
 # Terminus's own notice/timing lines leaked into stdout. This is WORSE on
@@ -89,6 +111,14 @@ strip_noise() {
     -e '^ *\[[0-9]+\.[0-9]+ *(ms|s)\]' \
     -e '^Your Terminus version' \
     -e '^You are running an outdated' \
+    -e '^PHP Deprecated:' \
+    -e '^Deprecated:' \
+    -e '^PHP Notice:' \
+    -e '^Notice:' \
+    -e '^PHP Warning:' \
+    -e '^Warning: Constant .* already defined' \
+    -e '^PHP Stack trace:' \
+    -e '^PHP +[0-9]+\. ' \
     || true
 }
 
@@ -114,6 +144,29 @@ json_or_empty() {
   fi
   if printf '%s' "$cleaned" | jq empty >/dev/null 2>&1; then
     printf '%s' "$cleaned"
+    return 0
+  fi
+  # LAST RESORT: take everything from the first line that STARTS a JSON value.
+  #
+  # Enumerating noise patterns has now failed twice in one day. The PHP
+  # deprecation wall cost four sites their plugin counts, and the fix for it
+  # missed `Warning: Constant DISALLOW_FILE_MODS already defined in phar://...`
+  # on morrison-chs, which cost a fifth. Every miss is a real measurement
+  # thrown away, and the list of things WP-CLI and PHP can print before their
+  # output is not knowable in advance.
+  #
+  # So: if the cleaned text does not parse whole, find the first line beginning
+  # with [ or { and try from there to the END of the input. Anchored on a line
+  # start and required to parse all the way to the end, so a stray brace inside
+  # an error message cannot produce a partial object -- it has to be the real
+  # payload or nothing.
+  #
+  # This does NOT make strip_noise redundant: `core version` returns bare text,
+  # not JSON, and is matched by grep rather than parsed here.
+  local from_json
+  from_json="$(printf '%s' "$cleaned" | sed -n '/^[[{]/,$p')"
+  if [ -n "$from_json" ] && printf '%s' "$from_json" | jq empty >/dev/null 2>&1; then
+    printf '%s' "$from_json"
     return 0
   fi
   return 1
