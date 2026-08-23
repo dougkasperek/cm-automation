@@ -1411,6 +1411,7 @@ COMPONENT_JS = """<script>
      sname=document.getElementById('sitename'),
      scount=document.getElementById('sitecount'),
      clear=document.getElementById('clearsite'),
+     spending=document.getElementById('sitepending'),
      persite=[].slice.call(document.querySelectorAll('.persite'));
 
  // Deep link. The fleet table's plugin count arrives as
@@ -1434,16 +1435,29 @@ COMPONENT_JS = """<script>
 
  function apply(){
    var t=(q.value||'').trim().toLowerCase(), ty_=ty.value, sc_=sc.value,
-       si=(site.value||'').toLowerCase(), n=0;
+       si=(site.value||'').toLowerCase(), n=0, npend=0, ninst=0;
    rows.forEach(function(r){
      var ok=true;
      if(si && (' '+r.dataset.sitesList+' ').indexOf(' '+si+' ')<0) ok=false;
      if(ok && t && r.dataset.slug.indexOf(t)<0 &&
         (' '+r.dataset.sitesList+' ').indexOf(t)<0) ok=false;
      if(ok && ty_ && r.dataset.type!==ty_) ok=false;
-     if(ok && sc_ && (' '+r.dataset.flags+' ').indexOf(sc_)<0) ok=false;
+     var ins = si ? r.querySelector('.install[data-site="'+si+'"]') : null;
+     // With a site selected, "updates pending" must mean pending ON THIS
+     // SITE. The `pending` flag on the row is fleet-wide, so filtering on it
+     // inside a per-site view would list components whose update is waiting
+     // somewhere else entirely -- the same confusion as the count that sent
+     // us here.
+     if(ok && sc_==='pending' && si){
+       if(!ins || !ins.dataset.pending) ok=false;
+     } else if(ok && sc_ && (' '+r.dataset.flags+' ').indexOf(sc_)<0) ok=false;
      r.classList.toggle('hide', !ok);
      if(ok) n++;
+     // Site totals are counted from the site's OWN install rows, independent
+     // of the type/scope/text filters. Counting visible rows instead made the
+     // banner read "1 component installed" as soon as the pending filter was
+     // on, when 31 were installed and 1 was merely shown.
+     if(ins){ ninst++; if(ins.dataset.pending) npend++; }
 
      // Fill the per-site cell from the install row for the selected site.
      // Read off the same rendered data the table already shows, so the two
@@ -1460,7 +1474,14 @@ COMPONENT_JS = """<script>
 
    persite.forEach(function(el){ el.hidden = !si; });
    banner.style.display = si ? '' : 'none';
-   if(si){ sname.textContent=site.value; scount.textContent=n; }
+   if(si){
+     sname.textContent=site.value;
+     scount.textContent=ninst;
+     spending.textContent = npend===0
+       ? 'none have an update pending'
+       : (npend===1 ? '1 has an update pending'
+                    : npend+' have an update pending');
+   }
 
    // Keep the URL shareable, without adding a history entry per keystroke.
    var u=new URL(location.href);
@@ -1616,12 +1637,21 @@ def render_components(m):
       'Pantheon deep scan is never reached at all. See the coverage line '
       'above.</div></div>')
 
+    # THE COUNT THIS PAGE IS REACHED BY IS A DIFFERENT COUNT. The fleet
+    # table's plugin cell means "updates PENDING" -- 1 for 11daypowerplay.com
+    # -- and it links here, where the same site shows 26 plugins INSTALLED.
+    # Both are right and the page said nothing to reconcile them, so the link
+    # read as a contradiction. It now states installed AND pending, and names
+    # the fleet page's number explicitly.
     A('<div id=sitebanner class=card style="display:none;margin-bottom:10px">'
-      '<div><b>Showing the <span id=sitecount></span> component(s) on '
-      '<code id=sitename></code>.</b> The <em>On this site</em> column is that '
-      'site\'s own version. <b>Sites</b>, <b>Versions</b> and <b>Pending</b> '
-      'stay fleet-wide &mdash; they describe the component across all %d '
-      'inventoried sites, not this one.</div>'
+      '<div><b>Showing the <span id=sitecount></span> component(s) installed '
+      'on <code id=sitename></code></b>, of which '
+      '<b><span id=sitepending></span></b> &mdash; that second number is the '
+      'plugin/theme count on the fleet page.</div>'
+      '<div class=quiet style="margin-top:6px">The <em>On this site</em> '
+      'column is this site\'s own version. <b>Sites</b>, <b>Versions</b> and '
+      '<b>Pending</b> stay fleet-wide: they describe the component across all '
+      '%d inventoried sites, not this one.</div>'
       '<div style="margin-top:6px"><a href="#" id=clearsite>Show the whole '
       'fleet again</a></div></div>' % len(c["sites_inventoried"]))
 
@@ -1676,9 +1706,10 @@ def render_components(m):
             st = ""
             if i["status"] in ("inactive", "must-use", "parent"):
                 st = ' <span class=quiet>%s</span>' % e(i["status"])
-            A('<div class=install data-site="%s" data-v="%s"><code>%s</code>'
-              '<span class=v>%s</span>%s</div>'
+            A('<div class=install data-site="%s" data-v="%s" data-pending="%s">'
+              '<code>%s</code><span class=v>%s</span>%s</div>'
               % (e(i["site_id"].lower()), e(" ".join(bits)),
+                 "1" if i["update_available"] else "",
                  e(i["site_id"]), " ".join(bits), st))
         A("</div></details>")
         A("</td></tr>")

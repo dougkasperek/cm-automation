@@ -1283,6 +1283,22 @@ check("an uninventoried site in the URL is explained, not shown as zero",
       "has no component inventory" in _full
       and "not a site with no plugins" in _full)
 
+# THE TWO COUNTS. The fleet table's plugin cell means "updates PENDING" -- 1
+# for 11daypowerplay.com -- and it links here, where that site shows 26
+# plugins INSTALLED. Both are right, and with nothing reconciling them the
+# link read as a contradiction. Reported by Doug, 2026-08-23.
+check("a site view states installed AND pending, and names the fleet count",
+      "installed on" in _full and "update pending" in _full
+      and "the plugin/theme count on the fleet page" in _full)
+
+# Per-site pending needs per-install data; the row-level `pending` flag is
+# fleet-wide, so filtering on it inside a site view would list components
+# whose update is waiting on some OTHER site.
+check("each install row carries whether the update is pending THERE",
+      'data-pending="1"' in _full,
+      "no per-install pending flag; the scope filter would use the "
+      "fleet-wide one inside a per-site view")
+
 # textContent does not decode HTML entities, so a &rarr; in the data attribute
 # the per-site column reads rendered as the literal characters "&rarr;".
 check("the version arrow is a character, not an entity",
