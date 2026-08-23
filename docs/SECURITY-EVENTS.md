@@ -179,10 +179,30 @@ worth saying out loud rather than being asked.
 installed WordPress version on 48 Pantheon sites and scores anything below the
 wp2shell floor as CRIT. It found `cm-whitelabel` at 6.9.4.
 
-**Would have helped:** answering "which of our sites run Pods, and at what
-version" in seconds rather than by hand. That list was compiled manually into
-two spreadsheet tabs. The scanner already runs `wp plugin list` and throws
-everything but the count away — see step 0 in `docs/VULN-INTEL-REVIEW.md`.
+**Could NOT have answered "which of our sites run Pods", and still cannot.**
+An earlier draft of this file said it would have answered that "in seconds".
+That was wrong twice over and is corrected here rather than quietly deleted:
+
+- The ledger holds two plugin fields per site, `plugin_updates` and
+  `theme_updates`, and both are integers. No slug, no name, no version. Nothing
+  in this suite knows the word "Pods".
+- The command it runs would not answer it either.
+  `pantheon-fleet-healthcheck.sh` calls `wp plugin list --update=available`,
+  which returns only plugins with an update PENDING. A site sitting on Pods
+  3.3.9 with nothing newer released would not appear. The question needs
+  `wp plugin list` without that flag — a different call, which is what step 0
+  of `docs/VULN-INTEL-REVIEW.md` describes and which is not built.
+
+**What step 0 would actually buy, measured 2026-08-23 against
+`health-2026-08-23_1321`:** 29 of the 32 sites the workbook listed for this
+incident. The three it would miss are `clevermethod-forward` and
+`pfannenbergsales` (SKIP, no live environment to scan) and `elmanyhistory.org`
+(not on Pantheon). Fleet-wide the ceiling is **48 of 84** — the 21 Nexcess and
+10 outlier-host sites have no deep scan at all, so their component inventory
+stays manual until those transports exist.
+
+That is still worth building. It is not the same claim as "in seconds", and the
+difference is exactly the kind of overstatement this file exists to avoid.
 
 **Would NOT have caught:** the incident itself. Nothing in this suite observes
 admin users, so three sites having users added is invisible to it. It is
