@@ -17,11 +17,9 @@ is a ladder rather than a switch. See `docs/DESIGN-REVISIT.md`.
 ## Start here
 
 **Being shown the dashboard rather than working on it?**
-`docs/getting-started.html` is a one-page orientation for viewers -- what the
-three cards measure, what the state colours mean, and why almost every site
-reads WARN. It names no client sites, only fleet totals, so it can be shared
-outside the Access boundary that fronts the dashboard itself. Open it in a
-browser; it is a page, not a note.
+`docs/GETTING-STARTED.md` is a one-page orientation for viewers: what the three
+cards measure, what the state colours mean, and why almost every site reads
+WARN. It names no client sites, only fleet totals.
 
 Everything below is for working in the repo.
 
