@@ -60,8 +60,13 @@ for raw in found:
     if arg:
         scanner_calls.add(arg)
 
+# A FLOOR, not an equality. This read `== 4` and went red on 2026-08-23 when
+# the scanner correctly grew a fifth call (must-use plugins). The number of
+# calls is not an invariant; that all four questions still get asked is, and
+# the set-equality against the diagnostic below is what actually catches drift
+# -- if this regex ever matched nothing, that comparison fails too.
 check("the scanner's remote:wp calls were found at all",
-      len(scanner_calls) == 4, str(sorted(scanner_calls)))
+      len(scanner_calls) >= 4, str(sorted(scanner_calls)))
 
 diag_src = read(DIAG)
 m = re.search(r"^WP_CALLS='(.*?)'$", diag_src, re.M | re.S)
@@ -117,7 +122,9 @@ def run(*sites, **kw):
 
 rc, out = run("normalsite")
 check("a site whose calls all succeed reports MEASURED throughout",
-      "FABRICATED" not in out and out.count("MEASURED") == 4, out[-400:])
+      "FABRICATED" not in out and out.count("MEASURED") == len(diag_calls),
+      "%d MEASURED for %d calls\n%s" % (out.count("MEASURED"), len(diag_calls),
+                                        out[-400:]))
 check("...and exits 0", rc == 0, "exit %d" % rc)
 check("an empty [] is called a real measurement, not silence",
       "genuinely nothing pending" in out)
@@ -128,8 +135,15 @@ check("a non-zero exit is FABRICATED, never a clean value", "FABRICATED" in out)
 check("...and it names the exit code", "exit 1" in out, out[-500:])
 check("...and it surfaces the stderr the scanner throws away",
       "Could not establish a connection" in out)
+# `plugin_updates=0` used to be the expected string here, and it described the
+# scanner BEFORE item 22 was fixed on 2026-08-23. The scanner now writes null
+# for a failed call, which the ledger reads as unknown -- verified against the
+# mock: a dbmissing site ingests as plugin_updates=unknown, never 0. The
+# diagnostic's wording was left describing the old, buggy behaviour and this
+# assertion was pinning it there.
 check("...and it says what the scanner would have written",
-      "wp_core_update=up-to-date" in out and "plugin_updates=0" in out)
+      "wp_core_update=up-to-date" in out and "plugin_updates=unknown" in out,
+      out[-500:])
 check("...and exits 2 so a caller can act on it", rc == 2, "exit %d" % rc)
 
 # The nastiest case: exit 0, output on stdout, and none of it is JSON.
@@ -161,7 +175,7 @@ check("a site with a real pending core update is not called clean",
 # one site with known pending updates belongs in every batch.
 rc, out = run("plugindrift")
 check("a site with pending plugin updates reports a count, not 0",
-      "plugin_updates=<count>" in out, out[-600:])
+      "plugin_updates=<those with update=available>" in out, out[-600:])
 
 # Bad input must fail loudly rather than reporting a clean fleet.
 rc, out = run()

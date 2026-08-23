@@ -203,7 +203,7 @@ credential.
 
 | step | what | depends on | size |
 |---|---|---|---|
-| **0** | Scanner keeps full plugin/theme/mu-plugin JSON per site. New ledger file `history/components.jsonl`, source `health`, one row per site × component: `slug, type, name, version, status, update_available, update_version`. Coverage guard and fact-collision guard apply. Tests with a fixture run. | the existing deep scan | ~half a day |
+| ~~**0**~~ | ~~Scanner keeps full plugin/theme/mu-plugin JSON per site. New ledger file `history/components.jsonl`...~~ **DONE 2026-08-23.** Built as specified, with one addition: `components_checked` is carried on the observation row and registered in `COVERAGE_FLAGS`/`COVERAGE_DIRECTION`, so a site nobody could inventory is distinguishable from one running nothing, and the first run does not report ~46 rows of fleet news. **No real scan has run yet, so `history/components.jsonl` does not exist and every count below is still 0.** | the existing deep scan | done |
 | **1** | Dashboard: "Components" section under Health. Fleet catalog (distinct slugs, site count, version spread), per-site list, search. Per-site line "components not inventoried" where coverage is missing. | 0 | ~half a day |
 | **2** | `wp_version` + catalog answer "who runs X at version Y" via a CLI query. This is the Pods question, answerable from the ledger. | 0 | hours |
 | **3** | Wordfence V3 fetch in a scheduled workflow (every 6h), key in GitHub secrets. Filter to slugs in the catalog + core, commit only those records as source `vuln-intel`. KEV fetch in the same job. | key, 0 | ~1 day |

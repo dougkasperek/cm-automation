@@ -19,17 +19,25 @@ A person supplied that mapping from memory, every time. It is not derivable:
 `drspietrantone.com` is `pietrantone-health`. Thirteen of them have no rule at
 all.
 
-## The three layers
+## The layers
 
 ```
   data/fleet-inventory.json      authoritative, human-owned, edited in a PR
             |
             v
   history/observations.jsonl     append-only facts, every tool, keyed on site_id
-            |
+  history/components.jsonl       append-only inventory OF each site, one row
+            |                    per component, same run_id as the facts above
             v
   the dashboard                  one view, one site list, one history
 ```
+
+**`components.jsonl` is the fourth file and it is not a fourth source.** It is
+written by the same `health` run, under the same `run_id`, and holds a LIST
+where the observation ledger holds SCALARS. The split is deliberate: the
+observation ledger diffs facts between runs, and a 40-element plugin list per
+site would either be diffed element-wise -- turning every routine version bump
+into fleet news -- or stored as a blob nothing could query. See section 2b.
 
 ### 1. Inventory, `data/fleet-inventory.json`
 
@@ -85,6 +93,50 @@ Three rules the code enforces rather than trusts:
 Rows that match no inventory entry are recorded per run in
 `sites_not_in_inventory` and never silently dropped. An unknown site is the
 highest-signal finding there is.
+
+### 2b. Components, `history/components.jsonl`
+
+Added 2026-08-23. One row per site per installed component:
+
+```
+site_id, host_site_name, source, slug, type, version, status,
+update_available, update_version, run_id, observed_at
+```
+
+`type` is `plugin`, `mu-plugin` or `theme`. **Match on `slug` + `type` +
+`version`, never the display name** -- advisory feeds key on the directory
+slug, which is what WP-CLI's `name` field actually is.
+
+**The scanner keeps the full inventory, not the update backlog.** Until this
+change it ran `plugin list --update=available` and stored only the count. That
+answers "what is pending", which is the wrong question during the window that
+matters: when Pods CVE-2026-19598 was disclosed on 2026-08-15 there was no
+patch for about 36 hours, so an update-backlog list showed *nothing* on the
+affected sites. The only useful output was "these sites run pods, at these
+versions". `plugin_updates` and `theme_updates` are now derived from the full
+list by selecting `update == "available"`, so they mean exactly what they
+meant before and severity is unaffected.
+
+**mu-plugins need a second call.** `wp plugin list` omits must-use plugins
+unless asked. They load on every request and cannot be deactivated, so leaving
+them out would put a hole in the inventory exactly where it matters. Pantheon
+installs its own.
+
+**A site that could not be inventoried produces NO ROWS**, and says so on the
+observation row via `components_checked`. Zero rows and "this site runs
+nothing" must never be the same state. The first cut of the scanner defaulted
+each failed call to `[]`, and a site whose database is not installed came out
+as `components: []` -- read as "inventoried, runs nothing". Caught by running
+the mock, and `run-local-test.sh` now asserts it.
+
+`components_checked` is health's second **coverage** flag, in both
+`COVERAGE_FLAGS` and `COVERAGE_DIRECTION`. It moves `False -> True` on every
+inventoried site the first time the new scanner runs; without those entries
+that one event lands as ~46 rows of fleet news, which is precisely what
+`wp_checked` did on the first full-mode run.
+
+Nothing reads this file yet. The component page is the next step; see
+`docs/VULN-INTEL-REVIEW.md` section 5.
 
 ### 3. The dashboard
 

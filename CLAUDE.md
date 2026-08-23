@@ -283,6 +283,15 @@ ledger holds *measurements*; the dashboard shows both and labels which is which.
 
 - **`history/` must NOT be gitignored.** It is the only asset here that cannot
   be regenerated.
+- **`history/components.jsonl` is a fourth file, not a fourth source.** Added
+  2026-08-23. Written by the same `health` run under the same `run_id`, it
+  holds one row per site per installed plugin, mu-plugin and theme. It is
+  separate from `observations.jsonl` because that ledger diffs SCALAR facts,
+  and a 40-element list per site would either be diffed element-wise -- every
+  routine version bump becoming fleet news -- or stored as a blob nothing can
+  query. A site that could not be inventoried produces NO ROWS and records
+  `components_checked: false`; zero rows and "runs nothing" are different
+  answers. See `docs/DATA-MODEL.md` section 2b.
 - **`reports/` IS gitignored**, so it does not exist on a fresh clone or a CI
   runner. Anything reading it must tolerate its absence, and **no test may
   assert a fleet size against it.**

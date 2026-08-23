@@ -82,7 +82,14 @@ INVENTORY="${INVENTORY:-$SCRIPT_DIR/../data/fleet-inventory.json}"
 # or a call this script calls slow is one the scanner would have completed.
 WP_CLI_TIMEOUT="${WP_CLI_TIMEOUT_OVERRIDE:-60}"
 
-# The four calls, exactly as the scanner makes them, one per line.
+# The five calls, exactly as the scanner makes them, one per line.
+#
+# They went from four to five on 2026-08-23 when the scanner started keeping a
+# full component inventory instead of only the update backlog: the `--update=
+# available` filters came off, --fields was pinned so update_version is
+# present, and a second plugin call was added for must-use plugins, which
+# `plugin list` never shows. test-wp-calls.py asserts this list and the
+# scanner's calls are identical, and it caught this file being left behind.
 #
 # `core version` is here even though the scanner already handles its empty case
 # correctly (`[ -z "$wp_version" ] && wp_version="unknown"`). It is the CONTROL:
@@ -93,8 +100,9 @@ WP_CLI_TIMEOUT="${WP_CLI_TIMEOUT_OVERRIDE:-60}"
 # tell those apart either, which is the bug it is diagnosing.
 WP_CALLS='core version
 core check-update --format=json
-plugin list --update=available --format=json
-theme list --update=available --format=json'
+plugin list --fields=name,status,update,version,update_version --format=json
+plugin list --status=must-use --fields=name,status,version --format=json
+theme list --fields=name,status,update,version,update_version --format=json'
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -211,17 +219,26 @@ scanner_would_record() {
       else
         printf 'wp_core_update=up-to-date'
       fi ;;
-    "plugin list"*)
+    "plugin list --status=must-use"*)
       if [ -n "$parsed" ] && [ "$parsed" != "[]" ]; then
-        printf 'plugin_updates=<count>'
+        printf 'mu-plugins=<count> into the component inventory'
       else
-        printf 'plugin_updates=0'
+        printf 'no mu-plugins recorded'
+      fi ;;
+    "plugin list"*)
+      # The count is now DERIVED from the full list by selecting
+      # update=="available", so a non-empty result no longer means updates are
+      # pending -- it means the site was inventoried.
+      if [ -n "$parsed" ] && [ "$parsed" != "[]" ]; then
+        printf 'plugin_updates=<those with update=available>, inventory kept'
+      else
+        printf 'plugin_updates=unknown, no inventory'
       fi ;;
     "theme list"*)
       if [ -n "$parsed" ] && [ "$parsed" != "[]" ]; then
-        printf 'theme_updates=<count>'
+        printf 'theme_updates=<those with update=available>, inventory kept'
       else
-        printf 'theme_updates=0'
+        printf 'theme_updates=unknown, no inventory'
       fi ;;
   esac
 }

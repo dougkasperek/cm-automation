@@ -280,6 +280,12 @@ while IFS= read -r site <&3; do
 
   # --- WordPress specifics via remote WP-CLI (SSH; skipped in API-only mode) ---
   wp_core_update="n/a"; plugin_updates=0; theme_updates=0; wp_checked="false"
+  # null, never []. An empty array would say "we inventoried this site and it
+  # runs no plugins", which is never true of a WordPress site and is exactly
+  # the fabricated-negative shape the ledger refuses elsewhere.
+  components="null"
+  component_scan='{"plugin":false,"mu-plugin":false,"theme":false}'
+  components_checked="false"
   # "n/a" means this scan did not look. It is NOT the same as "unknown", which
   # means it looked and could not tell. Keeping them distinct is the whole
   # reason the WP columns could be trusted the day full mode came on.
@@ -324,18 +330,71 @@ while IFS= read -r site <&3; do
         else
           wp_core_update="$(printf '%s' "$core_json" | jq -r '.[0].version // "up-to-date"' 2>/dev/null || echo "unknown")"
         fi
-        pj="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- plugin list --update=available --format=json | json_or_empty)" || pj=""
+        # FULL INVENTORY, NOT THE UPDATE BACKLOG. Until 2026-08-23 these two
+        # calls carried `--update=available`, so they returned only components
+        # with a pending update and the scanner kept `jq 'length'`.
+        #
+        # That is the wrong question for the case this tool exists to answer.
+        # When Pods CVE-2026-19598 was disclosed on 2026-08-15 there was no
+        # patch for roughly 36 hours. During that window `--update=available`
+        # listed nothing for an affected site, because no update existed to
+        # report. The only useful output was "these sites run pods, at these
+        # versions", and it needed the whole list. See docs/VULN-INTEL-REVIEW.md
+        # section 3, item 1.
+        #
+        # The counts below are derived from the full list, so plugin_updates
+        # and theme_updates mean exactly what they meant before and severity
+        # is unaffected. Explicit --fields because update_version is not in
+        # WP-CLI's default set and it is what a version matcher needs.
+        pj="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- plugin list --fields=name,status,update,version,update_version --format=json | json_or_empty)" || pj=""
         if [ -z "$pj" ]; then
           plugin_updates="null"             # JSON null -> UNKNOWN at ingest
+          pj_ok="false"
         else
-          plugin_updates="$(printf '%s' "$pj" | jq 'length' 2>/dev/null || echo null)"
+          plugin_updates="$(printf '%s' "$pj" | jq '[.[]|select(.update=="available")]|length' 2>/dev/null || echo null)"
+          pj_ok="true"
         fi
-        tj="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- theme list --update=available --format=json | json_or_empty)" || tj=""
+        # mu-plugins are invisible to `plugin list`: it omits must-use unless
+        # asked. They are loaded on every request and cannot be deactivated,
+        # so leaving them out would put a silent hole in the inventory exactly
+        # where it matters most. Pantheon installs its own here.
+        mj="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- plugin list --status=must-use --fields=name,status,version --format=json | json_or_empty)" || mj=""
+        [ -z "$mj" ] && mj_ok="false" || mj_ok="true"
+        tj="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- theme list --fields=name,status,update,version,update_version --format=json | json_or_empty)" || tj=""
         if [ -z "$tj" ]; then
           theme_updates="null"
+          tj_ok="false"
         else
-          theme_updates="$(printf '%s' "$tj" | jq 'length' 2>/dev/null || echo null)"
+          theme_updates="$(printf '%s' "$tj" | jq '[.[]|select(.update=="available")]|length' 2>/dev/null || echo null)"
+          tj_ok="true"
         fi
+
+        # One array per site, typed. A call that FAILED contributes nothing and
+        # is recorded as unknown in component_scan below -- it must never be
+        # indistinguishable from a call that succeeded and found none, which is
+        # the whole bug table in CLAUDE.md.
+        #
+        # If EVERY call failed there is no inventory, and that must be null
+        # rather than []. The first cut of this used `${pj:-[]}` throughout and
+        # dbmissing -- a site whose database is not installed, so every
+        # DB-backed call exits 1 -- came out as `components: []`, which reads
+        # as "we inventoried it and it runs nothing". Caught by running the
+        # mock, not by review.
+        if [ "$pj_ok" = "false" ] && [ "$mj_ok" = "false" ] && [ "$tj_ok" = "false" ]; then
+          components="null"
+        else
+          components="$(jq -n \
+            --argjson p "${pj:-[]}" --argjson m "${mj:-[]}" --argjson t "${tj:-[]}" \
+            '[ ($p[] | .type="plugin"),
+               ($m[] | .type="mu-plugin" | .update="none"),
+               ($t[] | .type="theme") ]' 2>/dev/null || echo 'null')"
+        fi
+        component_scan="$(jq -n --arg p "$pj_ok" --arg m "$mj_ok" --arg t "$tj_ok" \
+          '{plugin:($p=="true"),"mu-plugin":($m=="true"),theme:($t=="true")}')"
+        # The scalar the LEDGER stores. component_scan stays in the report for
+        # diagnosis; the ledger needs one boolean it can score and diff.
+        components_checked="false"
+        [ "$components" != "null" ] && components_checked="true"
       fi
       ;;
   esac
@@ -389,11 +448,16 @@ while IFS= read -r site <&3; do
     --arg wpver "$wp_version" \
     --argjson plugins "$plugin_updates" --argjson themes "$theme_updates" \
     --argjson wp_checked "$wp_checked" \
+    --argjson components "$components" \
+    --argjson component_scan "$component_scan" \
+    --argjson components_checked "$components_checked" \
     --arg status "$status" --arg notes "$notes" \
     '{site:$site,framework:$fw,plan:$plan,env:$env,php_version:$php,
       db_backup_age_days:$backup_age,upstream_pending:$upstream,
       wp_checked:$wp_checked,wp_version:$wpver,wp_core_update:$core,
       plugin_updates:$plugins,theme_updates:$themes,
+      components:$components,component_scan:$component_scan,
+      components_checked:$components_checked,
       status:$status,notes:$notes,frozen:false}')"
   results="$(jq --argjson o "$obj" '. + [$o]' <<<"$results")"
 

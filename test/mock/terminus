@@ -220,13 +220,20 @@ JSON
     # the version AVAILABLE, version returns bare text for the version
     # INSTALLED. Keying only on the noun made them indistinguishable, which is
     # how a scan reporting "up-to-date" on every site looked like an answer.
-    sub=""; verb=""
+    sub=""; verb=""; mustuse=""
     for a in "$@"; do
       case "$a" in
         core|plugin|theme) [ -z "$sub" ] && sub="$a" ;;
         version|check-update|list) [ -n "$sub" ] && [ -z "$verb" ] && verb="$a" ;;
+        # `plugin list` OMITS must-use plugins unless asked, so the scanner
+        # makes a second call for them. A mock that answered both calls
+        # identically would report Pantheon's mu-plugins as ordinary ones and
+        # hide the fact that the second call is even made.
+        --status=must-use) mustuse="1" ;;
       esac
     done
+    # Sub-key so must-use can be matched separately from the regular list.
+    [ -n "$mustuse" ] && sub="muplugin"
     case "$se" in
       noisysite.*)  emit_noise ;;
       noticysite.*) emit_php_notices ;;
@@ -250,8 +257,14 @@ JSON
         exit 1 ;;
       noticysite.*:core:version)      echo "7.0.3" ;;
       noticysite.*:core:check-update) echo '[{"version":"7.1","update_type":"major"}]' ;;
-      noticysite.*:plugin:*) echo '[{"name":"a"},{"name":"b"},{"name":"c"},{"name":"d"},{"name":"e"},{"name":"f"},{"name":"g"},{"name":"h"},{"name":"i"},{"name":"j"},{"name":"k"},{"name":"l"},{"name":"m"},{"name":"n"},{"name":"o"}]' ;;
-      noticysite.*:theme:*)  echo '[{"name":"t1"},{"name":"t2"},{"name":"t3"}]' ;;
+      # 20 plugins installed, 15 of them with an update pending. The count the
+      # scanner records must be 15, and it is now DERIVED by selecting
+      # update=="available" rather than taking the array length. The five
+      # up-to-date entries exist so that a regression back to `jq length`
+      # reports 20 and fails the assertion instead of passing silently.
+      noticysite.*:plugin:*) echo '[{"name":"a","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"b","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"c","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"d","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"e","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"f","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"g","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"h","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"i","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"j","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"k","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"l","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"m","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"n","status":"inactive","update":"available","version":"1.0","update_version":"1.1"},{"name":"o","status":"active","update":"available","version":"1.0","update_version":"1.1"},{"name":"settled-1","status":"active","update":"none","version":"2.0","update_version":""},{"name":"settled-2","status":"active","update":"none","version":"2.0","update_version":""},{"name":"settled-3","status":"inactive","update":"none","version":"2.0","update_version":""},{"name":"settled-4","status":"active","update":"none","version":"2.0","update_version":""},{"name":"settled-5","status":"active","update":"none","version":"2.0","update_version":""}]' ;;
+      # 5 themes installed, 3 pending. Same reason as above.
+      noticysite.*:theme:*)  echo '[{"name":"t1","status":"active","update":"available","version":"1.0","update_version":"1.2"},{"name":"t2","status":"inactive","update":"available","version":"1.0","update_version":"1.2"},{"name":"t3","status":"inactive","update":"available","version":"1.0","update_version":"1.2"},{"name":"t4","status":"inactive","update":"none","version":"3.0","update_version":""},{"name":"t5","status":"inactive","update":"none","version":"3.0","update_version":""}]' ;;
       # Installed version. Plain text, never JSON.
       # coredrift sits on an older release than it reports as available.
       coredrift.*:core:version)   echo "6.8.1" ;;
@@ -270,10 +283,15 @@ JSON
       # shape galbanicheese actually had while the ledger recorded 0 and
       # "up-to-date". If strip_noise regresses, these become 0 again and the
       # assertions in run-local-test.sh fail.
-      plugindrift.*:plugin:*) echo '[{"name":"akismet"},{"name":"wordfence"},{"name":"yoast"}]' ;;
+      plugindrift.*:plugin:*) echo '[{"name":"akismet","status":"active","update":"available","version":"5.3","update_version":"5.3.4"},{"name":"wordfence","status":"active","update":"available","version":"7.11.0","update_version":"8.0.2"},{"name":"yoast","status":"active","update":"available","version":"22.4","update_version":"23.1"},{"name":"classic-editor","status":"inactive","update":"none","version":"1.6.5","update_version":""}]' ;;
       *:core:*)   echo '[]' ;;
-      *:plugin:*) echo '[]' ;;
-      *:theme:*)  echo '[]' ;;
+      # Every WordPress site on Pantheon carries this one, and `plugin list`
+      # never shows it. If the scanner stops making the must-use call, these
+      # rows vanish from the inventory and nothing else changes -- which is
+      # why test-wp-calls.py asserts on them directly.
+      *:muplugin:*) echo '[{"name":"wp-native-php-sessions","status":"must-use","version":"2.0.1"},{"name":"pantheon-mu-plugin","status":"must-use","version":"1.4.0"}]' ;;
+      *:plugin:*) echo '[{"name":"akismet","status":"active","update":"none","version":"5.3.4","update_version":""},{"name":"classic-editor","status":"inactive","update":"none","version":"1.6.5","update_version":""}]' ;;
+      *:theme:*)  echo '[{"name":"twentytwentyfour","status":"active","update":"none","version":"1.3","update_version":""}]' ;;
       *)          echo '[]' ;;
     esac
     exit 0

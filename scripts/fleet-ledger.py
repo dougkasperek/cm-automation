@@ -65,6 +65,11 @@ OBSERVED = (
     "wp_core_update",
     "plugin_updates",
     "theme_updates",
+    # Did this run inventory the site's components at all? The LIST itself is
+    # not a fact and is not stored here -- it goes to components.jsonl, one row
+    # per component. This is the scalar the page needs so that "no vulnerable
+    # plugin found" can be told apart from "we never listed the plugins".
+    "components_checked",
 )
 
 DERIVED = ("status",)
@@ -91,7 +96,8 @@ UNKNOWN = "unknown"
 # when none is, so a fleet on any version at all looked identical to a fleet on
 # 7.0.2. Belongs here because reading it needs SSH, so on an api-only run it
 # must be unknown and never a value.
-DEEP_ONLY = ("wp_version", "wp_core_update", "plugin_updates", "theme_updates")
+DEEP_ONLY = ("wp_version", "wp_core_update", "plugin_updates", "theme_updates",
+             "components_checked")
 
 
 def fact(row, key):
@@ -259,6 +265,51 @@ def _health_rows(payload, by_host):
         for k in DERIVED:
             rec["derived_" + k] = fact(r, k)
         out.append(rec)
+    return out
+
+
+def _component_rows(payload, by_host):
+    """One row per site per installed component. A LIST, not a fact.
+
+    Deliberately not in observations.jsonl. That ledger diffs scalar facts
+    between runs; a 40-element list per site would either be diffed
+    element-wise -- turning every routine plugin version bump into fleet news
+    -- or stored as an opaque blob nothing could query. Components are the
+    third layer the data model always implied: inventory (human), observations
+    (scalar measurements), components (an inventory OF each site).
+
+    A site with `components: null` produces NO ROWS. Zero rows for a site and
+    "this site runs nothing" must not be the same state, which is why
+    `components_checked` is carried on the observation row instead of being
+    inferred from a row count here.
+    """
+    if not isinstance(payload, list):
+        return None
+    out = []
+    for r in payload:
+        comps = r.get("components")
+        if not isinstance(comps, list):
+            continue
+        name = r["site"]
+        site_id = by_host.get(name, name)
+        for c in comps:
+            slug = c.get("name")
+            if not slug:
+                continue
+            out.append({
+                "site_id": site_id,
+                "host_site_name": name,
+                "source": "health",
+                # Match on slug + type + version, never the display name --
+                # docs/VULN-INTEL-REVIEW.md section 3. WP-CLI's `name` IS the
+                # directory slug, which is what advisory feeds key on.
+                "slug": slug,
+                "type": c.get("type") or "plugin",
+                "version": c.get("version") or UNKNOWN,
+                "status": c.get("status") or UNKNOWN,
+                "update_available": c.get("update") == "available",
+                "update_version": c.get("update_version") or None,
+            })
     return out
 
 
@@ -459,7 +510,14 @@ MEASURED = {
 # Adding a fifth source means adding its flag here in the same change as its
 # MEASURED entry. test-ledger.py asserts every name in this tuple classifies
 # as COVERAGE.
-COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok", "consent_http_status")
+# `components_checked` is health's SECOND coverage flag, added 2026-08-23 with
+# the component inventory. It is not a new source, but it answers the same
+# question -- can the tool see this site -- and it moves False->True on every
+# inventoried site the first time the new scanner runs. Without an entry here
+# that single event lands as ~46 TRANSITION rows of fleet news, which is
+# precisely what `wp_checked` did on the first full-mode run.
+COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok", "consent_http_status",
+                  "components_checked")
 
 # Which DIRECTION a move in one of those flags went. True means coverage was
 # gained; False means it went dark.
@@ -479,6 +537,7 @@ COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok", "consent_http_status")
 COVERAGE_DIRECTION = {
     "wp_checked":          lambda before, after: after is True,
     "consent_scan_ok":     lambda before, after: after is True,
+    "components_checked":  lambda before, after: after is True,
     # The sweep saw the site only on a 2xx. Anything else is an error page,
     # which is the whole reason `ok` was redefined to require one.
     "consent_http_status": lambda before, after: (isinstance(after, int)
@@ -561,7 +620,10 @@ def ingest(reports_dir, history_dir, inventory=None):
     # written into a file nobody reads is not a warning. The caller gets a count
     # back and the CLI prints it.
     unresolved_by_run = {}
-    with open(obs_path, "a") as obs_fh, open(runs_path, "a") as runs_fh:
+    comp_path = os.path.join(history_dir, "components.jsonl")
+    added_components = 0
+    with open(obs_path, "a") as obs_fh, open(runs_path, "a") as runs_fh, \
+            open(comp_path, "a") as comp_fh:
         for path in files:
             meta = parse_run_id(path)
             if meta is None:
@@ -680,11 +742,26 @@ def ingest(reports_dir, history_dir, inventory=None):
                 obs_fh.write(json.dumps(rec, sort_keys=True) + "\n")
                 added_obs += 1
 
+            # Components ride the same run_id, so the inventory and the facts
+            # measured alongside it can never drift apart. Guarded on source
+            # rather than on payload shape: another source is free to use the
+            # word "components" for something that is not a WordPress plugin.
+            for c in ((_component_rows(payload, by_host) or [])
+                      if source == "health" else []):
+                crec = dict(c)
+                crec["run_id"] = meta["run_id"]
+                crec["observed_at"] = meta["observed_at"]
+                crec["site"] = c["site_id"]
+                comp_fh.write(json.dumps(crec, sort_keys=True) + "\n")
+                added_components += 1
+
     return {
         "runs_added": added_runs,
         "runs_skipped": skipped,
         "observations_added": added_obs,
+        "components_added": added_components,
         "ledger": obs_path,
+        "components_ledger": comp_path,
         "unresolved_by_run": unresolved_by_run,
         "unresolved_count": sum(len(v) for v in unresolved_by_run.values()),
         "coverage_drops": coverage_drops,

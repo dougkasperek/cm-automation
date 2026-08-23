@@ -1047,6 +1047,120 @@ check("the workflow header no longer claims full mode is unreachable",
       "PHASE 1 (now): manual dispatch, API-only, no SSH key" not in _hc)
 
 
+
+# ---------------------------------------------------------------------------
+print("\n-- the component inventory: a list, not a fact --")
+
+_tmp = tempfile.mkdtemp()
+try:
+    hist = os.path.join(_tmp, "history")
+    reports = os.path.join(_tmp, "reports")
+    os.makedirs(hist); os.makedirs(reports)
+    inv = os.path.join(_tmp, "inv.json")
+    with open(inv, "w") as fh:
+        json.dump({"sites": [
+            {"site_id": "a.com", "domain": "a.com", "host_site_name": "a",
+             "production": True},
+            {"site_id": "b.com", "domain": "b.com", "host_site_name": "b",
+             "production": True}]}, fh)
+
+    payload = [
+        # Inventoried: two plugins (one pending), one mu-plugin, one theme.
+        row("a", wp_checked=True, wp_version="6.9.4", wp_core_update="up-to-date",
+            plugin_updates=1, theme_updates=0, components_checked=True,
+            components=[
+                {"name": "pods", "type": "plugin", "status": "active",
+                 "update": "available", "version": "3.2.7",
+                 "update_version": "3.3.1"},
+                {"name": "akismet", "type": "plugin", "status": "inactive",
+                 "update": "none", "version": "5.3.4", "update_version": ""},
+                {"name": "wp-native-php-sessions", "type": "mu-plugin",
+                 "status": "must-use", "update": "none", "version": "2.0.1"},
+                {"name": "astra", "type": "theme", "status": "active",
+                 "update": "none", "version": "4.8.6", "update_version": ""},
+            ]),
+        # NOT inventoried. Every WP-CLI call failed, as on a site whose
+        # database is not installed.
+        row("b", wp_checked=True, wp_version="6.9.4",
+            wp_core_update="unknown", plugin_updates=None, theme_updates=None,
+            components_checked=False, components=None),
+    ]
+    with open(os.path.join(reports, "fleet-health-2026-08-20_0900.json"), "w") as fh:
+        json.dump(payload, fh)
+
+    res = L.ingest(reports, hist, inventory=inv)
+    comp_path = os.path.join(hist, "components.jsonl")
+    comps = [json.loads(l) for l in open(comp_path) if l.strip()]
+
+    check("component rows are written to their own ledger",
+          res["components_added"] == 4 and len(comps) == 4,
+          "added=%r rows=%d" % (res.get("components_added"), len(comps)))
+
+    a_rows = [c for c in comps if c["site"] == "a.com"]
+    b_rows = [c for c in comps if c["site"] == "b.com"]
+
+    # THE POINT OF THE WHOLE FEATURE. A site nobody could inventory must
+    # produce no rows, and must not be reachable by any query that would make
+    # it look like a site running nothing. "No vulnerable plugin found" and
+    # "we never listed the plugins" are different answers.
+    check("a site with components:null produces NO component rows",
+          b_rows == [], repr(b_rows))
+    check("...and says so on the observation row, rather than by absence",
+          all(o["components_checked"] is False
+              for o in [json.loads(l) for l in
+                        open(os.path.join(hist, "observations.jsonl"))
+                        if l.strip()] if o["site"] == "b.com"))
+
+    check("every component type survives ingest",
+          sorted(set(c["type"] for c in a_rows))
+          == ["mu-plugin", "plugin", "theme"],
+          repr(sorted(set(c["type"] for c in a_rows))))
+
+    # mu-plugins are invisible to `wp plugin list`. If the scanner ever stops
+    # making the second call these rows vanish and nothing else changes.
+    check("mu-plugins are inventoried, not dropped",
+          any(c["slug"] == "wp-native-php-sessions" and c["type"] == "mu-plugin"
+              for c in a_rows))
+
+    pods = [c for c in a_rows if c["slug"] == "pods"][0]
+    check("a pending update carries the version it would move to",
+          pods["update_available"] is True and pods["update_version"] == "3.3.1",
+          repr(pods))
+    akismet = [c for c in a_rows if c["slug"] == "akismet"][0]
+    check("an up-to-date component is recorded, not omitted",
+          akismet["update_available"] is False and akismet["version"] == "5.3.4",
+          repr(akismet))
+    # The whole reason the --update=available filter came off: during the ~36
+    # hours Pods had no patch, an update-backlog list showed nothing at all.
+    check("...so the inventory holds components with nothing pending",
+          len([c for c in a_rows if not c["update_available"]]) == 3)
+
+    check("components rows are keyed on the inventory domain, not the host name",
+          all(c["site_id"] in ("a.com", "b.com") for c in comps),
+          repr(sorted(set(c["site_id"] for c in comps))))
+
+    obs = [json.loads(l) for l in
+           open(os.path.join(hist, "observations.jsonl")) if l.strip()]
+    check("the component LIST never leaks into the observation ledger",
+          all("components" not in o for o in obs),
+          repr([k for k in obs[0] if "component" in k]))
+finally:
+    shutil.rmtree(_tmp, ignore_errors=True)
+
+# Coverage classification. components_checked moves False->True on every
+# inventoried site the first time the new scanner runs. Without both entries
+# that single event lands as fleet news, which is exactly what wp_checked did.
+check("components_checked is declared a coverage flag",
+      "components_checked" in L.COVERAGE_FLAGS)
+check("...and has a direction, so the coverage line is not blank in both columns",
+      "components_checked" in L.COVERAGE_DIRECTION)
+check("...and gaining an inventory reads as coverage GAINED",
+      L.COVERAGE_DIRECTION["components_checked"](False, True) is True)
+check("components_checked is deep-only, so an api-only run reads unknown",
+      L.fact({"wp_checked": False, "components_checked": True},
+             "components_checked") == L.UNKNOWN)
+
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))

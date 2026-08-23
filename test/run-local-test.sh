@@ -101,6 +101,31 @@ else
   check "dbmissing: a failed theme call is null, NOT 0"      "null"   "$(n_of dbmissing theme_updates)"
   check "dbmissing: an unmeasured site does not read OK"     "WARN"   "$(status_of "$J" dbmissing)"
 
+  # THE COMPONENT INVENTORY, added 2026-08-23. The scanner now keeps the full
+  # `plugin list` rather than only the update backlog, because during the ~36
+  # hours Pods CVE-2026-19598 had no patch an update-backlog list showed
+  # nothing at all on the affected sites.
+  #
+  # The first cut of this used `${pj:-[]}` throughout, so dbmissing -- every
+  # DB-backed call exits 1 -- emitted `components: []`, which reads as "we
+  # inventoried it and it runs nothing". Caught by running the mock. This is
+  # the regression assertion for that.
+  comp_of() { jq -r --arg s "$1" '.[]|select(.site==$s)|if .components==null then "null" else (.components|length|tostring) end' "$J"; }
+  check "dbmissing: a site nobody could inventory is null, NOT []" "null" "$(comp_of dbmissing)"
+  check "drupalsite: a non-WordPress site is never inventoried"    "null" "$(comp_of drupalsite)"
+  check "dbmissing: and the ledger flag says so"  "false" "$(n_of dbmissing components_checked)"
+  check "normalsite: an inventoried site says so" "true"  "$(n_of normalsite components_checked)"
+
+  # 20 plugins installed, 15 pending; 5 themes, 3 pending. The counts above are
+  # DERIVED by selecting update=="available". If that ever regresses to
+  # `jq length` the count assertions read 20 and 5 instead of 15 and 3, which
+  # is why the mock deliberately installs more than are pending.
+  check "noticysite: the whole inventory is kept, not just the backlog" "27" "$(comp_of noticysite)"
+  mu_of() { jq -r --arg s "$1" '[.[]|select(.site==$s)|.components[]|select(.type=="mu-plugin")]|length' "$J"; }
+  check "noticysite: mu-plugins are inventoried too"  "2" "$(mu_of noticysite)"
+  settled() { jq -r --arg s "$1" '[.[]|select(.site==$s)|.components[]|select(.type=="plugin" and .update!="available")]|length' "$J"; }
+  check "noticysite: components with nothing pending are kept" "5" "$(settled noticysite)"
+
   # The observed WordPress version, added 2026-08-18. check-update alone only
   # ever says whether something is PENDING, so a fleet claimed to be on 7.0.2
   # read as "up-to-date" everywhere and the claim stayed unverified.
