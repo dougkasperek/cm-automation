@@ -62,12 +62,20 @@ present, and that the result actually changed; a slice helper must assert
 fired on the very next run, on a different anchor. **Commit before a
 mechanical rewrite of a file, not after.**
 
-**Claude must not run any git command that writes the index.** Not `commit`,
-and not `add`, `reset` or `update-index`. Even a bare `git status` leaves a
-`.git/index.lock` on the mounted volume, and Claude cannot delete files there.
-If a lock appears, `mv` it: `mkdir -p _to_delete && mv .git/index.lock
-_to_delete/`. Then tell Doug to remove that folder. Leaving a lock behind means
-his next commit fails with no explanation. **Claude edits files; Doug runs git.**
+~~**Claude must not run any git command that writes the index.**~~ **LIFTED
+2026-08-23.** The rule existed for one reason: the repo lived on a mounted
+iCloud volume, a bare `git status` left a `.git/index.lock` there, and Claude
+could not delete files on that volume — so Doug's next commit failed with no
+explanation. The repo moved to `~/dev/cm-automation` (see
+`docs/DO-THIS-NEXT.md`) and the premise went with it. Checked before lifting:
+repeated `git status` runs from a Claude session leave no lock behind.
+
+Claude may now run `add`, `commit` and `status`. **Still not `push`** — that is
+outward-facing and stays a human action. If a lock ever does appear, `mv` it:
+`mkdir -p _to_delete && mv .git/index.lock _to_delete/`, then say so.
+
+Kept rather than deleted because it is another written-down rule that outlived
+its reason. Check a claim before acting on it, including the claims in this file.
 
 **`.github/workflows/` is the ONLY copy of a workflow. Edit it directly.**
 
@@ -143,6 +151,10 @@ eleven times:
 | `workers_dev = false` is pinned in `wrangler.toml` | it sat below `[[routes]]`, so TOML made it a key of the ROUTE. Wrangler had never applied it and refused to deploy the first time anyone tried |
 | Pantheon is blocking the scanner; ask them to allowlist it | a CLOUDFLARE bot challenge on 20 client zones. Zero requests reached Pantheon. Nobody had read a response header before the action item was written down |
 | a consent run covering the fleet | all four wrote 78 rows over 78 sites; one measured 54 and two measured 38 |
+| 45 sites `OK` on an api-only run | nothing about any site's WordPress had been read. The same page said "WordPress core, plugins, themes: 0 of 52" two cards lower. Fixed 2026-08-23 by `wp_unestablished` |
+| `plugin_updates: 0`, `theme_updates: 0`, `wp_core_update: up-to-date` on four OK sites | WP-CLI had returned **15 plugin updates, 3 theme updates and WordPress 7.1 available** on one of them. Pantheon's own mu-plugin emits PHP deprecation notices on stdout ahead of the JSON, `strip_noise` did not cover them, `json_or_empty` refused the lot, and the scanner wrote its clean default. Item 22, measured 2026-08-23 |
+| a sixth site `OK` after all that | its `wp core version` answered and the three database-backed calls did not, so the VERSION was known and the UPDATE STATUS was not. `wp_unestablished` tests the version, so it stayed silent. Fixed the same day by `wp_update_status_unknown` |
+| a fifth site `up-to-date` at 6.9.4 | its database is not installed at all. Every call that needs the DB exits 1; `core version` reads the version off disk and answers, so the row looked measured |
 | the coverage box lists three sources | a fourth, Nexcess, existed and had never once run, with nothing on the page saying so — the box only appended a line `if source in latest`, so a source with zero runs was never `in latest` and simply never appeared |
 
 The thirteenth was our own diagnostic: `probe` printed one word for a DNS
@@ -302,6 +314,7 @@ consent sweep ran and nothing about maintenance had changed.
 ```bash
 ./scripts/pantheon-fleet-healthcheck.sh --no-fail-on-crit             # scan (full)
 ./scripts/pantheon-fleet-healthcheck.sh --api-only --no-fail-on-crit  # no SSH
+./scripts/diagnose-wp-calls.sh cm-whitelabel sgroilawley.com          # item 22: did the WP-CLI calls actually run?
 ./scripts/fleet-nexcess.py probe                                      # confirm the base URL
 ./scripts/fleet-nexcess.py discover --stamp "$(date -u +%Y-%m-%d_%H%M)"
 node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs npm i
@@ -320,12 +333,13 @@ reads the ledger and is what gets published. Do not delete either.
 ## Testing
 
 ```bash
-python3 test/test-ledger.py       # 126
-python3 test/test-severity.py     #  96
+python3 test/test-ledger.py       # 149
+python3 test/test-severity.py     # 116
 python3 test/test-email-dns.py    #  58   (needs dnspython)
 python3 test/test-nexcess.py      #  88   offline, no API call
-python3 test/test-consent.py      #  65   offline, no browser
-./test/run-local-test.sh          #  32   1-3 min, silent, two mock sites hang
+python3 test/test-consent.py      #  75   offline, no browser
+python3 test/test-wp-calls.py     #  45   offline, drives the mock
+./test/run-local-test.sh          #  42   1-3 min, silent, two mock sites hang
                                   #       on purpose. Never run it through the
                                   #       device bridge: 45s timeout.
 ```

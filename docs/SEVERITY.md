@@ -114,6 +114,8 @@ below.
 | 10 or more plugin updates pending | `PLUGIN_WARN_COUNT = 10` |
 | last backup 8 to 30 days old | `BACKUP_WARN_DAYS = 7` |
 | deep scan ran but the version could not be read | — |
+| no scan ever established the WordPress status | — |
+| the deep scan could not establish the core-update or plugin status | — |
 
 ### Informational: recorded, displayed, never scored
 
@@ -222,7 +224,9 @@ call to make silently. Left for a decision.
 
 ## Tests
 
-`test/test-severity.py`, 53 checks. Every regression above is asserted by name:
+`test/test-severity.py`, 109 checks (measured 2026-08-23; it was 53 when this
+line was first written and drifted for a month, which is why the number is now
+dated). Every regression above is asserted by name:
 
 - 6.9.4 with `wp_core_update: up-to-date` must be CRIT
 - `upstream_pending: 2` and nothing else wrong must be OK
@@ -230,6 +234,8 @@ call to make silently. Left for a decision.
 - PHP 8.1 must be CRIT, PHP 8.2 must not be
 - `php_support` must not fail open when `today` is omitted
 - unknown must never fold into OK, in any of its forms
+- an api-only run must leave NO site reading OK, pinned to the named run
+  `health-2026-08-23_0033` with the full run 38 minutes later as its control
 
 The ledger assertions run against the **committed** ledger in `history/`,
 pinned to a **named** run. Never against `reports/`, which is gitignored, and
@@ -265,6 +271,50 @@ plugin count and no theme count, and those are the facts that make a Pantheon
 OK mean anything. So a Nexcess site cannot reach OK on discovery evidence. The
 rule is conditioned on the site having Nexcess facts and NO health facts, so it
 retires itself the moment an SSH scan supplies them.
+
+**`wp_unestablished`** — WARN. Added 2026-08-23, and it is not a Nexcess rule;
+it is listed here because it is the third sibling of the two above. Nothing
+established this site's WordPress status, and no scan tried.
+
+An api-only health run reaches every site's control plane over the Pantheon API
+and reads no WordPress at all — no version, no core-update state, no plugin
+count. It fell between the two guards meant to catch that:
+`wp_version_unknown` requires `wp_checked is True`, meaning a deep scan ran and
+failed, and in api-only `wp_checked` is False; `coverage_partial` requires that
+health did NOT see the site, and here health did see it, just without SSH.
+
+So the site scored on backup age and PHP alone and reached OK. On the api-only
+run `health-2026-08-23_0033` the page printed **45 OK** while the coverage box
+on the same page said *"WordPress core, plugins, themes (needs SSH): 0 of 52"*,
+and the standing findings said *"WordPress core, plugin and theme status not
+observed"*. Three parts of one page, two of them right. The full run 38 minutes
+later put it back to 7 OK, which is how it stayed invisible: the bug only shows
+in the window between an api-only run and the next full one.
+
+The rule is about the ABSENCE, not the mode that caused it — a site whose
+WordPress status was never established cannot be OK, whichever mode failed to
+establish it. api-only remains the supported no-SSH fallback, so this recurs
+every time it runs.
+
+`framework` fails safe: only a positively non-WordPress framework is exempt,
+because there the WordPress question is not a question and a rule true of every
+one of them would rank nothing. An unrecorded framework warns.
+
+**`wp_update_status_unknown`** — WARN. Added 2026-08-23, hours after
+`wp_unestablished`, because that rule tested the wrong fact.
+
+`morrison-chs` answered `wp core version` (7.0.4) and then failed the three
+calls that need the database. Its version was known and its update status was
+not, so `wp_unestablished` — which fires on a missing VERSION — stayed silent
+and the site read OK with core, plugin and theme all unknown.
+
+The version is not what makes an OK mean anything; "nothing is pending" is. So
+a deep-scanned site is not OK while either fact the score reads for
+maintenance, `wp_core_update` or `plugin_updates`, is missing.
+
+Kept separate from `wp_unestablished` because the remedies differ:
+`wp_unestablished` means run a full scan, this one means find out why WP-CLI
+refused on this site.
 
 **`wp_version_disagreement`** — WARN. WP-CLI and the control plane reporting
 different versions is a finding, not a tie to break. The WP-CLI reading is what

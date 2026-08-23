@@ -40,9 +40,13 @@ one to do first: credential-free, no browser, no variance.
 
 1. **Two questions are out and unanswered**: Matt on the Cloudflare rules,
    Nexcess on the API bot challenge. Check both before starting anything new.
-2. **Items 21 and 22 below are the only known defects**, both about an
-   unmeasured site reading as a healthy one. 22 has an unresolved CAUSE that
-   must be settled before its fix is written.
+2. **Item 21 is FIXED (2026-08-23); item 22 is the only known defect left.**
+   Both were about an unmeasured site reading as a healthy one. 22 has an
+   unresolved CAUSE that must be settled before its fix is written, and item
+   21's fix does not cover it: `wp_unestablished` fires when NO scan looked,
+   and item 22 is a scan that looked, got nothing back, and recorded a clean
+   answer. A full run still writes `plugin_updates: 0` on a failed call, and
+   nothing in severity can tell that from a real zero.
 3. The rest of the backlog is security housekeeping on the Cloudflare tokens.
 
 ### What changed 2026-08-22
@@ -82,6 +86,55 @@ Cloudflare challenge, wrong vendor), two Workers already pinned, "delete
 before acting on it. This repo already applies that to code; it applies to these
 notes just as hard.
 
+### BACKLOG 2026-08-23: decommission the test/temp sites
+
+**Doug is confirming with the team. Nothing has been changed.** He named the
+two Mooresville sites and cm-whitelabel; the evidence says the set is probably
+the six sites absent from the workbook, all on the Sandbox plan:
+
+| site | state | evidence |
+|---|---|---|
+| `clevermethod-forward` | SKIP | live env never initialized |
+| `moorseville-nc` | SKIP | live env never initialized |
+| `pfannenbergsales` | SKIP | live env never initialized |
+| `nc-moorseville` | FROZEN | frozen by Pantheon; near-duplicate name of `moorseville-nc` |
+| `hoffmanscheese` | CRIT | no backup in 725 days, core update pending |
+| `cm-whitelabel` | CRIT | 6.9.4, no database installed, already `production: false` |
+
+Separately, `eamusicfest.com` and `hitsfoundation.org` carry
+`decommission_candidate: true` from the workbook import, with notes asking the
+same question. Different sites, same conversation.
+
+**Three things to settle before anything is changed:**
+
+1. **A ruling, not an inference.** CLAUDE.md says not to infer `production`
+   from the Pantheon plan, because that would have excluded the fleet's
+   worst-maintained site — which is `hoffmanscheese`, on this list. The team
+   deciding a site is a test site is exactly what `production: false` records.
+   "They are all Sandbox" is not the same statement and must not become the
+   reason.
+2. **Removing `hoffmanscheese` takes fleet CRIT from 2 to 1.** Correct if it is
+   genuinely a test site. It is also the shape of improving a number by
+   deleting the evidence, so the record should say which it was.
+3. **Do not delete inventory rows.** Each of these has 7 ledger rows, the
+   ledger is append-only and keyed on `site_id`, and the site still exists on
+   Pantheon — so the next scan rediscovers it and its rows land unresolved
+   (`sites_not_in_inventory`, and a test asserts no committed run left one).
+   **Decommission on Pantheon first, then update the inventory.**
+
+**Mechanism:** `production: false` already does the right thing — excluded from
+fleet counts, still scanned, still shown, still scored on its own row. Used
+once today, on cm-whitelabel.
+
+**`decommission_candidate` is a dead field.** Written by
+`build-fleet-inventory.py`, read by nothing. Either wire it into the page or
+drop it; a field nobody reads and nobody updates is the same problem the
+consent-ownership note is parked on.
+
+**Numbers this moves if all six go:** fleet 84 -> 78, the Pantheon denominator
+52 -> 46, and CLAUDE.md's headline still says 84. The HEALTH-COVERAGE
+scoreboard of 32 is NOT affected — none of these are in it.
+
 ### Open, and what it is waiting on
 
 - **Matt, on the Cloudflare rules.** 8 sites block the CI runner because a
@@ -109,7 +162,45 @@ notes just as hard.
   api-only invocation as *the* scan command. test-ledger.py now asserts all
   three, including that the header no longer makes the false claim.
 
-### OPEN 2026-08-23, item 21: an api-only run makes 45 sites read OK
+### ~~OPEN~~ FIXED 2026-08-23, item 21: an api-only run makes 45 sites read OK
+
+**Fixed the same day it was written down.** `severity.py` gained
+`wp_unestablished`, a WARN on the health axis: a site whose WordPress status
+was never established cannot reach OK, whichever mode failed to establish it.
+Rationale in `docs/SEVERITY.md`.
+
+Measured after the fix, both runs rendered and looked at:
+
+| run | mode | before | after |
+|---|---|---|---|
+| `health-2026-08-23_0033` | api-only | 2 CRIT / 32 WARN / **45 OK** | 2 CRIT / 77 WARN / **0 OK** |
+| `health-2026-08-23_0111` | full | 2 CRIT / 70 WARN / 7 OK | **unchanged** |
+
+The live page does not move, because the newest health run is full and the rule
+is silent on it. That is the point: it fires only in the window where the page
+was lying.
+
+Three things worth keeping from the fix:
+
+- **The page was already half-right.** The coverage box said "WordPress core,
+  plugins, themes (needs SSH): 0 of 52" and the standing findings said
+  "WordPress core, plugin and theme status not observed" — on the same page as
+  45 OK. A contradiction inside one page is not caught by any test that reads
+  one number.
+- **The HEALTH-COVERAGE scoreboard is unchanged at 32, deliberately.** It counts
+  sites with no backup age AND no plugin or theme count; an api-only site has a
+  backup age, so it is not one of them. Folding these in would have moved Doug's
+  scoreboard for a reason that is about the scanner's mode, not the fleet.
+  Flagged rather than done.
+- **A ledger test fixture was silently measuring nothing.** `row()` in
+  `test-ledger.py` defaults to an api-only row, so the "status move driven only
+  by new visibility is COVERAGE" check had both sides land on WARN once this
+  rule existed, and the status fact stopped moving at all. The fixture's AFTER
+  side is now a clean deep scan, so the move is WARN -> OK and the check
+  measures what its name says.
+
+The original write-up follows.
+
 
 **Found by reading a dry-run page, in the window between two batches.** Batch 1
 ran api-only; the render said **2 CRIT / 32 WARN / 45 OK** while the coverage
@@ -131,7 +222,115 @@ api-only lands between them. **The rule that should exist is the sibling of
 reach OK, whichever mode failed to establish it.** Not urgent while full is the
 default, but api-only remains the no-SSH fallback, so it will recur.
 
-### OPEN 2026-08-23, item 22: three WP facts default to CLEAN when the call fails
+### ~~OPEN~~ SETTLED AND FIXED 2026-08-23, item 22
+
+**Measured, not argued. Neither hypothesis in the original write-up was right.**
+`diagnose-wp-calls.sh` was run against all five suspect sites. There are TWO
+causes, and the four that mattered were losing real data:
+
+| site | Pantheon name | scanner recorded | WP-CLI actually returned |
+|---|---|---|---|
+| galbanicheese.com | `galbanicheese` | up-to-date, 0, 0 | **7.1 available, 15 plugins, 3 themes** |
+| lifebreath.com | `life-breath` | up-to-date, 0, 0 | **7.1 available, 5 plugins** |
+| morrison-chs.com | `morrison-chs` | up-to-date, 0, 0 | **7.1 available, 6 plugins** |
+| sgroilawley.com | `sgroifinancial` | up-to-date, 0, 0 | none pending, **1 plugin** |
+| cm-whitelabel | `cm-whitelabel` | up-to-date, 0, 0 | nothing — no database installed |
+
+**Four of the seven OK sites were OK because their output was being thrown
+away.** Not one of them was a failed connection: every call exited 0 and the
+JSON was intact.
+
+**Cause 1, the four sites: a `strip_noise` gap.** Pantheon's own
+`wp-native-php-sessions` mu-plugin emits ~40 lines of `PHP Deprecated: Return
+type of Pantheon_Sessions\Session_Handler::open(...)` on PHP 8.2, on STDOUT,
+ahead of WP-CLI's JSON. `strip_noise` did not cover those lines, so
+`json_or_empty` refused the whole response and the scanner wrote its default.
+**The RUNBOOK has predicted this exact failure since it was written** — *"jq
+parse failures | new noise line not covered by strip_noise | add the pattern"*.
+It was never acted on because there was no symptom: the defaults turned a parse
+failure into a clean measurement.
+
+**Cause 2, cm-whitelabel: no database.** Every call that needs the DB exits 1
+with *"The site you have requested is not installed"*. `wp core version` reads
+the version off disk, needs no DB, and answers 6.9.4 — which is why the row
+looked measured. The control call is what separated this from a dead SSH path.
+
+**Both fixed, in one change:**
+
+- `strip_noise` covers `PHP Deprecated:` / `Deprecated:` / `PHP Notice:` /
+  `Notice:` / `PHP Warning:` / stack-trace frames. `Fatal error` is
+  deliberately NOT filtered — a fatal should stay unparseable and record as
+  unknown.
+- The scanner's three branches now distinguish a genuine `[]` from an empty
+  result: `wp_core_update` goes to `unknown`, `plugin_updates` and
+  `theme_updates` to JSON `null`, which `fact()` already reads as UNKNOWN. No
+  ingest change was needed.
+- The scanner's own status no longer says OK when a WP-CLI call did not answer.
+
+**Two mock sites carry the regression:** `noticysite` (notice wall in front of
+real data — asserts 15/3/7.1 come through) and `dbmissing` (cm-whitelabel's
+shape — asserts unknown/null/null and not-OK). `run-local-test.sh` is 42.
+
+**NOT YET DONE: the ledger still holds the old numbers.** These fixes change
+what the NEXT scan records; `health-2026-08-23_0111` still says those four
+sites are clean, and the live page still shows 7 OK. **A full scan needs to be
+run and ingested before the page tells the truth**, and the four sites will
+move from OK to WARN/CRIT when it does. That is the fix landing, not the fleet
+getting worse — three of them have a WordPress core update pending that has
+been invisible the whole time.
+
+The original write-up follows.
+
+
+**READY TO SETTLE. Run one command and this stops being a question.**
+`scripts/diagnose-wp-calls.sh` was written 2026-08-23 for exactly this. It runs
+the scanner's four WP-CLI calls against named sites and reports, per call,
+whether the clean value the scanner would record is a MEASUREMENT or a
+FABRICATION:
+
+```bash
+./scripts/diagnose-wp-calls.sh --json reports/item22.json cm-whitelabel sgroilawley
+```
+
+**Load the SSH key into the agent first** — `ssh-add --apple-use-keychain
+~/.ssh/id_rsa`. On 2026-08-23 the first real run stopped at `Enter passphrase
+for key`: the agent held no identities, and ssh reads that prompt from
+`/dev/tty`, which the script's `< /dev/null` does not close. An unanswered
+prompt is killed by the 60s timeout and reported as a failed call — a fact
+about one laptop wearing a fleet finding's clothes, which is the `probe`
+mistake exactly. The script now preflights `ssh-add -l`, warns before running
+anything, and if timeouts occur while the agent was empty it says so in the
+summary instead of letting you record it as evidence.
+
+Needs terminus, a Pantheon session and the SSH key — so it runs on your laptop
+or in CI, not from a Claude session. Exit 0 means every call was real; exit 2
+means at least one failed and the scanner would have written a clean value for
+it. **Put `sgroilawley` (or any site with known pending updates) in every
+batch**: a run where everything reads clean is either good news or a dead SSH
+path, and without a control you cannot tell which.
+
+What it does that the scanner cannot:
+
+- **It keeps stderr.** `run_with_timeout` sends it to `/dev/null`, which is
+  right for parsing and is why nobody has ever seen why a call failed. The
+  reason a call failed is the thing that was being discarded.
+- **It separates `json_or_empty`'s two rejections** — "nothing came back" and
+  "something came back and it was not JSON". The scanner sees one empty string
+  for both, plus for a timeout, plus for a genuine `[]`. Four events, one
+  value.
+- **`core version` is the CONTROL.** It shares the SSH session with the other
+  three. If it returns a version and `core check-update` returns nothing, the
+  session worked and the empty result is a real answer — which is precisely
+  the distinction this item is blocked on.
+
+A drift guard in `test/test-wp-calls.py` asserts the diagnostic's four calls
+and its timeout are exactly the scanner's. A diagnostic that runs slightly
+different commands answers a different question and looks like it answered this
+one, and the answer would go straight into this file as settled.
+
+**Do not change the defaults until this has been run.** The original write-up
+follows.
+
 
 `pantheon-fleet-healthcheck.sh` sets `wp_checked="true"` BEFORE the WP-CLI
 calls, then:
