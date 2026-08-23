@@ -173,6 +173,9 @@ do not add a total.
 | the coverage box lists three sources | a fourth, Nexcess, existed and had never once run, with nothing on the page saying so — the box only appended a line `if source in latest`, so a source with zero runs was never `in latest` and simply never appeared |
 | the Access API returned `0 applications` | five exist. The wrangler OAuth token carries no Zero Trust scope, and the endpoint answers `success: true` with an empty list rather than 403. Caught 2026-08-23 by curling the five hostnames and seeing five distinct Access redirects |
 | `count: 0` for the `clevermethod.net` zone | the zone exists and is active. The token is scoped to one account and the zone is in another. Same endpoint, same shape: not permitted to see it reads exactly like it is not there |
+| `components: []` on a site | every WP-CLI call had failed. Its database is not installed, so each DB-backed call exits 1, and a `${pj:-[]}` default turned four failures into "we inventoried it and it runs nothing". Caught by running the mock, 2026-08-23 |
+| `updates pending` inside a per-site view | the fleet-wide flag. The filter listed components whose update is waiting on some OTHER site, in a view whose every other number was about the one selected |
+| `the 1 component(s) installed on <site>` | 31 were installed; 1 was merely being shown. The banner counted VISIBLE rows, so switching on a filter rewrote a fact about the site into a fact about the view |
 
 One of them was our own diagnostic: `probe` printed one word for a DNS
 failure, a TLS trust failure and a dead host alike, and sent Doug looking at
