@@ -85,6 +85,61 @@ notes just as hard.
   api-only invocation as *the* scan command. test-ledger.py now asserts all
   three, including that the header no longer makes the false claim.
 
+### OPEN 2026-08-23, item 21: an api-only run makes 45 sites read OK
+
+**Found by reading a dry-run page, in the window between two batches.** Batch 1
+ran api-only; the render said **2 CRIT / 32 WARN / 45 OK** while the coverage
+box on the same page said **"WordPress core, plugins, themes: 0 of 52"**. The
+page claimed 45 sites were fine and that it had measured nothing about their
+WordPress, simultaneously. Batch 2 ran full and it went back to 7 OK, which is
+how this stays invisible.
+
+Every severity rule correctly refuses to fire on `unknown`. The gap is in the
+two guards meant to catch the consequence:
+
+- `wp_version_unknown` requires `wp_checked is True` — a deep scan that ran and
+  failed. In api-only `wp_checked` is `False`, so it never fires.
+- `coverage_partial` requires a site seen by Nexcess or consent but NOT by
+  health. Here health DID see it, just without SSH.
+
+api-only lands between them. **The rule that should exist is the sibling of
+`coverage_partial`: a site whose WordPress status was never established cannot
+reach OK, whichever mode failed to establish it.** Not urgent while full is the
+default, but api-only remains the no-SSH fallback, so it will recur.
+
+### OPEN 2026-08-23, item 22: three WP facts default to CLEAN when the call fails
+
+`pantheon-fleet-healthcheck.sh` sets `wp_checked="true"` BEFORE the WP-CLI
+calls, then:
+
+- `plugin_updates=0` and `theme_updates=0` stay at their defaults if the call
+  returns nothing — recorded as "we looked, nothing pending".
+- `wp_core_update` falls to `"up-to-date"` on an empty result, which is the
+  same answer as a genuinely current site.
+
+`wp_version` gets this right (`[ -z "$wp_version" ] && wp_version="unknown"`).
+Its three siblings do not. This is the FIRST row of CLAUDE.md's table
+(`plugin_updates: 0 | nobody looked`) surviving in a narrower form: the
+whole-site case was fixed, the per-call case was not.
+
+**Evidence it may be live, not theoretical.** On `health-2026-08-23_0111`, five
+sites report `plugin_updates: 0`, and four of them report
+`wp_core_update: up-to-date` while running a version below 7.1 — which we know
+exists, because `sgroilawley.com` runs it. `cm-whitelabel` is among them at
+6.9.4, BELOW the wp2shell floor, reporting up-to-date.
+
+**NOT ESTABLISHED, and do not assume either way:** whether those four are
+failed calls or whether Pantheon's upstream delivery model makes
+`wp core check-update` legitimately answer "up-to-date" for a site whose core
+it manages. Both are plausible and nothing recorded separates them. Settle that
+BEFORE changing the defaults, or the fix will be aimed at the wrong cause —
+which is the mistake this file has recorded five times now.
+
+The plugin COUNTS themselves look sound: across 48 sites, 08-20 to 08-23, 36
+were unchanged, 11 moved by 1-5, and one dropped 10 to 1 (someone ran updates).
+Failed calls would look like noise, not that. It is specifically the ZEROS that
+cannot be distinguished from silence.
+
 ### PARKED 2026-08-22: consent ownership, so a finding knows who to route to
 
 Deliberately not built. The analysis is done and is in `docs/CONSENT-DELTA.md`
