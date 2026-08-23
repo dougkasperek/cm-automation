@@ -115,16 +115,29 @@ it sat below `[[routes]]` for a day and had therefore never been applied at all;
 the off toggles in the dashboard were a manual click. Parse the file before
 believing it -- `python3 -c "import tomllib; print(tomllib.load(open('wrangler.toml','rb')))"`
 -- rather than reading the line and assuming it lands where it looks like it
-lands. Measured state of all five hostnames, the
-Access policies and the API tokens is in project memory,
-`fleet_cloudflare_access.md`.
+lands. Measured state of all five hostnames and their Access applications is
+in `docs/DASHBOARD.md`, "Access: what is configured".
+
+**That pointer used to say project memory, `fleet_cloudflare_access.md`. No such
+file exists.** Checked 2026-08-23: this project's memory directory holds
+`MEMORY.md` and three preference notes, nothing else. Whether it was lost or
+never written cannot be determined, and that is the point -- project memory is
+per-user and outside git, so a measured record kept there is invisible to
+review, cannot be diffed, and disappears without leaving a gap anyone can see.
+Same shape as the gitignored `ci/github-actions/` mirror: the copy that loses is
+the one nobody is looking at. **Measured infrastructure state goes in the
+repo.**
 
 ---
 
 ## The one bug this project keeps making
 
-**A confident-looking value standing in for an absence.** It has happened
-eleven times:
+**A confident-looking value standing in for an absence.** Every row below is
+one occurrence. **The count that used to sit here said eleven, over a table that
+had long since passed thirty** -- an asserted number that nobody reread when the
+table grew, which is the same rule this file states two sections down: assert
+the property, not the number that was true the day it was written. Add rows;
+do not add a total.
 
 | what it said | what was true |
 |---|---|
@@ -158,14 +171,16 @@ eleven times:
 | a sixth site `OK` after all that | its `wp core version` answered and the three database-backed calls did not, so the VERSION was known and the UPDATE STATUS was not. `wp_unestablished` tests the version, so it stayed silent. Fixed the same day by `wp_update_status_unknown` |
 | a fifth site `up-to-date` at 6.9.4 | its database is not installed at all. Every call that needs the DB exits 1; `core version` reads the version off disk and answers, so the row looked measured |
 | the coverage box lists three sources | a fourth, Nexcess, existed and had never once run, with nothing on the page saying so — the box only appended a line `if source in latest`, so a source with zero runs was never `in latest` and simply never appeared |
+| the Access API returned `0 applications` | five exist. The wrangler OAuth token carries no Zero Trust scope, and the endpoint answers `success: true` with an empty list rather than 403. Caught 2026-08-23 by curling the five hostnames and seeing five distinct Access redirects |
+| `count: 0` for the `clevermethod.net` zone | the zone exists and is active. The token is scoped to one account and the zone is in another. Same endpoint, same shape: not permitted to see it reads exactly like it is not there |
 
-The thirteenth was our own diagnostic: `probe` printed one word for a DNS
+One of them was our own diagnostic: `probe` printed one word for a DNS
 failure, a TLS trust failure and a dead host alike, and sent Doug looking at
 Nexcess when the fault was his Python's trust store. **A tool built to report
 absences honestly has to classify its own failures too.**
 
 **Only two were caught by code. The rest were caught by a person looking at a
-rendered page or a raw number.** The twelfth was found the same way, on
+rendered page or a raw number.** The `8.2 claimed` row was found the same way, on
 2026-08-19, by rendering the page with Nexcess facts in the ledger: 21 sites
 whose PHP and WordPress versions had just been measured still displayed the
 workbook's unverified claim. The measurement was in the ledger and scoring

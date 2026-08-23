@@ -232,9 +232,61 @@ is what you committed.**
 
 ## Access: what is configured
 
-**Measured 2026-08-20 in the Cloudflare Zero Trust dashboard.** All five
-Workers on this account have a custom hostname, an Access application, and
-`workers.dev` disabled.
+**This section is the record.** It used to live in project memory as
+`fleet_cloudflare_access.md`; that file does not exist and probably never did.
+See `CLAUDE.md` for why measured state belongs here instead.
+
+### Re-measured 2026-08-23, from outside, with no Cloudflare session
+
+| what | how it was checked | result |
+|---|---|---|
+| Every hostname is gated | unauthenticated `curl -I` to each of the five | all 302 to `doug-kasperek.cloudflareaccess.com` |
+| They are separate applications | the `kid` in each redirect | five distinct app keys, one per hostname |
+| No `workers.dev` back door | `GET /accounts/{id}/workers/scripts/{name}/subdomain` | `enabled: false` on all five, `previews_enabled: false` too |
+
+A visitor authorised for one hostname is therefore **not** authorised for the
+others: Access issues an identity session, and each application re-evaluates its
+own policy against that identity. With `workers.dev` off everywhere there is no
+unauthenticated path to Worker content that skips Access.
+
+### The Access API will lie to you about this
+
+`GET /accounts/{id}/access/apps` with the wrangler OAuth token returns
+**`success: true` and an empty list**. There are five applications; the live 302s
+above prove it. The token simply carries no Zero Trust scope, and the API
+answers with an absence rather than a 403.
+
+This is the project's signature bug wearing a new hat -- a confident-looking
+value standing in for "nobody could look". Anything that reads Access config
+programmatically must distinguish "zero applications" from "not permitted to
+enumerate applications", and the only honest way to check gating from a token
+without Zero Trust scope is to request the hostname and look for the redirect.
+
+### What is NOT machine-verified here
+
+**Policy membership.** Who is on `fleet viewers` versus `[removed]` cannot be read
+without a token carrying Zero Trust scope, so the lists below are the
+2026-08-20 dashboard reading, re-confirmed by Doug in the dashboard on
+2026-08-23 but never measured by code. Treat them as a written claim.
+
+The risk that membership guards against: if any application's include rule is a
+**domain-wide** selector (`Emails ending in @clevermethod.com`, or the
+`all-cm-emails` reusable policy below) rather than a named list, then anyone
+added to the fleet page also clears whichever applications share that rule.
+Adding a viewer and widening access to the deck would be the same action, in
+different screens.
+
+**To add several viewers at once**, build a list rather than editing the policy:
+Zero Trust -> Reusable components -> Lists -> Create manual list, type *User
+email addresses*, CSV upload (one entry per line, 1,000 entries on Standard
+plans, file under 2 MB), then reference it from the policy with the **in list**
+operator. Keep any such list referenced by **one** policy; a list is only a set
+of values, and all of its containment comes from what points at it.
+
+### The 2026-08-20 dashboard reading
+
+All five Workers on this account have a custom hostname, an Access application,
+and `workers.dev` disabled.
 
 | Worker | hostname | Access application | policy |
 |---|---|---|---|
@@ -274,6 +326,54 @@ one any more; the publish path talks to the R2 API and never touches the
 hostname.
 
 ---
+---
+
+## Which Cloudflare account, and what it can do
+
+**Measured 2026-08-23** with `GET /memberships` and `GET /zones` against the
+wrangler OAuth login (`doug.kasperek@clevermethod.com`).
+
+| account | id | roles held |
+|---|---|---|
+| Doug.kasperek@clevermethod.com's Account | `8ae22197…2e11` | Super Administrator -- All Privileges |
+| clevermethod, Inc. | `856635b4…4d52` | Zone Versioning Read, Billing, **Administrator Read Only** |
+
+Everything in this suite -- all five Workers, the `dash-data` bucket, the
+`thudstaff.com` zone and every Access application -- is in the **first** account.
+
+**Moving the dashboard to `fleet.clevermethod.net` is not a route change.**
+`clevermethod.net` is a Cloudflare zone, but in the second account, and
+Cloudflare will not attach a Worker to a zone its account does not own: *"You
+cannot create a Custom Domain on a hostname with an existing CNAME DNS record or
+on a zone you do not own."* The Worker has to be deployed **into** clevermethod,
+Inc., which means a new R2 bucket, a new API token and new GitHub secrets.
+
+**Two separate things block that, and fixing one does not fix the other:**
+
+1. The wrangler token here is scoped to the first account only, so it cannot
+   even *read* clevermethod, Inc. `GET /zones?name=clevermethod.net` returns
+   `count: 0` -- again an absence, not a denial. Re-running `wrangler login` and
+   ticking the second account at the consent screen clears this.
+2. The role there is `Administrator Read Only` -- *"Can access the full account
+   in read-only mode."* Every write in the migration fails regardless of token
+   scope. It needs **Workers Platform Admin**, **Cloudflare R2 Admin** and
+   **Cloudflare Zero Trust** granted by a Super Administrator on that account.
+
+**Access policies do not transfer.** Applications and policies belong to a Zero
+Trust organisation, which is per-account, so `fleet viewers` gets rebuilt
+against whatever IdP clevermethod, Inc. uses. The login hostname changes with
+it: today every one of the five applications sends users to
+`doug-kasperek.cloudflareaccess.com`, which reads as a personal side project
+rather than company infrastructure. Renaming the team domain is account-wide and
+would move all five logins at once, so it is better done as part of the move
+than twice.
+
+`scripts/publish-dashboard.sh` already reads `FLEET_R2_BUCKET` (default
+`dash-data`) and `FLEET_PUBLIC_URL` (default `https://fleet.thudstaff.com`), so
+the repo side of the move is a default change plus documentation. The only
+functional hardcoded hostname is the `[[routes]]` block in
+`ci/cloudflare/wrangler.toml`.
+
 ---
 
 ## Design decisions worth not undoing
