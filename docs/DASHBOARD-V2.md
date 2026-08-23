@@ -71,7 +71,7 @@ Two things to know before touching these:
   palette no longer passes.
 
 Do not swap these for brand colours without re-running
-`scripts/validate_palette.js`. The deck's own severity green and amber fail
+`validate_palette.js` **in `~/dev/[removed]`, not this repo** (checked 2026-08-23: no such file here). The deck's own severity green and amber fail
 colourblind separation at protan delta-E 3.8, and
 `pantheon-fleet-health.html` in `~/dev/[removed]` still uses those failing tokens.
 

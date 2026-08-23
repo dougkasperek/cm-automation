@@ -219,7 +219,13 @@ some networks and answers instantly from others, including GitHub's, while its
 | `scripts/extract-audit-workbook.py` | workbook to `data/fleet-email-inventory.json`, needs openpyxl |
 | `data/fleet-email-inventory.json` | 78 sites, declared email config, and the workbook's recorded verdicts |
 | `test/test-email-dns.py` | 45 assertions, fully offline, no DNS |
-| `ci/github-actions/fleet-email-dns.yml` | the Actions wrapper (move to `.github/workflows/`) |
+| `.github/workflows/fleet-email-dns.yml` | the Actions wrapper |
+
+> **Corrected 2026-08-23.** This line described `ci/github-actions/`, a
+> gitignored mirror that was deleted on 2026-08-22 after the two copies
+> diverged. `.github/workflows/` is the only copy. Do not recreate a
+> second one — see the hard boundary in `CLAUDE.md`.
+
 | `requirements.txt` | dnspython |
 
 **Dependency note.** The rest of cm-automation is stdlib only. This script needs

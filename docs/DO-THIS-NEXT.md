@@ -105,23 +105,26 @@ clevermethod Mailgun setup is incomplete.
 
 ## Part 3. Put it on GitHub
 
-### Step 8. Move the workflow files where GitHub expects them
+### ~~Step 8. Move the workflow files where GitHub expects them~~ DONE
 
-GitHub only runs workflow files that live in `.github/workflows/`. They are
-currently parked in `ci/github-actions/` because the Claude file bridge is not
-allowed to write into `.github/`. That restriction goes away now.
+**Skip this step. It was completed on 2026-08-22 and the commands below would
+now fail.** `ci/github-actions/` no longer exists; all five workflow files live
+in `.github/workflows/`, which is the only copy and is edited directly. See the
+hard boundary in `CLAUDE.md` — do not recreate a mirror.
 
-```bash
-mkdir -p .github/workflows
-mv ci/github-actions/*.yml .github/workflows/
-rmdir ci/github-actions
-```
+The original step said the files were "parked in `ci/github-actions/` because
+the Claude file bridge is not allowed to write into `.github/`". That
+restriction is gone. Kept here rather than deleted because this file is a
+numbered runbook and removing a step would renumber the rest.
 
-Then check:
+To confirm it is already done:
 
 ```bash
 ls .github/workflows/
 ```
+
+**You should see:** `_publish-dashboard.yml`, `fleet-consent.yml`,
+`fleet-email-dns.yml`, `fleet-nexcess.yml`, `pantheon-fleet-healthcheck.yml`.
 
 **You should see:** `fleet-email-dns.yml` and `pantheon-fleet-healthcheck.yml`.
 

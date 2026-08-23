@@ -295,7 +295,13 @@ direction that reads as an all-clear.
 
 ## In CI
 
-`ci/github-actions/fleet-consent.yml`, copied to `.github/workflows/` by hand
+`.github/workflows/fleet-consent.yml`
+
+> **Corrected 2026-08-23.** This line described `ci/github-actions/`, a
+> gitignored mirror that was deleted on 2026-08-22 after the two copies
+> diverged. `.github/workflows/` is the only copy. Do not recreate a
+> second one — see the hard boundary in `CLAUDE.md`.
+
 because the file bridge cannot write there. **Diff the two before telling
 anyone to run it.**
 

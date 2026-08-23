@@ -905,12 +905,13 @@ def render(m):
                  if any(r.get("code") == "coverage_partial"
                         for r in (s.get("severity") or {}).get("reasons", []))]
     if no_health:
-        A('<p class=sub style="margin:10px 0 0"><strong>%d site(s) have been '
-          'looked at but have NO health evidence</strong> — no backup age, no '
-          'plugin or theme count. They score WARN rather than OK for that '
-          'reason alone. This is the coverage number to watch; it is not the '
-          'same question as UNKNOWN, which asks whether any scan reached a '
-          'site at all.</p>' % len(no_health))
+        A('<p class=sub style="margin:10px 0 0">The <strong>%d site(s) with no '
+          'health evidence</strong> named on the health card above are NOT the '
+          'same question as UNKNOWN. UNKNOWN asks whether any scan reached a '
+          'site at all; the consent sweep reaches every domain, so no site is '
+          'UNKNOWN on health and that number is 0. Coverage asks whether we '
+          'know how a site is <em>maintained</em>, which is the number to '
+          'watch.</p>' % len(no_health))
         # The 32 domains used to be printed here. Measured 2026-08-23: 233px
         # of a 879px section, in a block headed "What the states mean", which
         # is not what a site list is. The same sentence already appears on the

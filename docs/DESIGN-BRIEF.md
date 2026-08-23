@@ -1,5 +1,10 @@
 # Fleet automation: design brief for the next round
 
+> **SUPERSEDED. Read `docs/SESSION-HANDOFF.md` instead.** Kept for the record.
+> Parts of this file are known wrong: it describes committing workflows to
+> `ci/github-actions/` and copying them across, and that mirror was deleted on
+> 2026-08-22. `.github/workflows/` is the only copy.
+
 **Purpose.** This file is the cold-start handoff for a new session about
 *expanding the design of the workflow*. Chats share this folder and project
 memory, never each other's conversation history, so everything needed to resume

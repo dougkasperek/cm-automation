@@ -576,7 +576,8 @@ back to the wrangler OAuth session. CI still uses the token.
    dashboard-managed by an explicit earlier decision, and a `wrangler.toml`
    declaring bindings nobody can enumerate could drop one on the next deploy.
    Instead the constraint is written into `deploy.sh` and
-   `.github/workflows/deploy.yml` — the two files someone would touch — so the
+   `[removed]/.github/workflows/deploy.yml` (that repo, not this one) — the two
+   files someone would touch — so the
    risk is no longer silent. Also fixed a comment in `cf-worker-r2.js` naming
    bucket `deck-assets`, which does not exist; the account has only
    `[removed]` and `dash-data`. That is the line someone would copy into
