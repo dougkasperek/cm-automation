@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-20.** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-23.** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,46 +8,96 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-22, end of day (runs stamped 2026-08-23 UTC)
+## PICK UP HERE — 2026-08-23, end of day
 
-**Everything is committed and pushed; the tree is clean.** Tests: ledger 148,
-severity 97, email-dns 58, nexcess 88, consent 75, run-local 32.
+**Everything is committed and pushed; the tree is clean.** Tests: ledger 149,
+severity 116, email-dns 58, nexcess 88, consent 75, **wp-calls 45 (new)**,
+run-local 42.
 
-**THE WHOLE SUITE RAN END TO END AND PUBLISHED ITSELF.** Scan, ingest, render,
-publish, no manual step, all three workflows. First time that has happened.
-The live page is current.
+**Both known defects are fixed, and both were the same shape: an unmeasured
+site reading as a healthy one.** The live numbers moved because of it.
 
 | source | run | measured |
 |---|---|---|
-| health | `health-2026-08-23_0111` (**full**) | 48 of 52 |
+| health | `health-2026-08-23_1321` (**full**) | 48 of 52 |
 | email-dns | `email-dns-2026-08-23_0108` | 70 of 78 |
 | consent | `consent-2026-08-23_0109` | 69 of 78 |
 
-Health **2 CRIT / 70 WARN / 7 OK / 3 SKIP / 1 FROZEN**. Consent **48 WARN /
-21 OK / 10 UNKNOWN** — UNKNOWN was 29 this morning.
+Health **2 CRIT / 73 WARN / 4 OK / 3 SKIP / 1 FROZEN**, from 2/70/7 this
+morning. **OK fell from 7 to 4 and that is the fix working, not a regression** —
+three sites left OK because their real data now arrives, one because it now
+honestly reads unknown.
 
-**NO STANDING CONSTRAINT ANY MORE.** The previous note here said not to trigger
-`fleet-consent.yml`. That is obsolete: consent is now CI-primary at 69 of 78,
-the baseline reset itself, and CI publishes without help. The 8 sites CI cannot
-reach read UNMEASURED with their HTTP status, which is honest. If Matt adds the
-skip rule, coverage rises to 77 on its own and rising coverage is never blocked.
+### What happened today, in one paragraph each
 
-**Everything is scheduled-ready but nothing is scheduled.** All three crons stay
-commented out. Turning them on is the next real decision, and email-dns is the
-one to do first: credential-free, no browser, no variance.
+**Item 21.** An api-only run scored **45 sites OK** while the coverage box on
+the same page said "WordPress core, plugins, themes: 0 of 52". Fixed by
+`wp_unestablished` in `severity.py`. Then the first run after item 22 landed
+exposed the same gap one layer in — `morrison-chs` read OK with core, plugin
+and theme all unknown because its *version* was known — so
+`wp_update_status_unknown` was added too. Full rationale in `docs/SEVERITY.md`.
+
+**Item 22, settled by measurement rather than argument.** Neither hypothesis in
+the old write-up was right. `scripts/diagnose-wp-calls.sh` was written for this,
+run against all five suspect sites, and found two causes. Four sites: Pantheon's
+own `wp-native-php-sessions` mu-plugin prints ~40 PHP deprecation lines on
+STDOUT ahead of WP-CLI's JSON, `strip_noise` did not cover them, and the scanner
+wrote its clean default. **`galbanicheese` was recording 0 plugin updates while
+WP-CLI had returned 15**, and three sites reported "up-to-date" with WordPress
+7.1 waiting. Fifth site, `cm-whitelabel`: no database installed, so every
+DB-backed call exits 1 while `wp core version` reads off disk and answers.
+
+**The security event log is in git.** `docs/SECURITY-EVENTS.md`. Three
+incidents, copied out of the workbook's `Security Event Log` sheet, which
+`extract-audit-workbook.py` had never read. Includes **Pods CVE-2026-19598,
+2026-08-20**, where three sites had users added: `breakstones`,
+`frontline-construction`, `zehnder-america-zna`.
+
+**The workbook is off the dashboard.** Zero occurrences of the word. The
+findings stayed — the reconciliation section is the highest-signal thing on the
+page — but the wording now describes the inventory, which is what the page
+actually reads.
 
 ### Start here tomorrow
 
-1. **Two questions are out and unanswered**: Matt on the Cloudflare rules,
-   Nexcess on the API bot challenge. Check both before starting anything new.
-2. **Item 21 is FIXED (2026-08-23); item 22 is the only known defect left.**
-   Both were about an unmeasured site reading as a healthy one. 22 has an
-   unresolved CAUSE that must be settled before its fix is written, and item
-   21's fix does not cover it: `wp_unestablished` fires when NO scan looked,
-   and item 22 is a scan that looked, got nothing back, and recorded a clean
-   answer. A full run still writes `plugin_updates: 0` on a failed call, and
-   nothing in severity can tell that from a real zero.
-3. The rest of the backlog is security housekeeping on the Cloudflare tokens.
+1. **The Pods meeting is today (2026-08-24).** The five questions that decide
+   the design of any security-event feature are at the bottom of
+   `docs/SECURITY-EVENTS.md`. The load-bearing one: does an open incident
+   change a site's status, or sit beside an unchanged one? That is the
+   difference between a severity axis and a display layer.
+2. **A security-event feature was deliberately NOT built.** Three incidents is
+   not a schema, `Remediation Complete?` is already a lifecycle nobody
+   specified, and the dashboard is read-only so it can display an incident but
+   never collect one. Do not start building before the meeting.
+3. **Three decisions are waiting on people, not on code:** the six Sandbox
+   sites (backlog item below), whether to turn on the email-dns cron first,
+   and what to do with the 546 undated attestations.
+4. **Two questions are still out:** Matt on the Cloudflare rules, Nexcess on
+   the API bot challenge. Both predate today.
+
+### Things that will look like bugs and are not
+
+- **`morrison-chs` reads unknown in the current ledger.** Its noise pattern
+  (`Warning: Constant DISALLOW_FILE_MODS already defined`) was fixed *after*
+  that scan ran. The next full scan measures it correctly. Nothing to do.
+- **A card count and its filter can differ by one.** Health CRIT says 2 and
+  lists 3; consent UNKNOWN says 10 and lists 11. Both are `cm-whitelabel`,
+  `production: false` — excluded from counts, still shown in the table, by
+  design. The chip tooltips name the state and never a number, so nothing
+  promises a count the filter will not deliver.
+- **`git` is no longer off-limits to Claude.** The ban is marked LIFTED in
+  `CLAUDE.md`; the repo left the iCloud volume that caused it. `push` is still
+  a human action.
+
+### Still true and unchanged
+
+**Nothing is scheduled.** All four crons stay commented out, so every number on
+the page came from a run someone triggered by hand. Turning them on is still
+the next real decision and email-dns is still the one to do first:
+credential-free, no browser, no variance.
+
+**The scoreboard is still 32.** None of today's work touched it — those are
+sites with no health evidence at all, and it moves when Nexcess unblocks.
 
 ### What changed 2026-08-22
 
