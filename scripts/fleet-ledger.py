@@ -292,10 +292,31 @@ def _component_rows(payload, by_host):
             continue
         name = r["site"]
         site_id = by_host.get(name, name)
+        # DE-DUPLICATE, keyed on (slug, is-a-theme), preferring the mu-plugin
+        # typing. `wp plugin list` ALREADY returns must-use plugins, with
+        # status "must-use", so the scanner's separate --status=must-use call
+        # lists every one of them twice -- once typed `plugin`, once
+        # `mu-plugin`. Measured on the first real run, 2026-08-23: 51
+        # duplicate rows across the first 16 sites, ~165 fleet-wide.
+        #
+        # Deduping HERE rather than only in the scanner is deliberate. This
+        # store is append-only, so a duplicated row cannot be corrected later;
+        # the guard belongs at the point of writing, where it holds no matter
+        # which version of the scanner produced the report.
+        #
+        # A theme is allowed to share a slug with a plugin, so themes are keyed
+        # separately rather than collapsed into one namespace.
+        best = {}
         for c in comps:
             slug = c.get("name")
             if not slug:
                 continue
+            key = (slug, c.get("type") == "theme")
+            if key in best and best[key].get("type") == "mu-plugin":
+                continue          # already have the authoritative typing
+            best[key] = c
+        for c in best.values():
+            slug = c.get("name")
             out.append({
                 "site_id": site_id,
                 "host_site_name": name,

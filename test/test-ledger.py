@@ -1144,6 +1144,37 @@ try:
     check("the component LIST never leaks into the observation ledger",
           all("components" not in o for o in obs),
           repr([k for k in obs[0] if "component" in k]))
+
+    # `wp plugin list` ALREADY returns must-use plugins, with status
+    # "must-use", so the scanner's separate --status=must-use call lists every
+    # one of them a second time. Measured on the first real run, 2026-08-23:
+    # 51 duplicate rows across 16 sites. The exact shape, both rows, from
+    # lasershows -- note `update` is a BOOLEAN false in one and the string
+    # "none" in the other, which is why they cannot be compared whole.
+    dup_payload = [row("a", wp_checked=True, components_checked=True,
+                       plugin_updates=0, theme_updates=0,
+                       components=[
+                           {"name": "bot-block", "status": "must-use",
+                            "update": False, "version": "",
+                            "update_version": "", "type": "plugin"},
+                           {"name": "bot-block", "status": "must-use",
+                            "version": "", "type": "mu-plugin",
+                            "update": "none"},
+                           # A theme may legitimately share a slug with a
+                           # plugin, so themes are keyed separately and this
+                           # one must SURVIVE.
+                           {"name": "bot-block", "status": "active",
+                            "update": "none", "version": "1.0",
+                            "type": "theme"},
+                       ])]
+    dr = L._component_rows(dup_payload, {"a": "a.com"})
+    check("a must-use plugin returned by BOTH calls is stored once",
+          len([x for x in dr if x["type"] != "theme"]) == 1, repr(dr))
+    check("...and keeps the mu-plugin typing, not the plugin one",
+          [x for x in dr if x["type"] != "theme"][0]["type"] == "mu-plugin",
+          repr(dr))
+    check("...while a theme sharing the slug is not collapsed with it",
+          len([x for x in dr if x["type"] == "theme"]) == 1, repr(dr))
 finally:
     shutil.rmtree(_tmp, ignore_errors=True)
 

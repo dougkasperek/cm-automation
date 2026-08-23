@@ -404,5 +404,23 @@ no metaphors, and do not make a straightforward technical finding sound
 profound. Prefer *"the workbook says all 78 sites run 7.0.2, and exactly one
 does"* over any dressed-up version of it.
 
+Use simple, direct, professional language.
+
+Prefer short sentences and short paragraphs. State the important point first.
+
+Avoid literary phrasing, rhetorical flourishes, metaphors, clever turns of phrase, dramatic framing, and sophisticated-sounding prose when plain language will do.
+
+Do not narrate your reasoning or make observations sound more profound than they are.
+
+Avoid phrases such as “the thing worth your attention,” “worth saying plainly,” “the argument for,” “what this really tells us,” or similar editorialized constructions.
+
+Write like an experienced colleague explaining something clearly and efficiently.
+
+Use technical terminology when it adds precision, but otherwise prefer ordinary language.
+
+Be concise, but do not omit important information.
+
+Do not add introductory or concluding prose unless it adds useful information.
+
 Comments in code explain **why**, especially why something non-obvious is the
 way it is. Most comments in this repo name a specific failure. Keep that.
