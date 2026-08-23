@@ -463,6 +463,10 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:13px}
 .wfblurb{font-size:13px;line-height:1.45;color:var(--ink2)}
 .wfstates{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;margin-top:2px}
 .wfstate{display:flex;align-items:baseline;gap:6px}
+button.wfjump{background:none;border:0;padding:2px 4px;margin:-2px -4px;font:inherit;
+  cursor:pointer;border-radius:6px}
+button.wfjump:hover{background:rgba(0,0,0,.05)}
+button.wfjump:focus-visible{outline:2px solid var(--info);outline-offset:1px}
 .wfn{font-size:22px;font-weight:640;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .wfcov{margin-top:auto;padding-top:4px}
 .wfbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
@@ -505,358 +509,57 @@ def chip(text, tone):
     return '<span class="chip %s"><span class="dot"></span>%s</span>' % (tone, e(text))
 
 
-def render(m):
-    o = []
-    A = o.append
-    A("<!doctype html><html lang=en><meta charset=utf-8>")
-    A('<meta name=viewport content="width=device-width,initial-scale=1">')
-    A("<title>clevermethod fleet</title><style>%s</style>" % css())
-    A('<div class=wrap>')
-    # --- masthead ----------------------------------------------------------
-    # COMPRESSED 2026-08-20. The hero card and a four-tile KPI row together ate
-    # roughly 490px before the first workflow card, so on a laptop the suite
-    # scoreboard -- the thing the page is now organised around -- started below
-    # the fold. Context that never changes (how many sites, how many hosts, how
-    # many tools) belongs in a line of text, not in tiles the size of the
-    # numbers that DO change.
-    risk = [g for g in m["standing"] if g["axis"] == "RISK"]
-    pushable = [c for c in m["changes"] if c["class"] not in L.QUIET_CLASSES]
-    drift = [c for c in m["changes"] if c["class"] == "DRIFT"]
-    nhosts = len({s.get("host") for s in m["sites"] if s.get("host")})
+# One line per source, for the provenance block. Keyed on the ledger's source
+# name so a source that has never run still has an answer waiting for it.
+SOURCE_ANSWERS = {
+    "health":    "Pantheon platform + WP-CLI, per site",
+    "consent":   "public homepage in a real browser",
+    "email-dns": "public DNS, per domain",
+    "nexcess":   "Nexcess control plane",
+}
 
-    A('<div class=masthead>')
-    A("<h1>clevermethod fleet</h1>")
-    A('<p class=sub style="margin:2px 0 0">%d sites across %d hosts &middot; %d tools '
-      'feeding one ledger &middot; read-only</p>' % (m["inventory_count"], nhosts,
-                                              len(m["latest"])))
-    A('</div>')
 
-    A('<div class="card topband">')
-    A('<div class=topmain>')
-    A('<div class=hero>%d</div>' % len(pushable))
-    A('<div class=hero-sub>%s</div>'
-      % ("change(s) needing a decision since the previous run of each tool."
-         if pushable else
-         "changes needing a decision. The fleet is stable; the standing "
-         "findings below are unchanged."))
-    A('</div>')
+def coverage_section(A, m, e):
+    """The one place that says who looked, when, and at how much.
 
-    A('<div class=topside>')
-    cov_n = sum(len(g["sites"]) for g in m["coverage_changes"])
-    cov_sites = len(set(x for g in m["coverage_changes"] for x in g["sites"]))
-    for val, label in [
-        (len(risk), "open risk causes, grouped by cause not by site"),
-        (len(m["unreconciled"]), "sites in one source but not the other"),
-        (len(drift), "counters moved on findings already open, suppressed"),
-        (cov_n, "facts crossed the unknown boundary on %d site(s) &mdash; this "
-                "tool&rsquo;s coverage changing, not the fleet&rsquo;s" % cov_sites),
-    ]:
-        if not val:
-            continue
-        A('<div class=toprow><b>%s</b><span>%s</span></div>' % (e(val), label))
-    A('</div>')
-    A('</div>')
+    Moved here 2026-08-23 and merged with the run line. It renders high on
+    the page now -- directly under the scoreboard -- because a coverage
+    caveat three sections below the number it qualifies is a caveat nobody
+    reads. The per-number warnings stay inline with their numbers; only the
+    general provenance moved.
+    """
+    # --- coverage ---------------------------------------------------------
+    A("<h2>What this page knows, and what it does not</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">Everything here is a measurement '
+      'read off a site or a DNS record and stored in an append-only ledger. '
+      'Nothing is copied from a spreadsheet. The only values a person types are '
+      'the site list and the production rulings. A green row is worth exactly as '
+      'much as the coverage behind it, so the coverage is on the same screen: '
+      'unknown is shown as unknown, never as a pass.</p>')
 
-    # Latest runs, in the timezone the people reading this are actually in.
-    A('<p class=runline>Latest runs &mdash; %s</p>'
-      % " &middot; ".join("<b>%s</b> %s" % (e(src), e(when(r.get("observed_at"))))
-                   for src, r in sorted(m["latest"].items())))
-
-    # --- the suite ---------------------------------------------------------
-    # ONE TILE GROUP PER QUESTION, added 2026-08-20.
-    #
-    # Until today the page led with a single status row that mixed two
-    # unrelated questions. 38 of 70 WARN sites carried a consent finding and 7
-    # were WARN for consent alone, so "fleet health" moved when the consent
-    # sweep ran and nothing about maintenance had changed -- while consent
-    # itself had no headline anywhere and survived as three rows inside
-    # "Still true". Both problems are the same problem.
-    #
-    # ONLY THE ANSWER STATES ARE SHOWN PER CARD. SKIP and FROZEN are terminal
-    # states of the SITE, not of a question, so repeating them on every card
-    # says "3 sites are SKIP for consent", which is not a thing. They are
-    # stated once, in the footer of the health card. Caught by looking at the
-    # rendered page, not by a test.
-    h = m["health"]
-    ax = h.get("axes") or {}
-    ANSWERS = ["CRIT", "WARN", "OK", "UNKNOWN"]
-
-    def _cov(prefix):
-        for w, (k, n) in m["coverage"]:
-            if w.startswith(prefix):
-                return k, n
-        return None, None
-
-    def _bar(known, of, label):
-        if not of:
-            return ""
-        pct = int(round(100.0 * known / of))
-        tone = "good" if pct >= 90 else ("info" if pct >= 60 else "bad")
-        return ('<div class=wfbar><i class="%s" style="width:%d%%"></i></div>'
-                '<div class=wfcovlab><strong>%d of %d</strong> %s</div>'
-                % (tone, pct, known, of, e(label)))
-
-    A("<h2>The suite</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">One card per question. A site has '
-      'a status on <em>each</em> axis independently: a site can be well '
-      'maintained and still leak trackers. Scored from the ledger at render '
-      'time, so changing a '
-      'threshold rescores all of history rather than reporting as a fleet '
-      'change.</p>')
-    A('<div class=suite>')
-
-    def card(title, blurb, counts_map, cov, detail=None, note=None):
-        A('<div class="card wfcard">')
-        A('<div class=wfhead>%s</div>' % e(title))
-        A('<div class=wfblurb>%s</div>' % blurb)
-        if counts_map:
-            A('<div class=wfstates>')
-            for st in ANSWERS:
-                n = counts_map.get(st, 0)
-                if not n and st in ("CRIT", "UNKNOWN"):
-                    continue
-                A('<div class=wfstate>%s<span class=wfn>%s</span></div>'
-                  % (chip(st, STATE_TONE.get(st, "muted")), e(n)))
-            A('</div>')
-        if detail:
-            A('<div class=wfdetail>%s</div>' % detail)
-        A('<div class=wfcov>%s</div>' % cov)
-        if note:
-            A('<div class=wfnote>%s</div>' % note)
-        A('</div>')
-
-    # HEALTH ----------------------------------------------------------------
-    nh = len([x for x in m["sites"]
-              if any(r.get("code") == "coverage_partial"
-                     for r in (x.get("severity") or {}).get("reasons", []))])
-    k, n = _cov("Pantheon platform facts")
-    terminal = []
-    for st in ("SKIP", "FROZEN"):
-        c = h["counts"].get(st, 0)
-        if c:
-            terminal.append("%d %s" % (c, st.lower()))
-    if h["excluded_sites"]:
-        terminal.append("%d excluded as non-production" % len(h["excluded_sites"]))
-    hcodes = {}
-    for x in m["sites"]:
-        for r in ((x.get("severity") or {}).get("axes", {})
-                  .get("health", {}).get("reasons", [])):
-            hcodes[r["code"]] = hcodes.get(r["code"], 0) + 1
-    hbits = []
-    for codes, label in (
-            (("backup_missing", "backup_stale", "backup_aging"),
-             "have no recent database backup"),
-            (("core_update",), "are behind on WordPress core"),
-            (("plugin_backlog",), "have a plugin backlog"),
-            (("php_eol",), "run PHP past end of security support")):
-        c = sum(hcodes.get(x, 0) for x in codes)
-        if c:
-            hbits.append('<span class=wfrow><b>%d</b> %s</span>' % (c, e(label)))
-    card("Fleet health",
-         "Is this site being maintained: backups, PHP, WordPress, plugins.",
-         ax.get("health") or h["counts"], _bar(k, n, "Pantheon platform facts"),
-         detail="".join(hbits) or None,
-         note=("<strong>%d site(s) have been looked at but have NO health "
-               "evidence</strong> — no backup age, no plugin or theme count. "
-               "They score WARN for that reason alone, and this is the coverage "
-               "number to watch.%s"
-               % (nh, ("<br>Plus " + ", ".join(terminal) + ".") if terminal else "")))
-
-    # CONSENT ---------------------------------------------------------------
-    # The status split alone does not say what to DO. 38 WARN is two different
-    # conversations: a site with no tooling at all, and a site whose tooling is
-    # installed and not working. The second is worse and is invisible in a
-    # single count.
-    def _n_standing(frag):
-        for g in m["standing"]:
-            if frag in g["cause"]:
-                return len(g.get("sites") or [])
-        return 0
-    leaks_with = _n_standing("tooling present, but trackers fire")
-    leaks_without = _n_standing("Trackers fire before consent, and no consent")
-    notool = _n_standing("No consent tooling detected")
-    k, n = _cov("Cookie consent")
-    card("Cookie consent",
-         "Does the homepage fire trackers before anyone consents.",
-         ax.get("consent"), _bar(k, n, "homepages the sweep could load"),
-         detail=(
-             '<span class=wfrow><b>%d</b> fire trackers before consent</span>'
-             '<span class=wfrow><b>%d</b> of those have consent tooling '
-             'installed that is not stopping them</span>'
-             '<span class=wfrow><b>%d</b> have no consent tooling at all</span>'
-             % (leaks_with + leaks_without, leaks_with, notool)),
-         note="Never CRIT by design: CRIT stays a security tier so it remains a "
-              "list somebody works through. <strong>UNKNOWN is a site that "
-              "refused the scanner, not a clean site.</strong> Technical "
-              "observations, not legal conclusions.")
-
-    # EMAIL / DNS -----------------------------------------------------------
-    # No per-site status: this answers a question about a DOMAIN. It still gets
-    # a card, because leaving a live workflow off the strip reads as "we do not
-    # do that" -- and it shows its three coverage fractions where the other
-    # cards show states, so the card is comparable rather than half empty.
-    email_causes = [g for g in m["standing"]
-                    if g["axis"] == "RISK"
-                    and ("DMARC" in g["cause"] or "SPF" in g["cause"]
-                         or "aligned" in g["cause"])]
-    A('<div class="card wfcard">')
-    A('<div class=wfhead>Email DNS</div>')
-    A('<div class=wfblurb>Can this domain send mail that authenticates.</div>')
-    A('<div class=wfmini>')
-    for label, prefix in (("SPF", "SPF"), ("DKIM", "DKIM"), ("DMARC", "DMARC")):
-        k, n = _cov(prefix)
-        if n:
-            pct = int(round(100.0 * k / n))
-            tone = "good" if pct >= 90 else ("info" if pct >= 60 else "bad")
-            A('<div class=wfminirow><span class=wfminilab>%s</span>'
-              '<span class=wfbar><i class="%s" style="width:%d%%"></i></span>'
-              '<span class=wfmininum>%d/%d</span></div>'
-              % (e(label), tone, pct, k, n))
-    A('</div>')
-    A('<div class=wfnote>Scored per DOMAIN, not per site, so it has no column '
-      'in the fleet table below and no status of its own. <strong>%d open '
-      'cause(s)</strong>, listed under Still true.</div>' % len(email_causes))
-    A('</div>')
-
-    A('</div>')
-
-    # --- fleet health -----------------------------------------------------
-    counts, excl = h["counts"], h["excluded"]
-    A("<h2>What the states mean</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">Scored from the ledger at render '
-      'time, not at scan time. Thresholds are named constants in '
-      '<code>scripts/lib/severity.py</code>; changing one rescores every run in '
-      'history and does not report as a fleet change.</p>')
-    A("<div class=card><div class=kpis>")
-    for st in SEV.ORDER:
-        n = counts.get(st, 0)
-        if not n and st in ("UNKNOWN", "FROZEN", "SKIP"):
-            continue
-        A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
+    # WHO LOOKED, AND WHEN. This used to be a bare line of timestamps under the
+    # masthead, three sections above the coverage bars it explains. Provenance
+    # was spread over five places on this page -- masthead, run line, suite
+    # intro, this box, and the table preamble -- so a new reader had to
+    # assemble it. One block, 2026-08-23.
+    # EVERY REGISTERED SOURCE, not just the ones that have run. The masthead
+    # used to print a tool count from `m["latest"]` and said "3 tools" while the
+    # coverage bars below listed four -- Nexcess has a source in the ledger and
+    # has never once run. A source that is simply absent from this block reads
+    # as "not covered" when the truth is "not built yet", and the coverage line
+    # for Nexcess exists precisely so nobody makes that mistake.
+    A('<div class=card style="margin-bottom:10px"><div class=kpis>')
+    for src in sorted(L.FACT_FAMILIES):
+        meta = m["latest"].get(src)
+        if meta:
+            stamp, tone = when(meta.get("observed_at")), ""
+        else:
+            stamp, tone = "never run", ' class=quiet'
+        A('<div class=kpi><div class=lab>%s</div>'
+          '<div class=val style="font-size:15px"><span%s>%s</span></div>'
           '<div class=note>%s</div></div>'
-          % (chip(st, STATE_TONE.get(st, "muted")), e(n),
-             e(STATE_MEANING.get(st, ""))))
-    A("</div>")
-
-    # HEALTH COVERAGE, stated separately from the status counts.
-    #
-    # Added 2026-08-19 with the consent sweep, because rendering the page with
-    # consent facts in the ledger took UNKNOWN from 32 to ZERO. Nothing had
-    # improved: the sweep reached every domain, so no site was left in "nobody
-    # looked", and the number Doug named as the scoreboard silently became 0.
-    #
-    # UNKNOWN answers "has any scan reached this site". It never answered "do
-    # we know this site's health", and the two were only ever the same number
-    # by accident, while health was the only scan there was. Every source added
-    # to the suite breaks that coincidence again, so the health-coverage
-    # question gets its own line rather than riding on a status count.
-    no_health = [s for s in m["sites"]
-                 if any(r.get("code") == "coverage_partial"
-                        for r in (s.get("severity") or {}).get("reasons", []))]
-    if no_health:
-        A('<p class=sub style="margin:10px 0 0"><strong>%d site(s) have been '
-          'looked at but have NO health evidence</strong> — no backup age, no '
-          'plugin or theme count. They score WARN rather than OK for that '
-          'reason alone. This is the coverage number to watch; it is not the '
-          'same question as UNKNOWN, which asks whether any scan reached a '
-          'site at all.</p>' % len(no_health))
-        A('<p class=quiet style="margin:4px 0 0">%s</p>'
-          % ", ".join("<code>%s</code>" % e(x["site_id"])
-                      for x in sorted(no_health, key=lambda r: r["site_id"])[:40]))
-
-    if h["excluded_sites"]:
-        A('<p class=quiet style="margin:10px 0 0">Excluded from these counts: '
-          '%s. Marked <code>production: false</code> in the inventory by a '
-          'person. Still scanned, still shown in the table below, and scoring '
-          '%s on its own row.</p>'
-          % (", ".join("<code>%s</code>" % e(x) for x in h["excluded_sites"]),
-             ", ".join("%s %s" % (v, k) for k, v in excl.items() if v)))
-    A("</div>")
-
-    # --- review queue -----------------------------------------------------
-    # Sites with no `production` ruling AND no workbook row: nobody has ever
-    # looked at them. Deliberately NOT every site whose `production` is null,
-    # which is all 84 and would be ignored.
-    if h["unreviewed"]:
-        A("<h2>Needs a decision</h2>")
-        A('<p class=sub style="margin:-4px 0 10px">%d site(s) with no audit '
-          'record and no production ruling. Nobody has decided whether these '
-          'matter, so they are counted as production until someone does. On '
-          'this fleet that set has included the two worst-maintained sites, so '
-          'it is worth clearing once.</p>' % len(h["unreviewed"]))
-        A("<div class=card><table><tr><th>Site</th><th>State</th><th>Plan</th>"
-          "<th>Why it is here</th></tr>")
-        by_id = {x["site_id"]: x for x in m["sites"]}
-        for sid in h["unreviewed"]:
-            s_ = by_id.get(sid, {})
-            st = s_.get("status")
-            reasons = "; ".join(r["text"] for r in
-                                (s_.get("severity") or {}).get("reasons", []))
-            A("<tr><td><code>%s</code></td><td>%s</td><td class=quiet>%s</td>"
-              "<td>%s</td></tr>"
-              % (e(sid), chip(st, STATE_TONE.get(st, "muted")) if st else "—",
-                 e(s_.get("plan") or "—"),
-                 e(reasons or "In the Pantheon account, absent from the workbook.")))
-        A("</table></div>")
-
-    # --- what changed -----------------------------------------------------
-    A("<h2>What changed</h2><div class=card>")
-    if not m["changes"]:
-        A('<p class=big-quiet>Nothing, in either source.</p>')
-    else:
-        A("<table><tr><th>Class</th><th>Site</th><th>Fact</th><th>Before</th>"
-          "<th>After</th><th>Source</th></tr>")
-        for c in m["changes"]:
-            A("<tr><td>%s</td><td><code>%s</code></td><td>%s</td><td class=num>%s</td>"
-              "<td class=num>%s</td><td class=quiet>%s</td></tr>"
-              % (chip(c["class"], CLASS_TONE.get(c["class"], "info")), e(c["site"]),
-                 e(c["fact"]), e(c["before"]), e(c["after"]), e(c.get("source"))))
-        A("</table>")
-    A("</div>")
-
-    # --- coverage ---------------------------------------------------------
-    if m["coverage_changes"]:
-        A("<h2>What this tool can now see</h2>")
-        A('<p class=sub style="margin:-4px 0 10px">Facts that went from unknown '
-          'to known, or back. One line per fact rather than one row per site: '
-          'the first full-mode run gave 48 sites six new facts each, which is '
-          'one event, not 288 of them.</p>')
-        A("<div class=card><table><tr><th>Fact</th><th>Became visible</th>"
-          "<th>Went dark</th><th>Sites</th></tr>")
-        for g in m["coverage_changes"]:
-            A("<tr><td><code>%s</code></td><td class=num>%s</td>"
-              "<td class=num>%s</td><td><details><summary>%d site(s)</summary>"
-              '<div class=quiet style="margin-top:6px">%s</div></details></td></tr>'
-              % (e(g["fact"]), e(g["gained"]) if g["gained"] else "—",
-                 e(g["lost"]) if g["lost"] else "—",
-                 len(g["sites"]), e(", ".join(g["sites"]))))
-        A("</table></div>")
-
-    # --- still true, grouped by cause ------------------------------------
-    A("<h2>Still true</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">Grouped by cause. One unmerged '
-      'upstream commit across 38 sites is one decision, not 38 findings.</p>')
-    A("<div class=card>")
-    if not m["standing"]:
-        A('<p class=big-quiet>No standing findings.</p>')
-    else:
-        A("<table><tr><th>Axis</th><th>Cause</th><th>Sites</th><th>What it means</th></tr>")
-        for g in m["standing"]:
-            sites, detail = g["sites"], g.get("detail") or {}
-            listing = ", ".join(
-                ("%s (%s)" % (s, detail[s])) if s in detail else s for s in sites)
-            A("<tr><td>%s</td><td><strong>%s</strong></td><td class=num>%d</td>"
-              "<td>%s<details><summary>affected sites</summary>"
-              '<div class=quiet style="margin-top:6px">%s</div></details></td></tr>'
-              % (chip(g["axis"], AXIS_TONE.get(g["axis"], "info")), e(g["cause"]),
-                 len(sites), e(g["action"]), e(listing)))
-        A("</table>")
-    A("</div>")
-
-    # --- coverage ---------------------------------------------------------
-    A("<h2>How much of this is actually known</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">A green row is only worth as much '
-      'as the coverage behind it. Unknown is shown as unknown, never as a pass.</p>')
+          % (e(src), tone, e(stamp), e(SOURCE_ANSWERS.get(src, ""))))
+    A("</div></div>")
 
     # A coverage number that went DOWN. Directly above the coverage box,
     # because without it that box states a smaller number in the same
@@ -925,6 +628,384 @@ def render(m):
           % (tone, e(label), known, total, pct))
     A("</div>")
 
+
+
+def render(m):
+    o = []
+    A = o.append
+    A("<!doctype html><html lang=en><meta charset=utf-8>")
+    A('<meta name=viewport content="width=device-width,initial-scale=1">')
+    A("<title>clevermethod fleet</title><style>%s</style>" % css())
+    A('<div class=wrap>')
+    # --- masthead ----------------------------------------------------------
+    # COMPRESSED 2026-08-20. The hero card and a four-tile KPI row together ate
+    # roughly 490px before the first workflow card, so on a laptop the suite
+    # scoreboard -- the thing the page is now organised around -- started below
+    # the fold. Context that never changes (how many sites, how many hosts, how
+    # many tools) belongs in a line of text, not in tiles the size of the
+    # numbers that DO change.
+    risk = [g for g in m["standing"] if g["axis"] == "RISK"]
+    pushable = [c for c in m["changes"] if c["class"] not in L.QUIET_CLASSES]
+    drift = [c for c in m["changes"] if c["class"] == "DRIFT"]
+    nhosts = len({s.get("host") for s in m["sites"] if s.get("host")})
+
+    A('<div class=masthead>')
+    A("<h1>clevermethod fleet</h1>")
+    # NO TOOL COUNT HERE. It read `len(m["latest"])`, which counts sources that
+    # have RUN, and printed "3 tools" while the coverage block listed four --
+    # Nexcess has a registered source and no runs, and was given a coverage line
+    # precisely so nobody could confuse "not covered" with "not built". The
+    # provenance block below names them and says when each last ran.
+    A('<p class=sub style="margin:2px 0 0">%d sites across %d hosts &middot; '
+      'one ledger &middot; read-only</p>' % (m["inventory_count"], nhosts))
+    A('</div>')
+
+    A('<div class="card topband">')
+    A('<div class=topmain>')
+    A('<div class=hero>%d</div>' % len(pushable))
+    A('<div class=hero-sub>%s</div>'
+      % ("change(s) needing a decision since the previous run of each tool."
+         if pushable else
+         "changes needing a decision. The fleet is stable; the standing "
+         "findings below are unchanged."))
+    A('</div>')
+
+    A('<div class=topside>')
+    cov_n = sum(len(g["sites"]) for g in m["coverage_changes"])
+    cov_sites = len(set(x for g in m["coverage_changes"] for x in g["sites"]))
+    for val, label in [
+        (len(risk), "open risk causes, grouped by cause not by site"),
+        (len(m["unreconciled"]), "sites in one source but not the other"),
+        (len(drift), "counters moved on findings already open, suppressed"),
+        (cov_n, "facts crossed the unknown boundary on %d site(s) &mdash; this "
+                "tool&rsquo;s coverage changing, not the fleet&rsquo;s" % cov_sites),
+    ]:
+        if not val:
+            continue
+        A('<div class=toprow><b>%s</b><span>%s</span></div>' % (e(val), label))
+    A('</div>')
+    A('</div>')
+
+    # --- the suite ---------------------------------------------------------
+    # ONE TILE GROUP PER QUESTION, added 2026-08-20.
+    #
+    # Until today the page led with a single status row that mixed two
+    # unrelated questions. 38 of 70 WARN sites carried a consent finding and 7
+    # were WARN for consent alone, so "fleet health" moved when the consent
+    # sweep ran and nothing about maintenance had changed -- while consent
+    # itself had no headline anywhere and survived as three rows inside
+    # "Still true". Both problems are the same problem.
+    #
+    # ONLY THE ANSWER STATES ARE SHOWN PER CARD. SKIP and FROZEN are terminal
+    # states of the SITE, not of a question, so repeating them on every card
+    # says "3 sites are SKIP for consent", which is not a thing. They are
+    # stated once, in the footer of the health card. Caught by looking at the
+    # rendered page, not by a test.
+    h = m["health"]
+    ax = h.get("axes") or {}
+    ANSWERS = ["CRIT", "WARN", "OK", "UNKNOWN"]
+
+    def _cov(prefix):
+        for w, (k, n) in m["coverage"]:
+            if w.startswith(prefix):
+                return k, n
+        return None, None
+
+    def _bar(known, of, label):
+        if not of:
+            return ""
+        pct = int(round(100.0 * known / of))
+        tone = "good" if pct >= 90 else ("info" if pct >= 60 else "bad")
+        return ('<div class=wfbar><i class="%s" style="width:%d%%"></i></div>'
+                '<div class=wfcovlab><strong>%d of %d</strong> %s</div>'
+                % (tone, pct, known, of, e(label)))
+
+    A("<h2>The suite</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">One card per question. A site has '
+      'a status on <em>each</em> axis independently: a site can be well '
+      'maintained and still leak trackers. Scored from the ledger at render '
+      'time, so changing a '
+      'threshold rescores all of history rather than reporting as a fleet '
+      'change.</p>')
+    A('<div class=suite>')
+
+    def card(title, blurb, counts_map, cov, detail=None, note=None, axis=None):
+        A('<div class="card wfcard">')
+        A('<div class=wfhead>%s</div>' % e(title))
+        A('<div class=wfblurb>%s</div>' % blurb)
+        if counts_map:
+            A('<div class=wfstates>')
+            for st in ANSWERS:
+                n = counts_map.get(st, 0)
+                if not n and st in ("CRIT", "UNKNOWN"):
+                    continue
+                # CLICKABLE, 2026-08-23. "Every site" is 47% of the page and
+                # starts 53% of the way down it -- about seven screens of
+                # scrolling. Reordering the page was the obvious fix and the
+                # wrong one: a reader who opens on a table where 73 of 84 rows
+                # say WARN asks "is everything broken?", and the answer is in
+                # the sections they just skipped. A chip that jumps to the
+                # table already filtered puts the data one click from the top
+                # and keeps the reading order for people who want it.
+                if axis:
+                    # The tooltip deliberately does NOT promise this count.
+                    # Card counts exclude `production: false` sites; the table
+                    # still shows them, by design. Clicking "UNKNOWN 10" on the
+                    # consent card lists 11 rows, the extra being cm-whitelabel.
+                    # Naming a state is honest; naming a number would not be.
+                    A('<button class="wfstate wfjump" data-axis="%s" '
+                      'data-state="%s" title="Filter the table below to %s '
+                      '%s">%s<span class=wfn>%s</span></button>'
+                      % (e(axis), e(st), e(st), e(axis),
+                         chip(st, STATE_TONE.get(st, "muted")), e(n)))
+                else:
+                    A('<div class=wfstate>%s<span class=wfn>%s</span></div>'
+                      % (chip(st, STATE_TONE.get(st, "muted")), e(n)))
+            A('</div>')
+        if detail:
+            A('<div class=wfdetail>%s</div>' % detail)
+        A('<div class=wfcov>%s</div>' % cov)
+        if note:
+            A('<div class=wfnote>%s</div>' % note)
+        A('</div>')
+
+    # HEALTH ----------------------------------------------------------------
+    nh = len([x for x in m["sites"]
+              if any(r.get("code") == "coverage_partial"
+                     for r in (x.get("severity") or {}).get("reasons", []))])
+    k, n = _cov("Pantheon platform facts")
+    terminal = []
+    for st in ("SKIP", "FROZEN"):
+        c = h["counts"].get(st, 0)
+        if c:
+            terminal.append("%d %s" % (c, st.lower()))
+    if h["excluded_sites"]:
+        terminal.append("%d excluded as non-production" % len(h["excluded_sites"]))
+    hcodes = {}
+    for x in m["sites"]:
+        for r in ((x.get("severity") or {}).get("axes", {})
+                  .get("health", {}).get("reasons", [])):
+            hcodes[r["code"]] = hcodes.get(r["code"], 0) + 1
+    hbits = []
+    for codes, label in (
+            (("backup_missing", "backup_stale", "backup_aging"),
+             "have no recent database backup"),
+            (("core_update",), "are behind on WordPress core"),
+            (("plugin_backlog",), "have a plugin backlog"),
+            (("php_eol",), "run PHP past end of security support")):
+        c = sum(hcodes.get(x, 0) for x in codes)
+        if c:
+            hbits.append('<span class=wfrow><b>%d</b> %s</span>' % (c, e(label)))
+    card("Fleet health",
+         "Is this site being maintained: backups, PHP, WordPress, plugins.",
+         ax.get("health") or h["counts"], _bar(k, n, "Pantheon platform facts"),
+         detail="".join(hbits) or None,
+         note=("<strong>%d site(s) have been looked at but have NO health "
+               "evidence</strong> — no backup age, no plugin or theme count. "
+               "They score WARN for that reason alone, and this is the coverage "
+               "number to watch.%s"
+               % (nh, ("<br>Plus " + ", ".join(terminal) + ".") if terminal else "")),
+         axis="health")
+
+    # CONSENT ---------------------------------------------------------------
+    # The status split alone does not say what to DO. 38 WARN is two different
+    # conversations: a site with no tooling at all, and a site whose tooling is
+    # installed and not working. The second is worse and is invisible in a
+    # single count.
+    def _n_standing(frag):
+        for g in m["standing"]:
+            if frag in g["cause"]:
+                return len(g.get("sites") or [])
+        return 0
+    leaks_with = _n_standing("tooling present, but trackers fire")
+    leaks_without = _n_standing("Trackers fire before consent, and no consent")
+    notool = _n_standing("No consent tooling detected")
+    k, n = _cov("Cookie consent")
+    card("Cookie consent",
+         "Does the homepage fire trackers before anyone consents.",
+         ax.get("consent"), _bar(k, n, "homepages the sweep could load"),
+         detail=(
+             '<span class=wfrow><b>%d</b> fire trackers before consent</span>'
+             '<span class=wfrow><b>%d</b> of those have consent tooling '
+             'installed that is not stopping them</span>'
+             '<span class=wfrow><b>%d</b> have no consent tooling at all</span>'
+             % (leaks_with + leaks_without, leaks_with, notool)),
+         note="Never CRIT by design: CRIT stays a security tier so it remains a "
+              "list somebody works through. <strong>UNKNOWN is a site that "
+              "refused the scanner, not a clean site.</strong> Technical "
+              "observations, not legal conclusions.",
+         axis="consent")
+
+    # EMAIL / DNS -----------------------------------------------------------
+    # No per-site status: this answers a question about a DOMAIN. It still gets
+    # a card, because leaving a live workflow off the strip reads as "we do not
+    # do that" -- and it shows its three coverage fractions where the other
+    # cards show states, so the card is comparable rather than half empty.
+    email_causes = [g for g in m["standing"]
+                    if g["axis"] == "RISK"
+                    and ("DMARC" in g["cause"] or "SPF" in g["cause"]
+                         or "aligned" in g["cause"])]
+    A('<div class="card wfcard">')
+    A('<div class=wfhead>Email DNS</div>')
+    A('<div class=wfblurb>Can this domain send mail that authenticates.</div>')
+    A('<div class=wfmini>')
+    for label, prefix in (("SPF", "SPF"), ("DKIM", "DKIM"), ("DMARC", "DMARC")):
+        k, n = _cov(prefix)
+        if n:
+            pct = int(round(100.0 * k / n))
+            tone = "good" if pct >= 90 else ("info" if pct >= 60 else "bad")
+            A('<div class=wfminirow><span class=wfminilab>%s</span>'
+              '<span class=wfbar><i class="%s" style="width:%d%%"></i></span>'
+              '<span class=wfmininum>%d/%d</span></div>'
+              % (e(label), tone, pct, k, n))
+    A('</div>')
+    A('<div class=wfnote>Scored per DOMAIN, not per site, so it has no column '
+      'in the fleet table below and no status of its own. <strong>%d open '
+      'cause(s)</strong>, listed under Still true.</div>' % len(email_causes))
+    A('</div>')
+
+    A('</div>')
+
+    # --- fleet health -----------------------------------------------------
+    counts, excl = h["counts"], h["excluded"]
+    coverage_section(A, m, e)
+
+    A("<h2>What the states mean</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">Scored from the ledger at render '
+      'time, not at scan time. Thresholds are named constants in '
+      '<code>scripts/lib/severity.py</code>; changing one rescores every run in '
+      'history and does not report as a fleet change.</p>')
+    A("<div class=card><div class=kpis>")
+    for st in SEV.ORDER:
+        n = counts.get(st, 0)
+        if not n and st in ("UNKNOWN", "FROZEN", "SKIP"):
+            continue
+        A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
+          '<div class=note>%s</div></div>'
+          % (chip(st, STATE_TONE.get(st, "muted")), e(n),
+             e(STATE_MEANING.get(st, ""))))
+    A("</div>")
+
+    # HEALTH COVERAGE, stated separately from the status counts.
+    #
+    # Added 2026-08-19 with the consent sweep, because rendering the page with
+    # consent facts in the ledger took UNKNOWN from 32 to ZERO. Nothing had
+    # improved: the sweep reached every domain, so no site was left in "nobody
+    # looked", and the number Doug named as the scoreboard silently became 0.
+    #
+    # UNKNOWN answers "has any scan reached this site". It never answered "do
+    # we know this site's health", and the two were only ever the same number
+    # by accident, while health was the only scan there was. Every source added
+    # to the suite breaks that coincidence again, so the health-coverage
+    # question gets its own line rather than riding on a status count.
+    no_health = [s for s in m["sites"]
+                 if any(r.get("code") == "coverage_partial"
+                        for r in (s.get("severity") or {}).get("reasons", []))]
+    if no_health:
+        A('<p class=sub style="margin:10px 0 0"><strong>%d site(s) have been '
+          'looked at but have NO health evidence</strong> — no backup age, no '
+          'plugin or theme count. They score WARN rather than OK for that '
+          'reason alone. This is the coverage number to watch; it is not the '
+          'same question as UNKNOWN, which asks whether any scan reached a '
+          'site at all.</p>' % len(no_health))
+        # The 32 domains used to be printed here. Measured 2026-08-23: 233px
+        # of a 879px section, in a block headed "What the states mean", which
+        # is not what a site list is. The same sentence already appears on the
+        # health card one screen above, and the table below now has a filter
+        # that reproduces the list exactly. Naming a set is not the same as
+        # listing it.
+        A('<p class=quiet style="margin:4px 0 0">Filter the table below by '
+          '<b>No health evidence</b> to see them.</p>')
+
+    if h["excluded_sites"]:
+        A('<p class=quiet style="margin:10px 0 0">Excluded from these counts: '
+          '%s. Marked <code>production: false</code> in the inventory by a '
+          'person. Still scanned, still shown in the table below, and scoring '
+          '%s on its own row.</p>'
+          % (", ".join("<code>%s</code>" % e(x) for x in h["excluded_sites"]),
+             ", ".join("%s %s" % (v, k) for k, v in excl.items() if v)))
+    A("</div>")
+
+    # --- review queue -----------------------------------------------------
+    # Sites with no `production` ruling AND no workbook row: nobody has ever
+    # looked at them. Deliberately NOT every site whose `production` is null,
+    # which is all 84 and would be ignored.
+    if h["unreviewed"]:
+        A("<h2>Needs a decision</h2>")
+        A('<p class=sub style="margin:-4px 0 10px">%d site(s) with no ownership '
+          'record and no production ruling. Nobody has decided whether these '
+          'matter, so they are counted as production until someone does. On '
+          'this fleet that set has included the two worst-maintained sites, so '
+          'it is worth clearing once.</p>' % len(h["unreviewed"]))
+        A("<div class=card><table><tr><th>Site</th><th>State</th><th>Plan</th>"
+          "<th>Why it is here</th></tr>")
+        by_id = {x["site_id"]: x for x in m["sites"]}
+        for sid in h["unreviewed"]:
+            s_ = by_id.get(sid, {})
+            st = s_.get("status")
+            reasons = "; ".join(r["text"] for r in
+                                (s_.get("severity") or {}).get("reasons", []))
+            A("<tr><td><code>%s</code></td><td>%s</td><td class=quiet>%s</td>"
+              "<td>%s</td></tr>"
+              % (e(sid), chip(st, STATE_TONE.get(st, "muted")) if st else "—",
+                 e(s_.get("plan") or "—"),
+                 e(reasons or "In the Pantheon account, with no client, owner "
+                              "or production ruling in the inventory.")))
+        A("</table></div>")
+
+    # --- what changed -----------------------------------------------------
+    A("<h2>What changed</h2><div class=card>")
+    if not m["changes"]:
+        A('<p class=big-quiet>Nothing, in either source.</p>')
+    else:
+        A("<table><tr><th>Class</th><th>Site</th><th>Fact</th><th>Before</th>"
+          "<th>After</th><th>Source</th></tr>")
+        for c in m["changes"]:
+            A("<tr><td>%s</td><td><code>%s</code></td><td>%s</td><td class=num>%s</td>"
+              "<td class=num>%s</td><td class=quiet>%s</td></tr>"
+              % (chip(c["class"], CLASS_TONE.get(c["class"], "info")), e(c["site"]),
+                 e(c["fact"]), e(c["before"]), e(c["after"]), e(c.get("source"))))
+        A("</table>")
+    A("</div>")
+
+    if m["coverage_changes"]:
+        A("<h2>What this tool can now see</h2>")
+        A('<p class=sub style="margin:-4px 0 10px">Facts that went from unknown '
+          'to known, or back. One line per fact rather than one row per site: '
+          'the first full-mode run gave 48 sites six new facts each, which is '
+          'one event, not 288 of them.</p>')
+        A("<div class=card><table><tr><th>Fact</th><th>Became visible</th>"
+          "<th>Went dark</th><th>Sites</th></tr>")
+        for g in m["coverage_changes"]:
+            A("<tr><td><code>%s</code></td><td class=num>%s</td>"
+              "<td class=num>%s</td><td><details><summary>%d site(s)</summary>"
+              '<div class=quiet style="margin-top:6px">%s</div></details></td></tr>'
+              % (e(g["fact"]), e(g["gained"]) if g["gained"] else "—",
+                 e(g["lost"]) if g["lost"] else "—",
+                 len(g["sites"]), e(", ".join(g["sites"]))))
+        A("</table></div>")
+
+    # --- still true, grouped by cause ------------------------------------
+    A("<h2>Still true</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">Grouped by cause. One unmerged '
+      'upstream commit across 38 sites is one decision, not 38 findings.</p>')
+    A("<div class=card>")
+    if not m["standing"]:
+        A('<p class=big-quiet>No standing findings.</p>')
+    else:
+        A("<table><tr><th>Axis</th><th>Cause</th><th>Sites</th><th>What it means</th></tr>")
+        for g in m["standing"]:
+            sites, detail = g["sites"], g.get("detail") or {}
+            listing = ", ".join(
+                ("%s (%s)" % (s, detail[s])) if s in detail else s for s in sites)
+            A("<tr><td>%s</td><td><strong>%s</strong></td><td class=num>%d</td>"
+              "<td>%s<details><summary>affected sites</summary>"
+              '<div class=quiet style="margin-top:6px">%s</div></details></td></tr>'
+              % (chip(g["axis"], AXIS_TONE.get(g["axis"], "info")), e(g["cause"]),
+                 len(sites), e(g["action"]), e(listing)))
+        A("</table>")
+    A("</div>")
+
     # --- reconciliation ---------------------------------------------------
     if m["unreconciled"]:
         A("<h2>Sites that do not reconcile</h2>")
@@ -947,14 +1028,12 @@ def render(m):
       'Blank cells are not tidy, they are '
       'the point: <strong>not checked</strong> means no scan has looked, and '
       '<em>per host</em> means the hosting control plane reported it rather '
-      'than a scan reading it off the site. Every value here was measured; '
-      'nothing on this page is copied from the manual workbook. WordPress '
-      'core, plugin and theme status needs the SSH-based full scan, which is '
-      'not wired up yet.</p>')
+      'than a scan reading it off the site. Every value here was measured.</p>')
     A('<div class=filters>'
       '<input id=q placeholder="Filter by site name" autocomplete=off>'
       '<select id=host><option value="">All hosts</option></select>'
-      '<select id=state><option value="">All health states</option></select>'
+      '<select id=state><option value="">All health states</option>'
+      '<option value="__nohealth">No health evidence</option></select>'
       '<select id=consent><option value="">All consent states</option></select></div>')
     A('<div class=card style="overflow-x:auto"><table id=fleet>'
       "<tr><th>Site</th><th>Host</th><th>Health</th><th>Consent</th><th>PHP</th>"
@@ -1093,12 +1172,17 @@ def render(m):
         state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
         cst = ((s.get("severity") or {}).get("axes", {})
                .get("consent") or {}).get("status") or ""
-        A('<tr data-site="%s" data-host="%s" data-state="%s" data-consent="%s">'
+        nohealth = "1" if any(
+            r.get("code") == "coverage_partial"
+            for r in (s.get("severity") or {}).get("reasons", [])) else ""
+        A('<tr data-site="%s" data-host="%s" data-state="%s" data-consent="%s"'
+          ' data-nohealth="%s">'
           "<td><code>%s</code></td><td class=quiet>%s</td><td>%s</td><td>%s</td>"
           "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
           "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""), e(cst),
+             nohealth,
              e(s["site_id"]), e(s.get("host") or "—"), state, consent_cell(s),
              observed(s.get("php_version"), s.get("nexcess_php_version")),
              backup(s.get("db_backup_age_days")),
@@ -1122,8 +1206,11 @@ def render(m):
     A("""<script>
 (function(){
  var rows=[].slice.call(document.querySelectorAll('#fleet tr[data-site]'));
- function opts(sel,vals){vals.filter(Boolean).sort().forEach(function(v){
-   var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
+ function opts(sel,vals){
+   var have={};[].slice.call(sel.options).forEach(function(o){have[o.value]=1;});
+   vals.filter(Boolean).sort().forEach(function(v){
+     if(have[v])return;
+     var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
  opts(document.getElementById('host'),
       rows.map(function(r){return r.dataset.host}).filter(function(v,i,a){return a.indexOf(v)===i}));
  opts(document.getElementById('state'),
@@ -1136,9 +1223,20 @@ def render(m):
        s=document.getElementById('state').value,
        c=document.getElementById('consent').value;
    rows.forEach(function(r){
+     var okState = !s || (s==='__nohealth' ? r.dataset.nohealth==='1'
+                                           : r.dataset.state===s);
      r.style.display=(!q||r.dataset.site.indexOf(q)>-1)&&(!h||r.dataset.host===h)
-       &&(!s||r.dataset.state===s)&&(!c||r.dataset.consent===c)?'':'none';});
+       &&okState&&(!c||r.dataset.consent===c)?'':'none';});
  }
+ [].slice.call(document.querySelectorAll('.wfjump')).forEach(function(b){
+   b.addEventListener('click',function(){
+     var ax=b.dataset.axis, st=b.dataset.state;
+     document.getElementById('state').value   = (ax==='health')  ? st : '';
+     document.getElementById('consent').value = (ax==='consent') ? st : '';
+     apply();
+     var t=document.getElementById('fleet');
+     if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+   });});
  ['q','host','state','consent'].forEach(function(id){
    var el=document.getElementById(id);
    el.addEventListener('input',apply);el.addEventListener('change',apply);});

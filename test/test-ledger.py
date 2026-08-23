@@ -369,8 +369,15 @@ if os.path.exists(inv_p):
     check("a domain maps to itself", by_domain.get("galbanicheese.com") == "galbanicheese.com")
     check("a Pantheon site with no workbook row keeps its machine name as the id",
           "hoffmanscheese" in recs and recs["hoffmanscheese"]["in_workbook"] is False)
+    # Asserts the PROPERTY its own name states -- a reconciliation note exists
+    # and says something -- not the sentence it happened to contain. It pinned
+    # the literal "absent from the workbook" and went red on 2026-08-23 when
+    # that wording was deliberately taken off the page: the workbook is being
+    # retired, and the note now describes the inventory instead. Same trap as
+    # the fleet-count assertions further up this file.
+    _rec = recs["hoffmanscheese"]["reconciliation"]
     check("that site carries the reconciliation note, not a silent pass",
-          "absent from the workbook" in recs["hoffmanscheese"]["reconciliation"])
+          bool(_rec) and "Pantheon" in _rec and len(_rec) > 40, repr(_rec))
     check("a workbook site Pantheon does not return is flagged the other way",
           recs["hoosierfeeder.com"].get("host_site_name") is None
           and "not observed" in recs["hoosierfeeder.com"]["reconciliation"])

@@ -86,6 +86,64 @@ Cloudflare challenge, wrong vendor), two Workers already pinned, "delete
 before acting on it. This repo already applies that to code; it applies to these
 notes just as hard.
 
+### 2026-08-23, later: the workbook is off the page, and the event log is in git
+
+**`docs/SECURITY-EVENTS.md` is new and is the important one.** Three incidents —
+the April reCAPTCHA compromise, wp2shell in July, and **Pods (CVE-2026-19598) on
+2026-08-20** — copied out of the workbook's `Security Event Log` sheet, which
+had never been extracted. `extract-audit-workbook.py` reads `Sites` and
+`Security Plugins` and nothing else, so a live incident record existed in
+exactly one place.
+
+**Three sites had users added in the Pods incident**: `breakstones`,
+`frontline-construction`, `zehnder-america-zna`, each with "salt rotated" beside
+it. Doug: caught early, believed resolved, team meeting 2026-08-24. The log's
+own status points at an "outstanding issues tab" that does not exist.
+
+**A dashboard feature for capturing security events was deliberately NOT built.**
+Three incidents is not a schema, `Remediation Complete?` is already a lifecycle
+nobody specified, and the team meets on the live one tomorrow. The five
+questions to settle first are at the bottom of `SECURITY-EVENTS.md`.
+
+**The extractor was mis-mapping columns and would have imported the wrong one.**
+It keyed on POSITION with `notes` at index 27. The workbook gained three columns
+(`GCDN Configured`, `WAF Mode`, `Admin Routes Protected by IP Access Rule`)
+before `Notes`, which moved to 30. Re-running it would have written GCDN values
+into the notes field on all 78 sites and exited 0. It now resolves columns by
+HEADER TEXT and hard-errors on a missing one. Verified against the live header:
+`notes` resolves to 30, and a renamed column exits non-zero.
+
+**The word "workbook" is gone from the page.** Not the findings — the
+reconciliation section is the highest-signal thing on it — but the wording now
+describes the inventory, which is what the page actually reads. Seven
+reconciliation strings were rewritten in `fleet-inventory.json`. A test that
+pinned the literal "absent from the workbook" was rewritten to assert the
+property its own name states.
+
+**UI pass, all measured rather than eyeballed:**
+
+| change | why |
+|---|---|
+| removed "the SSH-based full scan is not wired up yet" | false for four days, and contradicted the coverage block on the same page |
+| masthead drops the tool count | it said 3; there are 4 registered sources |
+| one provenance block, "What this page knows, and what it does not" | provenance was in five places. The coverage box moved up under the scoreboard and absorbed the run line. Per-number caveats stay inline with their numbers |
+| the block lists every REGISTERED source | Nexcess shows "never run" rather than being absent, which would read as "not covered" |
+| legend loses its 32-domain list | 233px of a 879px section, inside a block headed "What the states mean". The health card already names the number one screen above |
+| new table filter, "No health evidence" | reproduces that list exactly — verified, 32 rows |
+| suite card chips are buttons that filter and jump to the table | "Every site" is 47% of the page and starts at 53%, about seven screens down. Reordering was the obvious fix and the wrong one: opening on a table where 73 of 84 rows say WARN reads as "everything is broken". Verified: health OK jumps to exactly the 4 OK sites |
+| the chip tooltip names the state, not the count | card counts exclude `production: false`; the table still shows those rows. Consent UNKNOWN says 10 and lists 11, the extra being cm-whitelabel |
+
+**One mistake worth recording.** The first attempt to move the coverage block
+sliced from a `# --- coverage ---` banner to a `# --- reconciliation ---` banner
+and swallowed two whole sections, because an earlier comment matched the start
+marker. The assert only checked the block contained the heading, not that it
+contained *nothing else*, so it passed. Caught by measuring the rendered section
+order, not by a test. Bound a slice on both ends and assert what it must NOT
+contain.
+
+**Not done, deliberately:** "Still true" is 1704px, the largest block before the
+table and bigger than the legend that prompted this. Raised, not changed.
+
 ### BACKLOG 2026-08-23: decommission the test/temp sites
 
 **Doug is confirming with the team. Nothing has been changed.** He named the

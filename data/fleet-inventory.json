@@ -1153,7 +1153,7 @@
       "observed_plan": "Sandbox",
       "owner": null,
       "production": null,
-      "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+      "reconciliation": "The Pantheon account returns this site; the inventory has no client, owner or production ruling for it. Decide whether it is a client site or scratch to decommission.",
       "site_id": "clevermethod-forward",
       "workbook_last_known": {}
     },
@@ -1242,7 +1242,7 @@
       "observed_plan": "Sandbox",
       "owner": null,
       "production": false,
-      "reconciliation": "Present in the Pantheon account, absent from the workbook. DECIDED 2026-08-19: temp non-public scratch, out of scope. See notes and production:false.",
+      "reconciliation": "The Pantheon account returns this site and the inventory has no client or owner for it. DECIDED 2026-08-19: temp non-public scratch, out of scope. See notes and production:false.",
       "site_id": "cm-whitelabel",
       "workbook_last_known": {}
     },
@@ -2467,7 +2467,7 @@
       "observed_plan": "Sandbox",
       "owner": null,
       "production": null,
-      "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+      "reconciliation": "The Pantheon account returns this site; the inventory has no client, owner or production ruling for it. Decide whether it is a client site or scratch to decommission.",
       "site_id": "hoffmanscheese",
       "workbook_last_known": {}
     },
@@ -2534,7 +2534,7 @@
       "notes": null,
       "owner": null,
       "production": null,
-      "reconciliation": "Listed as CM Pantheon in the workbook, but the Pantheon account does not return a matching site. Attested to but not observed. MEASURED 2026-08-19: the domain resolves to Cloudflare (104.21.x), not to Pantheon's 23.185.0.x range, which is consistent with it not being on Pantheon at all. The origin host behind Cloudflare has NOT been established. Also: hoosierfeedercompany.com 302-redirects here, and the email envelope uses that domain, so the client's canonical name is Hoosier Feeder Company and this is one property under two names. The workbook's host value is the claim that needs a person.",
+      "reconciliation": "The inventory places this site on CM Pantheon, but the Pantheon account does not return a matching site. Attested to but not observed. MEASURED 2026-08-19: the domain resolves to Cloudflare (104.21.x), not to Pantheon's 23.185.0.x range, which is consistent with it not being on Pantheon at all. The origin host behind Cloudflare has NOT been established. Also: hoosierfeedercompany.com 302-redirects here, and the email envelope uses that domain, so the client's canonical name is Hoosier Feeder Company and this is one property under two names. The inventory's host value is the claim that needs a person.",
       "site_id": "hoosierfeeder.com",
       "workbook_last_known": {
         "php_version": "8.2",
@@ -3764,7 +3764,7 @@
       "observed_plan": "Sandbox",
       "owner": null,
       "production": null,
-      "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+      "reconciliation": "The Pantheon account returns this site; the inventory has no client, owner or production ruling for it. Decide whether it is a client site or scratch to decommission.",
       "site_id": "moorseville-nc",
       "workbook_last_known": {}
     },
@@ -3853,7 +3853,7 @@
       "observed_plan": "Sandbox",
       "owner": null,
       "production": null,
-      "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+      "reconciliation": "The Pantheon account returns this site; the inventory has no client, owner or production ruling for it. Decide whether it is a client site or scratch to decommission.",
       "site_id": "nc-moorseville",
       "workbook_last_known": {}
     },
@@ -4439,7 +4439,7 @@
       "observed_plan": "Sandbox",
       "owner": null,
       "production": null,
-      "reconciliation": "Present in the Pantheon account, absent from the workbook. Decide whether this is a client site missing from the audit or scratch to decommission.",
+      "reconciliation": "The Pantheon account returns this site; the inventory has no client, owner or production ruling for it. Decide whether it is a client site or scratch to decommission.",
       "site_id": "pfannenbergsales",
       "workbook_last_known": {}
     },
