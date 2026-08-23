@@ -45,8 +45,14 @@ run() {
   gh workflow run "$workflow" --repo "$REPO" "$@"
 }
 
+# run_mode=full, changed 2026-08-22. This said api-only, which meant the one
+# command named "run all the fleet scans" was the only one that did NOT collect
+# WordPress version, core-update status or plugin/theme counts -- the facts that
+# answer wp2shell. It was written when full mode did not work; full has run
+# since 2026-08-18, including in CI, so the flag had outlived its reason and
+# nothing said so.
 run pantheon-fleet-healthcheck.yml \
-  -f run_mode=api-only \
+  -f run_mode=full \
   -f target_env=live \
   -f fail_on_crit=false \
   -f persist_ledger=true \

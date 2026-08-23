@@ -300,7 +300,8 @@ consent sweep ran and nothing about maintenance had changed.
 ## Commands
 
 ```bash
-./scripts/pantheon-fleet-healthcheck.sh --api-only --no-fail-on-crit  # scan
+./scripts/pantheon-fleet-healthcheck.sh --no-fail-on-crit             # scan (full)
+./scripts/pantheon-fleet-healthcheck.sh --api-only --no-fail-on-crit  # no SSH
 ./scripts/fleet-nexcess.py probe                                      # confirm the base URL
 ./scripts/fleet-nexcess.py discover --stamp "$(date -u +%Y-%m-%d_%H%M)"
 node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs npm i

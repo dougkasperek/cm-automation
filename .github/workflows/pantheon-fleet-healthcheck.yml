@@ -7,9 +7,22 @@
 # same run is reproducible on a laptop and portable to Azure DevOps. If you
 # find yourself adding business logic here, it belongs in the script instead.
 #
-# PHASE 1 (now): manual dispatch, API-only, no SSH key, no schedule.
-# PHASE 2: flip run_mode to "full" once an SSH key is registered with Pantheon.
-# PHASE 3: uncomment the schedule block and turn fail_on_crit on.
+# STATE, 2026-08-22: manual dispatch, run_mode=full by default, no schedule.
+#
+# This block used to read "PHASE 1 (now): API-only, no SSH key. PHASE 2: flip
+# run_mode to full once an SSH key is registered." Both were true when written
+# and neither was true afterwards -- PANTHEON_SSH_KEY has been registered and
+# full has run since 2026-08-18, including here in CI. The stale note was read
+# as current state on 2026-08-22 and produced the wrong answer about why a scan
+# had collected less than it could. A comment describing the old world is worse
+# than no comment.
+#
+# api-only remains available as a deliberate choice: it needs no SSH key and is
+# the fallback if the key is ever revoked. It is NOT the default, because a
+# default that quietly measures less is the defect this project keeps finding.
+#
+# STILL OPEN: the schedule block below stays commented out, and fail_on_crit
+# stays off, until a scheduled run has been trusted for several cycles.
 # ---------------------------------------------------------------------------
 name: Pantheon Fleet Health Check
 
@@ -17,10 +30,10 @@ on:
   workflow_dispatch:
     inputs:
       run_mode:
-        description: "api-only (no SSH) or full (SSH + WP-CLI)"
+        description: "full (SSH + WP-CLI, the complete scan) or api-only (no SSH, platform facts only)"
         type: choice
-        options: [api-only, full]
-        default: api-only
+        options: [full, api-only]
+        default: full
       target_env:
         description: "Pantheon environment to inspect"
         type: choice

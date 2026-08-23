@@ -71,23 +71,19 @@ notes just as hard.
 - **The API tokens.** `github-deploy-[removed]` still needs RE-SCOPING from All
   accounts to one. See item 4.
 
-- **`run-all-fleet-scans.sh` hardcodes `run_mode=api-only`**, so the "run
-  everything" path silently skips WordPress version, core-update status and
-  plugin/theme counts — the facts that answer wp2shell, which is the highest
-  value finding this project has. Full mode has worked since 2026-08-18,
-  including in CI (`health-2026-08-20_2305`, mode=full, 48 of 52), so the SSH
-  key IS registered and this is a one-word change, not a phase of work.
+- ~~**`run-all-fleet-scans.sh` hardcodes `run_mode=api-only`**~~ **FIXED
+  2026-08-22.** Full is now the default in three places: the run-everything
+  script, the workflow's own `run_mode` input, and CLAUDE.md's documented
+  command. `api-only` remains selectable — it needs no SSH key and is the
+  fallback if `PANTHEON_SSH_KEY` is ever revoked — but it is no longer what you
+  get by not choosing.
 
-  **Two stale claims led to reading this wrong on 2026-08-22.** The header of
-  `pantheon-fleet-healthcheck.yml` still says "PHASE 1 (now): manual dispatch,
-  API-only, no SSH key" and "PHASE 2: flip run_mode to full once an SSH key is
-  registered". Both were true in the past and neither is true now. Fix the
-  header in the same change, or the next person re-derives the same wrong
-  answer from it.
-
-  Consider whether `api-only` should stay the workflow's DEFAULT at all now
-  that full works. A default that quietly measures less is the same shape as
-  everything else in the table above.
+  Three stale claims caused this, and all three are corrected: the workflow
+  header said "PHASE 1 (now): API-only, no SSH key" long after the key was
+  registered and full had run in CI; the run-everything script passed
+  `api-only` for a reason that had expired; and CLAUDE.md documented the
+  api-only invocation as *the* scan command. test-ledger.py now asserts all
+  three, including that the header no longer makes the false claim.
 
 ### PARKED 2026-08-22: consent ownership, so a finding knows who to route to
 

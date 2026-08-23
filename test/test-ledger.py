@@ -987,6 +987,45 @@ check("a source that declares NO method is unaffected: api-only is still a "
       _prevh is not None and _prevh["run_id"] == "h-1",
       "chose %s" % (_prevh["run_id"] if _prevh else None))
 
+# ---------------------------------------------------------------------------
+# "RUN EVERYTHING" HAS TO MEAN EVERYTHING
+# ---------------------------------------------------------------------------
+# run-all-fleet-scans.sh hardcoded `run_mode=api-only`, so the one path named
+# "run all the scans" was the only path that did not collect WordPress version,
+# core-update status or plugin/theme counts -- the facts that answer wp2shell,
+# which is the highest-value finding this project has.
+#
+# It was written when full mode genuinely did not work. Full has run since
+# 2026-08-18, including in CI (health-2026-08-20_2305, mode=full, 48 of 52), so
+# the flag outlived its reason and nothing said so. A default that quietly
+# measures less than it could is the same shape as every row in CLAUDE.md's
+# table.
+print()
+print("-- run-all-fleet-scans.sh collects everything it is able to --")
+
+_runall = open(os.path.join(ROOT, "scripts", "run-all-fleet-scans.sh")).read()
+check("the run-everything script asks for a FULL health scan",
+      "run_mode=full" in _runall,
+      "it still passes run_mode=api-only, so it skips wp_version and plugins")
+check("...and does not also pass api-only, which would be ambiguous",
+      "run_mode=api-only" not in _runall)
+
+# The workflow's own default matters just as much: somebody pressing the button
+# in the GitHub UI should get the complete scan, not the reduced one.
+_hc = open(os.path.join(ROOT, ".github", "workflows",
+                        "pantheon-fleet-healthcheck.yml")).read()
+_blk = _hc[_hc.find("run_mode:"):_hc.find("target_env:")]
+check("the workflow's own default run_mode is full",
+      'default: full' in _blk, _blk.strip()[:120])
+check("...and api-only is still available as a deliberate choice",
+      "api-only" in _blk)
+
+# The header claimed the SSH key was not registered, months after it was. It is
+# what made this misread as a phase of work rather than a one-word fix.
+check("the workflow header no longer claims full mode is unreachable",
+      "PHASE 1 (now): manual dispatch, API-only, no SSH key" not in _hc)
+
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))
