@@ -19,10 +19,14 @@ Design decisions, and why (see docs/DATA-MODEL.md for the data side):
   mostly-unchanged state trains people to stop reading it.
 * **Causes, not sites.** 38 sites sharing one unmerged upstream commit is one
   decision, not 38 rows.
-* **No chart is drawn here, deliberately.** The counts are a handful of named
-  classes, which is a stat tile and a table, not a bar chart; and with four runs
-  in the ledger a trend line would be two points pretending to be a trend. Charts
-  arrive when there is history to justify them.
+* **No chart is drawn here, deliberately, and none is pending.** The counts are
+  a handful of named classes, which is a stat tile and a table, not a bar chart.
+  The blocker is CADENCE, not volume: the ledger held 27 runs on 2026-08-23 and
+  every one was triggered by hand, so a trend line would show when somebody ran
+  the scanner rather than how the fleet moved. This said "with four runs" until
+  2026-08-23, and the footer promised charts would "appear once the ledger holds
+  enough runs" -- a threshold nothing implemented. Charts are a decision to be
+  made after the crons are on, not something waiting on a counter.
 * **Colour never carries meaning alone.** Every state chip has its text label.
   The palette is the project's validated status set, re-checked 2026-08-18 with
   the dataviz validator: light and dark both pass lightness, chroma, CVD
@@ -517,7 +521,17 @@ code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 input,select{font:13px inherit;padding:7px 10px;border:1px solid var(--line);border-radius:7px;
  background:var(--card);color:var(--ink);min-width:150px}
+/* EVERY table gets its own horizontal scroller, not just the site table.
+   Measured at 390px on 2026-08-23: five of the six tables sat in plain cards
+   with overflow-x:visible, so the whole document scrolled sideways on a
+   phone. "What changed" was 616px inside a 348px card -- and it is the
+   section GETTING-STARTED tells people to read if they read only one. */
+.tablewrap{overflow-x:auto}
 .quiet{color:var(--ink2)}
+/* input and select had no focus rule at all; only links and the state chips
+   did, so keyboard users lost the outline on the filters. */
+input:focus-visible,select:focus-visible{outline:2px solid var(--info);
+ outline-offset:1px}
 /* There was no `a` rule at all until 2026-08-23, because until then the page
    had no links. The component catalogue added 48 of them -- one per
    inventoried site in the plugin column, plus the back link -- and they all
@@ -1042,7 +1056,8 @@ def render(m):
           'matter, so they are counted as production until someone does. On '
           'this fleet that set has included the two worst-maintained sites, so '
           'it is worth clearing once.</p>' % len(h["unreviewed"]))
-        A("<div class=card><table><tr><th>Site</th><th>State</th><th>Plan</th>"
+        A("<div class=card><div class=tablewrap><table>"
+          "<tr><th>Site</th><th>State</th><th>Plan</th>"
           "<th>Why it is here</th></tr>")
         by_id = {x["site_id"]: x for x in m["sites"]}
         for sid in h["unreviewed"]:
@@ -1056,21 +1071,22 @@ def render(m):
                  e(s_.get("plan") or "—"),
                  e(reasons or "In the Pantheon account, with no client, owner "
                               "or production ruling in the inventory.")))
-        A("</table></div>")
+        A("</table></div></div>")
 
     # --- what changed -----------------------------------------------------
     A("<h2>What changed</h2><div class=card>")
     if not m["changes"]:
         A('<p class=big-quiet>Nothing, in either source.</p>')
     else:
-        A("<table><tr><th>Class</th><th>Site</th><th>Fact</th><th>Before</th>"
+        A("<div class=tablewrap><table>"
+          "<tr><th>Class</th><th>Site</th><th>Fact</th><th>Before</th>"
           "<th>After</th><th>Source</th></tr>")
         for c in m["changes"]:
             A("<tr><td>%s</td><td><code>%s</code></td><td>%s</td><td class=num>%s</td>"
               "<td class=num>%s</td><td class=quiet>%s</td></tr>"
               % (chip(c["class"], CLASS_TONE.get(c["class"], "info")), e(c["site"]),
                  e(c["fact"]), e(c["before"]), e(c["after"]), e(c.get("source"))))
-        A("</table>")
+        A("</table></div>")
     A("</div>")
 
     if m["coverage_changes"]:
@@ -1088,7 +1104,8 @@ def render(m):
           'good news. One line per fact rather than one row per site: the first '
           'full-mode run gave 48 sites six new facts each, which is one event, '
           'not 288 of them.</p>')
-        A("<div class=card><table><tr><th>Fact</th><th>Became visible</th>"
+        A("<div class=card><div class=tablewrap><table>"
+          "<tr><th>Fact</th><th>Became visible</th>"
           "<th>Went dark</th><th>Sites</th></tr>")
         for g in m["coverage_changes"]:
             A("<tr><td><code>%s</code></td><td class=num>%s</td>"
@@ -1097,7 +1114,7 @@ def render(m):
               % (e(g["fact"]), e(g["gained"]) if g["gained"] else "—",
                  e(g["lost"]) if g["lost"] else "—",
                  len(g["sites"]), e(", ".join(g["sites"]))))
-        A("</table></div>")
+        A("</table></div></div>")
 
     # --- still true, grouped by cause ------------------------------------
     # RENAMED 2026-08-23. "Still true" left the obvious question unanswered --
@@ -1114,7 +1131,8 @@ def render(m):
     if not m["standing"]:
         A('<p class=big-quiet>No standing findings.</p>')
     else:
-        A("<table><tr><th>Axis</th><th>Cause</th><th>Sites</th><th>What it means</th></tr>")
+        A("<div class=tablewrap><table>"
+          "<tr><th>Axis</th><th>Cause</th><th>Sites</th><th>What it means</th></tr>")
         for g in m["standing"]:
             sites, detail = g["sites"], g.get("detail") or {}
             listing = ", ".join(
@@ -1124,7 +1142,7 @@ def render(m):
               '<div class=quiet style="margin-top:6px">%s</div></details></td></tr>'
               % (chip(g["axis"], AXIS_TONE.get(g["axis"], "info")), e(g["cause"]),
                  len(sites), e(g["action"]), e(listing)))
-        A("</table>")
+        A("</table></div>")
     A("</div>")
 
     # --- reconciliation ---------------------------------------------------
@@ -1133,11 +1151,12 @@ def render(m):
         A('<p class=sub style="margin:-4px 0 10px">Present in one source and absent '
           'from the other. This is the highest-signal finding on the page: until it '
           'is explained, nothing else about these sites can be trusted.</p>')
-        A("<div class=card><table><tr><th>Site</th><th>Host</th><th>Why</th></tr>")
+        A("<div class=card><div class=tablewrap><table>"
+          "<tr><th>Site</th><th>Host</th><th>Why</th></tr>")
         for s in m["unreconciled"]:
             A("<tr><td><code>%s</code></td><td>%s</td><td>%s</td></tr>"
               % (e(s["site_id"]), e(s.get("host")), e(s.get("reconciliation"))))
-        A("</table></div>")
+        A("</table></div></div>")
 
     # --- the fleet --------------------------------------------------------
     A("<h2>Every site</h2>")
@@ -1156,7 +1175,7 @@ def render(m):
       '<select id=state><option value="">All health states</option>'
       '<option value="__nohealth">No health evidence</option></select>'
       '<select id=consent><option value="">All consent states</option></select></div>')
-    A('<div class=card style="overflow-x:auto"><table id=fleet>'
+    A('<div class="card tablewrap"><table id=fleet>'
       "<tr><th>Site</th><th>Host</th><th>Health</th><th>Consent</th><th>PHP</th>"
       "<th>Newest backup</th><th>Upstream</th>"
       "<th>WP version</th><th>WP core</th><th>Plugins</th><th>Themes</th>"
@@ -1312,15 +1331,25 @@ def render(m):
         nohealth = "1" if any(
             r.get("code") == "coverage_partial"
             for r in (s.get("severity") or {}).get("reasons", [])) else ""
+        # A row that is SHOWN but not COUNTED. cm-whitelabel is
+        # production:false, so the health card reads "CRIT 2" while filtering
+        # to CRIT returns three rows. Deliberate -- the site is still scanned
+        # and still shown -- but with nothing on the row saying so it reads as
+        # the card being wrong. It now says so on the row itself, rather than
+        # only in a sentence two sections away.
+        excluded = s.get("production") is False
         A('<tr data-site="%s" data-host="%s" data-state="%s" data-consent="%s"'
           ' data-nohealth="%s">'
-          "<td><code>%s</code></td><td class=quiet>%s</td><td>%s</td><td>%s</td>"
+          "<td><code>%s</code>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td>"
           "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
           "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""), e(cst),
              nohealth,
-             e(s["site_id"]), e(s.get("host") or "—"), state, consent_cell(s),
+             e(s["site_id"]),
+             ('<br><span class=quiet style="font-size:11.5px">not production, '
+              'excluded from the counts above</span>' if excluded else ""),
+             e(s.get("host") or "—"), state, consent_cell(s),
              observed(s.get("php_version"), s.get("nexcess_php_version")),
              backup(s.get("db_backup_age_days")),
              e(s.get("upstream_pending", "—")),
@@ -1333,10 +1362,25 @@ def render(m):
              yn(s.get("relaxed_aligned"))))
     A("</table></div>")
 
-    A('<p class=foot>Generated %s from the ledger at <code>history/</code>. '
-      "Read-only: this page reports, it never changes a site. Trend charts appear "
-      "once the ledger holds enough runs to justify one; with %d run(s) a line "
-      "would be points pretending to be a trend.</p>"
+    # THE TREND-CHART PROMISE WAS REMOVED 2026-08-23. It read "Trend charts
+    # appear once the ledger holds enough runs to justify one", which says
+    # they arrive on their own. Nothing implements them -- no chart code, no
+    # threshold, no check. The page promised behaviour that did not exist.
+    #
+    # Its own justification had also expired: the sentence rendered the live
+    # run count, so it argued a line would be "points pretending to be a
+    # trend" while printing 27. The count is no longer the reason.
+    #
+    # The real reason is cadence, not volume, and it is stated instead: those
+    # runs were triggered by hand at irregular intervals, so a line over them
+    # would draw the shape of when somebody ran the scanner rather than
+    # anything the fleet did. That is a worse answer than no chart.
+    A('<p class=foot>Generated %s from the ledger at <code>history/</code>, '
+      "which holds %d run(s). Read-only: this page reports, it never changes a "
+      "site. <strong>No trend chart is drawn.</strong> Nothing here is "
+      "scheduled yet, so runs happen at irregular intervals when somebody "
+      "starts one, and a line through them would show when the scanner was "
+      "run rather than how the fleet moved.</p>"
       % (e(m["generated"]), len(m["runs"])))
     A("</div>")
 

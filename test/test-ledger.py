@@ -1315,6 +1315,33 @@ _above = _page[:_page.find("<table id=fleet")]
 check("the fleet page links to the catalogue ABOVE the site table",
       _above.count('href="/components"') >= 2,
       "%d link(s) above the table" % _above.count('href="/components"'))
+# QA before sharing with the team, 2026-08-23.
+#
+# EVERY table needs its own horizontal scroller, not just the site table.
+# Measured at 390px: five of six sat in plain cards, so the whole document
+# scrolled sideways on a phone -- "What changed" was 616px inside a 348px
+# card, and it is the section GETTING-STARTED tells people to read first.
+_tables = _page.count("<table")
+_wrapped = (_page.count("class=tablewrap><table")
+            + _page.count('class="card tablewrap"><table'))
+check("every table on the fleet page sits in a horizontal scroller",
+      _tables == _wrapped and _tables > 0,
+      "%d table(s), %d wrapped" % (_tables, _wrapped))
+
+# A row that is SHOWN but not COUNTED. The health card reads "CRIT 2" and
+# filtering to CRIT returns three rows, because cm-whitelabel is
+# production:false. Deliberate, but with nothing on the row saying so it
+# reads as the card being wrong.
+check("a non-production row says it is excluded from the counts",
+      "excluded from the counts above" in _page)
+
+# The footer promised "Trend charts appear once the ledger holds enough runs",
+# which says they arrive on their own. Nothing implements them: no chart code,
+# no threshold, no check. It also argued a line would be "points pretending to
+# be a trend" while printing a run count of 27.
+check("the page does not promise a trend chart it cannot draw",
+      "Trend charts appear" not in _page and "No trend chart is drawn" in _page)
+
 check("...and the suite is still three cards, not four",
       _page.count('class="card wfcard"') == 3,
       "found %d suite cards; a components card would advertise a status a "
