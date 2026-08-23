@@ -71,6 +71,42 @@ notes just as hard.
 - **The API tokens.** `github-deploy-[removed]` still needs RE-SCOPING from All
   accounts to one. See item 4.
 
+### PARKED 2026-08-22: consent ownership, so a finding knows who to route to
+
+Deliberately not built. The analysis is done and is in `docs/CONSENT-DELTA.md`
+§3b — the sweep reports all 78 sites identically, but a finding on a site whose
+CMP is in clevermethod's tenant goes to Nick, and one on a client-tenant site
+goes to the account lead. `animatics.com` is the live example: it was flagged,
+and Nick cannot act on it.
+
+**The design was agreed, so do not re-derive it:**
+
+- One inventory field, `consent_owner: "clevermethod" | "client" | null`,
+  sitting beside `production` and `in_workbook`. It is a CLAIM, not a
+  measurement, and belongs in the human-owned layer.
+- **Tri-state with a fail-safe null, exactly like `production`.** `null` means
+  nobody has ruled and routes to US. The same argument applies verbatim: a site
+  must not stop being watched because nobody got round to classifying it.
+- **It changes ROUTING, never SEVERITY.** It may split standing findings into
+  "ours" and "the client's", add a filter, and let the consent card say "29
+  leaking, of which 4 are in our tenant". It must never decide whether a
+  finding is reported. Ownership is the field most likely to go stale — it
+  changes every time an implementation is sold — so it is the last field that
+  should ever be allowed to hide something. A `consent_owner: client` that
+  suppresses a WARN is this project's signature bug with a new label.
+
+**The commercial half is the point, not a side effect.** Client-tenant findings
+are an asset: "we observed these trackers firing before consent on the site
+your team manages" is something we bring them. The reporting should make that
+list easy to lift out and send, not bury it.
+
+**BLOCKED ON A DECISION, not on code:** who maintains the field and on what
+cadence. `onetrust-audit.xlsx` covers only the 15 OneTrust sites; the 34 with
+no tooling at all have no evidence of ownership anywhere, so their value is a
+pure judgement call. That answer decides whether this is 15 rows or 78, and
+should be settled before anyone writes code. A field nobody updates is a lie
+with a timestamp.
+
 ### The older entries below are kept, and some are wrong
 
 Everything under this line predates 2026-08-22 and is corrected in place where
