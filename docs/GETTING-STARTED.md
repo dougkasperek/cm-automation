@@ -70,9 +70,33 @@ alone, not because anything is known to be wrong.
 watching it fall is what progress looks like. Most of it is sites on a host the
 scanner cannot reach yet. Filter the table to *No health evidence* to see them.
 
-Among the sites we can see: 42 are behind on WordPress core, 18 have a plugin
+Among the sites we can see: 43 are behind on WordPress core, 18 have a plugin
 backlog, 2 have no recent database backup, 1 runs PHP past end of security
 support.
+
+## The component list
+
+There is a second page, linked from the Fleet health card and from the coverage
+box: **which plugins, themes and mu-plugins are installed, and on which sites.**
+312 components across 47 sites today.
+
+It is organised **by component, not by site**. The fleet page already tells you
+how many updates a site has pending; what a count cannot tell you is which of
+our sites run a particular plugin, and at what versions. That is the question
+that matters when a vulnerability is announced for one.
+
+- Pick a site from the dropdown to see just that site's components.
+- Or search a component name to see every site running it.
+- The plugin count on the fleet table links straight to that site's list.
+
+**Two things to read carefully.** When you filter to one site, the *Sites*,
+*Versions* and *Pending* columns still describe the whole fleet — the page says
+so, and the site's own version is in the *On this site* column. And it covers
+47 of 53 Pantheon sites and none of the 31 on other hosts, so a component
+showing three sites means three of the sites we can see.
+
+An **inactive** plugin is still listed. It is still on disk, and being
+deactivated is not the same as being removed.
 
 ## How fresh is it
 
@@ -80,7 +104,8 @@ support.
 
 | source | last run | coverage |
 |---|---|---|
-| Health (Pantheon + WP-CLI) | Aug 23, 9:21 AM | 48 of 52 |
+| Health (Pantheon + WP-CLI) | Aug 23, 3:56 PM | 48 of 52 |
+| Component inventory | Aug 23, 3:56 PM | 47 of 53 |
 | Cookie consent | Aug 22, 9:09 PM | 69 of 78 |
 | Email DNS | Aug 22, 9:08 PM | 78 of 78 |
 | Nexcess estate | never run | 0 of 21 |

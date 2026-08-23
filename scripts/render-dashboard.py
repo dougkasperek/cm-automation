@@ -704,10 +704,19 @@ def coverage_section(A, m, e):
     for label, (known, total) in m["coverage"]:
         pct = (100.0 * known / total) if total else 0
         tone = "good" if pct >= 99 else ("info" if pct >= 50 else "bad")
+        # The component line is the only coverage row with a page behind it.
+        # Linked HERE because this box is where a reader is already asking
+        # "what does this page know" -- until now the only route into the
+        # catalogue was one of 47 plugin-count cells in column 10 of the table
+        # at the bottom, so a reader who never scrolled had no idea it existed.
+        # The others stay plain: a link that goes nowhere is worse than none.
+        text = e(label)
+        if label.startswith("Component inventory"):
+            text = ('<a href="/components">%s</a>' % text)
         A('<div class="cov %s"><div style="color:var(--ink)">%s</div>'
           '<div class=n>%d of %d</div>'
           '<div class="m meter"><i style="width:%.1f%%"></i></div></div>'
-          % (tone, e(label), known, total, pct))
+          % (tone, text, known, total, pct))
     A("</div>")
 
 
@@ -886,7 +895,20 @@ def render(m):
                "evidence</strong> — no backup age, no plugin or theme count. "
                "They score WARN for that reason alone, and this is the coverage "
                "number to watch.%s"
-               % (nh, ("<br>Plus " + ", ".join(terminal) + ".") if terminal else "")),
+               # The catalogue is EVIDENCE behind this card, not a fourth
+               # question. "plugin backlog" above is a count; which plugins,
+               # at which versions, on which sites is the same rows pivoted.
+               # It gets a line here rather than a card of its own because a
+               # site has no status on components -- a fourth card would
+               # advertise one that does not exist. See
+               # docs/VULN-INTEL-REVIEW.md section 3: vulnerabilities land on
+               # THIS axis too, when they land.
+               "<br><a href=\"/components\">See which plugins, themes and "
+               "mu-plugins are installed, and on which sites</a> &mdash; "
+               "%d component(s) across %d site(s)."
+               % (nh, ("<br>Plus " + ", ".join(terminal) + ".") if terminal else "",
+                  len(m["components"]["catalogue"]),
+                  len(m["components"]["sites_inventoried"]))),
          axis="health")
 
     # CONSENT ---------------------------------------------------------------

@@ -1288,6 +1288,22 @@ check("an uninventoried site in the URL is explained, not shown as zero",
 check("the version arrow is a character, not an entity",
       "&rarr;" not in _full, "found &rarr; in rendered output")
 
+# DISCOVERABILITY. The catalogue shipped reachable only from one of 47
+# plugin-count cells in column 10 of the site table, so a reader who never
+# scrolled had no idea it existed. It is EVIDENCE behind the health card, not
+# a fourth question -- a site has no status on components -- so it gets links
+# from the health card and the coverage box rather than a card of its own.
+_page = RD.render(RD.build_model("./history", "./data/fleet-inventory.json",
+                                 datetime.date(2026, 8, 23)))
+_above = _page[:_page.find("<table id=fleet")]
+check("the fleet page links to the catalogue ABOVE the site table",
+      _above.count('href="/components"') >= 2,
+      "%d link(s) above the table" % _above.count('href="/components"'))
+check("...and the suite is still three cards, not four",
+      _page.count('class="card wfcard"') == 3,
+      "found %d suite cards; a components card would advertise a status a "
+      "site does not have" % _page.count('class="card wfcard"'))
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))
