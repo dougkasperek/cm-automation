@@ -8,86 +8,89 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-23, end of day
+## PICK UP HERE — 2026-08-23, end of day (second pass)
 
-**Everything is committed and pushed; the tree is clean.** Tests: ledger 149,
-severity 116, email-dns 58, nexcess 88, consent 75, **wp-calls 45 (new)**,
-run-local 42.
+**Everything is committed; the tree is clean. Nothing is pushed.** Tests:
+ledger **182**, severity 116, email-dns 58, nexcess 88, consent 75,
+wp-calls 45, run-local 49.
 
-**Both known defects are fixed, and both were the same shape: an unmeasured
-site reading as a healthy one.** The live numbers moved because of it.
+**The component inventory exists, and it is live.** Steps 0, 1 and 2 of
+`docs/VULN-INTEL-REVIEW.md` are done. `fleet.thudstaff.com/components` lists
+every plugin, mu-plugin and theme on the fleet and which sites run each one.
 
 | source | run | measured |
 |---|---|---|
-| health | `health-2026-08-23_1321` (**full**) | 48 of 52 |
+| health | `health-2026-08-23_1956` (**full**) | 52 scanned, 48 deep, **47 inventoried** |
 | email-dns | `email-dns-2026-08-23_0108` | 70 of 78 |
 | consent | `consent-2026-08-23_0109` | 69 of 78 |
 
-Health **2 CRIT / 73 WARN / 4 OK / 3 SKIP / 1 FROZEN**, from 2/70/7 this
-morning. **OK fell from 7 to 4 and that is the fix working, not a regression** —
-three sites left OK because their real data now arrives, one because it now
-honestly reads unknown.
+Health is **2 CRIT / 73 WARN / 4 OK / 3 SKIP / 1 FROZEN**, unchanged by the
+component work — correct, because adding an inventory is visibility, not fleet
+news. `components.jsonl` holds **1,842 rows, 312 distinct components**.
 
 ### What happened today, in one paragraph each
 
-**Item 21.** An api-only run scored **45 sites OK** while the coverage box on
-the same page said "WordPress core, plugins, themes: 0 of 52". Fixed by
-`wp_unestablished` in `severity.py`. Then the first run after item 22 landed
-exposed the same gap one layer in — `morrison-chs` read OK with core, plugin
-and theme all unknown because its *version* was known — so
-`wp_update_status_unknown` was added too. Full rationale in `docs/SEVERITY.md`.
+**The scanner stopped asking the wrong question.** It ran
+`plugin list --update=available` and kept `jq 'length'`, which answers "what is
+pending". During the ~36 hours Pods CVE-2026-19598 had no patch, that list
+showed *nothing* on the affected sites. The filter came off, `--fields` is
+pinned so `update_version` is captured, and a second call picks up must-use
+plugins. `plugin_updates` and `theme_updates` are now derived by selecting
+`update == "available"`, so they mean exactly what they meant before.
 
-**Item 22, settled by measurement rather than argument.** Neither hypothesis in
-the old write-up was right. `scripts/diagnose-wp-calls.sh` was written for this,
-run against all five suspect sites, and found two causes. Four sites: Pantheon's
-own `wp-native-php-sessions` mu-plugin prints ~40 PHP deprecation lines on
-STDOUT ahead of WP-CLI's JSON, `strip_noise` did not cover them, and the scanner
-wrote its clean default. **`galbanicheese` was recording 0 plugin updates while
-WP-CLI had returned 15**, and three sites reported "up-to-date" with WordPress
-7.1 waiting. Fifth site, `cm-whitelabel`: no database installed, so every
-DB-backed call exits 1 while `wp core version` reads off disk and answers.
+**`history/components.jsonl` is a fourth file, not a fourth source.** Same
+`run_id` as the facts measured beside it, one row per site per component.
+Separate from `observations.jsonl` because that ledger diffs SCALAR facts, and
+a 46-element list per site would either be diffed element-wise — every routine
+version bump becoming fleet news — or stored as a blob nothing could query.
 
-**The security event log is in git.** `docs/SECURITY-EVENTS.md`. Three
-incidents, copied out of the workbook's `Security Event Log` sheet, which
-`extract-audit-workbook.py` had never read. Includes **Pods CVE-2026-19598,
-2026-08-20**, where three sites had users added: `breakstones`,
-`frontline-construction`, `zehnder-america-zna`.
+**`components_checked` is health's second coverage flag.** Registered in both
+`COVERAGE_FLAGS` and `COVERAGE_DIRECTION`, so the fleet-wide `False -> True`
+on the first run rendered as ONE coverage line (47 gained, 1 lost, 48 sites)
+rather than 47 rows of change. Confirmed on the page, not just in a test.
 
-**The workbook is off the dashboard.** Zero occurrences of the word. The
-findings stayed — the reconciliation section is the highest-signal thing on the
-page — but the wording now describes the inventory, which is what the page
-actually reads.
+**The catalogue is a page, not a popout.** A popout lives in a site row, so it
+can only be site-major — it answers "what is pending here", which the count in
+that row already answers. The question a count cannot answer is "which sites
+run this, at what versions". The fleet table's plugin count links to
+`/components?site=<domain>`, but only on the 47 rows that have an inventory.
+
+**Four bugs, all found by running the thing or looking at the page.** A
+`${pj:-[]}` default made an uninventoried site emit `components: []` — read as
+"inventoried, runs nothing". `wp plugin list` already returns must-use
+plugins, so the separate call duplicated all 147 of them. The page had no `a`
+rule at all, so 48 new links rendered at ~2:1 on the dark ground. And
+`&rarr;` in a data attribute rendered literally, because `textContent` does
+not decode entities.
 
 ### Start here tomorrow
 
-1. **The Pods meeting is today (2026-08-24).** The five questions that decide
-   the design of any security-event feature are at the bottom of
-   `docs/SECURITY-EVENTS.md`. The load-bearing one: does an open incident
-   change a site's status, or sit beside an unchanged one? That is the
-   difference between a severity axis and a display layer.
-2. **A security-event feature was deliberately NOT built.** Three incidents is
-   not a schema, `Remediation Complete?` is already a lifecycle nobody
-   specified, and the dashboard is read-only so it can display an incident but
-   never collect one. Do not start building before the meeting.
-3. **Three decisions are waiting on people, not on code:** the six Sandbox
-   sites (backlog item below), whether to turn on the email-dns cron first,
-   and what to do with the 546 undated attestations.
-4. **Two questions are still out:** Matt on the Cloudflare rules, Nexcess on
-   the API bot challenge. Both predate today.
+1. **Steps 3 and 4 are blocked on a credential, not on code.** The Wordfence
+   V3 key must be created on a **clevermethod-owned login**, not Doug's
+   personal one. Same problem as the Cloudflare tokens.
+2. **`pods` is already answered.** All 30 sites run **3.3.9.1**, which
+   `VULN-INTEL-REVIEW.md` lists as the FIXED version for CVE-2026-19598. That
+   took a search box and no feed.
+3. **The version comparator is confirmed necessary.** `Divi` runs at 13
+   versions across 45 sites, `wp-schema-pro` at 11 across 32, and four-part
+   strings like `4.9.97.43` are common. Not semver, so `packaging` will not do.
+4. **`fleet.clevermethod.net` needs a role grant, not code.** See
+   `docs/DASHBOARD.md`, "Which Cloudflare account, and what it can do".
 
 ### Things that will look like bugs and are not
 
-- **`morrison-chs` reads unknown in the current ledger.** Its noise pattern
-  (`Warning: Constant DISALLOW_FILE_MODS already defined`) was fixed *after*
-  that scan ran. The next full scan measures it correctly. Nothing to do.
-- **A card count and its filter can differ by one.** Health CRIT says 2 and
-  lists 3; consent UNKNOWN says 10 and lists 11. Both are `cm-whitelabel`,
-  `production: false` — excluded from counts, still shown in the table, by
-  design. The chip tooltips name the state and never a number, so nothing
-  promises a count the filter will not deliver.
-- **`git` is no longer off-limits to Claude.** The ban is marked LIFTED in
-  `CLAUDE.md`; the repo left the iCloud volume that caused it. `push` is still
-  a human action.
+- **`cm-whitelabel` has no component rows.** Its database is not installed, so
+  every DB-backed WP-CLI call exits 1. It records `components_checked: false`
+  and NO rows — by design. Zero rows and "runs nothing" must never be the same
+  state.
+- **Two coverage lines disagree, and both are right.** "WordPress core,
+  plugins, themes: 47 of 52" counts ledger rows; "Component inventory: 47 of
+  53" uses the INVENTORY as its denominator, per the rule in CLAUDE.md step 5.
+  53 is how many Pantheon sites the inventory holds; 52 is how many the scan
+  reached. The gap is `hoosierfeeder.com`.
+- **The catalogue's Sites / Versions / Pending stay fleet-wide when you filter
+  to one site.** Deliberate, and the page says so in a banner. The per-site
+  value is in the "On this site" column.
 
 ### Still true and unchanged
 
@@ -98,6 +101,18 @@ credential-free, no browser, no variance.
 
 **The scoreboard is still 32.** None of today's work touched it — those are
 sites with no health evidence at all, and it moves when Nexcess unblocks.
+The component inventory does not move it: it covers sites that already had
+health evidence.
+
+### Earlier on 2026-08-23 (first pass)
+
+Item 21 (`wp_unestablished`, `wp_update_status_unknown`), item 22 (Pantheon's
+mu-plugin PHP notices ahead of WP-CLI's JSON), the security event log into git,
+and the workbook coming off the dashboard. Detail in the sections below and in
+`docs/SECURITY-EVENTS.md`. Also this session: the `git` ban was lifted, the
+dead `fleet_cloudflare_access.md` memory pointer in CLAUDE.md was replaced with
+the real record in `docs/DASHBOARD.md`, and `docs/GETTING-STARTED.md` was added
+as a one-page orientation for viewers.
 
 ### What changed 2026-08-22
 
