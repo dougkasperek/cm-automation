@@ -530,11 +530,14 @@ def coverage_section(A, m, e):
     """
     # --- coverage ---------------------------------------------------------
     A("<h2>What this page knows, and what it does not</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">Everything here is a measurement '
-      'read off a site or a DNS record and stored in an append-only ledger. '
-      'Nothing is copied from a spreadsheet. The only values a person types are '
-      'the site list and the production rulings. A green row is worth exactly as '
-      'much as the coverage behind it, so the coverage is on the same screen: '
+    A('<p class=sub style="margin:-4px 0 10px">Every value on this page is one '
+      'of two things, and they are labelled. A <strong>measurement</strong> was '
+      'read off a site, a DNS record or a hosting API by one of the tools below '
+      'and stored in an append-only ledger. A <strong>ruling</strong> is a '
+      'decision a person made and recorded in the inventory file: which sites '
+      'exist, who hosts them, and whether a site counts as production. Nobody '
+      'edits this page; it is generated. A green row is worth exactly as much '
+      'as the coverage behind it, so the coverage is on the same screen &mdash; '
       'unknown is shown as unknown, never as a pass.</p>')
 
     # WHO LOOKED, AND WHEN. This used to be a bare line of timestamps under the
@@ -861,7 +864,7 @@ def render(m):
     A('</div>')
     A('<div class=wfnote>Scored per DOMAIN, not per site, so it has no column '
       'in the fleet table below and no status of its own. <strong>%d open '
-      'cause(s)</strong>, listed under Still true.</div>' % len(email_causes))
+      'cause(s)</strong>, listed under Still open.</div>' % len(email_causes))
     A('</div>')
 
     A('</div>')
@@ -969,11 +972,20 @@ def render(m):
     A("</div>")
 
     if m["coverage_changes"]:
-        A("<h2>What this tool can now see</h2>")
-        A('<p class=sub style="margin:-4px 0 10px">Facts that went from unknown '
-          'to known, or back. One line per fact rather than one row per site: '
-          'the first full-mode run gave 48 sites six new facts each, which is '
-          'one event, not 288 of them.</p>')
+        # RENAMED 2026-08-23. It was "What this tool can now see", which a
+        # first-time reader takes as "new tooling was added". It is not that:
+        # it fires on any coverage change in EITHER direction since the
+        # previous run -- an SSH key landing, a WAF blocking four sites, an
+        # api-only run reading no WordPress. The direction is the point, so
+        # the title has to carry both.
+        A("<h2>What the scanner started, or stopped, being able to see</h2>")
+        A('<p class=sub style="margin:-4px 0 10px">Since the previous run of '
+          'each tool. These are facts that crossed the line between unknown and '
+          'known, in either direction &mdash; <strong>our visibility changing, '
+          'not the fleet</strong>. A fact going dark is a defect in the run, not '
+          'good news. One line per fact rather than one row per site: the first '
+          'full-mode run gave 48 sites six new facts each, which is one event, '
+          'not 288 of them.</p>')
         A("<div class=card><table><tr><th>Fact</th><th>Became visible</th>"
           "<th>Went dark</th><th>Sites</th></tr>")
         for g in m["coverage_changes"]:
@@ -986,9 +998,16 @@ def render(m):
         A("</table></div>")
 
     # --- still true, grouped by cause ------------------------------------
-    A("<h2>Still true</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">Grouped by cause. One unmerged '
-      'upstream commit across 38 sites is one decision, not 38 findings.</p>')
+    # RENAMED 2026-08-23. "Still true" left the obvious question unanswered --
+    # true since when? These are findings that are open as of the most recent
+    # run of each tool, and the section above it is what CHANGED in that run.
+    # The pairing only reads if both say what they are relative to.
+    A("<h2>Still open, as of the latest run of each tool</h2>")
+    A('<p class=sub style="margin:-4px 0 10px">Findings that were already true '
+      'and still are. Nothing here is new in this run &mdash; new movement is '
+      'under <em>What changed</em>. Grouped by cause rather than by site: one '
+      'unmerged upstream commit across 38 sites is one decision, not 38 '
+      'findings.</p>')
     A("<div class=card>")
     if not m["standing"]:
         A('<p class=big-quiet>No standing findings.</p>')

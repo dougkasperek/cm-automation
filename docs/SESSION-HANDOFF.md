@@ -141,7 +141,24 @@ contained *nothing else*, so it passed. Caught by measuring the rendered section
 order, not by a test. Bound a slice on both ends and assert what it must NOT
 contain.
 
-**Not done, deliberately:** "Still true" is 1704px, the largest block before the
+**Section titles rewritten after Doug read the page, same day.** Three of them
+assumed knowledge a first-time reader does not have:
+
+- **"What this tool can now see"** reads as "new tooling was added". It is not
+  that: it fires on any coverage change in EITHER direction since the previous
+  run. Now **"What the scanner started, or stopped, being able to see"**, and
+  the blurb says a fact going dark is a defect in the run, not good news.
+- **"Still true"** left the obvious question unanswered — true since when? Now
+  **"Still open, as of the latest run of each tool"**, and it names *What
+  changed* rather than saying "the section above", which stopped being accurate
+  the moment a section was inserted between them.
+- The provenance blurb said **"Nothing is copied from a spreadsheet"** — an
+  homage to the workbook we had just spent the session removing — and **"the
+  only values a person types"**, which reads as though someone types into this
+  page. It now names the two kinds of value on the page, measurement and
+  ruling, says where each comes from, and states that nobody edits the page.
+
+**Not done, deliberately:** "Still open" is 1704px, the largest block before the
 table and bigger than the legend that prompted this. Raised, not changed.
 
 ### BACKLOG 2026-08-23: decommission the test/temp sites
