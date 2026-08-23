@@ -939,6 +939,27 @@ def previous_run_of_same_source(runs, idx=-1, obs=None):
                 prev_measured = measured_sites(obs, r["run_id"], src)
                 if prev_measured and prev_measured < curr_measured:
                     continue
+                # Rule 2b, added 2026-08-23. A candidate that measured NOTHING
+                # is a baseline only when it is a different MODE.
+                #
+                # The empty-set exception above is keyed on emptiness, which is
+                # right for health -- an api-only run measures zero sites in
+                # the wp_checked family and is still a complete look at every
+                # site's control plane. It is wrong for every source that has
+                # only one mode, where zero measurements means the run failed.
+                #
+                # Measured: an email-dns run pointed at the wrong inventory
+                # file completed 78 rows and measured 0. Diffed against the
+                # good run that followed, it produced 117 TRANSITION rows and
+                # took the page's headline from 2 changes to 118 -- every one
+                # of them an artefact of the failed run. `mode` already
+                # distinguishes the two cases: health derives full/api-only
+                # from its coverage, while every other source has a fixed mode
+                # from RUN_MODE, so identical modes plus zero measurements is a
+                # failure rather than a different way of looking.
+                if (not prev_measured and curr_measured
+                        and r.get("mode") == curr.get("mode")):
+                    continue
         # Rule 3, added 2026-08-22: a run taken with a DIFFERENT INSTRUMENT is
         # not a baseline, whatever its coverage.
         #

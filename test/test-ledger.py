@@ -333,6 +333,47 @@ check("...and the current run is still the newest", _c["run_id"] == "r2")
 _p2, _ = L.previous_run_of_same_source(_runs)
 check("without obs the old positional behaviour is unchanged", _p2["run_id"] == "cohort")
 
+# Rule 2b. A run that measured NOTHING is a baseline only when it is a
+# different MODE. The empty-set exception is keyed on emptiness, which is
+# right for health -- an api-only run measures zero in the wp_checked family
+# and is still a complete look -- and wrong for a source with one mode, where
+# zero measurements means the run failed.
+#
+# Measured on 2026-08-23: an email-dns run pointed at the wrong inventory file
+# wrote 78 rows and measured 0. Diffed against the good run that followed it
+# produced 117 TRANSITION rows and took the page from 2 changes to 118.
+def _email_obs(run_id, measured):
+    return [{"run_id": run_id, "site": "a.com", "site_id": "a.com",
+             "source": "email-dns", "dkim_present": measured},
+            {"run_id": run_id, "site": "b.com", "site_id": "b.com",
+             "source": "email-dns", "dkim_present": measured}]
+
+_er = [{"run_id": "e-good", "source": "email-dns", "mode": "dns"},
+       {"run_id": "e-failed", "source": "email-dns", "mode": "dns"},
+       {"run_id": "e-now", "source": "email-dns", "mode": "dns"}]
+_eo = (_email_obs("e-good", True) + _email_obs("e-failed", False)
+       + _email_obs("e-now", True))
+_ep, _ec = L.previous_run_of_same_source(_er, obs=_eo)
+check("a same-mode run that measured NOTHING is not a baseline",
+      _ep["run_id"] == "e-good", str(_ep))
+
+# The exception this must not break: health's api-only mode measures zero and
+# IS a legitimate baseline, because it is a different way of looking rather
+# than a failed look. Excluding it would discard the only comparable run in
+# seven of this ledger's runs.
+def _health_obs(run_id, checked):
+    return [{"run_id": run_id, "site": "a.com", "site_id": "a.com",
+             "source": "health", "wp_checked": checked},
+            {"run_id": run_id, "site": "b.com", "site_id": "b.com",
+             "source": "health", "wp_checked": checked}]
+
+_hr = [{"run_id": "h-api", "source": "health", "mode": "api-only"},
+       {"run_id": "h-full", "source": "health", "mode": "full"}]
+_ho = _health_obs("h-api", False) + _health_obs("h-full", True)
+_hp, _ = L.previous_run_of_same_source(_hr, obs=_ho)
+check("...but an api-only health run still IS one, being a different mode",
+      _hp["run_id"] == "h-api", str(_hp))
+
 # ------------------------------------------------------------- 3. unknown rules
 print("\n-- unknown is never folded into yes or no --")
 check("absent field becomes the token 'unknown'", L.fact({"site": "x"}, "php_version") == "unknown")

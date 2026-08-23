@@ -462,6 +462,28 @@ CANDIDATES = {
 def cmd_check(a):
     inv = json.load(open(a.inventory))
     sites = inv["sites"][: a.limit] if a.limit else inv["sites"]
+
+    # A SITE WITH NO DOMAIN CANNOT BE ASKED THIS QUESTION, and is recorded as
+    # skipped rather than dropped. Six Pantheon entries carry `domain: null` --
+    # machine names nobody has written a domain for -- and every email fact is
+    # a DNS lookup against a domain, so there is nothing to look up.
+    #
+    # This crashed on 2026-08-23: `results.sort(key=lambda r: r["domain"])`
+    # cannot order None against a string, so the run died AFTER doing all 84
+    # lookups. It had never been hit because the inventory grew from 78 sites
+    # to 84 after the last successful run, and the six it gained are exactly
+    # the ones with no domain.
+    #
+    # Skipping them silently would be the easy fix and the wrong one: the
+    # report would say 78 with nothing explaining why, and "we did not check
+    # these" would be indistinguishable from "these are fine".
+    skipped = [s2.get("site_id") or s2.get("host_site_name") or "?"
+               for s2 in sites if not s2.get("domain")]
+    sites = [s2 for s2 in sites if s2.get("domain")]
+    if skipped:
+        print("  skipping %d site(s) with no domain recorded: %s"
+              % (len(skipped), ", ".join(sorted(skipped))), file=sys.stderr)
+
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.workers) as ex:
         futs = {ex.submit(check_site, s): s["domain"] for s in sites}
@@ -498,9 +520,15 @@ def cmd_check(a):
         if rep["recovered"]:
             results = [check_site(s) for s in sites]
 
-    results.sort(key=lambda r: r["domain"])
+    # Defensive: the filter above means no None should reach here, but an
+    # ordering that raises on one is how the whole run was lost once already.
+    results.sort(key=lambda r: r.get("domain") or "")
     payload = {"kind": "email-dns", "site_count": len(results),
                "repair": rep,
+               # Named, not counted. A reader comparing 78 against an 84-site
+               # fleet needs to know which six and why, not just that six are
+               # missing.
+               "sites_without_domain": sorted(skipped),
                "unresolved_lookups": sum(1 for v in _cache.values()
                                          if v["status"] not in RESOLVED),
                "dns_queries": _stats["queries"], "cache_hits": _stats["cache_hits"],
