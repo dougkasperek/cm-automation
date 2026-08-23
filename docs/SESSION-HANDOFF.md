@@ -8,24 +8,76 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-20, end of day
+## PICK UP HERE — 2026-08-22, end of day
 
-**Everything is committed and the tree is clean at `cad4e4f`.** Tests: severity
-96, consent 65, ledger 117, nexcess 88.
+**Everything is committed, pushed, and the tree is clean at `a4352ff`.** Tests:
+ledger 143, severity 97, email-dns 58, nexcess 88, consent 75, run-local 32.
 
-**THE LIVE PAGE IS STALE.** `fleet.thudstaff.com` was last published before any
-of today's UI work, so it still shows the single-status dashboard. First action
-tomorrow:
+**The live page is CURRENT** and shows the consent sweep at **77 of 78**.
 
-```
-./scripts/publish-dashboard.sh          # no token needed now, see below
-```
+**ONE CONSTRAINT, and it is the only thing that can go wrong unattended: do NOT
+trigger `fleet-consent.yml` until Matt replies about the Cloudflare rules.** A
+CI run lands at 69 of 78 and would step the live page down from 77. The cron is
+commented out, so it only runs if somebody presses the button. Nothing to
+change in code; just do not press it.
 
-It will ask for `CLOUDFLARE_ACCOUNT_ID` (`8ae221977ecb4518fecaffed03972e11`)
-because Doug's wrangler login can reach two accounts and the script refuses to
-guess.
+### What changed 2026-08-22
 
-### What changed today
+**The consent sweep runs a HEADED browser and the 403 problem is solved.**
+50 of 78 -> 77 of 78. The variable was `headless`, nothing else: not the
+vendor, not the User-Agent, not the IP, not the rate. Headless also could not
+see Hotjar or Meta Pixel on ANY site, so every earlier count was an undercount.
+Full method in `docs/CONSENT.md`, "The instrument".
+
+**CI runs headed too, via xvfb, proven on a runner.** The sweep verifies its own
+browser: it reads the User-Agent on the first result and exits 3 if it asked for
+headed and got headless, so a broken display can never silently produce
+undercounted rows.
+
+**A change of INSTRUMENT is not a change in the fleet.** Runs carry a `method`,
+separate from `mode`, and `previous_run_of_same_source()` refuses a baseline
+whose method differs. Without it the first headed run was a wave of false ONSET
+rows. Health/email/nexcess declare no method and are unaffected.
+
+**The coverage guard now covers publishing, not just ingest.** The page states a
+coverage drop above the coverage box, and `publish-dashboard.sh` refuses to
+upload without `--allow-coverage-drop`. Separately, `persist-ledger.sh` was
+DISCARDING the very run that tripped the ingest guard: it ran ingest bare under
+`set -e`, so the job died before the commit. Fixed; it stores first and fails
+after.
+
+**`ci/github-actions/` is gone.** It was a gitignored mirror of
+`.github/workflows/`. Edit `.github/workflows/` directly. Do not recreate a
+mirror.
+
+**Four written-down action items turned out to be wrong**, each disproved by one
+command. They are corrected in place below: the Pantheon allowlist request (a
+Cloudflare challenge, wrong vendor), two Workers already pinned, "delete
+`github-deploy-[removed]`" (its CI uses it), and a bucket name in
+`cf-worker-r2.js` that does not exist. The habit worth keeping: check a claim
+before acting on it. This repo already applies that to code; it applies to these
+notes just as hard.
+
+### Open, and what it is waiting on
+
+- **Matt, on the Cloudflare rules.** 8 sites block the CI runner because a
+  custom rule "Challenge the top abusive ASNs" lists AS8075 (Microsoft/Azure).
+  Confirmed from firewall events on 42northbrewing. The rule is on all four
+  zones inspected. Fix is a Skip rule at Order 1 matching a secret header, the
+  same shape as the "Allow safe IPs" rule already on `clevermethod.com`. Once
+  it lands, CI reaches 77 and the weekly `schedule:` block can be uncommented.
+- **Nexcess support**, ticket sent 2026-08-22. Unblocks the estate scan and
+  should take the never-scanned count from 32 to 11.
+- **The API tokens.** `github-deploy-[removed]` still needs RE-SCOPING from All
+  accounts to one. See item 4.
+
+### The older entries below are kept, and some are wrong
+
+Everything under this line predates 2026-08-22 and is corrected in place where
+it was found to be wrong. Read the strikethroughs; they are the record of what
+was believed and why it was not true.
+
+### What changed 2026-08-20
 
 **Scoring is per AXIS.** `health` and `consent` are separate questions with
 separate statuses. Health had been silently driven by consent: 38 of 70 WARN
