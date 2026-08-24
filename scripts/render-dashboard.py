@@ -1061,13 +1061,30 @@ def render(m):
     # a card, because leaving a live workflow off the strip reads as "we do not
     # do that" -- and it shows its three coverage fractions where the other
     # cards show states, so the card is comparable rather than half empty.
+    # Sites where no sending domain was recorded, so SPF/DKIM/DMARC were never
+    # queried anywhere. `spf_checked_at` names the domain actually looked up,
+    # so its absence IS the absence of a recorded sending domain.
+    _no_sending = len([x for x in m["sites"]
+                       if x.get("spf_present") is None
+                       and not x.get("spf_checked_at")])
     email_causes = [g for g in m["standing"]
                     if g["axis"] == "RISK"
                     and ("DMARC" in g["cause"] or "SPF" in g["cause"]
                          or "aligned" in g["cause"])]
     A('<div class="card wfcard">')
     A('<div class=wfhead>Email DNS</div>')
-    A('<div class=wfblurb>Can this domain send mail that authenticates.</div>')
+    # WHICH DOMAIN. Victoria asked this in the 2026-08-24 review, which is the
+    # question the old blurb invited: it said "can this domain send mail" over
+    # a card whose three bars are measured at THREE different places. SPF and
+    # DKIM are checked at the sending domain; DMARC is checked at
+    # `_dmarc.<sending_domain>`, not at the site's own domain, and that rule was
+    # recovered by scoring candidates against a year of the workbook's verdicts.
+    # A site at example.com sending through smtp.clevermethod.net is scored on
+    # smtp.clevermethod.net, and nothing on the page said so.
+    A('<div class=wfblurb>Can the domain each site <em>sends from</em> '
+      'authenticate its mail. Usually not the site\'s own domain: 34 sites '
+      'send through <code>smtp.clevermethod.net</code>, so they are scored on '
+      'that.</div>')
     A('<div class=wfmini>')
     for label, prefix in (("SPF", "SPF"), ("DKIM", "DKIM"), ("DMARC", "DMARC")):
         k, n = _cov(prefix)
@@ -1079,9 +1096,17 @@ def render(m):
               '<span class=wfmininum>%d/%d</span></div>'
               % (e(label), tone, pct, k, n))
     A('</div>')
-    A('<div class=wfnote>Scored per DOMAIN, not per site, so it has no column '
-      'in the fleet table below and no status of its own. <strong>%d open '
-      'cause(s)</strong>, listed under Still open.</div>' % len(email_causes))
+    A('<div class=wfnote>Scored per SENDING DOMAIN, not per site, so it has no '
+      'status chip of its own. Several sites '
+      'share one sending domain and therefore one result. The fleet table '
+      'below carries the per-site result in its <strong>Sends from</strong>, '
+      'SPF, DKIM and DMARC columns. <strong>%d open '
+      'cause(s)</strong>, listed under Still open.'
+      '<div style="margin-top:6px">The sending domain is <strong>recorded by a '
+      'person</strong> in the audit workbook, not measured. Nothing in DNS '
+      'reveals where a WordPress site was configured to send from. '
+      '<strong>%d site(s) have none recorded</strong> and are UNKNOWN here, '
+      'never a pass.</div></div>' % (len(email_causes), _no_sending))
     A('</div>')
 
     A('</div>')
@@ -1281,6 +1306,7 @@ def render(m):
       "<tr><th>Site</th><th>Host</th><th>Health</th><th>Consent</th><th>PHP</th>"
       "<th>Newest backup</th><th>Upstream</th>"
       "<th>WP version</th><th>WP core</th><th>Plugins</th><th>Themes</th>"
+      "<th>Sends from</th>"
       "<th>SPF</th><th>DKIM</th><th>DMARC sending</th><th>DMARC from</th>"
       "<th>Aligned</th></tr>")
 
@@ -1425,6 +1451,27 @@ def render(m):
             cell += '<div class=cellnote>%s</div>' % " &middot; ".join(bits)
         return cell
 
+    def sends_from(s):
+        """The domain SPF/DKIM/DMARC were actually queried at.
+
+        Added 2026-08-24 because Victoria asked "what is the sending URL" in
+        the first outside review. The page scored every site on a domain it
+        never named. `spf_checked_at` is that domain, recorded by the check
+        itself rather than re-derived here, so the column cannot drift from
+        what was measured.
+
+        It is a RULING, not a measurement: a person records it in the audit
+        workbook and nothing in DNS reveals it. When it is missing the cell
+        says so, because a blank would read as "nothing to send from".
+        """
+        d = s.get("spf_checked_at")
+        # The ledger's absence sentinel is the STRING "unknown", not None, so
+        # a plain falsiness test rendered `unknown` as if it were a domain.
+        # Caught by looking at the page: six rows showed <code>unknown</code>.
+        if not d or str(d).strip().lower() == L.UNKNOWN:
+            return '<span class=quiet>not recorded</span>'
+        return "<code>%s</code>" % e(d)
+
     for s in m["sites"]:
         st = s.get("status")
         state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
@@ -1445,6 +1492,7 @@ def render(m):
           "<td><code>%s</code>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td>"
           "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
           "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
+          "<td class=quiet>%s</td>"
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""), e(cst),
              nohealth,
@@ -1459,6 +1507,7 @@ def render(m):
              observed(s.get("wp_core_update")),
              plugin_cell(s),
              observed(s.get("theme_updates")),
+             sends_from(s),
              yn(s.get("spf_present")), e(s.get("dkim_selector") or "—"),
              yn(s.get("dmarc_at_sending_present")), yn(s.get("dmarc_at_from_present")),
              yn(s.get("relaxed_aligned"))))

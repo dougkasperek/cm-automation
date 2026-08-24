@@ -1482,6 +1482,43 @@ _real = _cat([_comp("a", "Alpha", "plugin"), _comp("b", "alpha", "plugin"),
 _keys = [(x["slug"].lower(), x["type"]) for x in _real]
 check("no two catalogue entries collide on lowercase slug and type", len(_keys) == len(set(_keys)))
 
+# ---------------------------------------------------------------------------
+# "Sends from" on the fleet table, 2026-08-24
+#
+# Victoria asked "what is the sending URL" in the first outside review. The
+# page scored every site on a domain it never named: SPF, DKIM and DMARC are
+# all queried at the SENDING domain, and for 34 sites that is
+# smtp.clevermethod.net rather than their own.
+# ---------------------------------------------------------------------------
+import io as _io
+import re as _re
+with _io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                           "fleet.html"), encoding="utf-8") as _fh:
+    _html = _fh.read()
+
+check("the fleet table names the domain each site sends from",
+      "<th>Sends from</th>" in _html)
+check("...and the email card points at that column instead of denying it exists",
+      "Sends from</strong>" in _html)
+check("the card no longer claims email has no column in the fleet table",
+      "no column in the fleet table below" not in _html)
+check("the card says the sending domain is usually NOT the site's own",
+      "sends from" in _html.lower() and "smtp.clevermethod.net" in _html)
+
+# The absence sentinel is the STRING "unknown", not None. A falsiness test
+# rendered `unknown` into the cell as though it were a domain, on six rows.
+check("no row renders the unknown sentinel as a sending domain",
+      "<code>unknown</code>" not in _html)
+check("a site with no recorded sending domain says so rather than blank",
+      "not recorded" in _html)
+
+# Column alignment: every row must carry exactly as many cells as there are
+# headers. Adding a th without a td silently shifts every column after it.
+_hdrs = _html.split("<table id=fleet>")[1].split("</tr>")[0].count("<th")
+_rows = _re.findall(r"<tr data-site=.*?</tr>", _html, _re.S)
+check("every fleet row has one cell per column header",
+      _rows and all(r.count("<td") == _hdrs for r in _rows))
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))

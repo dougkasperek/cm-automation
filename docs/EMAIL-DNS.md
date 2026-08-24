@@ -243,3 +243,47 @@ on macOS and a Linux runner, so the portability contract's intent holds.
   `fleet-email-dns-<stamp>.json` to match the ledger's run-id pattern; the
   ledger's ingest needs to learn this file's shape.
 - Decide whether a functional send test earns its own column.
+
+---
+
+## The sending domain, and why it is on the page now
+
+**Victoria asked "what is the sending URL" in the first outside review of the
+dashboard, 2026-08-24.** It was the right question and the page could not
+answer it: SPF, DKIM and DMARC are all queried at the SENDING domain, and the
+page scored 78 sites on a domain it never named.
+
+**It is a RULING, not a measurement.** It comes from the "Email Sending
+Domain" column of the audit workbook, via `extract-audit-workbook.py`, and a
+person records it. Nothing in DNS reveals where a WordPress site was
+configured to send from, so it cannot be derived. Measured spread across the
+78 rows:
+
+| pattern | rows |
+|---|---|
+| `smtp.clevermethod.net`, shared Mailgun | 34 |
+| `web.` / `app.` / `e.` prefixed client subdomains | ~30, prefix varies per site with no rule |
+| provider-shaped one-offs: `amazonses.icegame.com`, `em1420.morrison-chs.com`, `gmail.com` | a handful |
+| **blank** | **7** |
+
+So a wrong value does not fail loudly. It queries `_dmarc.` on a host nobody
+sends from and returns a confident answer about the wrong domain.
+
+**Fixed 2026-08-24:** a `Sends from` column on the fleet table showing
+`spf_checked_at`, which is the domain the check actually queried rather than a
+value re-derived at render time, so the column cannot drift from what was
+measured. A site with none recorded reads "not recorded" instead of blank.
+
+**Two defects found while adding it**, both by looking at the page:
+
+- The email card claimed email "has no column in the fleet table below". There
+  were already four: SPF, DKIM, DMARC sending, DMARC from. The claim had been
+  on the live page since the card was written.
+- The absence sentinel is the **string** `"unknown"`, not `None`, so a plain
+  falsiness test rendered `unknown` into six cells as though it were a domain.
+
+**Worth building next:** measure it instead of trusting it. `post-smtp` is on
+39 sites and stores its host and from-address in WordPress options, so a
+`wp option get` on the existing deep scan could turn this ruling into a
+measurement for the Pantheon fleet, starting with the 7 blanks where we
+currently report UNKNOWN and could report a fact.
