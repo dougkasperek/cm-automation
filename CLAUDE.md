@@ -15,7 +15,7 @@ a second scoring model or a second site list.
 | Email DNS (all hosts) | live, CI, 78 sites, no credentials |
 | Cookie consent, headed | live, 77 of 78 sites. CI headed via xvfb, **proven on a runner 2026-08-22** |
 | **Nexcess estate discovery** | **built; BLOCKED ON NEXCESS.** Cloudflare challenge. `docs/NEXCESS-SUPPORT.md` |
-| Nexcess SSH deep scan | not built. Gated on the account-level-SSH-key answer |
+| **Nexcess SSH deep scan** | **not built. UNGATED 2026-08-24** — one account-level key reaches all 21 sites, existing and future. And there is **no read-only SSH user**: the credential is write-capable, so the workflow's command list is a security control |
 | **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
 | Asana routing | not built. The missing shared plumbing |
 
@@ -47,6 +47,15 @@ after it.
 remediation. Applying updates stays human-gated until the read-only scan has
 been trusted for several cycles. There is no write path and adding one is a
 product decision, not an implementation detail.
+
+**On Nexcess, read-only is a property of this code and of nothing else.**
+Nexcess confirmed 2026-08-24 that no read-only or command-restricted SSH user
+exists on Managed WordPress; every SSH identity has read *and write* on the
+site filesystem, and Nexcess said restricting one to `wp core version` and
+`wp plugin list` is not possible. So when the Nexcess SSH scan is built, the
+list of commands it runs is the only thing standing between a read-only tool
+and a write-capable one — review it as a security control, not as a scan
+definition.
 
 **Claude edits files with asserted replacements, never a raw computed slice.**
 On 2026-08-20 a patch built its needle as `s[s.index(START):s.index(END)]`

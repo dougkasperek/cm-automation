@@ -92,11 +92,25 @@ For Nexcess Managed WordPress and Managed WooCommerce:
 - Each website has its own SSH user.
 - The SSH user is isolated to that site's filesystem.
 - One site-level SSH login does not provide filesystem access to every Managed WordPress site in the account.
-- Nexcess does not provide a read-only SSH user option.
-- SSH users have read/write access within the filesystem they can access.
+- **Nexcess does not provide a read-only SSH user option. VERIFIED by Nexcess support 2026-08-24.**
+- **SSH users have read *and write* access within the filesystem they can access. VERIFIED by Nexcess support 2026-08-24.**
 - Nexcess does not provide arbitrary folder-level restrictions for an SSH user.
 - Nexcess supports SSH key authentication.
 - Nexcess supports WP-CLI through SSH.
+
+**On the two verified lines.** These were imported research until 2026-08-24,
+when Nexcess support stated both directly: a read-only or command-restricted
+SSH user "is not currently supported on Managed WordPress or Nexcess Cloud
+accounts", and restricting an identity to `wp core version` and `wp plugin
+list` while preventing writes "would not be possible". The only alternative
+they offered was a bare-metal dedicated server via Sales, which is a hosting
+migration, not a scanner configuration. Reply recorded in
+`docs/NEXCESS-SUPPORT.md`.
+
+**This is a standing consequence, not a solved item.** Any Nexcess SSH scan
+holds a write-capable credential regardless of how carefully the workflow
+behaves. The repo's hard boundary — this tool never changes a client site — is
+enforced by the commands the workflow runs, and by nothing the host provides.
 
 ### Important distinction
 
@@ -129,22 +143,39 @@ GitHub Actions should potentially be able to store **one Nexcess automation priv
 
 That would avoid maintaining an individual password or private key for every Nexcess site.
 
-### Verify before production
+### CONFIRMED 2026-08-24 — one key reaches every site
 
-**The following point is strongly suggested by Nexcess's key-management model but should be explicitly confirmed with Nexcess support:**
+**The central point is answered.** Nexcess support, 2026-08-24:
 
-> Does a public SSH key added to a Nexcess user automatically become authorized for every Managed WordPress site that user can access, including both existing and future sites?
+> A single SSH public key added through the Nexcess Client Portal is managed at
+> the user/account level. This means that the same key can be used to access
+> all Managed WordPress sites that the user is authorized to access, including
+> sites currently associated with the account, as well as any sites added in
+> the future. There is no need to add the same SSH key separately for each
+> individual site.
 
-Questions to confirm:
+So the diagram above is right, and the production design **may** now depend on
+automatic key propagation. This is what unblocks Phase 2.
 
-- Does the key automatically propagate to all existing Managed WordPress sites?
-- Does it automatically apply to newly created sites?
-- Does propagation depend on the user's team permissions?
+Corroborated independently by the vendor's own API documentation:
+`ssh-key/add.md` documents `POST /v1/ssh-key` taking exactly `name` and `key`,
+with **no site parameter**. The resource is user-scoped by construction.
+
+Answered by that reply:
+
+- ~~Does the key automatically propagate to all existing Managed WordPress sites?~~ **Yes.**
+- ~~Does it automatically apply to newly created sites?~~ **Yes, explicitly.**
+- Does propagation depend on the user's team permissions? **Partly** — the key reaches what "the user is authorized to access", so authorisation is the boundary. The mechanics of changing that authorisation were not described.
+
+Still unanswered, and **do not read the confirmation above as covering these**:
+
 - Is there any lag before a newly added key works on all eligible sites?
 - Can a key be limited to selected sites?
 - If a team member is removed from a site, is the corresponding SSH key access removed immediately?
 
-Do not make the production design dependent on automatic key propagation until this is confirmed.
+None of the three blocks building Phase 2; the first is a first-run
+observation, the other two are offboarding questions. They stay listed in
+section 18.
 
 ## 4. Nexcess API
 
@@ -768,10 +799,12 @@ These should be resolved before treating the architecture as production-ready.
 
 ### Nexcess SSH
 
-- **Verify:** Does one user-level SSH public key automatically work across every Managed WordPress site accessible to that user?
-- **Verify:** Does that include future sites automatically?
-- **Verify:** How quickly is access revoked when team permissions change?
-- **Verify:** Can SSH keys be scoped to selected sites?
+- ~~**Verify:** Does one user-level SSH public key automatically work across every Managed WordPress site accessible to that user?~~ **ANSWERED 2026-08-24: yes.** See section 3.
+- ~~**Verify:** Does that include future sites automatically?~~ **ANSWERED 2026-08-24: yes, explicitly.**
+- ~~**Verify:** Is a read-only or command-restricted SSH user available?~~ **ANSWERED 2026-08-24: no.** Not on Managed WordPress or Nexcess Cloud. Every SSH user is write-capable.
+- **Verify:** How quickly is access revoked when team permissions change? *(asked 2026-08-22, not answered in the 2026-08-24 reply)*
+- **Verify:** Can SSH keys be scoped to selected sites? *(asked 2026-08-22, not answered in the 2026-08-24 reply)*
+- **Verify:** Is there a lag before a newly added key works on all eligible sites? *(observable on first run; no need to ask)*
 - **Verify:** Are there SSH concurrency or rate limits relevant to running dozens of GitHub Actions jobs simultaneously?
 - **Verify:** Is the SSH hostname always stable, or should automation use the IP / another endpoint returned by the API?
 - **Verify:** What is the canonical WordPress path for all Managed WordPress plans?
@@ -815,12 +848,20 @@ These should be resolved before treating the architecture as production-ready.
 
 ## 19. Recommended Nexcess Support Questions
 
-Before finalizing the CI design, send Nexcess support a concise technical request covering:
+**SENT 2026-08-22 as one ticket. PARTLY ANSWERED 2026-08-24.** The full text
+of what was asked, what came back, and the outstanding reply are in
+`docs/NEXCESS-SUPPORT.md`. Items 1 and 2 are answered; the rest of this list
+was either not covered or was never sent, and is marked accordingly.
 
-1. If an SSH public key is added under a Nexcess user's **SSH Keys**, does it automatically authorize that key for every Managed WordPress site the user currently has access to?
-2. Does the same key automatically work on newly created Managed WordPress sites?
-3. When site/team access is removed from that user, is SSH access using that key removed immediately?
-4. Can a user-level SSH key be limited to selected sites?
+1. ~~If an SSH public key is added under a Nexcess user's **SSH Keys**, does it automatically authorize that key for every Managed WordPress site the user currently has access to?~~ **ANSWERED 2026-08-24: yes, keys are user/account-level.**
+2. ~~Does the same key automatically work on newly created Managed WordPress sites?~~ **ANSWERED 2026-08-24: yes, stated explicitly.**
+3. When site/team access is removed from that user, is SSH access using that key removed immediately? **asked, not answered**
+4. Can a user-level SSH key be limited to selected sites? **asked, not answered**
+**Items 5–12 were never sent.** The 2026-08-22 ticket carried only the two
+blocking questions, deliberately — a twelve-part list invites one paragraph
+answering none of it. They remain worth asking once the API is reachable, at
+which point most of 6–10 become measurable rather than askable.
+
 5. Are there documented SSH concurrency limits for automated connections across many Managed WordPress sites?
 6. Are there published Client Portal API rate limits?
 7. Do Client Portal API tokens inherit the permissions of the user/team that created them?

@@ -8,7 +8,52 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-23, end of day (third pass)
+## PICK UP HERE — 2026-08-24, the Nexcess reply
+
+**Nexcess answered the 2026-08-22 ticket. Two of three questions settled, and
+the SSH deep scan is no longer gated.** Full record in
+`docs/NEXCESS-SUPPORT.md`, "The reply, 2026-08-24".
+
+| question | answer |
+|---|---|
+| Does one account-level SSH key reach every Managed WordPress site? | **Yes**, existing and future. Phase 2 is unblocked |
+| Is there a read-only SSH user? | **No.** Every SSH identity is write-capable. Not restrictable to `wp core version` |
+| Can the API be exempted from the Cloudflare challenge? | **Not answered.** They suggested a browser User-Agent |
+
+**The User-Agent suggestion was re-tested live 2026-08-24 and is still
+challenged** — `probe` and `probe --user-agent browser` both return HTTP 403
+`Just a moment...` from `portal.nexcess.net/api`, with a deliberately invalid
+token in both, because the challenge is served before the token is read. A
+reply is drafted at the bottom of `docs/NEXCESS-SUPPORT.md`; **sending it is a
+human task.**
+
+Also checked: the `api-token` docs they linked still write every example
+against `$PORTAL_API_URL` and define it nowhere, so our "what is the right base
+URL" question is unanswered rather than resolved. Separately, `ssh-key/add.md`
+documents `POST /v1/ssh-key` with no site parameter, which corroborates the
+account-level answer from the vendor's own docs.
+
+### Next, in order
+
+1. **Send the question-1 reply.** Human task, existing thread
+   `thread::sJecUJQ2cS6EeEacWJKo2D0::`.
+2. **Build the Nexcess SSH deep scan (Phase 2).** No longer gated. Two things
+   it needs first: the per-site `unix_username` join key, which normally comes
+   from the blocked API and for 21 sites can be read out of the portal by hand;
+   and a dedicated automation keypair, public half added at user level, private
+   half a GitHub secret. Follow the five steps in CLAUDE.md, "Adding a workflow
+   to the suite" — including the `MEASURED` and `COVERAGE_FLAGS` pair and a
+   coverage line from day one.
+3. **Treat the command list as a security control.** There is no read-only
+   user, so nothing on the host prevents a write. This is now recorded in
+   CLAUDE.md's hard boundaries.
+
+Nothing in the ledger, dashboard or CI changed today. The 2026-08-23 state
+below is still current.
+
+---
+
+## Previously — 2026-08-23, end of day (third pass)
 
 **Committed, clean and PUSHED.** `git ls-remote origin main` and `HEAD` are
 both `9f099c0`. Tests: ledger **197**, severity 116, email-dns 58, nexcess 88,

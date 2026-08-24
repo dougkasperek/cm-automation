@@ -6,11 +6,92 @@ code here. Send them together — they are the same conversation.
 Account: clevermethod, Inc. Nexcess account ID 82607. 21 Managed WordPress
 sites.
 
-> **STATUS: SENT 2026-08-22.** Both questions went in as one ticket. This file
-> is now a record of what was asked and the evidence behind it, not an action
-> item — **do not send it again.** If Nexcess replies, follow "When they
-> answer" at the bottom. If they have not replied within a week, chase the
-> ticket rather than opening a second one.
+> **STATUS: SENT 2026-08-22. ANSWERED 2026-08-24.** Both questions went in as
+> one ticket and Nexcess replied on 2026-08-24. **Question 2 is settled — see
+> "The reply" immediately below.** Question 1 is not: the reply asks us to do
+> the one thing this file already recorded as ruled out. This file is now a
+> record of what was asked, what came back, and what still needs answering.
+> **Do not re-send the original ticket** — reply on the existing thread,
+> `thread::sJecUJQ2cS6EeEacWJKo2D0::`, using the draft at the bottom.
+
+---
+
+## The reply, 2026-08-24
+
+Source: `liquidWeb-AP-question-response-08242026.md` in the Cowork Automation
+Portfolio folder. Ticket `thread::sJecUJQ2cS6EeEacWJKo2D0::`, Muhamed M.
+
+| what we asked | what came back | settled? |
+|---|---|---|
+| Exempt `/api/v1/*` from the bot challenge | Not addressed. Instead: set a browser User-Agent, taken from `navigator.userAgent` | **no** |
+| Is there a different hostname for programmatic access? | Not addressed. Linked the `api-token` docs, which still write `$PORTAL_API_URL` without defining it | **no** |
+| Documented client requirements — UA, allowlisted IP, header? | Only the browser-UA suggestion. No IP allowlist or header named | **partly** — see below |
+| Does one user-level SSH key reach every Managed WordPress site? | **Yes.** Keys are managed at the user/account level. One key reaches every site that user is authorised for, **including sites added later**. No per-site key needed | **yes** |
+| Can we have a read-only SSH user? | **No.** Not supported on Managed WordPress or Nexcess Cloud. SSH users have read *and* write on the site filesystem. Restricting to `wp core version` / `wp plugin list` is not possible. Bare-metal dedicated is the only path they offered, via Sales | **yes** |
+
+### The User-Agent suggestion was re-tested and is still wrong
+
+Support's answer to question 1 is the one thing this file had already ruled
+out on 2026-08-22. Re-verified **live on 2026-08-24** rather than quoted from
+the earlier pass, because "is it still happening" is the first thing they will
+ask:
+
+```
+NEXCESS_PORTAL_API_TOKEN=<deliberately invalid> ./scripts/fleet-nexcess.py probe
+NEXCESS_PORTAL_API_TOKEN=<deliberately invalid> ./scripts/fleet-nexcess.py probe --user-agent browser
+```
+
+Both runs: `https://portal.nexcess.net/api` → HTTP 403, `Just a moment...`,
+edge bot challenge. The conventional `Chrome/140.0.0.0` desktop string is
+challenged **identically** to `cm-automation/fleet-nexcess (read-only)`. The
+token was deliberately invalid in both, and that is the point — the challenge
+is served before the token is read, so no credential is needed to reproduce
+this and none was used.
+
+`probe` itself now says so on the second run: *"A conventional User-Agent was
+already tried on this run and was challenged too, so the fingerprint is not the
+header."*
+
+**Why the suggestion cannot work, structurally.** Cloudflare's managed
+challenge issues a `cf_clearance` cookie to a client that has executed its
+JavaScript. A `curl` or `urllib` request holds no such cookie no matter what
+UA string it sends, so copying a browser's `navigator.userAgent` copies the
+one part of the browser that is not what got the browser through. This is not
+a case of us not having tried hard enough with headers.
+
+### The docs link does not answer question 2
+
+They linked `github.com/nexcess/nexcess-api-docs/tree/master/api-token`. Read
+2026-08-24. Every example there is written against `$PORTAL_API_URL` and the
+repository defines it nowhere — no root `README.md` exists, and the
+`authentication/` folder holds only passphrase helpers. The link restates the
+gap we reported rather than closing it, so the "what is the right base URL for
+automation" question stands.
+
+### Independent corroboration of the SSH answer
+
+`ssh-key/add.md` in that same repository documents `POST /v1/ssh-key` with
+exactly two parameters, `name` and `key`, and **no site parameter** — the
+resource is user-scoped by construction. That is a second, documentary line of
+evidence for the account-level answer, arrived at separately from support's
+statement.
+
+### What the reply did NOT answer, and must not be read as answering
+
+The six sub-questions in section 19 of `NEXCESS-ARCHITECTURE.md` were not all
+covered. Still open after this reply:
+
+- **Propagation lag** — is a newly added key usable immediately on all sites?
+- **Revocation timing** — when a user loses access to a site, is key access
+  removed immediately?
+- **Can a user-level key be scoped to selected sites?** They said one key
+  reaches everything the user may reach. They did not say whether it can be
+  narrowed.
+- **SSH concurrency limits** across dozens of simultaneous Actions jobs.
+
+"One key reaches all sites" is a good answer to the question that gates the
+design. It is not an answer to the four above, and this file says so here so
+that nobody later reads the settled row in the table as covering them.
 
 ---
 
@@ -169,3 +250,62 @@ Record the answers in `docs/NEXCESS-ARCHITECTURE.md` next to the claims they
 settle, and mark those claims verified with the date. That file's whole
 provenance header exists because it is imported research; an answered question
 should stop looking like an open one.
+
+**Done for the 2026-08-24 reply:** section 3 "Confirmed" and section 19 now
+carry the answers and their date, and section 18 keeps only what is still open.
+
+---
+
+## Reply to send, 2026-08-24 (question 1 only)
+
+Reply on the existing thread. Question 2 needs no reply — it was answered.
+This is deliberately short and hands them one specific decision rather than
+re-arguing the whole case.
+
+> Thanks — the SSH answers are exactly what we needed, and we have what we need
+> to proceed there.
+>
+> On the API: we tested the User-Agent suggestion before writing in, and again
+> today, 2026-08-24. A conventional desktop Chrome User-Agent receives a
+> byte-identical Cloudflare challenge to our own client string — HTTP 403,
+> `cf-mitigated: challenge`, `<title>Just a moment...</title>`. Both requests
+> carried a deliberately invalid token, which is the important part: the
+> challenge is served before the token is read, so this reproduces with no
+> credential at all.
+>
+> The reason a User-Agent cannot fix this is structural. A Cloudflare managed
+> challenge admits a client that has executed its JavaScript and holds a
+> resulting `cf_clearance` cookie. A scripted HTTP client holds no such cookie
+> whatever User-Agent it sends, so copying a browser's `navigator.userAgent`
+> copies the one attribute of the browser that is not the reason the browser
+> gets through. We have also ruled out the TLS stack (Python `urllib` and
+> `curl`/OpenSSL challenged identically) and a single bad edge node (two PoPs,
+> `cf-ray` `-EWR` and `-ORD`).
+>
+> We are not attempting to solve or bypass the challenge, and we will not. We
+> are asking for one of two things:
+>
+> 1. An exemption from the bot challenge for API-token requests to
+>    `/api/v1/*` on account 82607, or
+> 2. The correct hostname for programmatic access, if
+>    `https://portal.nexcess.net/api` is not it.
+>
+> On (2) — the `api-token` documentation you linked writes every example
+> against `$PORTAL_API_URL`, and that variable is not defined anywhere in the
+> repository. We established `https://portal.nexcess.net/api` by observing the
+> portal's own traffic. If that is the wrong base URL for automation, telling
+> us the right one resolves this immediately.
+>
+> For context on scope: this is a read-only inventory, `GET /v1/site` and
+> `GET /v1/site/{id}`, no writes.
+
+### If they decline both
+
+Then the API is unusable by any automated client and Phase 1 stays blocked
+permanently. **That is survivable now, because the SSH answer landed.** The
+account-level key makes the Phase 2 SSH scan buildable, and SSH returns
+strictly more than the control plane does — backup ages and plugin counts,
+which `GET /v1/site/{id}` never had. The API's remaining unique value is site
+*enumeration*: which sites the account actually contains, and the per-site Unix
+username that the SSH scan needs as its join key. Both can come from the portal
+UI by hand for 21 sites. Slow and manual, not blocking.

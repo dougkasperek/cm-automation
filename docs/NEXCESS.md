@@ -4,12 +4,19 @@ Phase 1 of `docs/NEXCESS-ARCHITECTURE.md`. Read-only. It asks the Nexcess
 control plane what it knows about each site, so that the 21 Nexcess sites stop
 being the dashboard's largest evidence gap.
 
-**Status, 2026-08-19: BLOCKED on Nexcess.** The API is at
-`https://portal.nexcess.net/api`. That host answers a browser with JSON and
-answers this client with a Cloudflare challenge, so the token is never read.
-User-Agent, TLS stack and IP have all been ruled out — see the table below.
-**The next move is a support ticket, drafted in `docs/NEXCESS-SUPPORT.md`.
-There is no further code to write until Nexcess answers.**
+**Status, 2026-08-24: this workflow (Phase 1) is still BLOCKED on Nexcess.**
+The API is at `https://portal.nexcess.net/api`. That host answers a browser
+with JSON and answers this client with a Cloudflare challenge, so the token is
+never read. User-Agent, TLS stack and IP have all been ruled out — see the
+table below, and re-verified live 2026-08-24 after support suggested a browser
+User-Agent. A reply is drafted in `docs/NEXCESS-SUPPORT.md`.
+
+**But the project is no longer blocked, because Phase 2 is.** The same
+2026-08-24 reply confirmed that one account-level SSH key reaches every Managed
+WordPress site, existing and future. That was the open question gating the SSH
+deep scan, and the SSH scan is the more valuable of the two — see "Phase 2: the
+gate is open" below. There is no further Phase 1 code to write until Nexcess
+answers; there is now Phase 2 code to write.
 
 Everything below about field names remains vendor documentation that nothing
 here has executed against.
@@ -211,15 +218,49 @@ Ordered by how much depends on it.
    deliberately: a rule against a guessed enum either never fires or fires on
    everything.
 
-## Still open, and blocking Phase 2
+## Phase 2: the gate is open as of 2026-08-24
 
-**Does one SSH public key added at the Nexcess user level authorise every
-Managed WordPress site that user can reach, existing and future?**
+**Answered.** One SSH public key added at the Nexcess user level authorises
+every Managed WordPress site that user can reach, **including sites added
+later**. Nexcess support, 2026-08-24; full reply in `docs/NEXCESS-SUPPORT.md`,
+recorded against the claims it settles in section 3 of
+`NEXCESS-ARCHITECTURE.md`.
 
-True: one credential for 21 sites. False: 21 credentials and a different
-design. Section 19 of `NEXCESS-ARCHITECTURE.md` is a ready-made support email.
-Sending it is a human task. Do not build fleet-wide SSH on the assumption.
+So it is one credential for 21 sites, one GitHub secret, one workflow — the
+"true" branch of what this section used to ask. Fleet-wide SSH may now be
+built on that assumption.
 
-Nexcess has **no read-only SSH user**, so even a scan that only runs
-`wp core version` holds a write-capable credential. Dedicated automation
-identity, never an employee key, private key only in GitHub secrets.
+**Also answered, and it is the bad half: there is no read-only SSH user.**
+Confirmed directly rather than inferred. Not available on Managed WordPress or
+Nexcess Cloud; every SSH user has read *and write* on the site filesystem, and
+restricting an identity to `wp core version` and `wp plugin list` is not
+possible. The only alternative Nexcess offered is a bare-metal dedicated
+server, which is a hosting migration, not a scanner setting.
+
+Consequence, unchanged in substance but now a fact rather than a guess: a scan
+that only runs `wp core version` still holds a write-capable credential.
+Dedicated automation identity, never an employee key, private key only in
+GitHub secrets. The read-only boundary is enforced by the commands the
+workflow runs and by nothing the host provides — which makes the command list
+in the workflow a security control, not just a scan definition.
+
+### What the reply did not answer
+
+Not blocking, but do not treat them as settled: whether a user-level key can
+be scoped to a subset of sites, how quickly key access is revoked when a user
+loses site access, and whether there is propagation lag before a new key works
+everywhere. The last is observable on the first run.
+
+## Still open, and blocking Phase 1
+
+**The API is still behind the Cloudflare challenge.** The 2026-08-24 reply
+suggested setting a browser User-Agent, which was re-tested live the same day
+and is still challenged identically. A reply is drafted in
+`docs/NEXCESS-SUPPORT.md`.
+
+**Phase 1 is no longer on the critical path.** SSH returns strictly more than
+the control plane does — it is the only source of backup age and plugin
+counts, which `GET /v1/site/{id}` never had. What the API uniquely provides is
+enumeration: which sites the account contains, and the per-site `unix_username`
+that the SSH scan needs as its join key. For 21 sites both can be read out of
+the portal UI by hand. That is manual and unpleasant, and it is not a blocker.

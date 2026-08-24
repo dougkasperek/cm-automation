@@ -248,6 +248,10 @@ above:
 1. **The 21 Nexcess sites with no wp2shell verification.** One month after a
    critical WordPress vulnerability, the remediation record is blank for every
    Nexcess site. Someone should confirm they are clean and write it down.
+   *(2026-08-24: the SSH deep scan that would answer this automatically is no
+   longer gated — Nexcess confirmed one account-level key reaches all 21 sites.
+   It still has to be built, so this stays a human task for now. See
+   `docs/NEXCESS.md`, "Phase 2: the gate is open".)*
 2. **hoffmanscheese and hoosierfeeder.com.** One is on Pantheon but in nobody's
    audit. The other is in the audit but Pantheon does not return it. Both are
    five-minute answers from whoever knows the fleet.
