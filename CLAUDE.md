@@ -132,6 +132,22 @@ workers.dev URLs and all five hostnames anonymously and fails unless every
 Worker is refused at the edge and every hostname bounces to Access. It needs no
 credentials, so it runs on every push. Measured clear on 2026-08-24.
 
+**That check answers AUTHENTICATION only.** Whether a logged-in person can
+reach a DIFFERENT hostname by editing the subdomain is authorisation, decided
+by that application's own policy, and `check-access-policies.py` is what reads
+it. **A policy can admit someone without naming them** -- `email_domain`,
+`everyone`, `ip` -- which is precisely the thing a human reading a list of
+email rules will miss, and why "ask them to try it and report back" is not a
+control. An unrecognised rule type reports UNKNOWN and never DENIED: a rule the
+code cannot parse is a rule it cannot clear anyone against.
+
+It needs a **read-only** token the wrangler OAuth login is not: Access: Apps
+and Policies (Read) plus Access: Organizations, Identity Providers, Groups
+(Read). Without Zero Trust scope the endpoint answers `success: true` with an
+empty list, so the script treats zero applications as a scope problem rather
+than as an empty account. `data/access-expectations.json` holds the intended
+answer per person and CI fails on a difference in EITHER direction.
+
 The check exists because **`[removed]` cannot be pinned in config and that is a
 deliberate decision, not an oversight.** It is dashboard-managed; its bindings
 (`DECK` -> R2 `[removed]`, `DECK_DB` -> D1 `[removed]`) and six
@@ -389,6 +405,8 @@ node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs 
 ./scripts/render-dashboard.py --out fleet.html \
     --components-out components.html                                  # both pages
 ./scripts/check-worker-exposure.py                                    # is any Worker reachable without Access?
+./scripts/check-access-policies.py --who someone@clevermethod.com     # which apps can this person open?
+./scripts/check-access-policies.py --expect data/access-expectations.json
 ./scripts/publish-dashboard.sh --dry-run                              # preview
 ./scripts/serve-dashboard.py --dir ./reports --open                   # live view
 ```
@@ -403,6 +421,7 @@ reads the ledger and is what gets published. Do not delete either.
 
 ```bash
 python3 test/test-worker-exposure.py  # 40   offline, no network
+python3 test/test-access-policies.py  # 30   offline, no token
 python3 test/test-ledger.py       # 149
 python3 test/test-severity.py     # 116
 python3 test/test-email-dns.py    #  58   (needs dnspython)

@@ -103,13 +103,39 @@ that gap has bitten: the Zero Trust API needs a scope the wrangler OAuth token
 does not carry, and answers `success: true` with an empty list, so "not
 permitted to look" reads exactly like "nothing is there". See the bug table.
 
-**So one human test is outstanding, and Doug cannot run it.** `fleet viewers`
-is doug, matt, brian, victoria, nick. The deck policy `[removed]` is doug, matt,
-brian. Doug is in both and will always get in. **Ask [removed] or
-[removed] to open `[removed]` and report what they see.** Expected:
-an Access denial. Worth doing before the fleet dashboard is shared more widely,
-because the deck holds [removed], [removed] and the ownership
-discussion.
+**BEFORE SENDING `fleet.thudstaff.com` TO VICTORIA, run this.** She will have
+a valid Access session, and the question is whether editing the subdomain gets
+her into `[removed]`, which holds [removed], [removed] and the
+[removed].
+
+An earlier draft of this block said to ask her to try it and report back. That
+is not a control: it relies on the person being tested to self-report, it tests
+one hostname, and it happens after the link has been sent. The thing that
+actually decides the answer is the `cm` application's policy, so read the
+policy.
+
+`scripts/check-access-policies.py` does that. **It needs one read-only token
+that does not exist yet** -- My Profile -> API Tokens -> Custom, with Access:
+Apps and Policies (Read) and Access: Organizations, Identity Providers, Groups
+(Read). Then:
+
+```
+export CF_ACCESS_TOKEN=...
+export CLOUDFLARE_ACCOUNT_ID=8ae221977ecb4518fecaffed03972e11
+./scripts/check-access-policies.py --expect data/access-expectations.json
+```
+
+`data/access-expectations.json` encodes the intent: victoria and nick reach
+`fleet.thudstaff.com` and nothing else. It fails in BOTH directions, so an
+unexpected grant and a missing one are both findings.
+
+**The membership in that file is from `docs/DASHBOARD.md`, not from the API,
+and has never been verified.** The first run may disagree with it. If it does,
+the API is right.
+
+The rule the script exists for: **a policy can admit someone without naming
+them.** `email_domain`, `everyone` and `ip` rules all do. Reading a list of
+email rules and concluding "she is not on it" is the mistake this replaces.
 
 **Backlogged, not started: maintaining the rulings.** See the "Backlog:
 maintaining the rulings" section at the end of `docs/DO-THIS-NEXT.md`. The
