@@ -263,3 +263,99 @@ And one decision for when you are ready: should the GitHub job save its results
 back into the repository, so the history builds up automatically? Right now it
 does not, because a brand new automated job should not have permission to write
 to its own repository until you have watched it behave for a while.
+
+---
+
+## Backlog: maintaining the rulings
+
+**Logged 2026-08-24. Nothing built. Doug asked for the thinking to be recorded
+rather than acted on.**
+
+A ruling is the half of the data model a person decides rather than a tool
+measures: which sites exist, who hosts them, and whether a site counts as
+production. It lives in `data/fleet-inventory.json`. The question raised was
+whether to build a way to maintain rulings, or edit that file, from a UI.
+
+### The finding that should shape the answer
+
+**83 of the 84 sites are `production: null`. Exactly one ruling has ever been
+recorded**, `cm-whitelabel` as `false`. No site has ever been explicitly marked
+`true`. Measured 2026-08-24 by reading the inventory, not inferred.
+
+`render-dashboard.py` already knew, in a comment at the review-queue block:
+"Deliberately NOT every site whose `production` is null, which is all 84 and
+would be ignored." That was written as a display decision. Read as a fact about
+the fleet, it says the ruling concept is unused.
+
+Note the CLI line under it prints "%d site(s) need a production ruling" for the
+narrow set of five that have no ownership record AND no ruling. **83 need one.**
+The on-page copy is accurate; the CLI line is the project's signature shape, a
+narrow set described in broad words. Worth fixing when someone is next in there.
+
+### Recommendation: do the pass, do not build the editor
+
+"A way to edit the JSON master" assumes the bottleneck is editing. The evidence
+says it is not: nobody has been blocked from editing that file, the work simply
+has not been done. Building an editor for an activity performed once in the
+project's life commits us to auth, a write path and provenance plumbing to
+serve unproven demand.
+
+The fair counter, which cannot be ruled out from the data: nobody ruled
+*because* it means opening JSON in a git repo, so only Doug can do it. That is
+testable cheaply. Do the pass once and see whether a queue actually forms.
+
+The shape of the work also argues against an app. Most of the null list are
+obvious client sites where `production: true` needs no judgment. Five to ten
+look genuinely non-production from their names alone:
+`live-frontline-construction.pantheonsite.io`, `clevermethod-forward`,
+`pfannenbergsales`, `hoffmanscheese`, and the `moorseville-nc` /
+`nc-moorseville` pair. So it is one bulk pass with a handful of real decisions,
+then a few per year as sites are added or retired.
+
+### In order, when it is picked up
+
+1. **Run the ruling pass once.** Generate a pre-filled worksheet of all 84 with
+   host, status and current evidence; a person marks it up; apply the result in
+   one commit. This has to happen under every option, so it is the only step
+   that is unconditionally worth doing.
+2. **A small CLI to apply rulings safely.** `fleet-ruling.py set <site>
+   --production false --why "..."`: validate the site exists, refuse unknown
+   keys, write canonically formatted JSON so diffs stay readable, put the reason
+   in the commit. Roughly a hundred lines, and worth having either way because
+   it removes hand-editing JSON and hoping.
+3. **Put the real number on the page.** 83 of 84 sites have no production
+   ruling. That is a coverage number of the same kind as the health-coverage
+   scoreboard and belongs beside it. One line, never a per-site flag: a fact
+   true of every site ranks nothing.
+4. **Only if non-technical people must rule, build a proposal flow, not an
+   editor.** A form that PROPOSES a ruling and routes it, with a person
+   applying it.
+
+### Why a proposal flow rather than a direct editor, if it comes to that
+
+- **Provenance is free.** A commit or a task records who ruled, when and why. A
+  live-store edit loses all three unless we rebuild them.
+- **It would mean putting a write route back into the Worker.** `PUT
+  /api/publish/` was deliberately removed, and an audit found it still deployed
+  a day later with `PUBLISH_TOKEN` still set. Re-opening a write path on the
+  same hostname as the read-only dashboard is the riskiest item here, and
+  "editing `ci/cloudflare/` does not change what is running" means trusting a
+  deploy nobody can verify from source.
+- **Low frequency, high consequence.** The production flag drives severity for
+  the whole fleet. That is the profile where review beats direct edit.
+
+Asana routing is already listed in `CLAUDE.md` as the missing shared plumbing.
+A ruling proposal is a good first thing to ride on it, if that gets built.
+
+**Note this does NOT touch the hard boundary.** "This tool never changes a
+client site" is about client sites; the inventory is ours. The risk here is a
+write path in the Worker and the loss of provenance, not a write to a client.
+
+### One thing worth checking regardless
+
+`moorseville-nc` and `nc-moorseville` both exist, both with no domain, both
+unruled. That looks like one site keyed twice, and "ledger holds 84 sites / 130
+rows, two per site, mis-keyed" is already in the bug table. A ruling pass would
+surface inventory hygiene like this, which is a further argument for doing it as
+a review rather than through a form. Related to item 2 above: `hoffmanscheese`
+appears in both lists.

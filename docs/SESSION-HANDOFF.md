@@ -51,6 +51,13 @@ account-level answer from the vendor's own docs.
    user, so nothing on the host prevents a write. This is now recorded in
    CLAUDE.md's hard boundaries.
 
+**Backlogged, not started: maintaining the rulings.** See the "Backlog:
+maintaining the rulings" section at the end of `docs/DO-THIS-NEXT.md`. The
+finding behind it is worth knowing before anyone quotes the production flag:
+**83 of 84 sites are `production: null` and exactly one ruling has ever been
+recorded.** The recommendation is to run the ruling pass once rather than build
+an editor, and specifically not to put a write route back into the Worker.
+
 Nothing in the ledger, dashboard or CI changed today. The 2026-08-23 state
 below is still current.
 
