@@ -1,6 +1,9 @@
 # WordPress vulnerability intelligence: review and feasibility
 
-**Written 2026-08-20.** Inputs: `wordpressvulnerabilityintelligencefleethealthv2.md`
+**Written 2026-08-20. Section 0 added 2026-08-24 after the post-action
+regroup, which answered four of the six open questions and changed the
+delivery target from Asana to Teams. Steps 0 and 1 are built; step 2 onward is
+not.** Inputs: `wordpressvulnerabilityintelligencefleethealthv2.md`
 (the research doc), the Pods advisory and its CVE record, Wordfence's V3 API
 change notices, Patchstack pricing, the Matt/Doug Teams thread from this
 afternoon, and the cm-automation scanner, ledger and CLAUDE.md as they are
@@ -11,6 +14,85 @@ tonight. Nothing was built.
 Patchstack, and the V3 API facts from two third-party write-ups of Wordfence's
 2026-02-02 notice plus the V2 schema I already know. Two items are marked
 *verify* where the live V3 response is the only authority.
+
+---
+
+## 0. The post-action regroup, 2026-08-24
+
+**A meeting happened, and it answers most of section 6.** Attendees Brian,
+Matt, Victoria, Zach, Doug. Transcript: `Post Action regroup.vtt` in the
+Cowork Automation Portfolio `meeting-records` folder. This section is what it
+settled; the sections below are the 2026-08-20 analysis and are left as
+written except where marked.
+
+**Doug has an action item, recorded in the meeting.** Matt: *"I heard Doug is
+going to noodle on what he's got because it's kind of close to maybe doing
+some of the formula we just talked about."* The formula Brian stated is
+exactly steps 2 to 5 below: *"unique across the entire portfolio. Get the
+CVEs, cross compare it. If there's a hit, then someone needs to do
+something."*
+
+### What the meeting settled
+
+| question, from section 6 | answer |
+|---|---|
+| Which site, how was it found | **Zach found rogue admin users** on a site, then they looked and found them "everywhere". Not a Wordfence alert, not a client report. A person noticing a user list |
+| Who owns the Wordfence account | Matt: the key is *"shy of a few minutes"* away. **Still must be created on a clevermethod-owned login**, which is the same constraint as before, but it now has an owner |
+| Is Patchstack in use | not raised. Treat as no |
+| Scope: plugins only? | **No, and Doug raised it.** *"Plugin concerns are just one flavor of CVE. We got to go bigger than that."* Confirmed by the July WordPress **core** vulnerability. Victoria read the feed schema aloud: type core/plugin/theme, name, slug, affected versions, patched versions, remediation |
+| Delivery target | **Teams, not Asana.** Matt wants *"an email or a Teams message dropped into a channel we can all see"*. Victoria: *"I started a bit of work on the critical notifications channel."* **This changes step 5** |
+| Auto-update on a hit? | **No, firmly, from both.** Matt wants a soak period, *"a week, seven days"*, unless it is a hotfix. Brian wants it through backfill test-from-prod, dev-from-test, update, examine, publish. The output is a TICKET, and *"the validation is the human element"* |
+
+### What the meeting changed
+
+**The root cause was not only Pods.** Section 1 below reads as a Pods
+incident. Brian's account is messier and worth keeping: rogue admin users,
+found by eye; a code review that revealed no changes; a database comparison
+that **timed out and never completed**; and a conclusion that the users were
+probably remnants of an EARLIER incident, from a white-label plugin with an
+elevated-privileges flaw that had already been removed. Three other CVEs were
+identified as plausible alongside Pods.
+
+Matt's reading is the simpler one, and both were left standing in the room:
+*"pods had a vulnerability that got exposed and all the sites that had pods on
+it and hadn't been updated within X amount of days were exposed."*
+
+**Nobody established which one it was.** That matters for this document
+because a vulnerability feed would have caught the Pods path and would not
+have caught a leftover account from a prior incident. Do not let the build
+imply otherwise.
+
+**A new inventory dimension exists.** Victoria added a **content management
+model** column to the master WordPress spreadsheet: clevermethod only, both,
+or client only. It decides whether we can act on a site unilaterally, which
+makes it a routing input, not just a note. It is a RULING in this repo's
+sense and belongs in `data/fleet-inventory.json` alongside `production`. See
+the ruling backlog in `docs/DO-THIS-NEXT.md`.
+
+**The WAF has a known side effect.** Brian: any plugin using
+`/wp-admin/admin-ajax.php` to write to the database is blocked by the
+block-unknown-WP-admin-source-IP rule. Four issues are open in Asana under
+"CF onboarding issues". Not this tool's problem, but it is why a site may
+misbehave in a way unrelated to anything here.
+
+### The 312, since Matt challenged it
+
+Matt, on hearing the number: *"312 plugins, it sounds like a lot. There's no
+way it's right."* It is right, and the shape explains the reaction. Measured
+from `history/components.jsonl`, run `health-2026-08-23_1956`:
+
+| | |
+|---|---|
+| distinct components | **312** = 287 plugins, 12 mu-plugins, 13 themes |
+| installs | 1,842 across 47 of 53 Pantheon sites |
+| on exactly ONE site | **156**, half the catalogue |
+| on 10 or more sites | 50 |
+
+So the shared white-label core is about **50 components**, which is the number
+Matt has a mental model for. The other half is a long tail of one-site
+plugins, and **that tail is the part nobody has a mental model of**, which is
+precisely the exposure a catalogue exists to surface. Both halves of his
+reaction were correct.
 
 ---
 
@@ -208,7 +290,7 @@ credential.
 | **2** | `wp_version` + catalog answer "who runs X at version Y" via a CLI query. This is the Pods question, answerable from the ledger. | 0 | hours |
 | **3** | Wordfence V3 fetch in a scheduled workflow (every 6h), key in GitHub secrets. Filter to slugs in the catalog + core, commit only those records as source `vuln-intel`. KEV fetch in the same job. | key, 0 | ~1 day |
 | **4** | Matcher + `version_compare` comparator + severity codes (`component_known_vulnerable` CRIT/WARN, `component_vulnerable_no_patch`). Tests: the six Pods ranges, an unbounded range, a non-numeric version, a slug not in the feed. Render and look. | 3 | ~1 day |
-| **5** | Asana routing, first real case: a new CRIT component finding on a production site opens a task. This is the shared plumbing already on the list. | 4 | the existing Asana item |
+| **5** | **Teams, not Asana. Changed by the 2026-08-24 meeting.** Matt asked for *"an email or a Teams message dropped into a channel we can all see"*, and Victoria has already started a **critical notifications channel**. A new CRIT component finding on a production site posts there. Asana task creation stays on the list as a later step, because the meeting also said the validation is a human step and a ticket should follow the human, not precede them. **Talk to Victoria before building: her channel may already define the message shape.** | 4 | smaller than the Asana item |
 | **6** | Nexcess SSH inventory, when the key question is answered. Same rows, different transport. Coverage 48 → 69. | Nexcess | separate phase |
 | — | Webhooks | never, unless polling proves too slow | — |
 
@@ -219,18 +301,34 @@ already-queued publish, coverage guard and token work.
 
 ## 6. Questions before building
 
-1. **Which site, which version, how was it found** (Wordfence alert? client
-   report? host notice?). The answer tells us whether step 2 alone would have
-   caught it.
+**Four of these were answered by the 2026-08-24 meeting. See section 0.**
+
+1. ~~**Which site, which version, how was it found**~~ **ANSWERED: Zach found
+   rogue admin users by eye, not via any alert.** And the root cause was never
+   pinned: the users may be remnants of an earlier incident rather than Pods.
+   So the honest answer to "would step 2 have caught it" is **maybe**, and the
+   build must not claim otherwise.
 2. **Are any Pantheon sites composer-managed?** `wp plugin list` still sees
    those plugins, but the fix path differs (composer.json, not a dashboard
    update), and that matters for the remediation note.
 3. **Auto-update policy.** Do any sites have plugin auto-updates on? If so
    the inventory will show version drift between scans that is not a person
    acting, and the diff should say so.
-4. **Who owns the Wordfence account** (question for Matt).
-5. **Is Patchstack already in use anywhere** (Doug pasted its pricing page;
-   if a plan exists, its API may be the better first feed).
+4. ~~**Who owns the Wordfence account**~~ **ANSWERED: Matt, and the key is
+   "shy of a few minutes" away.** The constraint is unchanged: it must be
+   created on a **clevermethod-owned login**, not a personal one.
+5. ~~**Is Patchstack already in use**~~ **Not raised in the meeting. Treat as
+   no.** Wordfence is the feed.
 6. **Do inactive plugins count as exposed?** Many WordPress vulnerabilities
    need the plugin active; some (file-based) do not. Proposal: inactive =
    WARN, never CRIT, and the row says "inactive".
+
+7. **NEW, from the meeting. What does the Teams critical notifications channel
+   already expect?** Victoria has started it. Building a second message format
+   against a channel that already has one is how two things that should agree
+   start disagreeing. Ask before writing the payload.
+8. **NEW. Does the content management model belong in the inventory?** It
+   decides whether a site can be acted on unilaterally, which makes it a
+   routing input for step 5 rather than a spreadsheet note. It is a ruling,
+   and 83 of 84 sites have no ruling recorded at all today. See the backlog in
+   `docs/DO-THIS-NEXT.md`.

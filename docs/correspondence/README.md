@@ -63,6 +63,27 @@ Example: `2026-08-24-nexcess-in-ssh-and-api-challenge.md`
   and what we did about it.
 - **Anything containing a live credential**, redacted or otherwise, that would
   be better off never having been written down. See rule 5.
+- **Internal meeting transcripts.** Decided 2026-08-24 over the Pods
+  post-action regroup, which `docs/VULN-INTEL-REVIEW.md` section 0 quotes
+  heavily. Three reasons, and they are specific to transcripts rather than a
+  general squeamishness about internal material.
+
+  First, this directory exists for statements of fact from OUTSIDE parties,
+  where the exact wording is the evidence and we cannot ask them again. A
+  colleague's half-finished sentence is not that, and we can just ask them.
+
+  Second, auto-transcription is unreliable. The Pods transcript renders
+  "clevermethod" as "clutter method" and "Lactalis" three different ways.
+  Committing it makes a lossy machine reading look like a record.
+
+  Third, candid internal discussion names clients in a security-incident
+  context and includes people criticising each other's decisions. That is
+  healthy in a meeting and corrosive in a repository that is about to move to
+  a company GitHub org.
+
+  **So: quote what was decided, attribute it, and cite the transcript by its
+  location.** The Pods one is `Post Action regroup.vtt` in the Cowork
+  Automation Portfolio `meeting-records` folder.
 
 ## Contents
 

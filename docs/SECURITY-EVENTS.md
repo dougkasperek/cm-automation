@@ -212,11 +212,40 @@ read-only by design and does not log in.
 
 ## Deferred: capturing security events in the suite
 
-Discussed 2026-08-23 and **deliberately not built.** Three incidents in five
-months is not enough to design a schema from, the `Remediation Complete?` field
-is already a lifecycle nobody has specified, and the team meets on the Pods
-incident on 2026-08-24. Building the day before that meeting means building
-against assumptions rather than requirements.
+**THE MEETING HAPPENED, 2026-08-24, and question 4 was answered by Doug in the
+room.** This block was written the day before, saying to wait for it. Waiting
+was right, and the requirement that came back is narrower and more specific
+than anything that would have been designed on 2026-08-23.
+
+Doug, in the regroup: *"if there ever is a security incident where the client
+gets involved and they're angry, we have to have some legal posture. And six
+months after it happens we're like, oh, all I have is this 13 character note."*
+And the shape he asked for: *"what happened, when it happened, what we did."*
+
+So the answer to question 4 is **yes, and that is the primary purpose.** He
+described it as a cover-our-backs document first and a client deliverable
+second: *"we give him a file... here's your incident report... it becomes a
+value add."*
+
+Question 2 is partly answered. Victoria already keeps a **security event log
+tab** in the master workbook, so a capture mechanism exists and has an owner.
+Brian's proposal was looser: *"maybe we just put a file up in here."* Nobody
+settled where the durable copy lives.
+
+**What this changes about the design.** A record written for a legal posture
+six months later is a different artifact from a dashboard row. It needs dates,
+what was observed, what was done, by whom, and what was ruled out. The Pods
+incident is a live demonstration of why: the root cause was never established,
+a database comparison **timed out and never completed**, and the rogue accounts
+may have been remnants of an earlier incident. A schema with a
+`root_cause` field would have forced a guess into a record meant to survive
+scrutiny. **Whatever gets built needs a first-class "not established".**
+
+Still deliberately not built. Three incidents is still not a schema, and the
+next thing to do is ask Victoria what her tab already holds rather than design
+a second one beside it.
+
+The remaining unsettled parts of the original block:
 
 The dashboard is read-only — `CLAUDE.md`, first hard boundary — so it can
 display an incident record but cannot collect one. Collection is an edit to a
@@ -231,6 +260,12 @@ file in this repo, or it is somewhere else entirely. That is a product decision.
    pull request is a workable capture mechanism.
 3. Is "affected sites" a judgement someone records, or the output of a scan?
    The Pods sheets are both, and they disagree.
-4. Is this record ever shown to a client or an insurer? That changes the
-   retention and wording bar.
+4. ~~Is this record ever shown to a client or an insurer?~~ **ANSWERED
+   2026-08-24: yes, and it is the point.** Legal posture first, client
+   deliverable second.
 5. What was meant to be on the outstanding-issues tab?
+
+6. **NEW.** Where does the durable copy live? Victoria's workbook tab, this
+   repo, or somewhere else? Brian said *"maybe we just put a file up in here"*
+   and nobody landed it. Two copies is the failure this repo has already made
+   twice, so pick one and point the other at it.
