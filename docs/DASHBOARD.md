@@ -304,6 +304,51 @@ link dead for however long they are out of step.
 
 ---
 
+## Verifying a publish without going through Access
+
+**Added 2026-08-24.** "Access blocks Claude, so the published page cannot be
+checked" was half true and cost a session's worth of verification. Access
+protects the *hostname*. The R2 object behind it can be read straight back:
+
+```bash
+wrangler r2 object get dash-data/fleet/dashboard.html --file ./live.html --remote
+```
+
+Note the key is `fleet/dashboard.html`, not `dashboard.html`. `R2_PREFIX` is
+`fleet/` and the local file is named `dashboard.html`, so neither the repo
+filename (`fleet.html`) nor the bare object name is the key.
+
+Then diff it against what was rendered locally. On 2026-08-24 the published
+object was byte-identical to the committed `fleet.html`, md5
+`a11810c8a68b7a0bfdf848d605e610b7`, which is the strongest form of "what is
+published is what you reviewed" available without a browser.
+
+**What this proves and what it does not.** It proves the object in R2 is the
+one that was rendered and reviewed. It does NOT prove what a browser receives
+at `fleet.thudstaff.com`: the Worker sits between them, and this project has
+already been bitten once by a deployed Worker differing from its source. So
+this replaces "nobody checked the artifact" and not "nobody opened the page".
+Someone with Access should still look at it.
+
+## The wrangler OAuth token publishes to R2, despite what `whoami` lists
+
+**Measured 2026-08-24.** `wrangler whoami` lists 29 scopes and **none of them
+is R2**. Both `r2 object put` and `r2 object get --remote` nevertheless
+succeed on the `dash-data` bucket. A publish was talked out of on that basis
+before someone simply ran it.
+
+So `whoami`'s scope list understates what an OAuth token can do, and **no
+`CLOUDFLARE_API_TOKEN` is needed to publish from a logged-in laptop.** Run
+`./scripts/publish-dashboard.sh` bare; the script reads the account ID out of
+`wrangler whoami` itself. The env vars in its header are the CI path, for a
+headless box with no login.
+
+This is the mirror image of the Access-API row in `CLAUDE.md`'s bug table,
+where an endpoint answered `success: true` with an empty list because the token
+lacked a scope. There, a missing scope read as "nothing is there". Here, a
+missing scope reads as "you cannot do this" and the operation works anyway.
+**Neither direction can be inferred from a scope listing. Run the command.**
+
 ## Access: what is configured
 
 **This section is the record.** It used to live in project memory as

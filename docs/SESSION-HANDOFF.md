@@ -51,6 +51,16 @@ account-level answer from the vendor's own docs.
    user, so nothing on the host prevents a write. This is now recorded in
    CLAUDE.md's hard boundaries.
 
+**Published 2026-08-24, and verified by reading R2 back.** The dashboard copy
+fix is live. The published object is byte-identical to the committed
+`fleet.html`, md5 `a11810c8a68b7a0bfdf848d605e610b7`. Two things learned doing
+it, both in `docs/DASHBOARD.md`: a publish CAN be verified without Access by
+pulling `dash-data/fleet/dashboard.html` back out of R2, and the wrangler OAuth
+token publishes fine despite `whoami` listing no R2 scope, so no
+`CLOUDFLARE_API_TOKEN` is needed from a logged-in laptop. Still nobody has
+opened `fleet.thudstaff.com` in a browser; the Worker sits between R2 and the
+hostname, so the read-back is not a substitute for that.
+
 **Backlogged, not started: maintaining the rulings.** See the "Backlog:
 maintaining the rulings" section at the end of `docs/DO-THIS-NEXT.md`. The
 finding behind it is worth knowing before anyone quotes the production flag:
