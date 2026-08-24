@@ -158,6 +158,13 @@ The rule the script exists for: **a policy can admit someone without naming
 them.** `email_domain`, `everyone` and `ip` rules all do. Reading a list of
 email rules and concluding "she is not on it" is the mistake this replaces.
 
+**Backlogged, not started: measure the sending domain.** From Victoria's
+question in the demo. `post-smtp` is on 39 sites and holds its host in
+WordPress options, so the existing deep scan can turn a workbook ruling into a
+measurement and close the 7 blanks. Store it under a different fact name so a
+disagreement with the workbook shows rather than resolves silently. Full entry
+at the end of `docs/DO-THIS-NEXT.md`.
+
 **Backlogged, not started: maintaining the rulings.** See the "Backlog:
 maintaining the rulings" section at the end of `docs/DO-THIS-NEXT.md`. The
 finding behind it is worth knowing before anyone quotes the production flag:

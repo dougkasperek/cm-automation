@@ -359,3 +359,50 @@ rows, two per site, mis-keyed" is already in the bug table. A ruling pass would
 surface inventory hygiene like this, which is a further argument for doing it as
 a review rather than through a form. Related to item 2 above: `hoffmanscheese`
 appears in both lists.
+
+---
+
+## Backlog: measure the sending domain instead of trusting it
+
+**Logged 2026-08-24, from Victoria's question in the first outside review.**
+
+SPF, DKIM and DMARC are all queried at the **sending domain**, and that value
+is a ruling: a person types it into the "Email Sending Domain" column of the
+audit workbook and `extract-audit-workbook.py` reads it. Nothing in DNS reveals
+where a WordPress site was configured to send from, so it cannot be derived.
+
+A wrong value does not fail loudly. It queries `_dmarc.` at a host nobody sends
+from and returns a confident answer about the wrong domain. **7 of 78 sites
+have none recorded** and report UNKNOWN, which is honest but is a fact we could
+have.
+
+**The fix is already reachable.** `post-smtp` is installed on 39 sites and
+stores its host and from-address in WordPress options. The deep scan is already
+running WP-CLI on those sites, so one more call turns the ruling into a
+measurement:
+
+```
+wp option get postman_options --format=json
+```
+
+### Why it is worth doing rather than tidy
+
+- **It closes the 7 blanks** with a measured value rather than a request for
+  someone to fill in a spreadsheet cell.
+- **It cross-checks the other 71.** A workbook claim disagreeing with the
+  site's actual SMTP configuration is a finding, and this suite has never once
+  found a claim and a measurement agreeing by accident.
+- **It follows the pattern already proven with Nexcess.** Store it under a
+  DIFFERENT fact name from the workbook's value, never overwriting it, so the
+  disagreement is visible rather than resolved silently. `nexcess_php_version`
+  beside `php_version` is the precedent.
+
+### What to watch
+
+- **Only `post-smtp` is covered.** 39 of 78. Other sites use different SMTP
+  plugins or the host's mailer, so this raises coverage, it does not complete
+  it. Say so on the page or "no measured sending domain" reads as "no mail".
+- **Pantheon only.** The 21 Nexcess and 10 outlier-host sites have no deep scan
+  reaching them, so they stay on the workbook value regardless.
+- **The option key may vary by post-smtp version.** Verify against one site
+  before writing a rule, per the usual.
