@@ -8,101 +8,120 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-23, end of day (second pass)
+## PICK UP HERE — 2026-08-23, end of day (third pass)
 
-**Everything is committed; the tree is clean. Nothing is pushed.** Tests:
-ledger **182**, severity 116, email-dns 58, nexcess 88, consent 75,
-wp-calls 45, run-local 49.
+**Committed, clean and PUSHED.** `git ls-remote origin main` and `HEAD` are
+both `9f099c0`. Tests: ledger **197**, severity 116, email-dns 58, nexcess 88,
+consent 75, wp-calls 45, run-local 49.
 
-**The component inventory exists, and it is live.** Steps 0, 1 and 2 of
-`docs/VULN-INTEL-REVIEW.md` are done. `fleet.thudstaff.com/components` lists
-every plugin, mu-plugin and theme on the fleet and which sites run each one.
+*(An earlier draft of this block said 16 commits were unpushed. That was
+inferred from the rule that `push` is a human action, never checked.
+`git status --short` reports working-tree changes only — it says nothing about
+ahead/behind, and a `## main...origin/main` line with no marker means level.
+`git ls-remote` is the check that talks to the remote.)*
+
+**Doug is showing the dashboard to the team on 2026-08-24.** Both pages are
+published and were verified by reading the objects back out of R2. Access
+membership was confirmed by Doug. The one check nobody has done is opening
+`fleet.thudstaff.com` in a browser and looking at it — Access blocks Claude, so
+every visual check this session was against local renders.
 
 | source | run | measured |
 |---|---|---|
 | health | `health-2026-08-23_1956` (**full**) | 52 scanned, 48 deep, **47 inventoried** |
-| email-dns | `email-dns-2026-08-23_0108` | 70 of 78 |
+| email-dns | `email-dns-2026-08-23_2354` | 70 of 78 |
 | consent | `consent-2026-08-23_0109` | 69 of 78 |
+| nexcess | — | **never run**, 0 of 21 |
 
-Health is **2 CRIT / 73 WARN / 4 OK / 3 SKIP / 1 FROZEN**, unchanged by the
-component work — correct, because adding an inventory is visibility, not fleet
-news. `components.jsonl` holds **1,842 rows, 312 distinct components**.
+Health **2 CRIT / 73 WARN / 4 OK / 3 SKIP / 1 FROZEN**. One change needing a
+decision. `components.jsonl` holds **1,842 rows, 312 distinct components**
+across 47 of 53 Pantheon sites.
 
-### What happened today, in one paragraph each
+### What exists now that did not this morning
 
-**The scanner stopped asking the wrong question.** It ran
-`plugin list --update=available` and kept `jq 'length'`, which answers "what is
-pending". During the ~36 hours Pods CVE-2026-19598 had no patch, that list
-showed *nothing* on the affected sites. The filter came off, `--fields` is
-pinned so `update_version` is captured, and a second call picks up must-use
-plugins. `plugin_updates` and `theme_updates` are now derived by selecting
-`update == "available"`, so they mean exactly what they meant before.
+**The component inventory, steps 0–2 of `docs/VULN-INTEL-REVIEW.md`.** The
+scanner keeps the full `wp plugin list` rather than the update backlog, plus
+must-use plugins; `history/components.jsonl` is a fourth ledger file, one row
+per site per component, same `run_id` as the facts beside it. Rationale and the
+`components_checked` coverage flag are in `docs/DATA-MODEL.md` section 2b.
 
-**`history/components.jsonl` is a fourth file, not a fourth source.** Same
-`run_id` as the facts measured beside it, one row per site per component.
-Separate from `observations.jsonl` because that ledger diffs SCALAR facts, and
-a 46-element list per site would either be diffed element-wise — every routine
-version bump becoming fleet news — or stored as a blob nothing could query.
+**`/components`, the catalogue.** Plugin-major, because that is the question a
+count cannot answer. Sortable, filterable by text, type, scope and site, with a
+site picker and `?site=` deep links from the fleet table's plugin count. Route
+added to the Worker and **deployed** — verified by reading the deployed code
+back through the Cloudflare MCP, not from the source file.
 
-**`components_checked` is health's second coverage flag.** Registered in both
-`COVERAGE_FLAGS` and `COVERAGE_DIRECTION`, so the fleet-wide `False -> True`
-on the first run rendered as ONE coverage line (47 gained, 1 lost, 48 sites)
-rather than 47 rows of change. Confirmed on the page, not just in a test.
+**It already answered the question it was built for:** all 30 sites running
+`pods` are on **3.3.9.1**, which is the FIXED version for CVE-2026-19598. No
+feed, one search box.
 
-**The catalogue is a page, not a popout.** A popout lives in a site row, so it
-can only be site-major — it answers "what is pending here", which the count in
-that row already answers. The question a count cannot answer is "which sites
-run this, at what versions". The fleet table's plugin count links to
-`/components?site=<domain>`, but only on the 47 rows that have an inventory.
+**House style, from [removed].** `[removed]/src/form.html`'s paper, purple-cast ink,
+hairlines, Helvetica Neue stack, uppercase 800-weight labels and square
+corners. **The severity colours are deliberately NOT [removed]'s** — ours are
+colourblind-validated and its `--good`/`--red` are not; a test asserts those
+two hues stay absent. **Light only, no dark mode** — [removed] ships light only,
+and `body{background}` is now load-bearing because nothing else stops the page
+inheriting a dark host ground.
 
-**Four bugs, all found by running the thing or looking at the page.** A
-`${pj:-[]}` default made an uninventoried site emit `components: []` — read as
-"inventoried, runs nothing". `wp plugin list` already returns must-use
-plugins, so the separate call duplicated all 147 of them. The page had no `a`
-rule at all, so 48 new links rendered at ~2:1 on the dark ground. And
-`&rarr;` in a data attribute rendered literally, because `textContent` does
-not decode entities.
+**A QA pass before sharing** removed a footer promising trend charts nothing
+implemented, gave every table its own scroller (the page scrolled sideways on a
+phone; "What changed" was 616px in a 348px card), and marked the non-production
+row that makes "CRIT 2" filter to three.
 
-### Start here tomorrow
+### Start here next time
 
-1. **Steps 3 and 4 are blocked on a credential, not on code.** The Wordfence
-   V3 key must be created on a **clevermethod-owned login**, not Doug's
-   personal one. Same problem as the Cloudflare tokens.
-2. **`pods` is already answered.** All 30 sites run **3.3.9.1**, which
-   `VULN-INTEL-REVIEW.md` lists as the FIXED version for CVE-2026-19598. That
-   took a search box and no feed.
+1. **Steps 3 and 4 are blocked on a credential, not code.** The Wordfence V3
+   key must be created on a **clevermethod-owned login**. Same problem as the
+   Cloudflare tokens.
+2. **`fleet.clevermethod.net` needs a role grant.** Doug holds
+   `Administrator Read Only` on the clevermethod, Inc. Cloudflare account, so
+   every write in that migration fails regardless of token scope. Full finding
+   in `docs/DASHBOARD.md`, "Which Cloudflare account, and what it can do".
 3. **The version comparator is confirmed necessary.** `Divi` runs at 13
-   versions across 45 sites, `wp-schema-pro` at 11 across 32, and four-part
-   strings like `4.9.97.43` are common. Not semver, so `packaging` will not do.
-4. **`fleet.clevermethod.net` needs a role grant, not code.** See
-   `docs/DASHBOARD.md`, "Which Cloudflare account, and what it can do".
+   versions across 45 sites, four-part strings like `4.9.97.43` are common, so
+   not semver and `packaging` will not do.
+4. **`render-fleet-dashboard.py` (v1) still has a dark block** and was left
+   alone on purpose. Its own change if the local live view should match.
 
 ### Things that will look like bugs and are not
 
 - **`cm-whitelabel` has no component rows.** Its database is not installed, so
-  every DB-backed WP-CLI call exits 1. It records `components_checked: false`
-  and NO rows — by design. Zero rows and "runs nothing" must never be the same
-  state.
-- **Two coverage lines disagree, and both are right.** "WordPress core,
-  plugins, themes: 47 of 52" counts ledger rows; "Component inventory: 47 of
-  53" uses the INVENTORY as its denominator, per the rule in CLAUDE.md step 5.
-  53 is how many Pantheon sites the inventory holds; 52 is how many the scan
-  reached. The gap is `hoosierfeeder.com`.
-- **The catalogue's Sites / Versions / Pending stay fleet-wide when you filter
-  to one site.** Deliberate, and the page says so in a banner. The per-site
-  value is in the "On this site" column.
+  every DB-backed WP-CLI call exits 1. `components_checked: false`, no rows.
+- **"CRIT 2" filters to three rows.** `cm-whitelabel` is `production: false` —
+  shown but not counted. Its row now says so inline.
+- **Two coverage lines read 47 of 52 and 47 of 53.** Both right: one counts
+  ledger rows, the other uses the INVENTORY as denominator per CLAUDE.md step
+  5. The gap is `hoosierfeeder.com`.
+- **The catalogue's Sites / Versions / Pending stay fleet-wide under a site
+  filter.** Deliberate; the banner says so and the per-site value is in "On
+  this site".
+- **The fleet table scrolls sideways on a phone.** Correct for 16 columns, but
+  a phone shows about three of them.
+
+### Two traps this session walked into
+
+**`fleet-email-dns.py` takes `data/fleet-email-inventory.json`, NOT
+`data/fleet-inventory.json`.** The site inventory has no `sending_domain` on
+any row, so the wrong file yields 78 rows measuring nothing. The coverage
+guard caught it and refused to publish; the ledger, being append-only, kept
+the failed run, and diffing the good run against it produced 117 false
+TRANSITIONs. Fixed by rule 2b in `previous_run_of_same_source`: a run that
+measured NOTHING is a baseline only when it is a different MODE — the empty-set
+exception is load-bearing for health's api-only runs and wrong everywhere else.
+
+**Run IDs are UTC and the page renders Eastern.** `consent-2026-08-23_0109`
+displays as "Aug 22, 9:09 PM EDT". Both correct; a run ID quoted aloud sounds a
+day fresher than it is.
 
 ### Still true and unchanged
 
-**Nothing is scheduled.** All four crons stay commented out, so every number on
-the page came from a run someone triggered by hand. Turning them on is still
-the next real decision and email-dns is still the one to do first:
+**Nothing is scheduled.** All four crons stay commented out. Turning them on is
+still the next real decision and email-dns is still the one to do first:
 credential-free, no browser, no variance.
 
-**The scoreboard is still 32.** None of today's work touched it — those are
-sites with no health evidence at all, and it moves when Nexcess unblocks.
-The component inventory does not move it: it covers sites that already had
-health evidence.
+**The scoreboard is still 32** — sites with no health evidence at all. The
+component inventory does not move it; it covers sites that already had health
+evidence.
 
 ### Earlier on 2026-08-23 (first pass)
 

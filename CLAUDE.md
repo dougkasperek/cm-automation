@@ -176,6 +176,7 @@ do not add a total.
 | `components: []` on a site | every WP-CLI call had failed. Its database is not installed, so each DB-backed call exits 1, and a `${pj:-[]}` default turned four failures into "we inventoried it and it runs nothing". Caught by running the mock, 2026-08-23 |
 | `updates pending` inside a per-site view | the fleet-wide flag. The filter listed components whose update is waiting on some OTHER site, in a view whose every other number was about the one selected |
 | `the 1 component(s) installed on <site>` | 31 were installed; 1 was merely being shown. The banner counted VISIBLE rows, so switching on a filter rewrote a fact about the site into a fact about the view |
+| `16 commits are unpushed, that is the first thing to do` | everything was pushed. Inferred from the rule that `push` is a human action and repeated four times without checking. `git status --short` reports working-tree changes ONLY and says nothing about ahead/behind; `git ls-remote origin main` is the check that talks to the remote |
 
 One of them was our own diagnostic: `probe` printed one word for a DNS
 failure, a TLS trust failure and a dead host alike, and sent Doug looking at
