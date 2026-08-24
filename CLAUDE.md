@@ -21,11 +21,23 @@ a second scoring model or a second site list.
 
 **The scoreboard is the HEALTH-COVERAGE count on the dashboard** — sites that
 have been looked at but have **no health evidence**: no backup age, no plugin
-or theme count. It is **32, measured 2026-08-22**, and it is the number printed
+or theme count. It is **32, re-measured 2026-08-24**, and it is the number printed
 under the fleet-health card. That number falling is what progress looks like.
-The Nexcess discovery workflow is built and should take it to 11, but **no
-Nexcess API call has been made yet, so 32 is still the real number.** Do not
-quote 11 until a live run has produced it.
+
+It breaks down as **Nexcess 21, Azure 4, Pressable 3, Flywheel 2, WP Engine 1,
+Pantheon 1** (`hoosierfeeder.com`). So the Nexcess SSH deep scan is worth 21 of
+the 32, and **nothing else in the plan is worth more than four.**
+
+**The 11 belongs to the SSH scan, NOT to API discovery, and this file said
+otherwise until 2026-08-24.** It read "the Nexcess discovery workflow is built
+and should take it to 11". Discovery cannot move this number at all, by
+construction: `coverage_partial` fires on `(nexcess_seen or consent_seen) and
+not health_seen`, and the Nexcess adapter deliberately writes `nexcess_*` fact
+names that are not in `HEALTH_FACTS` — ingest maps the scanner's `php_version`
+to `nexcess_php_version` precisely so the two evidence tiers can never be
+confused. Scoring a site seen only by the control plane still returns
+`coverage_partial`. Verified by running `severity.evaluate()` on such a site,
+not by reading the rule.
 
 **It used to be the UNKNOWN count, and quoting UNKNOWN today is wrong.**
 UNKNOWN answers "has ANY scan reached this site", and the consent sweep reaches
@@ -185,6 +197,7 @@ do not add a total.
 | `components: []` on a site | every WP-CLI call had failed. Its database is not installed, so each DB-backed call exits 1, and a `${pj:-[]}` default turned four failures into "we inventoried it and it runs nothing". Caught by running the mock, 2026-08-23 |
 | `updates pending` inside a per-site view | the fleet-wide flag. The filter listed components whose update is waiting on some OTHER site, in a view whose every other number was about the one selected |
 | `the 1 component(s) installed on <site>` | 31 were installed; 1 was merely being shown. The banner counted VISIBLE rows, so switching on a filter rewrote a fact about the site into a fact about the view |
+| `the Nexcess discovery workflow should take the scoreboard to 11` | it cannot move it at all. Discovery writes `nexcess_*` facts, `coverage_partial` fires on exactly that — a site seen by the control plane and not by a health scan. The 11 is real and belongs to the **SSH** scan. The sentence sat in this file for five days, one paragraph above the rule that contradicts it, and was believed because the number was right |
 | `16 commits are unpushed, that is the first thing to do` | everything was pushed. Inferred from the rule that `push` is a human action and repeated four times without checking. `git status --short` reports working-tree changes ONLY and says nothing about ahead/behind; `git ls-remote origin main` is the check that talks to the remote |
 
 One of them was our own diagnostic: `probe` printed one word for a DNS
