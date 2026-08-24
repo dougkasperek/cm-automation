@@ -129,9 +129,30 @@ export CLOUDFLARE_ACCOUNT_ID=8ae221977ecb4518fecaffed03972e11
 `fleet.thudstaff.com` and nothing else. It fails in BOTH directions, so an
 unexpected grant and a missing one are both findings.
 
-**The membership in that file is from `docs/DASHBOARD.md`, not from the API,
-and has never been verified.** The first run may disagree with it. If it does,
-the API is right.
+### RUN 2026-08-24. Victoria is clear to receive the fleet link.
+
+**Measured, not inferred.** `[removed]` and `[removed]` are ALLOWED on
+`fleet.thudstaff.com` and **DENIED on all four others**, including
+`[removed]`. Editing the subdomain gets them nothing.
+
+**Every ALLOW on this account names an individual.** No `email_domain`, no
+`everyone`, no `ip` rule anywhere, and zero UNKNOWN verdicts. That absence is
+the reassuring part, because those rules admit people without listing them and
+are exactly what a human review of a member list misses.
+
+Two things the run corrected:
+
+- **`data/access-expectations.json` was wrong about matt and brian.** It gave
+  them three applications from `docs/DASHBOARD.md`; they have all five. The
+  file now holds measured membership, and doug was missing from it entirely.
+- **`docs/DASHBOARD.md` named the wrong policy on `cmcom`.** It said `[removed]`;
+  it is `cmcom-viewers`. Same three people, so nothing was wrong about access,
+  but the table named an object that was not there. Corrected.
+
+And one bug in the script itself, found by reading the output: **`_comment` was
+evaluated as an identity.** Keys are now skipped when `_`-prefixed, and a key
+without an `@` is a hard error rather than a silent skip, because a silently
+skipped key is an identity nobody is checking. In the bug table.
 
 The rule the script exists for: **a policy can admit someone without naming
 them.** `email_domain`, `everyone` and `ip` rules all do. Reading a list of

@@ -224,6 +224,7 @@ do not add a total.
 | the coverage box lists three sources | a fourth, Nexcess, existed and had never once run, with nothing on the page saying so — the box only appended a line `if source in latest`, so a source with zero runs was never `in latest` and simply never appeared |
 | the Access API returned `0 applications` | five exist. The wrangler OAuth token carries no Zero Trust scope, and the endpoint answers `success: true` with an empty list rather than 403. Caught 2026-08-23 by curling the five hostnames and seeing five distinct Access redirects |
 | the wrangler OAuth token has no R2 scope, so publishing will probably fail | it publishes fine. `whoami` lists 29 scopes and no R2, yet `r2 object put` and `get --remote` both succeed. The inverse of the row below: there a missing scope read as "nothing is there", here it read as "you cannot do this". A scope listing predicts neither. Run the command |
+| `_comment` cannot reach the four applications it is expected to | `_comment` is not a person. The expectations file used a `_`-prefixed key for commentary, and the loader evaluated every key as an email, so a JSON comment was scored against five Access policies and then had its own prose joined into an "EXPECTED ACCESS MISSING" line. Found on the first real run, by looking at the output |
 | `count: 0` for the `clevermethod.net` zone | the zone exists and is active. The token is scoped to one account and the zone is in another. Same endpoint, same shape: not permitted to see it reads exactly like it is not there |
 | `components: []` on a site | every WP-CLI call had failed. Its database is not installed, so each DB-backed call exits 1, and a `${pj:-[]}` default turned four failures into "we inventoried it and it runs nothing". Caught by running the mock, 2026-08-23 |
 | `updates pending` inside a per-site view | the fleet-wide flag. The filter listed components whose update is waiting on some OTHER site, in a view whose every other number was about the one selected |
@@ -421,7 +422,7 @@ reads the ledger and is what gets published. Do not delete either.
 
 ```bash
 python3 test/test-worker-exposure.py  # 40   offline, no network
-python3 test/test-access-policies.py  # 30   offline, no token
+python3 test/test-access-policies.py  # 38   offline, no token
 python3 test/test-ledger.py       # 149
 python3 test/test-severity.py     # 116
 python3 test/test-email-dns.py    #  58   (needs dnspython)

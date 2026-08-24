@@ -404,6 +404,18 @@ of values, and all of its containment comes from what points at it.
 
 ### The 2026-08-20 dashboard reading
 
+**Corrected 2026-08-24 against the API.** The `cmcom` row below said its policy
+was `[removed]`; it is `cmcom-viewers`. Read off a dashboard by eye in August and
+never checked until `check-access-policies.py` enumerated the policies for the
+first time. Membership on it is the same three people, so nothing was wrong
+about who can get in, but the table named the wrong object.
+
+**Also measured that day, and the reassuring part:** every ALLOW policy on this
+account admits people by **named individual**. There is no `email_domain`,
+`everyone` or `ip` rule anywhere. Those admit people without listing them, and
+a name list sitting beside one reads as exclusive while granting the opposite.
+That failure mode is absent here, and it is now asserted rather than assumed.
+
 All five Workers on this account have a custom hostname, an Access application,
 and `workers.dev` disabled.
 
@@ -413,7 +425,7 @@ and `workers.dev` disabled.
 | [removed] | [removed] | dash | `[removed]` |
 | [removed] | [removed] | cm | `[removed]` |
 | [removed] | [removed] | cm SOWgen | `[removed]` |
-| [removed] | [removed] | cmcom | `[removed]` |
+| [removed] | [removed] | cmcom | `cmcom-viewers` |
 
 - `fleet viewers` -- doug.kasperek, [removed], [removed],
   [removed], [removed].
