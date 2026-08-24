@@ -314,13 +314,14 @@ soon as anyone edits a word before hitting send.
 > requests?** If we have simply been calling the wrong host, that would explain
 > everything and we can stop there.
 >
-> If `https://portal.nexcess.net/api` is the right one, then we do have a
-> genuine problem, because requests from a script get a Cloudflare challenge
-> page rather than an API response. We did try the browser User-Agent
-> suggestion, both before opening this ticket and again today. It returns the
-> same challenge, HTTP 403 with `cf-mitigated: challenge`. Worth noting we see
-> this even with an intentionally invalid token, which suggests the request is
-> being stopped at the edge before the token is checked.
+> If `https://portal.nexcess.net/api` is the right one, then there is something
+> we have not been able to get past from our end. Requests from a script
+> receive a Cloudflare challenge page rather than an API response. We did try
+> the browser User-Agent suggestion, both before opening this ticket and again
+> today, and it returns the same challenge, HTTP 403 with
+> `cf-mitigated: challenge`. Worth noting we see this even with an
+> intentionally invalid token, which suggests the request is being stopped at
+> the edge before the token is checked.
 >
 > We have logs of the full request and response headers, including `cf-ray`
 > values, and are happy to send them over or to work with whoever looks after
