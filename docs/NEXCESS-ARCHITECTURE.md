@@ -104,8 +104,9 @@ SSH user "is not currently supported on Managed WordPress or Nexcess Cloud
 accounts", and restricting an identity to `wp core version` and `wp plugin
 list` while preventing writes "would not be possible". The only alternative
 they offered was a bare-metal dedicated server via Sales, which is a hosting
-migration, not a scanner configuration. Reply recorded in
-`docs/NEXCESS-SUPPORT.md`.
+migration, not a scanner configuration. Analysis in `docs/NEXCESS-SUPPORT.md`;
+the reply itself is archived verbatim at
+`docs/correspondence/2026-08-24-nexcess-in-ssh-and-api-challenge.md`.
 
 **This is a standing consequence, not a solved item.** Any Nexcess SSH scan
 holds a write-capable credential regardless of how carefully the workflow
@@ -153,6 +154,9 @@ That would avoid maintaining an individual password or private key for every Nex
 > sites currently associated with the account, as well as any sites added in
 > the future. There is no need to add the same SSH key separately for each
 > individual site.
+
+Archived verbatim at
+`docs/correspondence/2026-08-24-nexcess-in-ssh-and-api-challenge.md`.
 
 So the diagram above is right, and the production design **may** now depend on
 automatic key propagation. This is what unblocks Phase 2.

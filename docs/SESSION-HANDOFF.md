@@ -11,8 +11,11 @@ written down.
 ## PICK UP HERE — 2026-08-24, the Nexcess reply
 
 **Nexcess answered the 2026-08-22 ticket. Two of three questions settled, and
-the SSH deep scan is no longer gated.** Full record in
-`docs/NEXCESS-SUPPORT.md`, "The reply, 2026-08-24".
+the SSH deep scan is no longer gated.** Analysis in `docs/NEXCESS-SUPPORT.md`,
+"The reply, 2026-08-24". The reply itself is archived verbatim in
+**`docs/correspondence/`, a new directory** — external messages that a doc
+relies on as evidence now live in the repo rather than in someone's inbox.
+Its README defines the convention; read that before adding a second one.
 
 | question | answer |
 |---|---|

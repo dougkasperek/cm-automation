@@ -18,8 +18,12 @@ sites.
 
 ## The reply, 2026-08-24
 
-Source: `liquidWeb-AP-question-response-08242026.md` in the Cowork Automation
-Portfolio folder. Ticket `thread::sJecUJQ2cS6EeEacWJKo2D0::`, Muhamed M.
+**The reply is archived verbatim at
+`docs/correspondence/2026-08-24-nexcess-in-ssh-and-api-challenge.md`** — read
+it there rather than trusting the summary below. Ticket
+`thread::sJecUJQ2cS6EeEacWJKo2D0::`, Muhamed M. Captured from
+`liquidWeb-AP-question-response-08242026.md` in the Cowork Automation Portfolio
+folder; the archived body was verified byte-identical to that original.
 
 | what we asked | what came back | settled? |
 |---|---|---|
@@ -261,6 +265,11 @@ carry the answers and their date, and section 18 keeps only what is still open.
 Reply on the existing thread. Question 2 needs no reply — it was answered.
 This is deliberately short and hands them one specific decision rather than
 re-arguing the whole case.
+
+**Once sent, archive what was actually sent** as
+`docs/correspondence/2026-08-__-nexcess-out-api-challenge.md`. The draft below
+is what we intended to say; the archive is what we said, and they diverge as
+soon as anyone edits a word before hitting send.
 
 > Thanks — the SSH answers are exactly what we needed, and we have what we need
 > to proceed there.

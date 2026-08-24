@@ -35,6 +35,7 @@ Everything below is for working in the repo.
 | `docs/RUNBOOK.md` | the Pantheon health check: severity model, running it, failure modes |
 | `docs/SECRETS.md` | secret inventory and the Keeper research |
 | `docs/DASHBOARD.md` | the live local dashboard and the hosting question |
+| `docs/correspondence/` | **verbatim external messages a doc relies on as evidence.** Vendor replies, never edited. Its README defines the convention |
 
 ## What runs today
 
