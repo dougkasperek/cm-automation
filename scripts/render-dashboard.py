@@ -672,15 +672,35 @@ def coverage_section(A, m, e):
     """
     # --- coverage ---------------------------------------------------------
     A("<h2>What this page knows, and what it does not</h2>")
+    # NO NAMED ARTIFACT, and no em dash. Both 2026-08-24.
+    #
+    # This used to say a ruling was "recorded in the inventory file". That named
+    # something the reader cannot see, cannot identify and has no route to: to a
+    # viewer of this page, "the inventory file" is a JSON file in a private git
+    # repo. It told them a mutable thing exists and left "so where do I change
+    # one" hanging, and the predictable question was "where is the inventory
+    # file editing page". `Nobody edits this page` did not cover it, because it
+    # denies editing HERE while the sentence before it says a person edits
+    # SOMETHING.
+    #
+    # The distinction itself stays. Measurement vs ruling is the point of this
+    # section and of the data model: the ledger holds what was measured, the
+    # inventory holds what a person decided, and this page shows both and says
+    # which is which. Dropping `ruling` to dodge the question would cost the
+    # page its ability to say "nobody measured this, somebody decided it".
+    # So: keep the two categories, describe the ruling by WHO MADE IT rather
+    # than by WHERE IT LIVES, and close the question with "nothing here is
+    # editable" instead of the narrower "nobody edits this page".
     A('<p class=sub style="margin:-4px 0 10px">Every value on this page is one '
       'of two things, and they are labelled. A <strong>measurement</strong> was '
       'read off a site, a DNS record or a hosting API by one of the tools below '
       'and stored in an append-only ledger. A <strong>ruling</strong> is a '
-      'decision a person made and recorded in the inventory file: which sites '
-      'exist, who hosts them, and whether a site counts as production. Nobody '
-      'edits this page; it is generated. A green row is worth exactly as much '
-      'as the coverage behind it, so the coverage is on the same screen &mdash; '
-      'unknown is shown as unknown, never as a pass.</p>')
+      'decision someone on the team has already made: which sites exist, who '
+      'hosts them, and whether a site counts as production. Nothing on this '
+      'page is editable. It is generated, and both the measurements and the '
+      'rulings come from source data kept outside it. A green row is worth '
+      'exactly as much as the coverage behind it, so the coverage is on the '
+      'same screen. Unknown is shown as unknown, never as a pass.</p>')
 
     # WHO LOOKED, AND WHEN. This used to be a bare line of timestamps under the
     # masthead, three sections above the coverage bars it explains. Provenance
@@ -726,8 +746,8 @@ def coverage_section(A, m, e):
           'margin-bottom:10px">'
           '<div><b>These consent numbers are a floor, not a total.</b> They were '
           'taken with a headless browser, which cannot load a site behind a bot '
-          'challenge and cannot see trackers that detect automation &mdash; '
-          'Hotjar and Meta Pixel among them.</div>'
+          'challenge and cannot see trackers that detect automation. '
+          'Hotjar and Meta Pixel are among them.</div>'
           '<div class=quiet style="margin-top:6px">Measured on one site that '
           'headless could already read: 4 trackers headless, 6 headed. Every '
           'count below may be low, and none of them is high. Re-run the sweep '
@@ -743,8 +763,8 @@ def coverage_section(A, m, e):
           'comparable to the previous run.</b> The sweep now uses a headed '
           'browser, which sees trackers a headless one cannot.</div>'
           '<div class=quiet style="margin-top:6px">A higher tracker count here '
-          'is new visibility, not a fleet regression. Nothing started firing '
-          '&mdash; we started being able to see it. The previous run is '
+          'is new visibility, not a fleet regression. Nothing started firing. '
+          'We started being able to see it. The previous run is '
           'deliberately not used as a baseline, so no change below is derived '
           'from comparing the two.</div></div>')
 
@@ -756,7 +776,7 @@ def coverage_section(A, m, e):
           'are not visible now.</div>'
           '<div class=quiet style="margin-top:6px">The page below reflects the '
           'newer, smaller measurement, because it is the most recent one. That '
-          'is not the same as the fleet getting worse &mdash; it is this tool '
+          'is not the same as the fleet getting worse. It is this tool '
           'seeing less. Re-run the scan before reading anything into a number '
           'that moved. (%s, against %s)</div></div>'
           % (e(g["source"]), g["deep_scanned"], g["site_count"] or 0,
@@ -831,7 +851,7 @@ def render(m):
         (len(risk), "open risk causes, grouped by cause not by site"),
         (len(m["unreconciled"]), "sites in one source but not the other"),
         (len(drift), "counters moved on findings already open, suppressed"),
-        (cov_n, "facts crossed the unknown boundary on %d site(s) &mdash; this "
+        (cov_n, "facts crossed the unknown boundary on %d site(s): this "
                 "tool&rsquo;s coverage changing, not the fleet&rsquo;s" % cov_sites),
     ]:
         if not val:
@@ -955,7 +975,7 @@ def render(m):
          ax.get("health") or h["counts"], _bar(k, n, "Pantheon platform facts"),
          detail="".join(hbits) or None,
          note=("<strong>%d site(s) have been looked at but have NO health "
-               "evidence</strong> — no backup age, no plugin or theme count. "
+               "evidence</strong>: no backup age, no plugin or theme count. "
                "They score WARN for that reason alone, and this is the coverage "
                "number to watch.%s"
                # The catalogue is EVIDENCE behind this card, not a fourth
@@ -967,7 +987,7 @@ def render(m):
                # docs/VULN-INTEL-REVIEW.md section 3: vulnerabilities land on
                # THIS axis too, when they land.
                "<br><a href=\"/components\">See which plugins, themes and "
-               "mu-plugins are installed, and on which sites</a> &mdash; "
+               "mu-plugins are installed, and on which sites</a>. "
                "%d component(s) across %d site(s)."
                % (nh, ("<br>Plus " + ", ".join(terminal) + ".") if terminal else "",
                   len(m["components"]["catalogue"]),
@@ -1148,7 +1168,7 @@ def render(m):
         A("<h2>What the scanner started, or stopped, being able to see</h2>")
         A('<p class=sub style="margin:-4px 0 10px">Since the previous run of '
           'each tool. These are facts that crossed the line between unknown and '
-          'known, in either direction &mdash; <strong>our visibility changing, '
+          'known, in either direction: <strong>our visibility changing, '
           'not the fleet</strong>. A fact going dark is a defect in the run, not '
           'good news. One line per fact rather than one row per site: the first '
           'full-mode run gave 48 sites six new facts each, which is one event, '
@@ -1172,7 +1192,7 @@ def render(m):
     # The pairing only reads if both say what they are relative to.
     A("<h2>Still open, as of the latest run of each tool</h2>")
     A('<p class=sub style="margin:-4px 0 10px">Findings that were already true '
-      'and still are. Nothing here is new in this run &mdash; new movement is '
+      'and still are. Nothing here is new in this run. New movement is '
       'under <em>What changed</em>. Grouped by cause rather than by site: one '
       'unmerged upstream commit across 38 sites is one decision, not 38 '
       'findings.</p>')
@@ -1210,7 +1230,7 @@ def render(m):
     # --- the fleet --------------------------------------------------------
     A("<h2>Every site</h2>")
     A('<p class=sub style="margin:-4px 0 10px"><strong>Health and Consent are '
-      'independent</strong> — a site can be well maintained and still leak '
+      'independent</strong>. A site can be well maintained and still leak '
       'trackers, and the two filters combine, so "OK health, WARN consent" is a '
       'query you can run. A consent cell reading UNKNOWN is a site that refused '
       'the scanner, not a clean one. '
@@ -1632,7 +1652,7 @@ def render_components(m):
     A = o.append
     A("<!doctype html><html lang=en><meta charset=utf-8>")
     A('<meta name=viewport content="width=device-width,initial-scale=1">')
-    A("<title>clevermethod fleet &mdash; components</title><style>%s%s</style>"
+    A("<title>clevermethod fleet: components</title><style>%s%s</style>"
       % (css(), COMPONENT_CSS))
     A('<div class=wrap>')
 
@@ -1652,7 +1672,7 @@ def render_components(m):
     A('<div class="card" style="margin-bottom:14px">')
     A('<div><b>This page can see %d of %d Pantheon sites.</b> '
       'Nothing here is a statement about the other %d, or about the %d sites '
-      'on other hosts &mdash; no component has ever been listed for them.</div>'
+      'on other hosts. No component has ever been listed for them.</div>'
       % (inv_n, exp_n, exp_n - inv_n,
          len([x for x in m["sites"] if (x.get("host") or "") != "CM Pantheon"])))
     if c["sites_missing"]:
@@ -1723,7 +1743,7 @@ def render_components(m):
     A('<div id=nositenotice class=card style="display:none;margin-bottom:10px;'
       'border-left:3px solid var(--bad)">'
       '<div><b><code id=nositename></code> has no component inventory.</b> '
-      'This is not a site with no plugins &mdash; it is a site whose plugins '
+      'This is not a site with no plugins. It is a site whose plugins '
       'have never been listed. Nothing below describes it.</div>'
       '<div class=quiet style="margin-top:6px">Every DB-backed WP-CLI call '
       'fails on a site whose database is not installed, and a site outside the '
@@ -1739,7 +1759,7 @@ def render_components(m):
     A('<div id=sitebanner class=card style="display:none;margin-bottom:10px">'
       '<div><b>Showing the <span id=sitecount></span> component(s) installed '
       'on <code id=sitename></code></b>, of which '
-      '<b><span id=sitepending></span></b> &mdash; that second number is the '
+      '<b><span id=sitepending></span></b>. That second number is the '
       'plugin/theme count on the fleet page.</div>'
       '<div class=quiet style="margin-top:6px">The <em>On this site</em> '
       'column is this site\'s own version. <b>Sites</b>, <b>Versions</b> and '
