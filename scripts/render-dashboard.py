@@ -327,17 +327,50 @@ def build_components(rows, sites, inventoried, expected_sites):
     host = {s["site_id"]: (s.get("host") or "") for s in sites}
     by = {}
     for r in rows:
-        k = (r["slug"], r["type"])
+        # KEYED ON LOWERCASE SLUG, since 2026-08-24. The ledger stores the slug
+        # exactly as WP-CLI reported it, because that is the measurement and it
+        # is the directory name on disk. But the SAME component appears under
+        # different casing on different sites: `Divi-Child` on 25 sites and
+        # `Divi-child` on 16, `PDFEmbedder-premium` on 11 and
+        # `pdfembedder-premium` on 2. Keying on the raw slug split each into two
+        # catalogue entries and inflated the distinct count from 310 to 312.
+        #
+        # This is not a cosmetic count problem. Wordfence publishes LOWERCASE
+        # slugs, so a case-sensitive match of `pdfembedder-premium` against this
+        # catalogue would hit 2 sites and miss 11, in the exact plugin family
+        # this catalogue was built to answer for.
+        #
+        # Normalising here rather than at ingest keeps the rule this repo runs
+        # on: the ledger holds what was measured, interpretation happens at
+        # render time. The observed casings are preserved below in `variants`
+        # so a real disagreement on disk stays visible instead of being tidied
+        # away.
+        k = (r["slug"].lower(), r["type"])
         g = by.setdefault(k, {"slug": r["slug"], "type": r["type"], "installs": []})
         g["installs"].append(r)
     cat = []
     for g in by.values():
         inst = sorted(g["installs"], key=lambda x: x["site_id"])
         versions = sorted(set(x.get("version") or L.UNKNOWN for x in inst))
+        # Display the casing that appears on the most sites, not whichever row
+        # happened to be read first. `Divi-Child` (25) beats `Divi-child` (16).
+        counts = {}
+        for x in inst:
+            counts[x["slug"]] = counts.get(x["slug"], 0) + 1
+        display_slug = max(sorted(counts), key=lambda v: counts[v])
+        variants = sorted(counts)
+        # SITES, not installs. A site can carry the same component twice under
+        # different casing -- hoffmanscheese has pdfembedder-premium 3.2
+        # inactive beside PDFEmbedder-premium 5.1.4 active -- so counting rows
+        # would report 13 sites for a component that is on 12.
+        site_ids = {x["site_id"] for x in inst}
         cat.append({
-            "slug": g["slug"],
+            "slug": display_slug,
             "type": g["type"],
-            "sites": len(inst),
+            # Every casing seen on disk. One entry is the normal case.
+            "variants": variants,
+            "sites": len(site_ids),
+            "installs_count": len(inst),
             "versions": versions,
             "pending": sum(1 for x in inst if x.get("update_available")),
             "inactive": sum(1 for x in inst if x.get("status") == "inactive"),
@@ -1789,7 +1822,25 @@ def render_components(m):
           'data-n-pending="%d">'
           % (e(x["slug"].lower()), e(x["type"]), e(sites_attr),
              " ".join(flags), x["sites"], len(x["versions"]), x["pending"]))
-        A("<td><code>%s</code></td>" % e(x["slug"]))
+        # The casing note is not cosmetic. A component whose directory name
+        # differs across sites is one a case-sensitive CVE match would split,
+        # and Wordfence publishes lowercase slugs. Say it on the row rather
+        # than merging quietly.
+        variants = x.get("variants") or []
+        casing = ""
+        if len(variants) > 1:
+            casing = ('<div class=quiet style="font-size:11px">also on disk as '
+                      '%s</div>'
+                      % e(", ".join(v for v in variants if v != x["slug"])))
+        # Same component twice on ONE site. hoffmanscheese carries
+        # pdfembedder-premium 3.2 inactive beside PDFEmbedder-premium 5.1.4
+        # active. Inactive still means files on disk.
+        dupe = ""
+        if x.get("installs_count", x["sites"]) > x["sites"]:
+            dupe = ('<div class=quiet style="font-size:11px;color:var(--bad)">'
+                    '%d install(s) across %d site(s): installed twice somewhere'
+                    '</div>' % (x["installs_count"], x["sites"]))
+        A("<td><code>%s</code>%s%s</td>" % (e(x["slug"]), casing, dupe))
         A("<td class=quiet>%s</td>" % e(x["type"]))
         A('<td class=persite hidden></td>')
         A("<td class=num>%d</td>" % x["sites"])

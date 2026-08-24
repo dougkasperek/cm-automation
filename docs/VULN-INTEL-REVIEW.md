@@ -78,7 +78,27 @@ misbehave in a way unrelated to anything here.
 ### The 312, since Matt challenged it
 
 Matt, on hearing the number: *"312 plugins, it sounds like a lot. There's no
-way it's right."* It is right, and the shape explains the reaction. Measured
+way it's right."*
+
+**He was right that it was wrong, and the defect was worth more than the
+count.** It is **310**. Two components were counted twice because WP-CLI
+reports the on-disk directory name and the casing differs between sites:
+`Divi-Child` on 25 sites and `Divi-child` on 16 are one theme on 41;
+`PDFEmbedder-premium` on 11 and `pdfembedder-premium` on 2 are one plugin on
+12. Fixed 2026-08-24 by keying the catalogue on the lowercase slug at render
+time, with every observed casing kept and shown on the row.
+
+The count was the small half. **Wordfence publishes lowercase slugs**, so the
+matcher in step 4 would have hit 2 of our 12 PDFEmbedder sites and reported
+the other 10 clean. See the step 4 row.
+
+A second defect fell out of the same check: `hoffmanscheese` carries
+`pdfembedder-premium 3.2` **inactive** beside `PDFEmbedder-premium 5.1.4`
+active. Two copies on disk. The catalogue counted rows as sites and said 13.
+This is the first real instance of open question 6, and it argues for the
+proposed answer: inactive is WARN, never CRIT, and never silently excluded.
+
+The rest of the shape is unchanged. Measured
 from `history/components.jsonl`, run `health-2026-08-23_1956`:
 
 | | |
@@ -289,7 +309,7 @@ credential.
 | ~~**1**~~ | **DONE 2026-08-23.** Built as a separate PAGE rather than a section under Health: a section on the fleet page is site-major, and the question a count cannot answer is "which sites run this component, at what versions". Route `/components` on the Worker, rendered by `render-dashboard.py --components-out`, published in the same loop as the fleet page. Coverage stated first and the uninventoried sites NAMED. Original spec: Dashboard: "Components" section under Health. Fleet catalog (distinct slugs, site count, version spread), per-site list, search. Per-site line "components not inventoried" where coverage is missing. **Must also add a coverage-box line, "Component inventory: N of 52", denominator from the INVENTORY not from ledger rows.** As of 2026-08-23 the page holds 1,842 component rows and says nothing about how many sites they cover, which is the same shape as the Nexcess line that was missing for two days. Deferred here deliberately rather than forgotten. | 0 | ~half a day |
 | **2** | `wp_version` + catalog answer "who runs X at version Y" via a CLI query. This is the Pods question, answerable from the ledger. | 0 | hours |
 | **3** | Wordfence V3 fetch in a scheduled workflow (every 6h), key in GitHub secrets. Filter to slugs in the catalog + core, commit only those records as source `vuln-intel`. KEV fetch in the same job. | key, 0 | ~1 day |
-| **4** | Matcher + `version_compare` comparator + severity codes (`component_known_vulnerable` CRIT/WARN, `component_vulnerable_no_patch`). Tests: the six Pods ranges, an unbounded range, a non-numeric version, a slug not in the feed. Render and look. | 3 | ~1 day |
+| **4** | **MATCH ON LOWERCASE SLUG. Non-negotiable, and it is why the catalogue merges casings at render time.** Wordfence publishes lowercase slugs; WP-CLI reports the on-disk directory name, which differs per site. A case-sensitive match of `pdfembedder-premium` hits 2 of our 12 sites. Also: match on SITES not installs, since a site can carry the component twice. Matcher + `version_compare` comparator + severity codes (`component_known_vulnerable` CRIT/WARN, `component_vulnerable_no_patch`). Tests: the six Pods ranges, an unbounded range, a non-numeric version, a slug not in the feed. Render and look. | 3 | ~1 day |
 | **5** | **Teams, not Asana. Changed by the 2026-08-24 meeting.** Matt asked for *"an email or a Teams message dropped into a channel we can all see"*, and Victoria has already started a **critical notifications channel**. A new CRIT component finding on a production site posts there. Asana task creation stays on the list as a later step, because the meeting also said the validation is a human step and a ticket should follow the human, not precede them. **Talk to Victoria before building: her channel may already define the message shape.** | 4 | smaller than the Asana item |
 | **6** | Nexcess SSH inventory, when the key question is answered. Same rows, different transport. Coverage 48 → 69. | Nexcess | separate phase |
 | — | Webhooks | never, unless polling proves too slow | — |

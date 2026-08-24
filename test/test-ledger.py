@@ -1424,6 +1424,64 @@ check("...and the suite is still three cards, not four",
       "found %d suite cards; a components card would advertise a status a "
       "site does not have" % _page.count('class="card wfcard"'))
 
+# ---------------------------------------------------------------------------
+# Component catalogue: slug casing, 2026-08-24
+#
+# WP-CLI reports the plugin DIRECTORY name, and the same component is spelled
+# differently on different sites: Divi-Child on 25 and Divi-child on 16,
+# PDFEmbedder-premium on 11 and pdfembedder-premium on 2. Keying the catalogue
+# on the raw slug split each into two entries.
+#
+# The count was the small half of the problem. Wordfence publishes LOWERCASE
+# slugs, so a case-sensitive match of pdfembedder-premium against a
+# case-split catalogue hits 2 sites and misses 11, in the exact plugin family
+# the catalogue exists to answer for.
+# ---------------------------------------------------------------------------
+import importlib.util as _ilu
+_spec = _ilu.spec_from_file_location("_rd", os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "scripts",
+    "render-dashboard.py"))
+_rd = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_rd)
+
+
+def _comp(site, slug, typ, version="1.0", status="active"):
+    return {"site_id": site, "slug": slug, "type": typ,
+            "version": version, "status": status, "update_available": False}
+
+
+def _cat(rows, site_ids):
+    sites = [{"site_id": s, "host": "CM Pantheon"} for s in site_ids]
+    return _rd.build_components(rows, sites, set(site_ids), sites)["catalogue"]
+
+
+_rows = [_comp("a", "Divi-Child", "theme"), _comp("b", "Divi-child", "theme")]
+_c = _cat(_rows, ["a", "b"])
+check("two casings of one slug are ONE catalogue entry, not two", len(_c) == 1)
+check("...and it reports both sites", _c[0]["sites"] == 2)
+check("...while preserving every casing seen on disk, so the disagreement "
+      "stays visible", sorted(_c[0]["variants"]) == ["Divi-Child", "Divi-child"])
+
+# Type still separates. A theme and a plugin sharing a name are two things.
+_c2 = _cat([_comp("a", "thing", "theme"), _comp("a", "thing", "plugin")], ["a"])
+check("the same slug under two TYPES stays two entries", len(_c2) == 2)
+
+# hoffmanscheese: pdfembedder-premium 3.2 inactive beside
+# PDFEmbedder-premium 5.1.4 active. Counting rows would say 2 sites.
+_dupe = _cat([_comp("h", "PDFEmbedder-premium", "plugin", "5.1.4"),
+              _comp("h", "pdfembedder-premium", "plugin", "3.2", "inactive")],
+             ["h"])
+check("one component, twice on one site, is one entry", len(_dupe) == 1)
+check("SITES counts distinct sites, so installing it twice on one site is 1", _dupe[0]["sites"] == 1)
+check("...and installs_count keeps the 2, so the double install is visible", _dupe[0]["installs_count"] == 2)
+
+# The property, not the number: no two catalogue entries may normalise to the
+# same (slug, type). Asserting 310 would break the next time a plugin is added.
+_real = _cat([_comp("a", "Alpha", "plugin"), _comp("b", "alpha", "plugin"),
+              _comp("c", "beta", "plugin")], ["a", "b", "c"])
+_keys = [(x["slug"].lower(), x["type"]) for x in _real]
+check("no two catalogue entries collide on lowercase slug and type", len(_keys) == len(set(_keys)))
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))
