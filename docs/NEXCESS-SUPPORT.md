@@ -271,42 +271,62 @@ re-arguing the whole case.
 is what we intended to say; the archive is what we said, and they diverge as
 soon as anyone edits a word before hitting send.
 
-> Thanks — the SSH answers are exactly what we needed, and we have what we need
-> to proceed there.
+> Hi Muhamed,
 >
-> On the API: we tested the User-Agent suggestion before writing in, and again
-> today, 2026-08-24. A conventional desktop Chrome User-Agent receives a
-> byte-identical Cloudflare challenge to our own client string — HTTP 403,
-> `cf-mitigated: challenge`, `<title>Just a moment...</title>`. Both requests
-> carried a deliberately invalid token, which is the important part: the
-> challenge is served before the token is read, so this reproduces with no
-> credential at all.
+> Thank you. The SSH answers are exactly what we needed. Account-level key
+> management covering current and future sites is what we were hoping for, and
+> the confirmation that no read-only SSH user is available is useful even
+> though it is not the answer we wanted. We have what we need to proceed on
+> that side.
 >
-> The reason a User-Agent cannot fix this is structural. A Cloudflare managed
-> challenge admits a client that has executed its JavaScript and holds a
-> resulting `cf_clearance` cookie. A scripted HTTP client holds no such cookie
-> whatever User-Agent it sends, so copying a browser's `navigator.userAgent`
-> copies the one attribute of the browser that is not the reason the browser
-> gets through. We have also ruled out the TLS stack (Python `urllib` and
-> `curl`/OpenSSL challenged identically) and a single bad edge node (two PoPs,
-> `cf-ray` `-EWR` and `-ORD`).
+> On the API, the User-Agent suggestion does not resolve it. We had already
+> tested that before opening the ticket, and we retested it today, 2026-08-24,
+> to be sure nothing had changed.
 >
-> We are not attempting to solve or bypass the challenge, and we will not. We
-> are asking for one of two things:
+> A conventional desktop Chrome User-Agent receives a byte-identical Cloudflare
+> challenge to our own client string: HTTP 403, `cf-mitigated: challenge`, and
+> a `<title>Just a moment...</title>` body. Both requests carried a
+> deliberately invalid token, which is the important detail. The challenge is
+> served before the token is read, so this reproduces with no valid credential
+> at all.
 >
-> 1. An exemption from the bot challenge for API-token requests to
->    `/api/v1/*` on account 82607, or
+> There is a structural reason a User-Agent cannot fix this. A Cloudflare
+> managed challenge admits a client that has executed its JavaScript and
+> therefore holds a `cf_clearance` cookie. A scripted HTTP client holds no such
+> cookie regardless of what User-Agent it sends. Copying a browser's
+> `navigator.userAgent` copies the one attribute of the browser that is not the
+> reason the browser gets through.
+>
+> We have also ruled out two other common causes. The TLS stack is not the
+> factor: Python `urllib` and `curl` with OpenSSL are challenged identically
+> from the same source IP. It is not one misbehaving edge node either, since
+> two different Cloudflare PoPs answered with the same challenge, `cf-ray`
+> ending `-EWR` and `-ORD`.
+>
+> To be clear about our intent, we are not attempting to solve or bypass the
+> challenge, and we will not. We are asking for one of two things:
+>
+> 1. An exemption from the bot challenge for API-token requests to `/api/v1/*`
+>    on account 82607, or
 > 2. The correct hostname for programmatic access, if
->    `https://portal.nexcess.net/api` is not it.
+>    `https://portal.nexcess.net/api` is not the right one.
 >
-> On (2) — the `api-token` documentation you linked writes every example
-> against `$PORTAL_API_URL`, and that variable is not defined anywhere in the
-> repository. We established `https://portal.nexcess.net/api` by observing the
-> portal's own traffic. If that is the wrong base URL for automation, telling
-> us the right one resolves this immediately.
+> On the second point, the `api-token` documentation you linked writes every
+> example against `$PORTAL_API_URL`, and that variable is not defined anywhere
+> in the repository. There is no root README, and the `authentication` folder
+> contains only passphrase helpers. We established
+> `https://portal.nexcess.net/api` by observing the portal's own traffic. If
+> that is the wrong base URL for automation, simply telling us the right one
+> resolves this immediately.
 >
-> For context on scope: this is a read-only inventory, `GET /v1/site` and
-> `GET /v1/site/{id}`, no writes.
+> For context on scope, this is a read-only inventory. We call `GET /v1/site`
+> and `GET /v1/site/{id}` and nothing else. No writes.
+>
+> Happy to provide full request and response headers if that would help your
+> edge team.
+>
+> Thanks,
+> Doug
 
 ### If they decline both
 
