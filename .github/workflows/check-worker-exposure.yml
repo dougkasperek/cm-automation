@@ -1,0 +1,81 @@
+# Is any Worker on this account reachable without Cloudflare Access?
+#
+# Cloudflare Access cannot protect a *.workers.dev URL, so a Worker behind
+# Access on its custom domain is still served, unauthenticated, on its
+# workers.dev URL. [removed] served its client list, staff emails and pricing that
+# way on 2026-07-28.
+#
+# Four of the five Workers pin `workers_dev = false` in a config. `[removed]`
+# cannot: it is dashboard-managed by an explicit decision, so its toggle is held
+# by nothing but a manual click. This job is DETECTION rather than prevention.
+# You cannot pin a dashboard-managed Worker from a repo. You can notice when it
+# opens.
+#
+# NEEDS NO SECRETS. It is an outside-in check on purpose: it sees exactly what
+# an anonymous visitor sees, which is the only view that answers the question.
+# That is also why it can safely run on every push, unlike every other workflow
+# here.
+name: Check worker exposure
+
+on:
+  push:
+    paths:
+      - "scripts/check-worker-exposure.py"
+      - "test/test-worker-exposure.py"
+      - ".github/workflows/check-worker-exposure.yml"
+  workflow_dispatch:
+
+  # THIS IS THE ONE SCHEDULE WORTH TURNING ON FIRST, and it is commented out
+  # only to keep the house rule that a schedule is a deliberate decision.
+  #
+  # The argument for enabling it ahead of the others: this job's entire value is
+  # DETECTION LATENCY. On manual dispatch it tells you the door was shut at the
+  # moment you happened to look, which is close to worthless -- the failure mode
+  # it exists for is a toggle being flipped and nobody noticing for weeks. Every
+  # other workflow here produces data that is still useful when it is a day old.
+  # This one is not.
+  #
+  # It also carries none of the usual risk: no secrets, no client site is
+  # touched, nothing is written to the ledger, and a bad run cannot corrupt a
+  # good one because it stores nothing.
+  #
+  # schedule:
+  #   - cron: "13 */6 * * *"   # every six hours
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The classifiers run first and offline. If the logic that distinguishes
+      # "shut" from "could not see" is broken, the live check below cannot be
+      # trusted either, so there is no point running it.
+      - name: Test the classifiers
+        run: python3 test/test-worker-exposure.py
+
+      - name: Check the live perimeter
+        id: perimeter
+        run: ./scripts/check-worker-exposure.py
+
+      # Runs even when the step above fails, so the JSON is attached to a red
+      # build. A failure with no evidence attached is a failure someone has to
+      # reproduce by hand.
+      - name: Record the result
+        if: always()
+        run: ./scripts/check-worker-exposure.py --json > exposure.json || true
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: worker-exposure
+          path: exposure.json
+          retention-days: 90

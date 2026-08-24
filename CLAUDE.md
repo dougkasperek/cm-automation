@@ -126,7 +126,21 @@ behaviour from its source file.** Read the deployed code back --
 `wrangler deployments view`, the dashboard's Edit code view, or the Cloudflare
 MCP `workers_get_worker_code` -- and say which one you looked at.
 
-**Access protects hostnames, never `*.workers.dev`.** Every Worker must pin
+**Access protects hostnames, never `*.workers.dev`. Since 2026-08-24 this is
+CHECKED, not asserted:** `./scripts/check-worker-exposure.py` fetches all five
+workers.dev URLs and all five hostnames anonymously and fails unless every
+Worker is refused at the edge and every hostname bounces to Access. It needs no
+credentials, so it runs on every push. Measured clear on 2026-08-24.
+
+The check exists because **`[removed]` cannot be pinned in config and that is a
+deliberate decision, not an oversight.** It is dashboard-managed; its bindings
+(`DECK` -> R2 `[removed]`, `DECK_DB` -> D1 `[removed]`) and six
+secrets live on the Worker, and a config declaring an incomplete set would drop
+one on the next deploy. You cannot pin a dashboard-managed Worker from a repo.
+You can notice within minutes when it opens. **Detection, where prevention is
+the riskier operation.**
+
+Every OTHER Worker must still pin
 `workers_dev = false` in its own config, not just have the toggle off in the
 dashboard, because wrangler defaults it to TRUE when the key is absent and the
 next deploy silently re-opens it. **And `workers_dev` is a TOP-LEVEL key: it
@@ -374,6 +388,7 @@ node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs 
 ./scripts/fleet-ledger.py ingest --reports ./reports --history ./history
 ./scripts/render-dashboard.py --out fleet.html \
     --components-out components.html                                  # both pages
+./scripts/check-worker-exposure.py                                    # is any Worker reachable without Access?
 ./scripts/publish-dashboard.sh --dry-run                              # preview
 ./scripts/serve-dashboard.py --dir ./reports --open                   # live view
 ```
@@ -387,6 +402,7 @@ reads the ledger and is what gets published. Do not delete either.
 ## Testing
 
 ```bash
+python3 test/test-worker-exposure.py  # 23   offline, no network
 python3 test/test-ledger.py       # 149
 python3 test/test-severity.py     # 116
 python3 test/test-email-dns.py    #  58   (needs dnspython)

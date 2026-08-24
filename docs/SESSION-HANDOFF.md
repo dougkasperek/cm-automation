@@ -61,6 +61,31 @@ token publishes fine despite `whoami` listing no R2 scope, so no
 opened `fleet.thudstaff.com` in a browser; the Worker sits between R2 and the
 hostname, so the read-back is not a substitute for that.
 
+**Worker exposure is now checked rather than asserted, 2026-08-24.**
+`./scripts/check-worker-exposure.py` fetches all five workers.dev URLs and all
+five hostnames anonymously. **Measured clear the same day: every workers.dev
+route returns Cloudflare's `error code: 1042`, every hostname 302s to Access.**
+That includes `[removed]`, whose toggle nothing pins. Item 3b below said the
+dashboard toggle "remains the only live control"; it is still the only
+*control*, but it is no longer the only *observation*. 23 offline tests cover
+the classifiers, and they were verified to fail before they passed: breaking
+"a timeout is UNKNOWN" to return CLOSED turns 5 of them red.
+
+**The bindings ARE enumerable, which removes the stated blocker to a config.**
+`[removed]` uses `DECK` (R2 `[removed]`) and `DECK_DB` (D1 `[removed]`,
+uuid `[removed]`), plus six secrets: `[removed]`,
+`[removed]`, `[removed]`, `[removed]`, `[removed]`,
+`[removed]`. Enumerated from `env.*` in `cf-worker-r2.js`. **This is NOT a
+recommendation to add a config** — adding one changes how that Worker deploys,
+which is the risky operation, and detection is the cheaper fix. It is recorded
+so the decision is now a choice rather than a blocker.
+
+**Still open and NOT verified this session: the `github-deploy-[removed]` token
+scope.** Item 4 below says all accounts, R2 write, no expiry. Token scopes are
+not readable with the wrangler OAuth login, so that line is still a document
+rather than a measurement. **Check it in the dashboard.** Re-scope, do not
+delete.
+
 **Backlogged, not started: maintaining the rulings.** See the "Backlog:
 maintaining the rulings" section at the end of `docs/DO-THIS-NEXT.md`. The
 finding behind it is worth knowing before anyone quotes the production flag:
