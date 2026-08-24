@@ -117,5 +117,29 @@ ok(cwe.CLOSED != cwe.UNKNOWN and cwe.PROTECTED != cwe.UNKNOWN,
 
 print()
 print("-" * 67)
+print("portability and the negative control")
+print("-" * 67)
+
+ok(hasattr(cwe, "CONTROL_NAME") and cwe.CONTROL_NAME not in cwe.WORKERS,
+   "the negative control name is not a real Worker")
+ok(cwe.classify_workers_dev(200, "anything", None)[0] == cwe.OPEN,
+   "a control that SERVES means the harness is reaching something it should not")
+ok(cwe.classify_workers_dev(404, "error code: 1042", None)[0] == cwe.CLOSED,
+   "a control that is refused is the healthy case")
+
+# The trap this override exists to close: the built-in subdomain is tied to one
+# Cloudflare account and WILL be wrong after the clevermethod migration. A wrong
+# subdomain makes every real Worker look absent, which would otherwise print as
+# a clean bill of health.
+src = open(SRC).read()
+ok("--subdomain" in src and "WORKER_SUBDOMAIN" in src,
+   "the subdomain is overridable by flag and by environment")
+ok("--targets" in src,
+   "the worker/hostname map is overridable, so this runs on any account")
+ok("global SUBDOMAIN" in src,
+   "the override actually rebinds the module constant rather than being ignored")
+
+print()
+print("-" * 67)
 print("%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

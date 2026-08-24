@@ -40,10 +40,27 @@ anonymous visitor sees, which is the only view that answers the question.
   ./scripts/check-worker-exposure.py --json
 
 Exit 0 clear, 1 EXPOSED, 2 could not determine. See the note on exit 2.
+
+WHAT THIS CANNOT CATCH
+----------------------
+One case, stated plainly rather than left for someone to discover. If
+SUBDOMAIN is set to a workers.dev subdomain that RESOLVES but belongs to a
+different account, every Worker name here is absent there, every lookup
+returns 1042, and the run prints a clean bill of health for an account it
+never touched. The negative control does not help: a wrong-but-real subdomain
+refuses the control too.
+
+A subdomain that does not resolve at all IS caught, as a DNS failure, which
+classifies UNKNOWN rather than CLOSED.
+
+So the residual risk is a plausible typo, not a random one. After the
+clevermethod migration, confirm the new subdomain against the Cloudflare
+dashboard once, by hand. Nothing in here can do it for you.
 """
 
 import argparse
 import json
+import os
 import ssl
 import sys
 import urllib.error
@@ -55,6 +72,14 @@ import urllib.request
 # That is why an all-1042 result is not enough on its own -- see `--json` output
 # and the sanity note in main().
 SUBDOMAIN = "doug-kasperek.workers.dev"
+
+# A script name that must NOT exist. It is the negative control: if a made-up
+# name answers with anything other than the same refusal the real Workers give,
+# then this harness is not reaching Cloudflare's workers.dev edge at all and no
+# verdict below can be trusted. A captive portal, a corporate proxy or a DNS
+# wildcard that answers everything would otherwise produce a page of CLOSED and
+# read as good news.
+CONTROL_NAME = "cm-automation-negative-control-do-not-create"
 
 # Worker script name -> the custom hostname it is meant to be reached on.
 # Adding a Worker to this account means adding it here. A Worker absent from
@@ -195,7 +220,41 @@ def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.add_argument("--subdomain", default=os.environ.get("WORKER_SUBDOMAIN"),
+                   help="workers.dev subdomain to test against. Overrides the "
+                        "built-in default, which is tied to one account and "
+                        "WILL be wrong after a migration. Also read from "
+                        "$WORKER_SUBDOMAIN.")
+    p.add_argument("--targets",
+                   help="path to a JSON object of {worker: hostname} to check "
+                        "instead of the built-in map. Lets this run against "
+                        "any account without editing the script.")
     a = p.parse_args()
+
+    global SUBDOMAIN, WORKERS
+    if a.subdomain:
+        SUBDOMAIN = a.subdomain.strip().lstrip(".")
+    if a.targets:
+        with open(a.targets) as fh:
+            loaded = json.load(fh)
+        if not isinstance(loaded, dict) or not loaded:
+            print("--targets must be a non-empty JSON object of "
+                  "{worker: hostname}", file=sys.stderr)
+            return 2
+        WORKERS = loaded
+
+    # The control runs FIRST. If the harness cannot be trusted, the per-Worker
+    # verdicts are noise and printing them would be worse than printing nothing.
+    cv, cd = probe("https://%s.%s/" % (CONTROL_NAME, SUBDOMAIN),
+                   classify_workers_dev)
+    if cv == OPEN:
+        print("HARNESS UNTRUSTWORTHY: a Worker name that cannot exist is being "
+              "served at\n  https://%s.%s/\n  (%s)\n"
+              % (CONTROL_NAME, SUBDOMAIN, cd))
+        print("  Something between here and Cloudflare is answering every "
+              "request.\n  Every verdict this script could print would be "
+              "meaningless, so it printed none.")
+        return 2
 
     rows = run()
     exposed = [r for r in rows
@@ -204,7 +263,9 @@ def main():
                if r["workers_dev"] == UNKNOWN or r["access"] == UNKNOWN]
 
     if a.json:
-        print(json.dumps({"subdomain": SUBDOMAIN, "results": rows,
+        print(json.dumps({"subdomain": SUBDOMAIN,
+                          "negative_control": {"verdict": cv, "detail": cd},
+                          "results": rows,
                           "exposed": len(exposed), "unknown": len(unknown)},
                          indent=2))
     else:
@@ -238,9 +299,11 @@ def main():
         print("COULD NOT DETERMINE for %d Worker(s). This is not a pass.\n"
               % len(unknown))
         print("  Most likely a transient network failure, in which case re-run.")
-        print("  If it persists, check SUBDOMAIN in this file is still correct:")
-        print("  a stale subdomain makes every Worker look absent, which would")
-        print("  otherwise read as good news.")
+        print("  If it persists, check the subdomain is still correct:")
+        print("    %s" % SUBDOMAIN)
+        print("  A subdomain that does not resolve lands here, which is the")
+        print("  safe outcome. A subdomain that resolves but belongs to another")
+        print("  account would instead print CLEAR, and nothing here can tell.")
         return 2
 
     print("Clear. No Worker is reachable without Access.")
