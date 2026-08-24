@@ -32,6 +32,26 @@ Both halves of the perimeter, because either one failing is an exposure:
 
   1. Every workers.dev URL must NOT serve the Worker.
   2. Every custom hostname must redirect to an Access login.
+  3. Every hostname must hand off to a DISTINCT Access application.
+
+AUTHENTICATION, NOT AUTHORISATION
+---------------------------------
+Checks 1 and 2 answer "can a stranger get in". They say NOTHING about what a
+logged-in person can reach. Access authorises per APPLICATION: signing in at
+fleet.thudstaff.com does not grant [removed], because the deck's own
+policy is evaluated fresh against that identity. SSO makes it seamless, so it
+is easy to assume otherwise.
+
+Check 3 is the closest this can get without credentials. Two hostnames sharing
+one application share one policy and therefore one audience. Distinct
+applications make separate audiences POSSIBLE; they do not prove the
+membership lists differ.
+
+**Who is in each policy cannot be read here.** The Zero Trust API needs a scope
+the wrangler OAuth token does not carry, and it answers `success: true` with an
+empty list rather than a denial, so "not permitted to look" is indistinguishable
+from "no applications exist". The only real test of separation is a person who
+should be denied opening the URL and being denied.
 
 Needs no credentials. It is an outside-in check by design: it sees what an
 anonymous visitor sees, which is the only view that answers the question.
@@ -61,6 +81,7 @@ dashboard once, by hand. Nothing in here can do it for you.
 import argparse
 import json
 import os
+import re
 import ssl
 import sys
 import urllib.error
@@ -183,12 +204,31 @@ def classify_hostname(status, location, error):
     return UNKNOWN, "HTTP %d, unrecognised" % status
 
 
+def access_app_id(location):
+    """Which Access APPLICATION is this hostname handing off to?
+
+    The login redirect carries the application's audience tag as `kid`. Two
+    hostnames showing the SAME tag are one application, and one application is
+    one policy: whoever can reach either can reach both.
+
+    Returns None when the tag cannot be read. None is not a match and never
+    collides with anything -- an unreadable tag must not be mistaken for
+    agreement with another unreadable tag.
+    """
+    if not location:
+        return None
+    m = re.search(r"[?&](?:kid|aud)=([a-fA-F0-9]{16,})", location)
+    return m.group(1) if m else None
+
+
 def probe(url, classifier):
     """Fetch with one retry, so a single blip is not a finding.
 
     Retries only on UNKNOWN. A definite OPEN is not retried away.
+    Returns (verdict, detail, location) -- the Location header rides along
+    because the Access application tag is read out of it.
     """
-    verdict = detail = None
+    verdict = detail = location = None
     for _ in range(ATTEMPTS):
         status, body, location, error = fetch(url)
         if classifier is classify_workers_dev:
@@ -197,23 +237,47 @@ def probe(url, classifier):
             verdict, detail = classify_hostname(status, location, error)
         if verdict not in (UNKNOWN,):
             break
-    return verdict, detail
+    return verdict, detail, location
 
 
 def run():
     rows = []
     for name, host in sorted(WORKERS.items()):
         wd_url = "https://%s.%s/" % (name, SUBDOMAIN)
-        hv, hd = probe("https://%s/" % host, classify_hostname)
-        wv, wd = probe(wd_url, classify_workers_dev)
+        hv, hd, hloc = probe("https://%s/" % host, classify_hostname)
+        wv, wd, _ = probe(wd_url, classify_workers_dev)
         rows.append({
             "worker": name,
             "workers_dev_url": wd_url,
             "workers_dev": wv, "workers_dev_detail": wd,
             "hostname": host,
             "access": hv, "access_detail": hd,
+            "access_app": access_app_id(hloc),
         })
     return rows
+
+
+def shared_access_apps(rows):
+    """Hostnames that hand off to the SAME Access application.
+
+    One application is one policy. On THIS account that is a regression by
+    definition: `fleet viewers` deliberately does not reuse the deck's policy,
+    because the deck holds [removed] and [removed] and the developers
+    who need the fleet page must not be able to open it. Two hostnames sharing
+    an application would silently merge those audiences.
+
+    That is an assumption about this account, not a universal truth, which is
+    why `--allow-shared-access-app` exists. Elsewhere one application across
+    several hostnames can be exactly what was intended.
+
+    A None tag never collides. An unreadable tag is not evidence of agreement.
+    """
+    seen = {}
+    for r in rows:
+        app = r.get("access_app")
+        if app:
+            seen.setdefault(app, []).append(r["hostname"])
+    return {app: hosts for app, hosts in seen.items() if len(hosts) > 1}
 
 
 def main():
@@ -225,6 +289,11 @@ def main():
                         "built-in default, which is tied to one account and "
                         "WILL be wrong after a migration. Also read from "
                         "$WORKER_SUBDOMAIN.")
+    p.add_argument("--allow-shared-access-app", action="store_true",
+                   help="do not fail when two hostnames hand off to the same "
+                        "Access application. Off by default because on this "
+                        "account separate policies are the point; one shared "
+                        "application is one shared audience.")
     p.add_argument("--targets",
                    help="path to a JSON object of {worker: hostname} to check "
                         "instead of the built-in map. Lets this run against "
@@ -245,8 +314,8 @@ def main():
 
     # The control runs FIRST. If the harness cannot be trusted, the per-Worker
     # verdicts are noise and printing them would be worse than printing nothing.
-    cv, cd = probe("https://%s.%s/" % (CONTROL_NAME, SUBDOMAIN),
-                   classify_workers_dev)
+    cv, cd, _ = probe("https://%s.%s/" % (CONTROL_NAME, SUBDOMAIN),
+                      classify_workers_dev)
     if cv == OPEN:
         print("HARNESS UNTRUSTWORTHY: a Worker name that cannot exist is being "
               "served at\n  https://%s.%s/\n  (%s)\n"
@@ -257,6 +326,10 @@ def main():
         return 2
 
     rows = run()
+    shared = {} if a.allow_shared_access_app else shared_access_apps(rows)
+    unreadable = [r["hostname"] for r in rows
+                  if r["access"] == PROTECTED and not r.get("access_app")]
+
     exposed = [r for r in rows
                if r["workers_dev"] == OPEN or r["access"] == UNPROTECTED]
     unknown = [r for r in rows
@@ -266,13 +339,17 @@ def main():
         print(json.dumps({"subdomain": SUBDOMAIN,
                           "negative_control": {"verdict": cv, "detail": cd},
                           "results": rows,
+                          "shared_access_apps": shared,
+                          "app_id_unreadable": unreadable,
                           "exposed": len(exposed), "unknown": len(unknown)},
                          indent=2))
     else:
         print("Checking %d Worker(s) on %s\n" % (len(rows), SUBDOMAIN))
         for r in rows:
-            print("  %-14s  %-30s  workers.dev %-8s  access %s"
-                  % (r["worker"], r["hostname"], r["workers_dev"], r["access"]))
+            app = r.get("access_app")
+            print("  %-14s  %-30s  workers.dev %-8s  access %-11s  app %s"
+                  % (r["worker"], r["hostname"], r["workers_dev"], r["access"],
+                     (app[:8] if app else "unreadable")))
             if r["workers_dev"] != CLOSED:
                 print("       workers.dev: %s" % r["workers_dev_detail"])
             if r["access"] != PROTECTED:
@@ -292,6 +369,25 @@ def main():
                       % r["hostname"])
         return 1
 
+    if shared:
+        print("SHARED ACCESS POLICY: %d application(s) front more than one "
+              "hostname.\n" % len(shared))
+        for app, hosts in sorted(shared.items()):
+            print("  %s  ->  %s" % (app[:8], ", ".join(sorted(hosts))))
+        print("\n  One application is one policy, so those hostnames share an")
+        print("  audience. Whoever can open one can open the others.")
+        print("  Give each hostname its own Access application, or pass")
+        print("  --allow-shared-access-app if that is deliberate here.")
+        return 1
+
+    if unreadable:
+        print("COULD NOT READ the Access application tag for: %s\n"
+              % ", ".join(unreadable))
+        print("  Those hostnames ARE protected. What could not be established")
+        print("  is whether they share a policy with another hostname, so the")
+        print("  separation between them is unverified rather than confirmed.")
+        return 2
+
     if unknown:
         # Deliberately not exit 0. A check that could not see must never report
         # success -- that is the single bug this repo keeps making, and a
@@ -306,7 +402,13 @@ def main():
         print("  account would instead print CLEAR, and nothing here can tell.")
         return 2
 
-    print("Clear. No Worker is reachable without Access.")
+    print("Clear. No Worker is reachable without Access, and each hostname")
+    print("hands off to a distinct Access application.")
+    print()
+    print("NOT checked, and not checkable without credentials: WHO is in each")
+    print("policy. Distinct applications make separate audiences possible; they")
+    print("do not prove the membership lists differ. The only real test is a")
+    print("person who should be denied trying the URL.")
     return 0
 
 

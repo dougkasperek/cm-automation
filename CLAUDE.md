@@ -402,7 +402,7 @@ reads the ledger and is what gets published. Do not delete either.
 ## Testing
 
 ```bash
-python3 test/test-worker-exposure.py  # 29   offline, no network
+python3 test/test-worker-exposure.py  # 40   offline, no network
 python3 test/test-ledger.py       # 149
 python3 test/test-severity.py     # 116
 python3 test/test-email-dns.py    #  58   (needs dnspython)

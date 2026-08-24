@@ -141,5 +141,45 @@ ok("global SUBDOMAIN" in src,
 
 print()
 print("-" * 67)
+print("Access application separation")
+print("-" * 67)
+
+A = "https://x.cloudflareaccess.com/cdn-cgi/access/login/h?kid=" + "a" * 64
+B = "https://x.cloudflareaccess.com/cdn-cgi/access/login/h?kid=" + "b" * 64
+
+ok(cwe.access_app_id(A) == "a" * 64, "the application tag is read out of kid=")
+ok(cwe.access_app_id("https://x/?aud=" + "c" * 32) == "c" * 32,
+   "aud= is accepted as well as kid=")
+ok(cwe.access_app_id(None) is None, "no Location yields no tag")
+ok(cwe.access_app_id("https://x.cloudflareaccess.com/nothing/here") is None,
+   "a redirect with no tag yields None rather than a guess")
+ok(cwe.access_app_id("https://x/?kid=short") is None,
+   "a too-short value is not accepted as a tag")
+
+def rows(*pairs):
+    return [{"hostname": h, "access_app": a} for h, a in pairs]
+
+ok(cwe.shared_access_apps(rows(("fleet.x", "a" * 64), ("cm.x", "b" * 64))) == {},
+   "two hostnames on DIFFERENT applications do not collide")
+shared = cwe.shared_access_apps(rows(("fleet.x", "a" * 64), ("cm.x", "a" * 64)))
+ok(list(shared) == ["a" * 64] and sorted(shared["a" * 64]) == ["cm.x", "fleet.x"],
+   "two hostnames on the SAME application are reported together")
+
+# The one that would quietly ruin the check: two unreadable tags are not a
+# match. Folding None into None would report a shared policy that is not there,
+# and worse, would hide that nothing was actually established.
+ok(cwe.shared_access_apps(rows(("a.x", None), ("b.x", None))) == {},
+   "two UNREADABLE tags do not collide with each other")
+ok(cwe.shared_access_apps(rows(("a.x", None), ("b.x", "a" * 64))) == {},
+   "an unreadable tag never matches a readable one")
+
+src = open(SRC).read()
+ok("--allow-shared-access-app" in src,
+   "sharing can be allowed explicitly, since it is an assumption about this account")
+ok("access_app" in src and "shared_access_apps" in src,
+   "the collision check is wired into the run, not just defined")
+
+print()
+print("-" * 67)
 print("%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

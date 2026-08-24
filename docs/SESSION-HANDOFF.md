@@ -86,6 +86,31 @@ not readable with the wrangler OAuth login, so that line is still a document
 rather than a measurement. **Check it in the dashboard.** Re-scope, do not
 delete.
 
+**The exposure check answers AUTHENTICATION, not AUTHORISATION, and the
+difference matters before the dashboard is shared.** It proves a stranger
+cannot get in. It says nothing about what a logged-in person can reach. Access
+authorises per application, so signing in at `fleet.thudstaff.com` does not
+grant `[removed]`; the deck's policy is evaluated fresh. SSO makes that
+seamless enough to be easy to assume otherwise.
+
+Added 2026-08-24: the check now also asserts each hostname hands off to a
+**distinct Access application**, measured live as five distinct tags. Two
+hostnames on one application share one policy and one audience. That is the
+closest a credential-free check can get.
+
+**WHO is in each policy still cannot be read**, and this is the second time
+that gap has bitten: the Zero Trust API needs a scope the wrangler OAuth token
+does not carry, and answers `success: true` with an empty list, so "not
+permitted to look" reads exactly like "nothing is there". See the bug table.
+
+**So one human test is outstanding, and Doug cannot run it.** `fleet viewers`
+is doug, matt, brian, victoria, nick. The deck policy `[removed]` is doug, matt,
+brian. Doug is in both and will always get in. **Ask [removed] or
+[removed] to open `[removed]` and report what they see.** Expected:
+an Access denial. Worth doing before the fleet dashboard is shared more widely,
+because the deck holds [removed], [removed] and the ownership
+discussion.
+
 **Backlogged, not started: maintaining the rulings.** See the "Backlog:
 maintaining the rulings" section at the end of `docs/DO-THIS-NEXT.md`. The
 finding behind it is worth knowing before anyone quotes the production flag:
