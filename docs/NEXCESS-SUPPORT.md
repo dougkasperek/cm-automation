@@ -262,9 +262,36 @@ carry the answers and their date, and section 18 keeps only what is still open.
 
 ## Reply to send, 2026-08-24 (question 1 only)
 
-Reply on the existing thread. Question 2 needs no reply — it was answered.
-This is deliberately short and hands them one specific decision rather than
-re-arguing the whole case.
+Reply on the existing thread. Question 2 needs no reply, it was answered.
+
+**Deliberately soft, and deliberately leads with the base-URL question. Do not
+"restore" a firmer version without reading why.** An earlier draft led with the
+rebuttal: a full account of why a User-Agent cannot defeat a challenge gated on
+a `cf_clearance` cookie, then a request to exempt the account at the edge. Three
+reasons that was the wrong letter.
+
+1. **The stakes are low and we did not know that when it was written.**
+   Measured 2026-08-24: the API cannot move the health-coverage scoreboard at
+   all, because `coverage_partial` fires on exactly the facts discovery writes.
+   The SSH scan is worth 21 of the 32. The API is enumeration and the
+   `unix_username` join key, both of which a person can read out of the portal
+   once for 21 sites. Spending goodwill at full volume on bookkeeping is a bad
+   trade, and support just gave us the answer that unblocked the real work.
+2. **The expensive ask can quietly die; the cheap one cannot.** "Exempt our
+   account from the bot challenge" needs someone with edge access and is an
+   escalation. "What is `$PORTAL_API_URL`?" is answerable by the person reading
+   the ticket, in one line. It also might genuinely be the answer: we inferred
+   that base URL from portal network traffic, not from documentation, and
+   `sites-portal.nexcess.com` exists and serves something else.
+3. **It was written past its reader.** The `cf_clearance` explanation is aimed
+   at an edge engineer and was going to be read by a support agent working a
+   script. Explaining someone's suggestion back to them as structurally naive
+   is a poor way to ask that same person to escalate.
+
+What survives: the evidence is still there, it is just offered rather than
+presented, and the invalid-token detail stays because it is the one line that
+tells an engineer the token is never being read. Nothing was conceded and no
+claim was weakened.
 
 **Once sent, archive what was actually sent** as
 `docs/correspondence/2026-08-__-nexcess-out-api-challenge.md`. The draft below
@@ -273,59 +300,39 @@ soon as anyone edits a word before hitting send.
 
 > Hi Muhamed,
 >
-> Thank you. The SSH answers are exactly what we needed. Account-level key
-> management covering current and future sites is what we were hoping for, and
-> the confirmation that no read-only SSH user is available is useful even
-> though it is not the answer we wanted. We have what we need to proceed on
-> that side.
+> Thank you, this is really helpful. The SSH answers settle what we needed to
+> know, and we can move forward on that side. We appreciate you checking on the
+> read-only user question even though the answer was no.
 >
-> On the API, the User-Agent suggestion does not resolve it. We had already
-> tested that before opening the ticket, and we retested it today, 2026-08-24,
-> to be sure nothing had changed.
+> One thing still open on the API, and it may be a simple one.
 >
-> A conventional desktop Chrome User-Agent receives a byte-identical Cloudflare
-> challenge to our own client string: HTTP 403, `cf-mitigated: challenge`, and
-> a `<title>Just a moment...</title>` body. Both requests carried a
-> deliberately invalid token, which is the important detail. The challenge is
-> served before the token is read, so this reproduces with no valid credential
-> at all.
+> The documentation you linked writes every example against `$PORTAL_API_URL`,
+> and we cannot find anywhere that variable is defined. We have been using
+> `https://portal.nexcess.net/api`, which we worked out by watching the
+> portal's own network requests rather than from any documentation. So our
+> first question is just: **what is the correct base URL for API token
+> requests?** If we have simply been calling the wrong host, that would explain
+> everything and we can stop there.
 >
-> There is a structural reason a User-Agent cannot fix this. A Cloudflare
-> managed challenge admits a client that has executed its JavaScript and
-> therefore holds a `cf_clearance` cookie. A scripted HTTP client holds no such
-> cookie regardless of what User-Agent it sends. Copying a browser's
-> `navigator.userAgent` copies the one attribute of the browser that is not the
-> reason the browser gets through.
+> If `https://portal.nexcess.net/api` is the right one, then we do have a
+> genuine problem, because requests from a script get a Cloudflare challenge
+> page rather than an API response. We did try the browser User-Agent
+> suggestion, both before opening this ticket and again today. It returns the
+> same challenge, HTTP 403 with `cf-mitigated: challenge`. Worth noting we see
+> this even with an intentionally invalid token, which suggests the request is
+> being stopped at the edge before the token is checked.
 >
-> We have also ruled out two other common causes. The TLS stack is not the
-> factor: Python `urllib` and `curl` with OpenSSL are challenged identically
-> from the same source IP. It is not one misbehaving edge node either, since
-> two different Cloudflare PoPs answered with the same challenge, `cf-ray`
-> ending `-EWR` and `-ORD`.
+> We have logs of the full request and response headers, including `cf-ray`
+> values, and are happy to send them over or to work with whoever looks after
+> the edge configuration. Just let us know what would be most useful.
 >
-> To be clear about our intent, we are not attempting to solve or bypass the
-> challenge, and we will not. We are asking for one of two things:
+> For context, this is a small read-only inventory job. We call `GET /v1/site`
+> and `GET /v1/site/{id}` and nothing else, no writes. We are not trying to get
+> around the protection, we would just like to use the API as documented.
 >
-> 1. An exemption from the bot challenge for API-token requests to `/api/v1/*`
->    on account 82607, or
-> 2. The correct hostname for programmatic access, if
->    `https://portal.nexcess.net/api` is not the right one.
+> Thanks again for the SSH answers, those were the ones holding us up.
 >
-> On the second point, the `api-token` documentation you linked writes every
-> example against `$PORTAL_API_URL`, and that variable is not defined anywhere
-> in the repository. There is no root README, and the `authentication` folder
-> contains only passphrase helpers. We established
-> `https://portal.nexcess.net/api` by observing the portal's own traffic. If
-> that is the wrong base URL for automation, simply telling us the right one
-> resolves this immediately.
->
-> For context on scope, this is a read-only inventory. We call `GET /v1/site`
-> and `GET /v1/site/{id}` and nothing else. No writes.
->
-> Happy to provide full request and response headers if that would help your
-> edge team.
->
-> Thanks,
+> Best,
 > Doug
 
 ### If they decline both
