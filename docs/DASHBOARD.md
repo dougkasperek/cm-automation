@@ -499,6 +499,36 @@ rather than company infrastructure. Renaming the team domain is account-wide and
 would move all five logins at once, so it is better done as part of the move
 than twice.
 
+**And the strongest argument for moving is now evidenced rather than
+asserted: access here is a hand-maintained list of email addresses, and it has
+already drifted.**
+
+Measured 2026-08-25, the first time anyone enumerated it. `[removed]` held
+access to an application and appeared in no document: not
+`docs/DASHBOARD.md`, not `data/access-expectations.json`, not the workbook.
+Nothing was wrong with the grant, most likely. What was wrong is that nobody
+could have told you it existed.
+
+That is not a mistake somebody made. It is what a personal Cloudflare account
+with per-application email lists produces over time:
+
+- **No directory behind it.** Membership is typed in per application. There is
+  no group to add someone to and no group to remove them from.
+- **Offboarding is manual and invisible.** Nobody leaving the company is
+  removed from five separate policies by any process that exists today. The
+  only way to notice is to enumerate, which nothing did until this week.
+- **The audit has no owner.** It is one person's account, so there is no
+  security review that would ever look at it.
+
+`check-access-policies.py --expect` now detects the drift, and detection is
+worth having. It is not the same as access following the directory. On the
+company account with the company IdP, `fleet viewers` becomes a group and
+membership is a consequence of employment rather than of somebody remembering.
+
+**So the move is not only about the hostname reading as a side project.** It is
+about who is accountable for the answer to "who can open this", and today the
+honest answer is that nobody was.
+
 `scripts/publish-dashboard.sh` already reads `FLEET_R2_BUCKET` (default
 `dash-data`) and `FLEET_PUBLIC_URL` (default `https://fleet.thudstaff.com`), so
 the repo side of the move is a default change plus documentation. The only

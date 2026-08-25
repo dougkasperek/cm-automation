@@ -177,6 +177,19 @@ Isolated by bisecting the context; ALPN was tested and is not the factor.
 - Everything in `docs/NEXCESS.md` about the challenge is now the record of a
   wrong diagnosis, not current state, and is marked as such.
 
+**Access membership drifted, and it is an argument for the migration.**
+Enumerated for the first time 2026-08-25: `[removed]` holds access to an
+application and appears in no document. Probably a legitimate grant nobody
+wrote down; the point is that nothing could have told you it existed. Access
+here is hand-typed email lists on a personal Cloudflare account, with no
+directory behind it, no offboarding path and no owner for the audit. Written up
+in `docs/DASHBOARD.md` under the migration section.
+
+`./scripts/check-access-policies.py --expect data/access-expectations.json`
+now reports anyone named in a policy who is not in the file, and reports
+separately when a broad rule makes enumeration impossible. Measured clear on
+that second point: every allow policy names individuals.
+
 **Backlogged, not started: measure the sending domain.** From Victoria's
 question in the demo. `post-smtp` is on 39 sites and holds its host in
 WordPress options, so the existing deep scan can turn a workbook ruling into a
