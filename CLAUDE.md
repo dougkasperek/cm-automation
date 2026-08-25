@@ -424,6 +424,7 @@ node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs 
 ./scripts/fleet-ledger.py ingest --reports ./reports --history ./history
 ./scripts/render-dashboard.py --out fleet.html \
     --components-out components.html                                  # both pages
+./scripts/nexcess-ssh-targets.py --history ./history                   # who does the SSH scan connect to, and as whom?
 ./scripts/check-worker-exposure.py                                    # is any Worker reachable without Access?
 ./scripts/check-access-policies.py --who someone@clevermethod.com     # which apps can this person open?
 ./scripts/check-access-policies.py --expect data/access-expectations.json
@@ -440,6 +441,7 @@ reads the ledger and is what gets published. Do not delete either.
 ## Testing
 
 ```bash
+python3 test/test-nexcess-ssh.py      # 17   offline, no key
 python3 test/test-worker-exposure.py  # 40   offline, no network
 python3 test/test-access-policies.py  # 38   offline, no token
 python3 test/test-ledger.py       # 149
