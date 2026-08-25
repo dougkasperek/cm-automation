@@ -77,7 +77,7 @@ site filesystem, and Nexcess said restricting one to `wp core version` and
 runs is the only thing standing between a read-only tool and a write-capable
 one — review it as a security control, not as a scan definition.
 
-**That list was reviewed and approved by Victoria Brake on 2026-08-25**, in
+**That list was reviewed and approved by Doug Kasperek on 2026-08-25**, in
 `scripts/nexcess-fleet-healthcheck.sh`, before the first fleet-wide run. Five
 commands, all reads. **Changing it invalidates the approval**, and nothing in
 the system will stop the change: there is no permission error to hit, because

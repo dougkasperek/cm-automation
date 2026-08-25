@@ -34,10 +34,10 @@
 # All five are reads. If you add one, it needs the same review as a firewall
 # rule, not the same review as a scan tweak.
 #
-# REVIEWED AND APPROVED 2026-08-25 by Victoria Brake, before the first
+# REVIEWED AND APPROVED 2026-08-25 by Doug Kasperek, before the first
 # fleet-wide run.
 #
-# CORRECTION, same day, after the first run: the list Victoria approved was
+# CORRECTION, same day, after the first run: the list approved above was
 # INCOMPLETE. `test -d ~/public_html` was running as the reachability probe and
 # was not written down. It is a read and changes nothing, but an approved list
 # that does not match what the script runs is not an approval of anything. It
