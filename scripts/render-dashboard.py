@@ -1049,7 +1049,24 @@ def render(m):
     nh = len([x for x in m["sites"]
               if any(r.get("code") == "coverage_partial"
                      for r in (x.get("severity") or {}).get("reasons", []))])
-    k, n = _cov("Pantheon platform facts")
+    # THE CARD IS FLEET-WIDE, SO ITS BAR MUST BE TOO. This read
+    # `_cov("Pantheon platform facts")` and showed "48 of 52" under a card
+    # whose CRIT/WARN/OK counts span all 85 sites. After the Nexcess SSH scan
+    # landed, that bar described one of two transports while the numbers above
+    # it described both, which reads as the card being 4 sites short of
+    # complete when it is 22 sites wider than the bar.
+    #
+    # Sum the WordPress-inventory lines instead: they are the per-transport
+    # coverage of the question this card actually asks. The individual lines
+    # stay in the coverage box below, so nothing is hidden by adding them up.
+    _wp_cov = [(kk, nn) for lab, (kk, nn) in m["coverage"]
+               if lab.startswith("WordPress core, plugins, themes")]
+    if _wp_cov:
+        k, n = sum(x[0] for x in _wp_cov), sum(x[1] for x in _wp_cov)
+        _bar_label = "WordPress core, plugins and themes, both transports"
+    else:
+        k, n = _cov("Pantheon platform facts")
+        _bar_label = "Pantheon platform facts"
     terminal = []
     for st in ("SKIP", "FROZEN"):
         c = h["counts"].get(st, 0)
@@ -1074,7 +1091,7 @@ def render(m):
             hbits.append('<span class=wfrow><b>%d</b> %s</span>' % (c, e(label)))
     card("Fleet health",
          "Is this site being maintained: backups, PHP, WordPress, plugins.",
-         ax.get("health") or h["counts"], _bar(k, n, "Pantheon platform facts"),
+         ax.get("health") or h["counts"], _bar(k, n, _bar_label),
          detail="".join(hbits) or None,
          note=("<strong>%d site(s) have been looked at but have NO health "
                "evidence</strong>: no backup age, no plugin or theme count. "
