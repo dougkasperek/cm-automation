@@ -709,5 +709,57 @@ check("a site the sweep could not load is UNKNOWN on consent, never OK",
       S.evaluate(_blocked, TODAY)["axes"]["consent"]["status"] == "UNKNOWN")
 
 
+# ---------------------------------------------------------------------------
+# A site the control plane calls WordPress that is not WordPress, 2026-08-25.
+#
+# app.eastauroracc.com: Nexcess reports app=wordpress, app_version=6.2.2. It is
+# a custom PHP application. No wp-config.php anywhere, composer.json requiring
+# only mailchimp/marketing, and `wp core version` answering "This does not seem
+# to be a WordPress installation".
+#
+# It scored CRIT wp_below_floor on the control plane's claim, which put a site
+# that cannot have wp2shell onto the wp2shell remediation list.
+# ---------------------------------------------------------------------------
+_base = {"wp_checked": False, "php_version": "8.2",
+         "nexcess_app_version": "6.2.2", "production": True}
+
+_r = S.evaluate(dict(_base, framework="not-wordpress"))
+check("a positively non-WordPress site is NOT CRIT for a WordPress version "
+      "it does not run",
+      "wp_below_floor" not in [x["code"] for x in _r["reasons"]],
+      repr([x["code"] for x in _r["reasons"]]))
+check("...and the disagreement is reported rather than silently dropped",
+      "framework_not_wordpress" in [x["code"] for x in _r["reasons"]],
+      repr([x["code"] for x in _r["reasons"]]))
+
+# framework FAILS SAFE. Only a positive non-WordPress value exempts.
+for _fw in (None, "unknown", "wordpress", "wordpress-network"):
+    _site = dict(_base)
+    if _fw is not None:
+        _site["framework"] = _fw
+    _r = S.evaluate(_site)
+    check("framework=%r still scores CRIT below the floor" % _fw,
+          "wp_below_floor" in [x["code"] for x in _r["reasons"]],
+          repr([x["code"] for x in _r["reasons"]]))
+
+# The exemption must not leak into a site with a REAL WP-CLI reading.
+_r = S.evaluate(dict(_base, framework="not-wordpress", wp_version="6.2.2",
+                     wp_checked=True))
+check("a measured WordPress version below the floor is CRIT whatever the "
+      "framework says",
+      "wp_below_floor" in [x["code"] for x in _r["reasons"]],
+      repr([x["code"] for x in _r["reasons"]]))
+
+# No control-plane claim means no disagreement to report.
+_r = S.evaluate({"framework": "not-wordpress", "php_version": "8.2",
+                 "wp_checked": False, "production": True})
+check("a non-WordPress site with no control-plane claim reports no "
+      "disagreement",
+      "framework_not_wordpress" not in [x["code"] for x in _r["reasons"]],
+      repr([x["code"] for x in _r["reasons"]]))
+
+check("the new code is mapped to an axis, since axis_of raises otherwise",
+      S.axis_of("framework_not_wordpress") == "health")
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

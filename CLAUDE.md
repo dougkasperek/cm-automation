@@ -22,12 +22,13 @@ a second scoring model or a second site list.
 
 **The scoreboard is the HEALTH-COVERAGE count on the dashboard** — sites that
 have been looked at but have **no health evidence**: no backup age, no plugin
-or theme count. It is **32, re-measured 2026-08-24**, and it is the number printed
+or theme count. It is **11, re-measured 2026-08-25** after the Nexcess SSH scan first ran (it was 32), and it is the number printed
 under the fleet-health card. That number falling is what progress looks like.
 
-It breaks down as **Nexcess 21, Azure 4, Pressable 3, Flywheel 2, WP Engine 1,
-Pantheon 1** (`hoosierfeeder.com`). So the Nexcess SSH deep scan is worth 21 of
-the 32, and **nothing else in the plan is worth more than four.**
+It breaks down as **Azure 4, Pressable 3, Flywheel 2, WP Engine 1, Pantheon 1**
+(`hoosierfeeder.com`). The Nexcess 21 are gone: the SSH deep scan ran on
+2026-08-25 and measured 21 of 22. **Nothing remaining is worth more than four**,
+and there is no single build that clears the rest.
 
 **The 11 belongs to the SSH scan, NOT to API discovery, and this file said
 otherwise until 2026-08-24.** It read "the Nexcess discovery workflow is built
@@ -240,6 +241,8 @@ do not add a total.
 | `the token was rejected` on Nexcess, then five days of `Nexcess is blocking us with a Cloudflare bot challenge` | **the challenge was OURS.** `_ssl_context()` built a context by hand to fix macOS certificate verification. `http.client` sets `post_handshake_auth = True` on the context it builds for you; a hand-built one does not, and that flag changes the TLS 1.3 ClientHello. Cloudflare fingerprints the hello, and one with no post-handshake-auth extension matches no browser, so it was challenged. Same machine, same second: `context=None` -> 401 from the application, hand-built context -> 403 challenge, hand-built plus the flag -> 401. ALPN was tested and is not the factor. A support ticket, two vendor replies and a documented "ruled out: not a TLS fingerprint problem" all rested on it |
 | the email card's "no column in the fleet table below" | four: SPF, DKIM, DMARC sending, DMARC from. The card denied the existence of columns rendered 200 lines below it, on the live page, until someone counted them |
 | `<code>unknown</code>` as a sending domain on six rows | the ledger's absence sentinel is the STRING `"unknown"`, not `None`, so a falsiness test let it through into a cell as though it were a hostname |
+| a 22-site Nexcess health run is the latest `health` run, so it is the fleet | it wiped the 52 Pantheon sites off the page. `health` now has TWO transports over disjoint cohorts, and the model took one latest run per SOURCE. Components fell 310 -> 128, and CRIT, SKIP and FROZEN vanished. Caught by looking at the render, one step before publishing. Now grouped per `(source, kind)`, merged across cohorts, and diffed within one |
+| `app.eastauroracc.com` is WordPress 6.2.2, per the Nexcess control plane | it is not WordPress at all. No `wp-config.php` anywhere, a `composer.json` requiring only `mailchimp/marketing`, and `wp core version` answering "This does not seem to be a WordPress installation". It scored CRIT `wp_below_floor` on the control plane's claim, putting a site that cannot have wp2shell onto the wp2shell remediation list. A positively non-WordPress `framework` now exempts it, and the disagreement is reported as `framework_not_wordpress` rather than becoming silent |
 | the Nexcess API's `domain` field is the site's domain | it is the **nxcli temp domain** for 18 of 22 sites, because the production domain was never set as primary in Nexcess. Joining the inventory on it resolved 18 sites to `0f614220a1.nxcli.net` and friends. Caught before ingest by the "every ingested row resolves to the inventory" guard, which is the only reason it is a paragraph here and not a corrupted append-only ledger. The real domain sits in `nickname`, which is free text: `2studs`, `Elma Historical Society`. The join is now `nexcess_site_id`, a stable integer, recorded in the inventory |
 | `312 distinct components` | 310. `Divi-Child` and `Divi-child` are one theme on 41 sites, `PDFEmbedder-premium` and `pdfembedder-premium` one plugin on 12. WP-CLI reports the DIRECTORY name and the casing differs per site, so the catalogue keyed on the raw slug split both. The count was the small half: Wordfence publishes LOWERCASE slugs, so a case-sensitive CVE match on `pdfembedder-premium` would have hit 2 sites and missed 11, in the exact plugin family the catalogue was built for. Found because Matt said "there's no way it's right" and it got measured |
 | `13 sites run PDFEmbedder-premium` | 12. `hoffmanscheese` carries it twice, `3.2` inactive beside `5.1.4` active. The catalogue counted ROWS as sites. Inactive still means files on disk |

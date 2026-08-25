@@ -22,6 +22,8 @@
 # preventing that is the list below. Every command is enumerated here, in one
 # place, and nothing builds a command string from data returned by a site.
 #
+#   test -d ~/public_html -- reachability probe, so "cannot log in" and "runs
+#                            nothing" are never the same row
 #   cd ~/public_html      -- a symlink Nexcess maintains to the WordPress root
 #   wp core version
 #   wp core check-update --format=json
@@ -33,7 +35,14 @@
 # rule, not the same review as a scan tweak.
 #
 # REVIEWED AND APPROVED 2026-08-25 by Victoria Brake, before the first
-# fleet-wide run. That is the whole point of the review: a second person
+# fleet-wide run.
+#
+# CORRECTION, same day, after the first run: the list Victoria approved was
+# INCOMPLETE. `test -d ~/public_html` was running as the reachability probe and
+# was not written down. It is a read and changes nothing, but an approved list
+# that does not match what the script runs is not an approval of anything. It
+# is listed above now, and this note stays as the record that the list drifted
+# from the code within hours of being signed off. That is the whole point of the review: a second person
 # confirmed these five are read-only and that nothing else in this file runs
 # anything on a site.
 #
@@ -146,6 +155,18 @@ run_wp() {
       "cd ~/public_html && wp $wp_args" < /dev/null 2>/dev/null
 }
 
+# Same command, stderr KEPT. See the framework note below for why.
+#
+# The `2>&1` is INSIDE the quoted remote command, and it has to be.
+# `run_with_timeout` redirects its child's stderr to /dev/null unconditionally,
+# so stderr must become stdout on the REMOTE side before the helper ever sees
+# it. Redirecting on this side does nothing, which cost two wrong fixes.
+run_wp_stderr() {
+  local user_host="$1" wp_args="$2"
+  run_with_timeout "$WP_TIMEOUT" ssh "${SSH_OPTS[@]}" "$user_host" \
+      "cd ~/public_html && wp $wp_args 2>&1" < /dev/null
+}
+
 echo "[" > "$JSON_OUT.tmp"
 first=1; scanned=0; unreachable=0; nowp=0
 
@@ -174,7 +195,26 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
       '{site:$s, site_id:$s, host_site_name:null, wp_checked:false,
         components_checked:false, scan_error:"ssh failed or ~/public_html missing"}')"
   else
-    wp_version="$(run_wp "$target" "core version" | strip_noise | head -n1 | tr -d '[:space:]')" || wp_version=""
+    # STDERR IS KEPT for this one call, deliberately. `wp core version` on a
+    # non-WordPress site prints "This does not seem to be a WordPress
+    # installation", and that sentence is the only evidence we get that the
+    # directory holds something else. Discarding it would leave the site
+    # looking like WordPress we failed to measure.
+    #
+    # NO NEW COMMAND. Reading the error output of a command already on the
+    # approved list is not an addition to the list. Testing for wp-config.php
+    # would have been, and would have needed re-review.
+    # `|| true`, NOT `|| core_raw=""`. `wp core version` EXITS NON-ZERO on a
+    # non-WordPress directory, so the second form threw away the one sentence
+    # that identifies the site. Caught on app.eastauroracc.com, which came back
+    # framework=None when it should have been not-wordpress.
+    core_raw="$(run_wp_stderr "$target" "core version" || true)"
+    wp_version="$(printf '%s' "$core_raw" | strip_noise | grep -vi "^Error:" | grep -vi "^Pass --path" | head -n1 | tr -d '[:space:]')" || wp_version=""
+    framework=""
+    case "$core_raw" in
+      *"not seem to be a WordPress installation"*) framework="not-wordpress" ;;
+      *) [ -n "$wp_version" ] && framework="wordpress" ;;
+    esac
     core_json="$(run_wp "$target" "core check-update --format=json" | json_or_empty)" || core_json=""
     pj="$(run_wp "$target" "plugin list --fields=name,status,update,version,update_version --format=json" | json_or_empty)" || pj=""
     mj="$(run_wp "$target" "plugin list --status=must-use --fields=name,status,version --format=json" | json_or_empty)" || mj=""
@@ -210,6 +250,7 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
       --arg wv  "$wp_version" \
       --argjson checked "$( [ -n "$wp_version" ] && echo true || echo false )" \
       --argjson comp    "$have_components" \
+      --arg fw  "$framework" \
       --argjson core "$( [ -n "$core_json" ] && echo "$core_json" || echo null )" \
       --argjson plugins "$( [ -n "$pj" ] && echo "$pj" || echo null )" \
       --argjson muplugins "$( [ -n "$mj" ] && echo "$mj" || echo null )" \
@@ -217,6 +258,7 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
       '{site:$s, site_id:$s, host_site_name:null,
         wp_checked:$checked,
         wp_version:(if $wv == "" then null else $wv end),
+        framework:(if $fw == "" then null else $fw end),
         wp_core_update:(if $core == null then null
                         elif ($core|length) == 0 then "up-to-date"
                         else "available" end),

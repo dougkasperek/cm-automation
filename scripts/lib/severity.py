@@ -195,6 +195,7 @@ AXIS_OF_CODE = {
     # The scan asked and WP-CLI would not answer. Different remedy.
     "wp_update_status_unknown":    "health",
     "wp_version_disagreement":     "health",
+    "framework_not_wordpress":     "health",
     "nexcess_app_version_unknown": "health",
     # Fires on the consent sweep, ANSWERS a health question. See above.
     "coverage_partial":            "health",
@@ -356,8 +357,29 @@ def evaluate(site, today=None):
     # for all 21 Nexcess sites, and being wrong in this direction produces a
     # site to go and check. Being wrong in the other direction produces a green
     # row over an unauthenticated RCE.
+    # ...UNLESS a scan positively established the site is not WordPress at all.
+    #
+    # app.eastauroracc.com, 2026-08-25: the Nexcess control plane reports
+    # `app: wordpress, app_version: 6.2.2`, and the site is a custom PHP
+    # application. No wp-config.php anywhere, a composer.json requiring only
+    # mailchimp/marketing. `wp core version` answers "This does not seem to be
+    # a WordPress installation".
+    #
+    # Without this, the site scored CRIT wp_below_floor on a control-plane
+    # claim about WordPress it does not run. That is not a cautious error, it
+    # is a wrong one: it puts a site on the wp2shell remediation list that
+    # cannot have the vulnerability, and the list is only useful while every
+    # row on it is real.
+    #
+    # `framework` FAILS SAFE, as everywhere else here: only a positively
+    # non-WordPress value exempts. None and "unknown" still score.
+    fw_raw = site.get("framework")
+    positively_not_wp = (fw_raw not in (None, UNKNOWN)
+                         and not str(fw_raw).startswith("wordpress"))
+
     nx_wp = _version(site.get("nexcess_app_version"))
-    if wp is None and nx_wp is not None and nx_wp < WP_SECURITY_FLOOR:
+    if (wp is None and nx_wp is not None and nx_wp < WP_SECURITY_FLOOR
+            and not positively_not_wp):
         add(crit, "wp_below_floor",
             "WordPress %s is below the %s security floor (wp2shell), per the "
             "Nexcess control plane" % (site.get("nexcess_app_version"),
@@ -482,6 +504,17 @@ def evaluate(site, today=None):
         add(warn, "wp_version_disagreement",
             "WP-CLI reports WordPress %s, the Nexcess control plane reports %s"
             % (site.get("wp_version"), site.get("nexcess_app_version")))
+
+    # The stronger disagreement: the control plane says WordPress, a scan of
+    # the filesystem says it is not. Exempting the CRIT above must NOT make
+    # this silent -- a site the hosting plan calls WordPress and that is not
+    # WordPress is a thing somebody should know about, and it is why the
+    # inventory and the control plane can drift apart unnoticed.
+    if positively_not_wp and site.get("nexcess_app_version") not in (None, UNKNOWN):
+        add(warn, "framework_not_wordpress",
+            "The Nexcess control plane calls this WordPress %s. A scan of the "
+            "site found no WordPress installation (framework: %s)"
+            % (site.get("nexcess_app_version"), fw_raw))
 
     # --- cookie-consent rules -----------------------------------------------
     # WARN, not CRIT. Doug's ruling, 2026-08-19: CRIT stays a security tier --

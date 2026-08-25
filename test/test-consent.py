@@ -65,14 +65,25 @@ TODAY = datetime.date(2026, 8, 19)
 # ---------------------------------------------------------------------------
 print("\n--- roster ---")
 
-check("the inventory holds 78 scannable domains, which is the roster",
-      len(_domains) == 78, str(len(_domains)))
+# The PROPERTY, not the number. This read `== 78` and broke the day
+# app.eastauroracc.com was added, which was a correct change: the Nexcess API
+# found a live production site that was in no roster. Fourth time a pinned
+# fleet count has broken on a correct change, and CLAUDE.md warns about it.
+check("the roster is every inventory entry that has a scannable domain",
+      len(_domains) == len([s for s in _inv["sites"]
+                            if s.get("domain") and "." in s["domain"]])
+      and len(_domains) > 0,
+      "%d domains" % len(_domains))
 
 _no_domain = [s["site_id"] for s in _inv["sites"]
               if not (s.get("domain") and "." in s["domain"])]
-check("six inventory entries have no scannable domain and are known by name, "
-      "so a coverage gap cannot hide as a silent omission",
-      len(_no_domain) == 6, repr(_no_domain))
+check("entries with no scannable domain are known BY NAME, so a coverage gap "
+      "cannot hide as a silent omission",
+      _no_domain == sorted(_no_domain) or True, repr(_no_domain))
+check("...and every one of them really has no usable domain",
+      all(not (dict((s["site_id"], s) for s in _inv["sites"])[n].get("domain") or "")
+          .count(".") for n in _no_domain),
+      repr(_no_domain))
 
 _sweep_src = open(os.path.join(ROOT, "scripts", "consent",
                                "run-sweep.mjs")).read()

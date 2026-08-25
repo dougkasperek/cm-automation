@@ -118,15 +118,38 @@ def build_model(history_dir, inventory_path, today):
         raise SystemExit("ledger is empty; run `fleet-ledger.py ingest` first")
     _, _, inv = L.load_inventory(inventory_path)
 
-    # Latest run per source, and the diff against the previous run of that source.
-    by_source = {}
+    # Latest run per (source, COHORT), and the diff against the previous run of
+    # the same cohort.
+    #
+    # THE COHORT IS LOAD-BEARING AS OF 2026-08-25. `health` now has two
+    # transports over disjoint site sets: Pantheon terminus (52 sites) and
+    # Nexcess SSH (22). They can never appear in one run, so "the latest run of
+    # the health source" can never represent the fleet.
+    #
+    # Taking one latest run per SOURCE did exactly what that implies: the
+    # 22-site Nexcess run became "the latest health run" and the 52 Pantheon
+    # sites lost every fact they had. The rendered page went from 310 distinct
+    # components to 128, and CRIT, SKIP and FROZEN vanished entirely. Caught by
+    # looking at the render, one step before it was published.
+    #
+    # Diffing within a cohort is also the correct comparison. A Nexcess run is
+    # not the Pantheon run having lost 26 sites, and the coverage-drop guard
+    # would otherwise report it as one every time.
+    by_cohort = {}
     for r in runs:
-        by_source.setdefault(r.get("source", "health"), []).append(r)
+        key = (r.get("source", "health"), r.get("kind") or r.get("source", "health"))
+        by_cohort.setdefault(key, []).append(r)
 
-    latest, changes, standing = {}, [], []
-    for source, rs in by_source.items():
+    latest_by_cohort, changes, standing = {}, [], []
+    latest = {}
+    for (source, kind), rs in by_cohort.items():
         prev, curr = L.previous_run_of_same_source(rs, obs=obs)
-        latest[source] = curr
+        latest_by_cohort[(source, kind)] = curr
+        # `latest[source]` stays the most recent run of the source overall, for
+        # the freshness line and the provenance block. Facts come from
+        # latest_by_cohort below, never from this.
+        if source not in latest or curr["run_id"] > latest[source]["run_id"]:
+            latest[source] = curr
         rows = L.rows_for(obs, curr["run_id"])
         standing.extend(L.standing(rows, today))
         if prev is not None:
@@ -155,7 +178,7 @@ def build_model(history_dir, inventory_path, today):
 
     # One row per site, merged across every source that has seen it.
     merged = {}
-    for source, run in latest.items():
+    for (source, _kind), run in sorted(latest_by_cohort.items()):
         for site_id, row in L.rows_for(obs, run["run_id"]).items():
             m = merged.setdefault(site_id, {"site_id": site_id, "sources": []})
             m["sources"].append(source)
@@ -206,11 +229,25 @@ def build_model(history_dir, inventory_path, today):
 
     coverage = []
     if "health" in latest:
-        hr = list(L.rows_for(obs, latest["health"]["run_id"]).values())
-        coverage.append(("Pantheon platform facts (plan, PHP, backups, upstream)",
-                         frac(hr, "php_version")))
-        coverage.append(("WordPress core, plugins, themes (needs SSH)",
-                         frac(hr, "plugin_updates")))
+        # PER COHORT. One line per transport, because they cover disjoint site
+        # sets and a combined fraction would hide which half is missing.
+        # Pantheon reports platform facts that Nexcess has no equivalent for,
+        # so the two lines are not the same question either.
+        for (src, kind), run in sorted(latest_by_cohort.items()):
+            if src != "health":
+                continue
+            hr = list(L.rows_for(obs, run["run_id"]).values())
+            if kind == "health-nexcess":
+                coverage.append(
+                    ("WordPress core, plugins, themes on Nexcess (SSH)",
+                     frac(hr, "plugin_updates")))
+            else:
+                coverage.append(
+                    ("Pantheon platform facts (plan, PHP, backups, upstream)",
+                     frac(hr, "php_version")))
+                coverage.append(
+                    ("WordPress core, plugins, themes on Pantheon (SSH)",
+                     frac(hr, "plugin_updates")))
     if "email-dns" in latest:
         er = list(L.rows_for(obs, latest["email-dns"]["run_id"]).values())
         coverage.append(("SPF", frac(er, "spf_present")))
@@ -240,7 +277,10 @@ def build_model(history_dir, inventory_path, today):
     # same reason: the denominator is the INVENTORY (which sites this scan is
     # expected to reach), never the component rows themselves. Counting rows
     # would make an empty ledger read as full coverage of nothing.
-    comp_rows = (L.load_components(history_dir, latest["health"]["run_id"])
+    _health_runs = [r["run_id"] for (src, _k), r in latest_by_cohort.items()
+                    if src == "health"]
+    comp_rows = (sum((L.load_components(history_dir, rid) or []
+                      for rid in sorted(_health_runs)), [])
                  if "health" in latest else [])
     pantheon_sites = [s for s in sites if s.get("host") == "CM Pantheon"]
     inventoried = set(r["site_id"] for r in comp_rows)
@@ -278,9 +318,10 @@ def build_model(history_dir, inventory_path, today):
         "consent_method_changed": bool(
             "consent" in latest
             and (latest["consent"].get("method")
-                 != next((r.get("method") for r in reversed(by_source.get("consent", [])[:-1])),
+                 != next((r.get("method") for r in
+                          reversed(by_cohort.get(("consent", "consent"), [])[:-1])),
                          None))
-            and len(by_source.get("consent", [])) > 1),
+            and len(by_cohort.get(("consent", "consent"), [])) > 1),
         "generated": today.isoformat(),
     }
 
