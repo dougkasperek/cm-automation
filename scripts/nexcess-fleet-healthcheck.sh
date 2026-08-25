@@ -31,6 +31,16 @@
 #
 # All five are reads. If you add one, it needs the same review as a firewall
 # rule, not the same review as a scan tweak.
+#
+# REVIEWED AND APPROVED 2026-08-25 by Victoria Brake, before the first
+# fleet-wide run. That is the whole point of the review: a second person
+# confirmed these five are read-only and that nothing else in this file runs
+# anything on a site.
+#
+# **A change to this list invalidates that approval.** Adding a sixth command
+# is not a scan tweak, and nothing in the system will stop you: there is no
+# permission error to hit, because the credential can already write. Get it
+# re-reviewed and record the new approval here.
 # ---------------------------------------------------------------------------
 #
 # VERIFIED ON A REAL SITE 2026-08-25 (eamusicfest.com):

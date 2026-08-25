@@ -72,10 +72,16 @@ product decision, not an implementation detail.
 Nexcess confirmed 2026-08-24 that no read-only or command-restricted SSH user
 exists on Managed WordPress; every SSH identity has read *and write* on the
 site filesystem, and Nexcess said restricting one to `wp core version` and
-`wp plugin list` is not possible. So when the Nexcess SSH scan is built, the
-list of commands it runs is the only thing standing between a read-only tool
-and a write-capable one — review it as a security control, not as a scan
-definition.
+`wp plugin list` is not possible. So the list of commands the Nexcess SSH scan
+runs is the only thing standing between a read-only tool and a write-capable
+one — review it as a security control, not as a scan definition.
+
+**That list was reviewed and approved by Victoria Brake on 2026-08-25**, in
+`scripts/nexcess-fleet-healthcheck.sh`, before the first fleet-wide run. Five
+commands, all reads. **Changing it invalidates the approval**, and nothing in
+the system will stop the change: there is no permission error to hit, because
+the credential can already write. Re-review and record the new approval in the
+script header.
 
 **Claude edits files with asserted replacements, never a raw computed slice.**
 On 2026-08-20 a patch built its needle as `s[s.index(START):s.index(END)]`
