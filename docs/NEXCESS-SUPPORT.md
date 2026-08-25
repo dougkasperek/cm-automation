@@ -201,6 +201,24 @@ answer that for the whole estate in a single read-only pass.
 | the token is bad | **ruled out** — the challenge is served before the token is read |
 | a single misbehaving edge node | **ruled out** 2026-08-22 — two Cloudflare PoPs (`-EWR`, `-ORD`) challenge identically |
 | the challenge has since cleared | **no** — re-verified live 2026-08-22, still `cf-mitigated: challenge` |
+| `api.liquidweb.com/v2` is an alternative host | **reachable, but the wrong API.** Suggested by Victoria 2026-08-25 and worth the test. It answers a scripted request with plain `401 Unauthorized`, `Server: nginx`, `WWW-Authenticate: LW-Basic`, **no Cloudflare and no challenge**, and it distinguishes `Authorization required` (no credential) from `Authorization denied` (a bad one), which is the diagnostic the Nexcess portal never allowed. But its documentation at `api.liquidweb.com/docs`, 422k characters, mentions **nexcess zero times** and **managed wordpress zero times**. Its groups are Account, Authentication, Metal, Network, Server, Utilities: Liquid Web infrastructure, not Nexcess Managed WordPress |
+
+**The Liquid Web result is documentation evidence, not a response, and that is
+the weaker kind.** One authenticated `GET /v2/Server/List` would settle it
+properly. Nobody has run it: the credential is separate from the Nexcess portal
+token and may not exist.
+
+**Its real value is that it sharpens the question**, because their own sister
+infrastructure serves scripted requests normally while `portal.nexcess.net/api`
+challenges them. That is an inconsistency on their side rather than a request to
+weaken a policy, which is easier for a support agent to escalate. For the next
+reply, if one is needed:
+
+> We notice `api.liquidweb.com/v2` responds normally to scripted requests, with
+> `WWW-Authenticate: LW-Basic` and no bot challenge, while
+> `portal.nexcess.net/api` returns a Cloudflare challenge before our token is
+> read. Is there an equivalent programmatic host for Nexcess Managed WordPress,
+> or should Nexcess sites be reachable through the Liquid Web API?
 
 The pattern that remains: **Cloudflare challenges any client that has not
 solved its JavaScript challenge and therefore holds no `cf_clearance` cookie.**
