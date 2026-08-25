@@ -252,6 +252,7 @@ do not add a total.
 | `312 distinct components` | 310. `Divi-Child` and `Divi-child` are one theme on 41 sites, `PDFEmbedder-premium` and `pdfembedder-premium` one plugin on 12. WP-CLI reports the DIRECTORY name and the casing differs per site, so the catalogue keyed on the raw slug split both. The count was the small half: Wordfence publishes LOWERCASE slugs, so a case-sensitive CVE match on `pdfembedder-premium` would have hit 2 sites and missed 11, in the exact plugin family the catalogue was built for. Found because Matt said "there's no way it's right" and it got measured |
 | `13 sites run PDFEmbedder-premium` | 12. `hoffmanscheese` carries it twice, `3.2` inactive beside `5.1.4` active. The catalogue counted ROWS as sites. Inactive still means files on disk |
 | the wrangler OAuth token has no R2 scope, so publishing will probably fail | it publishes fine. `whoami` lists 29 scopes and no R2, yet `r2 object put` and `get --remote` both succeed. The inverse of the row below: there a missing scope read as "nothing is there", here it read as "you cannot do this". A scope listing predicts neither. Run the command |
+| the expectations file says who can reach what | it says who can reach what **among the people already written in it**. `[removed]` had access to `[removed]` and was invisible to the check, because nobody had listed her. It answered "does this person reach only what they should" and never "who else has a key", which is the more dangerous question. It now enumerates every email named in every allow policy and reports any the file omits — and reports separately that an `email_domain` or `everyone` rule makes enumeration **impossible**, so an empty list is never mistaken for nobody |
 | `_comment` cannot reach the four applications it is expected to | `_comment` is not a person. The expectations file used a `_`-prefixed key for commentary, and the loader evaluated every key as an email, so a JSON comment was scored against five Access policies and then had its own prose joined into an "EXPECTED ACCESS MISSING" line. Found on the first real run, by looking at the output |
 | `count: 0` for the `clevermethod.net` zone | the zone exists and is active. The token is scoped to one account and the zone is in another. Same endpoint, same shape: not permitted to see it reads exactly like it is not there |
 | `components: []` on a site | every WP-CLI call had failed. Its database is not installed, so each DB-backed call exits 1, and a `${pj:-[]}` default turned four failures into "we inventoried it and it runs nothing". Caught by running the mock, 2026-08-23 |
@@ -460,7 +461,7 @@ reads the ledger and is what gets published. Do not delete either.
 ```bash
 python3 test/test-nexcess-ssh.py      # 30   offline, no key
 python3 test/test-worker-exposure.py  # 40   offline, no network
-python3 test/test-access-policies.py  # 38   offline, no token
+python3 test/test-access-policies.py  # 46   offline, no token
 python3 test/test-ledger.py       # 149
 python3 test/test-severity.py     # 116
 python3 test/test-email-dns.py    #  58   (needs dnspython)
