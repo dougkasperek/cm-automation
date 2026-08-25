@@ -31,20 +31,20 @@
 #   wp plugin list --status=must-use --fields=... --format=json
 #   wp theme list --fields=... --format=json
 #
-# All five are reads. If you add one, it needs the same review as a firewall
+# All six are reads. If you add one, it needs the same review as a firewall
 # rule, not the same review as a scan tweak.
 #
 # REVIEWED AND APPROVED 2026-08-25 by Doug Kasperek, before the first
-# fleet-wide run.
+# fleet-wide run. The approval says a person read these commands, confirmed
+# every one is a read, and confirmed nothing else in this file runs anything
+# on a site.
 #
-# CORRECTION, same day, after the first run: the list approved above was
-# INCOMPLETE. `test -d ~/public_html` was running as the reachability probe and
-# was not written down. It is a read and changes nothing, but an approved list
-# that does not match what the script runs is not an approval of anything. It
-# is listed above now, and this note stays as the record that the list drifted
-# from the code within hours of being signed off. That is the whole point of the review: a second person
-# confirmed these five are read-only and that nothing else in this file runs
-# anything on a site.
+# CORRECTION, same day, after the first run: the list approved was INCOMPLETE.
+# `test -d ~/public_html` was running as the reachability probe and was not
+# written down. It is a read and changes nothing, but an approved list that
+# does not match what the script runs is not an approval of anything. It is
+# listed above now, and this note stays as the record that the list drifted
+# from the code within hours of being signed off.
 #
 # **A change to this list invalidates that approval.** Adding a sixth command
 # is not a scan tweak, and nothing in the system will stop you: there is no
