@@ -546,6 +546,22 @@ def discover(base, token, inventory_path, with_detail=True, sleep=0.2,
         if s.get("host") and "nexcess" in str(s["host"]).lower())
     inv_all = set(s["domain"].lower() for s in inv["sites"] if s.get("domain"))
 
+    # THE JOIN IS THE SITE ID, NOT THE DOMAIN. Nexcess reports the nxcli TEMP
+    # domain as `domain` for 18 of our 22 sites, because the production domain
+    # was never set as primary there. Reconciling on domain therefore reported
+    # all 18 as "in the API but in no inventory row" AND all 18 as "in the
+    # inventory but absent from the API" -- 36 findings, every one false.
+    #
+    # A reconciliation that cries wolf 36 times is worse than none: it is the
+    # step CLAUDE.md puts FIRST when adding a workflow, and a real disagreement
+    # would be invisible in that noise. The ledger was fixed to join on
+    # `nexcess_site_id` on 2026-08-25; this block was not, and reported 18 and
+    # 18 on the very next run.
+    inv_by_nx_id = {}
+    for s in inv["sites"]:
+        if s.get("nexcess_site_id") is not None:
+            inv_by_nx_id[str(s["nexcess_site_id"])] = s
+
     listings = list_sites(base, token)
     raw = {"list": listings, "detail": {}}
 
@@ -571,6 +587,20 @@ def discover(base, token, inventory_path, with_detail=True, sleep=0.2,
 
     api_domains = set(r["domain"] for r in records if r["domain"])
 
+    # Resolve every API record to an inventory row: by site id first, by domain
+    # second. `matched_domains` is what the domain-keyed checks below compare
+    # against, so a site matched by id no longer looks missing.
+    matched_domains, unmatched_api = set(), []
+    for r in records:
+        row = inv_by_nx_id.get(str(r.get("nexcess_site_id")))
+        if row is None and r.get("domain") in inv_all:
+            row = next((s for s in inv["sites"]
+                        if (s.get("domain") or "").lower() == r["domain"]), None)
+        if row is None:
+            unmatched_api.append(r.get("domain") or str(r.get("nexcess_site_id")))
+        else:
+            matched_domains.add((row.get("domain") or "").lower())
+
     # Reconciliation. CLAUDE.md's first rule for adding a workflow: reconcile
     # the tool's own roster against the inventory BEFORE anything else, because
     # every tool that arrived with its own site list has disagreed with the
@@ -587,15 +617,14 @@ def discover(base, token, inventory_path, with_detail=True, sleep=0.2,
         # In the inventory as Nexcess, absent from the API. Either the site
         # moved host, or the token cannot see it. Both are findings.
         "in_inventory_not_in_api": sorted(
-            d for d in inv_nexcess if d not in api_domains),
+            d for d in inv_nexcess if d not in matched_domains),
         # Returned by the API and in no inventory row at all. On Pantheon this
         # exact check surfaced the two worst-maintained sites in the fleet.
-        "in_api_not_in_inventory": sorted(
-            d for d in api_domains if d not in inv_all),
+        "in_api_not_in_inventory": sorted(set(unmatched_api)),
         # Returned by the API, in the inventory, but the inventory does not say
         # Nexcess. A host disagreement, not a missing site.
         "in_api_host_mismatch": sorted(
-            d for d in api_domains
+            d for d in matched_domains
             if d in inv_all and d not in inv_nexcess),
     }
     if raw_out:

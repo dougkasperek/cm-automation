@@ -658,5 +658,62 @@ check("...and still verifies certificates, which is why the context exists",
 check("...and still checks the hostname",
       _ctx.check_hostname is True)
 
+# ---------------------------------------------------------------------------
+# Reconciliation joins on the site id, 2026-08-25.
+#
+# Nexcess reports the nxcli TEMP domain as `domain` for 18 of our 22 sites.
+# Reconciling on domain reported all 18 as "in the API, in no inventory row"
+# AND all 18 as "in the inventory, absent from the API": 36 findings, every one
+# false. The ledger was fixed to join on nexcess_site_id; this block was not,
+# and cried wolf on the very next run.
+# ---------------------------------------------------------------------------
+_INV_ID = {"sites": [
+    {"site_id": "real.com", "domain": "real.com", "host": "CM Nexcess",
+     "nexcess_site_id": 4242},
+    {"site_id": "plain.com", "domain": "plain.com", "host": "CM Nexcess"},
+    {"site_id": "pan.com", "domain": "pan.com", "host": "CM Pantheon",
+     "nexcess_site_id": 7777},
+]}
+import tempfile as _tf4, json as _js4, os as _os4
+_f4 = _tf4.NamedTemporaryFile("w", suffix=".json", delete=False)
+_js4.dump(_INV_ID, _f4); _f4.close()
+
+try:
+    # The API reports a TEMP domain for the site whose id we hold.
+    _api = [dict(LISTING_FULL, id=4242, domain="abc123.nxcli.net"),
+            dict(LISTING_FULL, id=None, domain="plain.com")]
+    N._request = _fake([_api])
+    sc = N.discover("https://example.invalid", "tok", _f4.name,
+                    with_detail=False, sleep=0)
+    check("a site whose API domain is a temp domain reconciles by site id",
+          sc["in_inventory_not_in_api"] == ["plain.com"] or
+          "real.com" not in sc["in_inventory_not_in_api"],
+          repr(sc["in_inventory_not_in_api"]))
+    check("...and is not reported as a site nobody wrote down",
+          "abc123.nxcli.net" not in sc["in_api_not_in_inventory"],
+          repr(sc["in_api_not_in_inventory"]))
+    check("a site whose API domain IS the real domain still reconciles",
+          "plain.com" not in sc["in_api_not_in_inventory"],
+          repr(sc["in_api_not_in_inventory"]))
+
+    # A site id the inventory does not know is still a real finding.
+    N._request = _fake([[dict(LISTING_FULL, id=9999, domain="zz.nxcli.net")]])
+    sc = N.discover("https://example.invalid", "tok", _f4.name,
+                    with_detail=False, sleep=0)
+    check("a site the inventory has never heard of is STILL reported",
+          sc["in_api_not_in_inventory"] == ["zz.nxcli.net"],
+          repr(sc["in_api_not_in_inventory"]))
+
+    # Matching by id must not hide a host disagreement.
+    N._request = _fake([[dict(LISTING_FULL, id=7777, domain="tmp.nxcli.net")]])
+    sc = N.discover("https://example.invalid", "tok", _f4.name,
+                    with_detail=False, sleep=0)
+    check("a site matched by id whose inventory row says another host is "
+          "reported as a host mismatch, not as missing",
+          sc["in_api_host_mismatch"] == ["pan.com"],
+          repr(sc["in_api_host_mismatch"]))
+finally:
+    _os4.unlink(_f4.name)
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)
