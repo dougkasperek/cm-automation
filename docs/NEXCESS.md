@@ -10,7 +10,15 @@ being the dashboard's largest evidence gap.
 even using the right host" question for good. The exact endpoint the portal
 calls returns HTTP 403 `cf-mitigated: challenge` to a script.
 
-**Status, 2026-08-24: this workflow (Phase 1) is still BLOCKED on Nexcess.**
+> **UNBLOCKED 2026-08-25, and the blocker was ours.** `probe` returns
+> `ok 200 site list returned` against a real token. The Cloudflare challenge
+> was caused by `_ssl_context()` building a TLS context by hand without
+> `post_handshake_auth`, which `http.client` sets for you and which changes the
+> TLS 1.3 ClientHello. Everything below about the challenge is kept as the
+> record of a five-day wrong diagnosis, not as current state. See CLAUDE.md's
+> bug table.
+
+**Status, 2026-08-24 (SUPERSEDED): this workflow (Phase 1) was BLOCKED.**
 The API is at `https://portal.nexcess.net/api`. That host answers a browser
 with JSON and answers this client with a Cloudflare challenge, so the token is
 never read. User-Agent, TLS stack and IP have all been ruled out — see the

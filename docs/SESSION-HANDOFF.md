@@ -158,6 +158,25 @@ The rule the script exists for: **a policy can admit someone without naming
 them.** `email_domain`, `everyone` and `ip` rules all do. Reading a list of
 email rules and concluding "she is not on it" is the mistake this replaces.
 
+**NEXCESS PHASE 1 IS UNBLOCKED, 2026-08-25, and the blocker was ours.**
+`probe` returns `ok 200 site list returned` against a real token. Five days of
+"Nexcess is blocking us with a Cloudflare challenge" came from one line:
+`_ssl_context()` built a TLS context by hand and omitted `post_handshake_auth`,
+which `http.client` sets for you and which changes the TLS 1.3 ClientHello.
+Isolated by bisecting the context; ALPN was tested and is not the factor.
+
+**What this changes:**
+
+- The 21 `unix_username` values come from the API, not from copying SSH
+  Command lines out of the portal by hand. That was the last prerequisite for
+  the SSH deep scan other than the keypair.
+- `docs/NEXCESS-SUPPORT.md` carries a correction to send. **Do not send the
+  request/response headers Suraksha asked for** -- we would be handing a vendor
+  a capture of our own bug, on top of a ticket that already told them a TLS
+  fingerprint was "ruled out". It was not.
+- Everything in `docs/NEXCESS.md` about the challenge is now the record of a
+  wrong diagnosis, not current state, and is marked as such.
+
 **Backlogged, not started: measure the sending domain.** From Victoria's
 question in the demo. `post-smtp` is on 39 sites and holds its host in
 WordPress options, so the existing deep scan can turn a workbook ruling into a

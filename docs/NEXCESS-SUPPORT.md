@@ -6,6 +6,14 @@ code here. Send them together — they are the same conversation.
 Account: clevermethod, Inc. Nexcess account ID 82607. 21 Managed WordPress
 sites.
 
+> **RESOLVED 2026-08-25, ON OUR SIDE. Do not send the headers Suraksha asked
+> for.** The challenge was caused by our own TLS context omitting
+> `post_handshake_auth`. `probe` now returns a site list. What is owed to
+> Nexcess is a correction, not a packet capture: this file told them two
+> independent TLS stacks were challenged identically and that a TLS
+> fingerprint was ruled out, and both statements were wrong. The draft reply
+> is at the end of this file. Everything below is kept as the record.
+>
 > **STATUS: SENT 2026-08-22. ANSWERED 2026-08-24.** Both questions went in as
 > one ticket and Nexcess replied on 2026-08-24. **Question 2 is settled — see
 > "The reply" immediately below.** Question 1 is not: the reply asks us to do
@@ -423,3 +431,31 @@ which `GET /v1/site/{id}` never had. The API's remaining unique value is site
 *enumeration*: which sites the account actually contains, and the per-site Unix
 username that the SSH scan needs as its join key. Both can come from the portal
 UI by hand for 21 sites. Slow and manual, not blocking.
+
+
+---
+
+## The correction to send, 2026-08-25
+
+Short, and it concedes the whole thing. They confirmed the base URL, which is
+what let us isolate it, so the thanks is real rather than a softener.
+
+> Hi Suraksha,
+>
+> We found it, and it was on our side. No need for the headers.
+>
+> Our client was constructing its TLS context by hand and omitting the
+> post-handshake-auth flag, which Python's HTTP library normally sets for you.
+> That changes the TLS handshake enough that it no longer resembles a browser,
+> which is what triggered the challenge. Adding the flag fixed it immediately
+> and we now reach the API normally with our token.
+>
+> Confirming the base URL is what let us narrow it down, so thank you for
+> that. Apologies for the runaround, and we appreciate the help on both this
+> and the SSH questions.
+
+**Why send it at all**, given the ticket can simply be closed: we told them a
+TLS fingerprint was ruled out and that two stacks behaved identically. Both
+were wrong. Leaving a vendor with a false bug report about their own edge
+configuration is worse than saying so, and we need them again for the SSH
+work.
