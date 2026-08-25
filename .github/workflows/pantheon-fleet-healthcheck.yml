@@ -115,7 +115,21 @@ jobs:
     # Platform-level ceiling. The script has its own per-call timeouts; this is
     # the second safety net, so a pathological run cannot burn an entire hour
     # of minutes the way the pfannenbergpartners hang burned a local terminal.
-    timeout-minutes: 45
+    #
+    # RAISED 45 -> 75 on 2026-08-25, from a measurement rather than a guess. A
+    # full run reached site 50 of 52 and was cancelled 25 seconds later, having
+    # taken 44 minutes to scan 50 sites: about 53 seconds each, five terminus
+    # calls per site and every one of them an SSH round trip. 52 sites is
+    # therefore ~46 minutes of scanning plus ~4 of setup, and 45 was under the
+    # floor rather than a generous ceiling.
+    #
+    # 75 is not 50. The margin is for the sites that hit WP_CLI_TIMEOUT: those
+    # cost their full timeout each and a handful of them is the difference
+    # between finishing and being killed two sites short.
+    #
+    # This is a ceiling, not a target. If a run ever approaches it, the answer
+    # is to find out which site got slow, not to raise this again.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
 
