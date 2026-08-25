@@ -24,7 +24,7 @@ on:
         # NO DEFAULT ON PURPOSE. As of 2026-08-19 no candidate has returned a
         # site list; sites-portal.nexcess.com/api answers 200 with a web page.
         # Defaulting to it would put an unverified guess into every run.
-        description: "Portal API base URL. Blank falls back to the NEXCESS_PORTAL_API_URL secret. Run probe_only first."
+        description: "Portal API base URL. Blank falls back to the NEXCESS_PORTAL_API_URL repository VARIABLE. Run probe_only first."
         type: string
         default: ""
       probe_only:
@@ -115,7 +115,12 @@ jobs:
         if: ${{ !inputs.probe_only }}
         env:
           NEXCESS_PORTAL_API_TOKEN: ${{ secrets.NEXCESS_PORTAL_API_TOKEN }}
-          NEXCESS_PORTAL_API_URL: ${{ inputs.api_base != '' && inputs.api_base || secrets.NEXCESS_PORTAL_API_URL }}
+          # A VARIABLE, NOT A SECRET. Its value is
+          # https://portal.nexcess.net/api, which appears in four docs, the bug
+          # table and a support ticket. Storing a published fact behind a
+          # padlock teaches the next person that they cannot look it up, and
+          # this repo already lost a week to a base URL nobody could confirm.
+          NEXCESS_PORTAL_API_URL: ${{ inputs.api_base != '' && inputs.api_base || vars.NEXCESS_PORTAL_API_URL }}
         run: |
           python3 scripts/fleet-nexcess.py discover \
             --inventory data/fleet-inventory.json \
