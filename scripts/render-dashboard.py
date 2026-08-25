@@ -283,11 +283,19 @@ def build_model(history_dir, inventory_path, today):
                       for rid in sorted(_health_runs)), [])
                  if "health" in latest else [])
     pantheon_sites = [s for s in sites if s.get("host") == "CM Pantheon"]
+    # EVERY host a component-inventorying transport reaches, not just Pantheon.
+    # The components page was built when Pantheon was the only one. After the
+    # Nexcess SSH scan landed it held 2,344 installs while still claiming to
+    # cover "47 of 53" -- the Pantheon denominator -- and offered no Nexcess
+    # site in its picker. A page that holds data it says it does not have is
+    # the same failure as one that lacks data it claims to have.
+    COMPONENT_HOSTS = ("CM Pantheon", "CM Nexcess")
+    component_sites = [s for s in sites if s.get("host") in COMPONENT_HOSTS]
     inventoried = set(r["site_id"] for r in comp_rows)
-    if pantheon_sites:
+    if component_sites:
         coverage.append(("Component inventory (plugins, mu-plugins, themes)",
-                         (len(inventoried & set(s["site_id"] for s in pantheon_sites)),
-                          len(pantheon_sites))))
+                         (len(inventoried & set(s["site_id"] for s in component_sites)),
+                          len(component_sites))))
 
     nexcess_sites = [s for s in sites if s.get("host") == "CM Nexcess"]
     if nexcess_sites:
@@ -303,7 +311,7 @@ def build_model(history_dir, inventory_path, today):
         "runs": runs, "latest": latest, "changes": changes, "standing": standing,
         "sites": sites, "coverage": coverage, "inventory_count": len(inv),
         "components": build_components(comp_rows, sites, inventoried,
-                                       pantheon_sites),
+                                       component_sites),
         "unreconciled": unreconciled, "health": health,
         "coverage_changes": coverage_changes,
         # The latest run of a source measured fewer sites than the run before
@@ -314,6 +322,7 @@ def build_model(history_dir, inventory_path, today):
         "coverage_regressions": L.coverage_regressions(runs),
         # Which instrument produced the consent numbers on this page, and
         # whether it just changed. Both drive a notice; see render().
+        "latest_by_cohort": latest_by_cohort,
         "consent_method": (latest.get("consent") or {}).get("method"),
         "consent_method_changed": bool(
             "consent" in latest
@@ -787,17 +796,36 @@ def coverage_section(A, m, e):
     # has never once run. A source that is simply absent from this block reads
     # as "not covered" when the truth is "not built yet", and the coverage line
     # for Nexcess exists precisely so nobody makes that mistake.
+    # ONE ENTRY PER COHORT, not per source. `health` has two transports over
+    # disjoint site sets, and this block showed a single `health` row carrying
+    # the NEWER of the two timestamps against the description of the OTHER one:
+    # "Aug 25 ... Pantheon platform + WP-CLI" while the Pantheon scan was two
+    # days old. A freshness line that reports the wrong instrument is worse
+    # than none, because a stale page nobody can tell is stale is this project
+    # oldest failure.
     A('<div class=card style="margin-bottom:10px"><div class=kpis>')
+    _cohorts = m.get("latest_by_cohort") or {}
+    _seen = set()
     for src in sorted(L.FACT_FAMILIES):
-        meta = m["latest"].get(src)
-        if meta:
-            stamp, tone = when(meta.get("observed_at")), ""
-        else:
-            stamp, tone = "never run", ' class=quiet'
-        A('<div class=kpi><div class=lab>%s</div>'
-          '<div class=val style="font-size:15px"><span%s>%s</span></div>'
-          '<div class=note>%s</div></div>'
-          % (e(src), tone, e(stamp), e(SOURCE_ANSWERS.get(src, ""))))
+        runs = sorted((k, v) for k, v in _cohorts.items() if k[0] == src)
+        if not runs:
+            A('<div class=kpi><div class=lab>%s</div>'
+              '<div class=val style="font-size:15px"><span class=quiet>never run'
+              '</span></div><div class=note>%s</div></div>'
+              % (e(src), e(SOURCE_ANSWERS.get(src, ""))))
+            continue
+        for (_src, kind), meta in runs:
+            label = src if len(runs) == 1 else "%s (%s)" % (
+                src, "nexcess" if "nexcess" in kind else "pantheon")
+            note = SOURCE_ANSWERS.get(src, "")
+            if len(runs) > 1:
+                note = ("Nexcess SSH + WP-CLI, per site"
+                        if "nexcess" in kind
+                        else "Pantheon platform + WP-CLI, per site")
+            A('<div class=kpi><div class=lab>%s</div>'
+              '<div class=val style="font-size:15px"><span>%s</span></div>'
+              '<div class=note>%s</div></div>'
+              % (e(label), e(when(meta.get("observed_at"))), e(note)))
     A("</div></div>")
 
     # A coverage number that went DOWN. Directly above the coverage box,

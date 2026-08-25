@@ -268,19 +268,23 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
                        else ([$themes[]|select(.update=="available")]|length) end),
         components_checked:$comp,
         components:(if $comp then
-                      ([$plugins[]|{name:.name,slug:.name,type:"plugin",
-                                    status:.status,version:.version,
-                                    update_available:(.update=="available"),
-                                    update_version:(.update_version//null)}]
-                       + (if $muplugins == null then [] else
-                          [$muplugins[]|{name:.name,slug:.name,type:"mu-plugin",
-                                         status:.status,version:.version,
-                                         update_available:false,
-                                         update_version:null}] end)
-                       + [$themes[]|{name:.name,slug:.name,type:"theme",
-                                     status:.status,version:.version,
-                                     update_available:(.update=="available"),
-                                     update_version:(.update_version//null)}])
+                      # Pass the WP-CLI fields through, adding only `type`.
+                      # Same shape the Pantheon scanner emits, and it has to
+                      # be: ingest reads `update == "available"`, the raw
+                      # WP-CLI value. An earlier version here renamed it to
+                      # `update_available` and dropped `update`, so ingest saw
+                      # no key, read False for every component, and the
+                      # components page showed ZERO updates pending on 21 sites
+                      # while the fleet table said 187. Caught before
+                      # publishing, by comparing the two numbers.
+                      # NOTE: no apostrophes in this comment. It sits inside a
+                      # single-quoted jq program, and one apostrophe ends the
+                      # shell string. That cost a run.
+                      ([$plugins[] | .type="plugin"]
+                       + (if $muplugins == null then []
+                          else [$muplugins[] | .type="mu-plugin" | .update="none"]
+                          end)
+                       + [$themes[] | .type="theme"])
                     else null end)}')"
     scanned=$((scanned+1))
   fi
