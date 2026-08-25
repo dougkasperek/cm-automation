@@ -1519,6 +1519,64 @@ _rows = _re.findall(r"<tr data-site=.*?</tr>", _html, _re.S)
 check("every fleet row has one cell per column header",
       _rows and all(r.count("<td") == _hdrs for r in _rows))
 
+# ---------------------------------------------------------------------------
+# The Nexcess join key, 2026-08-25.
+#
+# Nexcess's own `domain` field holds the nxcli TEMP domain for 18 of our 22
+# sites, because the production domain was never set as primary there. Joining
+# on domain resolved those 18 to `0f614220a1.nxcli.net` and friends. The ledger
+# is append-only, so those rows could never have been corrected.
+# ---------------------------------------------------------------------------
+_inv_j = {"sites": [
+    {"site_id": "real.com", "domain": "real.com", "host": "CM Nexcess",
+     "nexcess_site_id": 4242},
+    {"site_id": "plain.com", "domain": "plain.com", "host": "CM Nexcess"},
+]}
+_, _bd_j, _recs_j = L.load_inventory_from_obj(_inv_j) \
+    if hasattr(L, "load_inventory_from_obj") else (None, None, None)
+if _bd_j is None:
+    import tempfile as _tf, json as _js, os as _os
+    _fh = _tf.NamedTemporaryFile("w", suffix=".json", delete=False)
+    _js.dump(_inv_j, _fh); _fh.close()
+    _, _bd_j, _recs_j = L.load_inventory(_fh.name)
+    _os.unlink(_fh.name)
+
+def _nx(sites):
+    return L._nexcess_rows({"kind": "nexcess-estate", "sites": sites}, _bd_j)
+
+# The site whose API domain is a temp domain still lands on the right row.
+_r = _nx([{"domain": "abc123.nxcli.net", "nexcess_site_id": 4242,
+           "unix_username": "u1"}])
+check("a site whose API domain is the nxcli temp domain resolves by site id",
+      len(_r) == 1 and _r[0]["site_id"] == "real.com",
+      repr([x["site_id"] for x in _r]))
+
+# Domain still works where the API reports the real one, and for rows nobody
+# has mapped yet.
+_r = _nx([{"domain": "plain.com", "unix_username": "u2"}])
+check("a site whose API domain IS the real domain still resolves by domain",
+      len(_r) == 1 and _r[0]["site_id"] == "plain.com",
+      repr([x["site_id"] for x in _r]))
+
+# The rule that matters: refuse, do not invent.
+_r = _nx([{"domain": "zz999.nxcli.net", "nexcess_site_id": 9999,
+           "unix_username": "u3"}])
+check("an unresolvable Nexcess site is SKIPPED, never keyed on its temp domain",
+      _r == [], repr(_r))
+
+_r = _nx([{"domain": "abc123.nxcli.net", "nexcess_site_id": 4242, "unix_username": "u1"},
+          {"domain": "zz999.nxcli.net", "nexcess_site_id": 9999, "unix_username": "u3"}])
+check("...and one unresolvable site does not stop the resolvable ones",
+      [x["site_id"] for x in _r] == ["real.com"],
+      repr([x["site_id"] for x in _r]))
+
+# The id wins over the domain, so a site that has been re-pointed cannot be
+# silently attached to whatever row happens to share its current domain.
+_r = _nx([{"domain": "plain.com", "nexcess_site_id": 4242, "unix_username": "u4"}])
+check("the site id wins over the domain when the two disagree",
+      len(_r) == 1 and _r[0]["site_id"] == "real.com",
+      repr([x["site_id"] for x in _r]))
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))

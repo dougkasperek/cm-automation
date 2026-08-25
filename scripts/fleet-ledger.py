@@ -248,6 +248,15 @@ def load_inventory(path):
             by_host[s["host_site_name"]] = s["site_id"]
         if s.get("domain"):
             by_domain[s["domain"].lower()] = s["site_id"]
+        # THE NEXCESS JOIN KEY, added 2026-08-25. Nexcess's own `domain` field
+        # holds the nxcli TEMP domain for 18 of our 22 sites, because the
+        # production domain was never set as primary there. Joining on domain
+        # therefore resolved 18 sites to `0f614220a1.nxcli.net` and friends,
+        # which would have written 18 mis-keyed rows into an append-only
+        # ledger. `nexcess_site_id` is a stable integer the API returns and a
+        # person records here, so it is the join.
+        if s.get("nexcess_site_id") is not None:
+            by_domain["nexcess-id:%s" % s["nexcess_site_id"]] = s["site_id"]
     return by_host, by_domain, recs
 
 
@@ -381,8 +390,24 @@ def _nexcess_rows(payload, by_domain):
         d = (s.get("domain") or "").lower()
         if not d:
             continue
+        # By id first. Falling back to the domain is correct for the four
+        # sites whose primary domain IS the real one, and for anything added
+        # to Nexcess that nobody has mapped yet.
+        sid = None
+        if s.get("nexcess_site_id") is not None:
+            sid = by_domain.get("nexcess-id:%s" % s["nexcess_site_id"])
+        if sid is None:
+            sid = by_domain.get(d)
+        if sid is None:
+            # UNRESOLVED. Do NOT invent a site_id from the temp domain. The
+            # ledger is append-only, so a mis-keyed row cannot be corrected
+            # later, and a row keyed `0f614220a1.nxcli.net` is a site that
+            # does not exist. Skipping is the safe failure: the reconciliation
+            # block in the scan already NAMES every unresolved site, so this
+            # is invisible only to the ledger, not to a reader.
+            continue
         out.append({
-            "site_id": by_domain.get(d, d), "host_site_name": None,
+            "site_id": sid, "host_site_name": None,
             "source": "nexcess",
             "nexcess_site_id": s.get("nexcess_site_id", UNKNOWN) or UNKNOWN,
             "nexcess_unix_username": s.get("unix_username") or UNKNOWN,
