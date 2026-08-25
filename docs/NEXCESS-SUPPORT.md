@@ -218,12 +218,54 @@ incomplete.** The same docs write `$PORTAL_API_URL` in every example and define
 it nowhere. Treating their docs as authoritative about what an API does not
 cover is exactly the inference this repo keeps getting wrong.
 
-**The check that settles it costs two minutes and no credential.** Open the
-portal, DevTools, Network tab, and read which host its own XHR calls go to.
-That is how `https://portal.nexcess.net/api` was established on 2026-08-19 in
-the first place. If the portal has been rebranded or migrated since, the base
-URL may have moved with it, and the host it calls today is the authoritative
-answer to a question this file has been guessing at for a week.
+### DONE 2026-08-25. The base URL was right all along.
+
+Doug read the portal's Network tab. It calls:
+
+```
+https://portal.nexcess.net/api/v1/package/addon/site?filter[label]=design-services
+```
+
+So **`$PORTAL_API_URL` is `https://portal.nexcess.net/api`**, confirmed from
+the portal's own traffic a second time and now dated. The `filter[label]=`
+syntax matches the documented `filter[id]` / `filter[name]` style, so this is
+the same API the `nexcess-api-docs` repository describes.
+
+**That closes question 2. There is no other host, and we no longer need
+Nexcess to tell us.**
+
+**And it makes the reproduction airtight.** The exact endpoint the portal
+itself calls, requested by a script with a deliberately invalid token,
+2026-08-25:
+
+| request | result |
+|---|---|
+| `GET /api/v1/package/addon/site?filter[label]=design-services` | HTTP 403, `cf-mitigated: challenge`, `server: cloudflare`, `cf-ray` `-ORD` |
+| `GET /api/v1/site` | HTTP 403, same, `cf-ray` `-EWR` |
+
+A browser loads the first of those routinely. A script cannot. Same host, same
+path, same query, same account.
+
+**So the ticket collapses from three questions to one:** exempt token-authenticated
+requests to `/api/v1/*` from the bot challenge. We are no longer asking where
+the API lives or what we might be doing wrong. We are reporting that their own
+portal's endpoint is unreachable to any client that has not executed the
+challenge JavaScript.
+
+**When they reply to the follow-up, this is the paragraph to send:**
+
+> Thanks. We have confirmed the base URL ourselves in the meantime: the portal
+> calls `https://portal.nexcess.net/api/v1/...` directly, so we were using the
+> right host.
+>
+> That leaves one question. The exact endpoint your own portal calls,
+> `GET /api/v1/package/addon/site?filter[label]=design-services`, returns HTTP
+> 403 with `cf-mitigated: challenge` when requested by a script, while it loads
+> normally in the browser. We reproduce it with a deliberately invalid token,
+> so the challenge is being applied before any credential is evaluated.
+>
+> Can token-authenticated requests to `/api/v1/*` be exempted from the bot
+> challenge for account 82607?
 
 **Its real value is that it sharpens the question**, because their own sister
 infrastructure serves scripted requests normally while `portal.nexcess.net/api`

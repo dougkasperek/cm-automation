@@ -4,6 +4,12 @@ Phase 1 of `docs/NEXCESS-ARCHITECTURE.md`. Read-only. It asks the Nexcess
 control plane what it knows about each site, so that the 21 Nexcess sites stop
 being the dashboard's largest evidence gap.
 
+**Base URL CONFIRMED 2026-08-25** from the portal's own Network tab:
+`https://portal.nexcess.net/api`, observed calling
+`/v1/package/addon/site?filter[label]=design-services`. That closes the "are we
+even using the right host" question for good. The exact endpoint the portal
+calls returns HTTP 403 `cf-mitigated: challenge` to a script.
+
 **Status, 2026-08-24: this workflow (Phase 1) is still BLOCKED on Nexcess.**
 The API is at `https://portal.nexcess.net/api`. That host answers a browser
 with JSON and answers this client with a Cloudflare challenge, so the token is
