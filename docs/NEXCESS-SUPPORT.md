@@ -204,9 +204,26 @@ answer that for the whole estate in a single read-only pass.
 | `api.liquidweb.com/v2` is an alternative host | **reachable, but the wrong API.** Suggested by Victoria 2026-08-25 and worth the test. It answers a scripted request with plain `401 Unauthorized`, `Server: nginx`, `WWW-Authenticate: LW-Basic`, **no Cloudflare and no challenge**, and it distinguishes `Authorization required` (no credential) from `Authorization denied` (a bad one), which is the diagnostic the Nexcess portal never allowed. But its documentation at `api.liquidweb.com/docs`, 422k characters, mentions **nexcess zero times** and **managed wordpress zero times**. Its groups are Account, Authentication, Metal, Network, Server, Utilities: Liquid Web infrastructure, not Nexcess Managed WordPress |
 
 **The Liquid Web result is documentation evidence, not a response, and that is
-the weaker kind.** One authenticated `GET /v2/Server/List` would settle it
-properly. Nobody has run it: the credential is separate from the Nexcess portal
-token and may not exist.
+the weaker kind. Doug's correction on 2026-08-25 makes it weaker still.**
+
+There is **no separate Nexcess portal**. Our sites are administered through the
+**Liquid Web "by Nexcess"** portal, one unified UI, account 82607. So the clean
+split this file assumed, Liquid Web infrastructure over here and Nexcess
+Managed WordPress over there, is not how the account is actually organised.
+
+A unified UI can still sit on two backends, so "the docs do not mention
+nexcess" is not disproved. But the evidence is now thin in a specific way:
+**it is documentation from a vendor whose documentation we have already proved
+incomplete.** The same docs write `$PORTAL_API_URL` in every example and define
+it nowhere. Treating their docs as authoritative about what an API does not
+cover is exactly the inference this repo keeps getting wrong.
+
+**The check that settles it costs two minutes and no credential.** Open the
+portal, DevTools, Network tab, and read which host its own XHR calls go to.
+That is how `https://portal.nexcess.net/api` was established on 2026-08-19 in
+the first place. If the portal has been rebranded or migrated since, the base
+URL may have moved with it, and the host it calls today is the authoritative
+answer to a question this file has been guessing at for a week.
 
 **Its real value is that it sharpens the question**, because their own sister
 infrastructure serves scripted requests normally while `portal.nexcess.net/api`
