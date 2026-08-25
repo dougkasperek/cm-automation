@@ -761,5 +761,32 @@ check("a non-WordPress site with no control-plane claim reports no "
 check("the new code is mapped to an axis, since axis_of raises otherwise",
       S.axis_of("framework_not_wordpress") == "health")
 
+# ---------------------------------------------------------------------------
+# The backup-age denominator is stated, 2026-08-25.
+#
+# "2 have no recent database backup" over an unstated denominator invites the
+# reading that the other 83 are fine. Backup age comes from a Pantheon API
+# call; Nexcess exposes no equivalent, so for 22 sites it is UNMEASURABLE, not
+# merely unmeasured. Those sites moved out of an honest UNKNOWN into WARN the
+# day the SSH scan landed, so they look well-measured while backup status is
+# invisible.
+# ---------------------------------------------------------------------------
+import io as _io3
+import re as _re3
+_re_bk = _re3.compile(r'<b>(\d+) of (\d+)</b> whose backup age')
+with _io3.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                            "fleet.html"), encoding="utf-8") as _fh3:
+    _pg = _fh3.read()
+
+if "database backup" in _pg:
+    check("the backup finding states how many sites the age can be read for",
+          "whose backup age can be read at all" in _pg,
+          "denominator missing from the health card")
+    check("...and that denominator is smaller than the fleet, or it would not "
+          "be worth printing",
+          _re_bk.search(_pg) is not None and
+          int(_re_bk.search(_pg).group(1)) < int(_re_bk.search(_pg).group(2)),
+          _re_bk.search(_pg).group(0) if _re_bk.search(_pg) else "no match")
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

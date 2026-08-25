@@ -1079,6 +1079,18 @@ def render(m):
         for r in ((x.get("severity") or {}).get("axes", {})
                   .get("health", {}).get("reasons", [])):
             hcodes[r["code"]] = hcodes.get(r["code"], 0) + 1
+    # THE DENOMINATOR FOR BACKUP AGE IS NOT THE FLEET, and saying "2 have no
+    # recent database backup" without saying so invites the reading that the
+    # other 83 are fine. Backup age comes from `terminus backup:list`, a
+    # Pantheon API call. Nexcess exposes no equivalent, so for all 22 Nexcess
+    # sites it is not merely unmeasured, it is UNMEASURABLE by this tool.
+    #
+    # This got worse the day the Nexcess SSH scan landed: those sites moved out
+    # of an honest UNKNOWN into WARN with real WordPress and plugin data, so
+    # they now look well-measured while their backup status is invisible.
+    _bk_known = len([x for x in m["sites"]
+                     if x.get("db_backup_age_days") not in (None, L.UNKNOWN)])
+    _bk_total = len(m["sites"])
     hbits = []
     for codes, label in (
             (("backup_missing", "backup_stale", "backup_aging"),
@@ -1088,7 +1100,12 @@ def render(m):
             (("php_eol",), "run PHP past end of security support")):
         c = sum(hcodes.get(x, 0) for x in codes)
         if c:
-            hbits.append('<span class=wfrow><b>%d</b> %s</span>' % (c, e(label)))
+            suffix = ""
+            if "database backup" in label and _bk_known < _bk_total:
+                suffix = (', of the <b>%d of %d</b> whose backup age can be '
+                          'read at all' % (_bk_known, _bk_total))
+            hbits.append('<span class=wfrow><b>%d</b> %s%s</span>'
+                         % (c, e(label), suffix))
     card("Fleet health",
          "Is this site being maintained: backups, PHP, WordPress, plugins.",
          ax.get("health") or h["counts"], _bar(k, n, _bar_label),
