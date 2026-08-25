@@ -147,6 +147,23 @@ ok("schedule:" not in _wf,
    "the job is dispatch-only: it carries a credential that can write to "
    "client sites")
 
+# The scan produced an artifact and nothing else until 2026-08-25. A workflow
+# that scans and does not persist is a 90-day artifact and then nothing, and
+# the ledger is the one asset here that cannot be regenerated.
+ok("persist-ledger" in _wf and "persist-ledger.sh" in _wf,
+   "the CI job can persist its run into the ledger")
+ok("group: fleet-ledger-write" in _wf,
+   "...under the same lock as every other workflow, so none can race")
+ok("_publish-dashboard.yml" in _wf,
+   "...and publishes, so the ledger cannot move while the page does not")
+
+# Persisting DEFAULTS OFF. This writes to the `health` source that every
+# severity rule reads, into an append-only ledger where a mis-keyed row cannot
+# be corrected in place.
+_pl = _wf.split("persist_ledger:")[1].split("publish_dashboard:")[0]
+ok("default: false" in _pl,
+   "persisting is opt-in, so early runs are read as artifacts first")
+
 # reports/ is gitignored, so it is ABSENT on a fresh clone and on every CI
 # runner. CLAUDE.md says so in the data-model section. The scanner wrote into
 # it anyway and the first real CI run died on

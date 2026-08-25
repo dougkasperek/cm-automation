@@ -41,6 +41,14 @@ on:
         description: "Resolve targets and print them, connect to nothing."
         type: boolean
         default: false
+      persist_ledger:
+        description: "Ingest this run into history/ and push it back to main"
+        type: boolean
+        default: false
+      publish_dashboard:
+        description: "After ingesting, re-render and publish to fleet.thudstaff.com"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -54,6 +62,8 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    outputs:
+      stamp: ${{ steps.stamp.outputs.value }}
     steps:
       - uses: actions/checkout@v4
 
@@ -94,12 +104,16 @@ jobs:
       # The scan is aimed by the control-plane run in the ledger, which is
       # committed. It does not read reports/, which is gitignored and absent
       # on a runner.
+      - name: Stamp
+        id: stamp
+        run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
+
       - name: Scan
         run: |
           ./scripts/nexcess-fleet-healthcheck.sh \
             --key ~/.ssh/nexcess_ci \
             --known-hosts data/nexcess-known-hosts \
-            --stamp "$(date -u +%Y-%m-%d_%H%M)" \
+            --stamp "${{ steps.stamp.outputs.value }}" \
             ${{ inputs.dry_run && '--dry-run' || '' }} \
             ${{ inputs.sites != '' && format('--sites {0}', inputs.sites) || '' }}
 
@@ -134,10 +148,71 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nexcess-health
+          name: nexcess-health-${{ steps.stamp.outputs.value }}
           path: reports/fleet-health-nexcess-*.json
           retention-days: 90
 
       - name: Remove the key
         if: always()
         run: rm -f ~/.ssh/nexcess_ci
+
+  # -------------------------------------------------------------------------
+  # Persist into the ledger. Same script and the same `fleet-ledger-write`
+  # concurrency group as the other workflows, so none of them can race.
+  #
+  # Defaults OFF, like the Nexcess control-plane job and unlike email-dns. This
+  # writes to the `health` source, which is the one every severity rule reads,
+  # and the ledger is append-only: a mis-keyed row cannot be corrected in
+  # place. The first runs get looked at as artifacts before any of it becomes
+  # permanent history.
+  # -------------------------------------------------------------------------
+  persist-ledger:
+    name: Ingest into the ledger
+    needs: scan
+    if: >-
+      always()
+      && inputs.persist_ledger
+      && !inputs.dry_run
+      && needs.scan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: fleet-ledger-write
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download this run's reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: nexcess-health-${{ needs.scan.outputs.stamp }}
+          path: /tmp/ci-reports
+
+      - name: Ingest, render and push
+        run: ./scripts/persist-ledger.sh /tmp/ci-reports "Nexcess SSH health check"
+
+  # -------------------------------------------------------------------------
+  # Publish. Without this the ledger moves and fleet.thudstaff.com does not,
+  # which is worse than not publishing: the page looks current.
+  # -------------------------------------------------------------------------
+  publish-dashboard:
+    name: Publish dashboard
+    needs: persist-ledger
+    if: >-
+      always()
+      && inputs.publish_dashboard
+      && needs.persist-ledger.result == 'success'
+    uses: ./.github/workflows/_publish-dashboard.yml
+    secrets: inherit
+    with:
+      label: "Nexcess SSH health check"
