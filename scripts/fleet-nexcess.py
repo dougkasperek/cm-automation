@@ -144,9 +144,36 @@ def _ssl_context():
     """
     try:
         import certifi
-        return ssl.create_default_context(cafile=certifi.where())
+        ctx = ssl.create_default_context(cafile=certifi.where())
     except ImportError:
-        return ssl.create_default_context()
+        ctx = ssl.create_default_context()
+
+    # THIS LINE IS WHY THE "BOT CHALLENGE" HAPPENED. Isolated 2026-08-25.
+    #
+    # `http.client._create_https_context()` sets `post_handshake_auth = True`
+    # on the context it builds for you. A context built by hand does NOT, and
+    # that flag changes the TLS 1.3 ClientHello. Cloudflare fingerprints on the
+    # ClientHello, and a hello with no post-handshake-auth extension does not
+    # look like any browser, so it is challenged.
+    #
+    # Measured, same machine, same second, same headers, same invalid token:
+    #
+    #   context=None (urllib builds its own)   -> 401 {"message":"Unauthorized"}
+    #   create_default_context(), by hand      -> 403 cf-mitigated: challenge
+    #   ...with post_handshake_auth = True     -> 401 {"message":"Unauthorized"}
+    #   ...with ALPN set but no PHA            -> 403, so ALPN is NOT the factor
+    #
+    # So the challenge was OURS. Supplying a context to fix macOS certificate
+    # verification silently dropped a flag urllib would have set, and the tool
+    # then reported the consequence as a vendor blocking us. Five days of
+    # support tickets came from this line.
+    #
+    # Do not "simplify" this away by dropping the context: a python.org build
+    # ships its own trust store and every HTTPS call fails without certifi.
+    # Both things have to be true at once.
+    if ctx.post_handshake_auth is not None:
+        ctx.post_handshake_auth = True
+    return ctx
 
 
 def classify_error(exc):

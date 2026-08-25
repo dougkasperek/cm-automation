@@ -626,5 +626,26 @@ check("the token is read from the environment and never from a file in the repo"
       "NEXCESS_PORTAL_API_TOKEN" in _src
       and "open(" not in _src.split("def _token")[1].split("def ")[0])
 
+# ---------------------------------------------------------------------------
+# post_handshake_auth, 2026-08-25. The line that caused the "bot challenge".
+#
+# http.client._create_https_context() sets this flag on the context it builds.
+# A hand-built context does not, and the flag changes the TLS 1.3 ClientHello.
+# Cloudflare challenged the resulting hello because it matched no browser.
+#
+# Measured, same machine, same second, same headers, same invalid token:
+#   context=None                        -> 401 from the application
+#   create_default_context() by hand    -> 403 cf-mitigated: challenge
+#   ...plus post_handshake_auth = True  -> 401 from the application
+#   ...plus ALPN but no PHA             -> 403, so ALPN is not the factor
+# ---------------------------------------------------------------------------
+_ctx = N._ssl_context()
+check("the SSL context sets post_handshake_auth",
+      _ctx.post_handshake_auth is True)
+check("...and still verifies certificates, which is why the context exists",
+      _ctx.verify_mode == __import__("ssl").CERT_REQUIRED)
+check("...and still checks the hostname",
+      _ctx.check_hostname is True)
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)
