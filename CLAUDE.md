@@ -15,7 +15,8 @@ a second scoring model or a second site list.
 | Email DNS (all hosts) | live, CI, 78 sites, no credentials |
 | Cookie consent, headed | live, 77 of 78 sites. CI headed via xvfb, **proven on a runner 2026-08-22** |
 | **Nexcess estate discovery** | **UNBLOCKED 2026-08-25.** The challenge was OURS, not Nexcess's: a hand-built SSL context omitted `post_handshake_auth`. `probe` now returns `ok 200 site list returned`. See the bug table |
-| **Nexcess SSH deep scan** | **not built. UNGATED 2026-08-24** — one account-level key reaches all 21 sites, existing and future. And there is **no read-only SSH user**: the credential is write-capable, so the workflow's command list is a security control |
+| **Nexcess SSH deep scan** | **BUILT 2026-08-25, proven on one real site.** Writes to the `health` source over SSH. Not yet run fleet-wide. **No read-only SSH user exists, so the command list in the script is a security control** |
+| ~~Nexcess SSH deep scan (old)~~ | ~~not built. UNGATED 2026-08-24~~ — one account-level key reaches all 21 sites, existing and future. And there is **no read-only SSH user**: the credential is write-capable, so the workflow's command list is a security control |
 | **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
 | Asana routing | not built. The missing shared plumbing |
 
@@ -418,6 +419,8 @@ consent sweep ran and nothing about maintenance had changed.
 ./scripts/pantheon-fleet-healthcheck.sh --no-fail-on-crit             # scan (full)
 ./scripts/pantheon-fleet-healthcheck.sh --api-only --no-fail-on-crit  # no SSH
 ./scripts/diagnose-wp-calls.sh cm-whitelabel sgroilawley.com          # item 22: did the WP-CLI calls actually run?
+./scripts/nexcess-fleet-healthcheck.sh --dry-run                      # who would the SSH scan connect to?
+./scripts/nexcess-fleet-healthcheck.sh --sites eamusicfest.com        # one site, real
 ./scripts/fleet-nexcess.py probe                                      # confirm the base URL
 ./scripts/fleet-nexcess.py discover --stamp "$(date -u +%Y-%m-%d_%H%M)"
 node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs npm i

@@ -267,7 +267,14 @@ def _health_rows(payload, by_host):
     out = []
     for r in payload:
         name = r["site"]
-        rec = {"site_id": by_host.get(name, name), "host_site_name": name,
+        # An EXPLICIT site_id wins, which is how a non-Pantheon transport joins.
+        # `by_host` maps Pantheon machine names, and Nexcess sites have no
+        # `host_site_name` at all -- their inventory rows carry None. Relying on
+        # `by_host.get(name, name)` falling through would work by accident and
+        # would mis-key the day a Nexcess site_id collided with a Pantheon
+        # machine name. `_consent_rows` already resolves this way.
+        rec = {"site_id": r.get("site_id") or by_host.get(name, name),
+               "host_site_name": r.get("host_site_name", name),
                "source": "health"}
         for k in OBSERVED:
             rec[k] = fact(r, k)

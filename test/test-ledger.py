@@ -1577,6 +1577,44 @@ check("the site id wins over the domain when the two disagree",
       len(_r) == 1 and _r[0]["site_id"] == "real.com",
       repr([x["site_id"] for x in _r]))
 
+# ---------------------------------------------------------------------------
+# A health row from a non-Pantheon transport, 2026-08-25.
+#
+# The Nexcess SSH scan writes to the `health` source, because the fact-name
+# collision guard refuses a second source claiming wp_version. But health rows
+# were keyed on the Pantheon machine name via by_host, and Nexcess inventory
+# rows carry host_site_name: None.
+# ---------------------------------------------------------------------------
+_inv_h = {"sites": [
+    {"site_id": "nx.com", "domain": "nx.com", "host": "CM Nexcess",
+     "host_site_name": None},
+    {"site_id": "pan.com", "domain": "pan.com", "host": "CM Pantheon",
+     "host_site_name": "pan-machine"},
+]}
+import tempfile as _tf2, json as _js2, os as _os2
+_f2 = _tf2.NamedTemporaryFile("w", suffix=".json", delete=False)
+_js2.dump(_inv_h, _f2); _f2.close()
+_bh2, _bd2, _rc2 = L.load_inventory(_f2.name); _os2.unlink(_f2.name)
+
+_r = L._health_rows([{"site": "pan-machine", "wp_version": "6.9"}], _bh2)
+check("a Pantheon row still keys on its machine name",
+      _r[0]["site_id"] == "pan.com" and _r[0]["host_site_name"] == "pan-machine",
+      repr(_r[0]["site_id"]))
+
+_r = L._health_rows([{"site": "nx.com", "site_id": "nx.com",
+                      "host_site_name": None, "wp_version": "7.1"}], _bh2)
+check("a row carrying an explicit site_id keys on it, with no machine name",
+      _r[0]["site_id"] == "nx.com" and _r[0]["host_site_name"] is None,
+      repr(_r[0]))
+check("...and it lands in the health source, not a new one",
+      _r[0]["source"] == "health", _r[0]["source"])
+
+# The collision the explicit key exists to prevent.
+_r = L._health_rows([{"site": "pan-machine", "site_id": "nx.com",
+                      "wp_version": "7.1"}], _bh2)
+check("an explicit site_id wins over a machine name that would resolve elsewhere",
+      _r[0]["site_id"] == "nx.com", repr(_r[0]["site_id"]))
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))
