@@ -372,8 +372,13 @@ INV_PATH = os.path.join(ROOT, "data", "fleet-inventory.json")
 _inv = json.load(open(INV_PATH))
 _inv_nexcess = sorted(s["domain"].lower() for s in _inv["sites"]
                       if s.get("host") and "nexcess" in str(s["host"]).lower())
-check("the inventory is the site list, and it holds 21 Nexcess sites",
-      len(_inv_nexcess) == 21, str(len(_inv_nexcess)))
+# The PROPERTY, not the number. This read `== 21` and broke the day
+# app.eastauroracc.com was added, which was a correct change: the API found a
+# live production site that was in no roster. CLAUDE.md's rule exists for
+# exactly this, and this assertion was violating it.
+check("the inventory is the site list, and it names some Nexcess sites",
+      len(_inv_nexcess) > 0 and all("." in d for d in _inv_nexcess),
+      "%d sites" % len(_inv_nexcess))
 
 try:
     # The API returns: one inventory Nexcess site, one site nobody wrote down,
@@ -385,10 +390,14 @@ try:
     N._request = _fake([_api])
     scan = N.discover("https://example.invalid", "tok", INV_PATH,
                       with_detail=False, sleep=0)
+    # Derived from the fixture, not written as a literal: the API returned
+    # exactly one of the inventory's Nexcess sites, so every other one must be
+    # reported missing.
     check("a site the inventory calls Nexcess and the API did not return is "
           "reported, not dropped",
-          len(scan["in_inventory_not_in_api"]) == 20,
-          str(len(scan["in_inventory_not_in_api"])))
+          len(scan["in_inventory_not_in_api"]) == len(_inv_nexcess) - 1,
+          "%d, expected %d" % (len(scan["in_inventory_not_in_api"]),
+                               len(_inv_nexcess) - 1))
     check("a site the API returned that is in no inventory row is reported",
           scan["in_api_not_in_inventory"] == ["nobody-wrote-this-down.com"],
           repr(scan["in_api_not_in_inventory"]))
@@ -398,7 +407,9 @@ try:
           repr(scan["in_api_host_mismatch"]))
     check("the scan records how many Nexcess sites the inventory claims, so a "
           "reader can see coverage without re-deriving it",
-          scan["inventory_nexcess_count"] == 21)
+          scan["inventory_nexcess_count"] == len(_inv_nexcess),
+          "%s, inventory has %d" % (scan["inventory_nexcess_count"],
+                                    len(_inv_nexcess)))
 
     # A detail call that fails must not silently produce a site with no facts.
     def _detail_fails(base, path, token, params=None, method="GET"):

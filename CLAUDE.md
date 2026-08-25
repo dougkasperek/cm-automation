@@ -41,8 +41,15 @@ not by reading the rule.
 
 **It used to be the UNKNOWN count, and quoting UNKNOWN today is wrong.**
 UNKNOWN answers "has ANY scan reached this site", and the consent sweep reaches
-all 78 domains, so **UNKNOWN is 0** and the health card no longer renders an
-UNKNOWN row at all. The two were the same figure by coincidence until
+all 78 domains, so UNKNOWN was **0** for a week. **It is 1 as of 2026-08-25**:
+`app.eastauroracc.com`, discovered by the Nexcess API, in no roster before
+that, and reached by no scan yet.
+
+That is the two questions coming apart again, in the useful direction. The
+scoreboard did NOT move, and stayed at 32, because `coverage_partial` fires on
+`(nexcess_seen or consent_seen) and not health_seen` and no source has seen the
+new site at all. A site nothing has looked at is UNKNOWN, not
+partially-covered. Verified by scoring, not by reading the rule. The two were the same figure by coincidence until
 2026-08-19; they are different questions. See the `UNKNOWN: 0` row in the table
 below — this paragraph is what that row was about, and it sat here
 contradicting it for two days.
@@ -338,7 +345,7 @@ costs a renderer change and check the page.
 ## Data model, in one paragraph
 
 Three layers, and conflating them is how the mis-keyed ledger happened.
-`data/fleet-inventory.json` is the **inventory**: 84 sites keyed on domain,
+`data/fleet-inventory.json` is the **inventory**: 85 sites keyed on domain,
 human-owned, edited by hand, holding the join key and the `production` flag.
 `history/*.jsonl` is the **ledger**: append-only observations, one row per tool
 per site per run, nothing typed by a person. The workbook holds *claims*; the

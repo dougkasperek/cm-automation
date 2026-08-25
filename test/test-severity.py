@@ -449,8 +449,12 @@ if R is not None and os.path.exists(os.path.join(ROOT, "history", "observations.
 
     check("feed carries a schema version",
           _data["schema"] == "fleet-dashboard/2", _data.get("schema"))
+    # The PROPERTY, not the number. This read `== 84` and broke the day a
+    # real site was added to the inventory, which is a correct change. What
+    # must hold is that the feed and the page describe the same set.
     check("feed has one entry per site on the page",
-          len(_data["sites"]) == len(_m["sites"]) == 84, str(len(_data["sites"])))
+          len(_data["sites"]) == len(_m["sites"]) and len(_m["sites"]) > 0,
+          "feed %d vs page %d" % (len(_data["sites"]), len(_m["sites"])))
 
     # THE PAGE AND THE FEED MUST AGREE ON EVERY AXIS, not just on health.
     # v1's page and JSON feed were built by two code paths and drifted; the

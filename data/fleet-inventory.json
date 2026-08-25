@@ -1,7 +1,7 @@
 {
   "note": "Authoritative and human-owned. Edit by hand, review in a PR. Nothing regenerates this from a scan.",
   "schema": "fleet-inventory/1",
-  "site_count": 84,
+  "site_count": 85,
   "sites": [
     {
       "attestations": {
@@ -498,6 +498,78 @@
         "plugins_utd": "No",
         "themes_utd": "Yes",
         "wp_version": "7.0.2"
+      }
+    },
+    {
+      "attestations": {
+        "activity_log": {
+          "at": null,
+          "by": null,
+          "source": "not in workbook; discovered 2026-08-25",
+          "value": null
+        },
+        "hide_login": {
+          "at": null,
+          "by": null,
+          "source": "not in workbook; discovered 2026-08-25",
+          "value": null
+        },
+        "keeper_password": {
+          "at": null,
+          "by": null,
+          "source": "not in workbook; discovered 2026-08-25",
+          "value": null
+        },
+        "single_cm_user": {
+          "at": null,
+          "by": null,
+          "source": "not in workbook; discovered 2026-08-25",
+          "value": null
+        },
+        "wp2shell_remedied": {
+          "at": null,
+          "by": null,
+          "source": "not in workbook; discovered 2026-08-25",
+          "value": null
+        },
+        "wp_2fa": {
+          "at": null,
+          "by": null,
+          "source": "not in workbook; discovered 2026-08-25",
+          "value": null
+        },
+        "xmlrpc_disabled": {
+          "at": null,
+          "by": null,
+          "source": "not in workbook; discovered 2026-08-25",
+          "value": null
+        }
+      },
+      "client": null,
+      "decommission_candidate": false,
+      "dns": null,
+      "domain": "app.eastauroracc.com",
+      "email": {
+        "dkim_selector": null,
+        "envelope_from": null,
+        "from_address": null,
+        "provider": null,
+        "sending_domain": null,
+        "smtp_plugin": null
+      },
+      "host": "CM Nexcess",
+      "host_site_name": null,
+      "in_workbook": false,
+      "nexcess_site_id": 9451513,
+      "notes": "Discovered by the Nexcess API 2026-08-25, in no roster before that. Live WordPress 6.2.2 on PHP 8.2, production. Likely custom code supporting eastauroracc.com, which is a separate site on CM Pantheon. Nobody has confirmed what it does.",
+      "owner": null,
+      "production": true,
+      "site_id": "app.eastauroracc.com",
+      "workbook_last_known": {
+        "php_version": null,
+        "plugins_utd": null,
+        "themes_utd": null,
+        "wp_version": null
       }
     },
     {
