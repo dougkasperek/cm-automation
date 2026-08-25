@@ -98,13 +98,40 @@ jobs:
         env:
           NEXCESS_PORTAL_API_TOKEN: ${{ secrets.NEXCESS_PORTAL_API_TOKEN }}
         run: |
+          # THE EXIT CODE IS THE ANSWER, so it is not thrown away. `probe`
+          # returns 0 only when a base URL actually returns a site list; every
+          # other verdict returns non-zero and names one cause.
+          #
+          # This step used to end in `|| true`. On 2026-08-25 the token in
+          # GitHub was rejected, probe printed "unauthorised - token rejected
+          # by the application", the step went GREEN, and the run failed three
+          # steps later as a Python traceback ending in
+          # `ApiError: 401 ... {"message":"Unauthorized"}`. The workflow knew
+          # the answer at step four and reported it at step six in the least
+          # readable form available.
+          #
+          # The output still reaches the job summary either way: it is captured
+          # first and written before the exit code is honoured, so a failure is
+          # never a red X with nothing to read.
+          set +e
+          out="$(python3 scripts/fleet-nexcess.py probe 2>&1)"
+          rc=$?
+          set -e
           {
             echo "## Nexcess API probe"
             echo
             echo '```'
-            python3 scripts/fleet-nexcess.py probe || true
+            printf '%s\n' "$out"
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$rc" -ne 0 ]; then
+            if printf '%s' "$out" | grep -q "unauthorised"; then
+              echo "::error::The API rejected the token. This is a credentials problem, not a URL or network problem: the request reached the application and it said Unauthorized. Re-set the NEXCESS_PORTAL_API_TOKEN secret from the value that works locally, with no trailing newline:  printf '%s' \"\$NEXCESS_PORTAL_API_TOKEN\" | gh secret set NEXCESS_PORTAL_API_TOKEN"
+            else
+              echo "::error::No API base URL returned a site list. See the probe output in the job summary; it names one cause and one fix."
+            fi
+            exit "$rc"
+          fi
 
       - name: Stamp
         if: ${{ !inputs.probe_only }}
