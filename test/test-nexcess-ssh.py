@@ -147,6 +147,24 @@ ok("schedule:" not in _wf,
    "the job is dispatch-only: it carries a credential that can write to "
    "client sites")
 
+# reports/ is gitignored, so it is ABSENT on a fresh clone and on every CI
+# runner. CLAUDE.md says so in the data-model section. The scanner wrote into
+# it anyway and the first real CI run died on
+# "./reports/...json.tmp: No such file or directory" -- after resolving all 22
+# targets correctly, so everything that could have been wrong was right.
+ok("mkdir -p \"$OUT_DIR\"" in _scan,
+   "the scanner creates its output directory before writing into it")
+_pre = _scan.split('echo "[" > "$JSON_OUT.tmp"')[0]
+ok('mkdir -p "$OUT_DIR"' in _pre,
+   "...and creates it BEFORE the first redirect, not at the end")
+
+# A dry run that writes a file is a small lie about what --dry-run means.
+_dry = _scan.split('if [ "$DRY_RUN" -eq 1 ]; then')[1].split("exit 0")[0]
+ok("JSON_OUT" not in _dry,
+   "a dry run names no output file at all")
+ok(_scan.count('if [ "$DRY_RUN" -eq 1 ]; then') == 1,
+   "the dry-run branch exists once, so it cannot fall through to the scan loop")
+
 print()
 print("-" * 67)
 print("%d passed, %d failed" % (passed, failed))

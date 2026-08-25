@@ -185,6 +185,30 @@ run_wp_stderr() {
       "cd ~/public_html && wp $wp_args 2>&1" < /dev/null
 }
 
+# A DRY RUN TOUCHES NOTHING. It resolves targets, prints them and stops, so it
+# is safe to point at anything. Deciding this AFTER opening the output file
+# meant a dry run still wrote, which is a small lie about what --dry-run means.
+if [ "$DRY_RUN" -eq 1 ]; then
+  log "DRY RUN: resolving targets only. No connection, no file written."
+  while IFS=$'\t' read -r site_id ssh_user ssh_host; do
+    [ -n "$site_id" ] || continue
+    if [ -n "$ONLY_SITES" ] && [[ ",$ONLY_SITES," != *",$site_id,"* ]]; then
+      continue
+    fi
+    log "  would scan $site_id via $ssh_user@$ssh_host"
+  done < "$TARGETS"
+  log "Dry run complete. Nothing connected to, nothing written."
+  exit 0
+fi
+
+# `reports/` IS GITIGNORED, so it does not exist on a fresh clone or a CI
+# runner. CLAUDE.md says so in the data-model section and this script wrote
+# into it anyway: the first real CI run died on
+# `./reports/...json.tmp: No such file or directory`, AFTER resolving all 22
+# targets correctly. mkdir was there, at the END, which is no use to a redirect
+# on line 188.
+mkdir -p "$OUT_DIR"
+
 echo "[" > "$JSON_OUT.tmp"
 first=1; scanned=0; unreachable=0; nowp=0
 
@@ -194,11 +218,6 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
     continue
   fi
   target="$ssh_user@$ssh_host"
-
-  if [ "$DRY_RUN" -eq 1 ]; then
-    log "  would scan $site_id via $target"
-    continue
-  fi
 
   log "  $site_id ($target)"
 
@@ -312,14 +331,8 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
   first=0
 done < "$TARGETS"
 
-if [ "$DRY_RUN" -eq 1 ]; then
-  rm -f "$JSON_OUT.tmp"
-  log "Dry run. Nothing connected to, nothing written."
-  exit 0
-fi
-
 echo "" >> "$JSON_OUT.tmp"; echo "]" >> "$JSON_OUT.tmp"
-mkdir -p "$OUT_DIR"; mv "$JSON_OUT.tmp" "$JSON_OUT"
+mv "$JSON_OUT.tmp" "$JSON_OUT"
 jq empty < "$JSON_OUT" || { err "produced invalid JSON"; exit 1; }
 
 log ""
