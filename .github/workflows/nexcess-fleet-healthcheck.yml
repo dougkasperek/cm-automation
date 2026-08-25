@@ -1,0 +1,143 @@
+# WordPress health for the Nexcess estate, over SSH + WP-CLI.
+#
+# ---------------------------------------------------------------------------
+# THIS JOB HOLDS A WRITE-CAPABLE CREDENTIAL. Read the two controls below.
+# ---------------------------------------------------------------------------
+# Nexcess issues no read-only SSH user. Every identity has read AND WRITE on
+# the site filesystem, and they confirmed on 2026-08-24 that restricting one to
+# `wp core version` is not possible. So this runner can change 22 client sites,
+# and only two things stop it:
+#
+#   1. THE COMMAND LIST in scripts/nexcess-fleet-healthcheck.sh. Six commands,
+#      all reads, enumerated in that file and reviewed as a security control.
+#      Changing it invalidates the review.
+#
+#   2. THE PINNED HOST KEYS in data/nexcess-known-hosts. The runner refuses any
+#      host not in that file. Without it, `accept-new` would hand this
+#      credential to whatever answered on first contact, which is a reasonable
+#      trade on a laptop where a person sees the fingerprint and is not one
+#      here.
+#
+# Both were verified rather than assumed. The pinning was tested by REMOVING a
+# host from the file and confirming the scan refuses it -- the first version of
+# that flag set StrictHostKeyChecking twice, ssh took the first value, and the
+# pin enforced nothing while looking correct.
+# ---------------------------------------------------------------------------
+#
+# NO SCHEDULE. Manual dispatch only, and deliberately so: this is the first CI
+# job in the suite that carries a credential able to modify a client site. It
+# stays human-triggered until it has been watched for several cycles, which is
+# the same rule the Pantheon full scan is under.
+name: Nexcess fleet health check
+
+on:
+  workflow_dispatch:
+    inputs:
+      sites:
+        description: "Comma-separated site_ids to limit the run. Blank = all."
+        required: false
+        default: ""
+      dry_run:
+        description: "Resolve targets and print them, connect to nothing."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # One at a time. Two concurrent runs would open 44 SSH sessions against an
+  # account whose concurrency limits Nexcess has never told us.
+  group: nexcess-ssh
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The classifiers and the target resolver run offline first. If the code
+      # that decides "which host, as whom" is broken, no SSH session should be
+      # opened at all.
+      - name: Test the target resolver
+        run: python3 test/test-nexcess-ssh.py
+
+      - name: Refuse to run without pinned host keys
+        run: |
+          test -s data/nexcess-known-hosts \
+            || { echo "::error::data/nexcess-known-hosts is missing or empty. This job will not hand a write-capable SSH key to an unverified host."; exit 1; }
+          echo "pinned hosts: $(grep -v '^#' data/nexcess-known-hosts | awk '{print $1}' | sort -u | wc -l)"
+
+      - name: Install the SSH key
+        env:
+          NEXCESS_SSH_KEY: ${{ secrets.NEXCESS_SSH_KEY }}
+        run: |
+          if [ -z "${NEXCESS_SSH_KEY}" ]; then
+            echo "::error::NEXCESS_SSH_KEY is not set. Add it under Settings -> Secrets and variables -> Actions. It is the PRIVATE half of ~/.ssh/nexcess_ci and is never committed."
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${NEXCESS_SSH_KEY}" > ~/.ssh/nexcess_ci
+          chmod 600 ~/.ssh/nexcess_ci
+          # Confirm the key PARSES before using it. A truncated secret fails
+          # 22 times with an authentication error, which reads like a revoked
+          # key rather than a mangled paste.
+          ssh-keygen -y -f ~/.ssh/nexcess_ci > /dev/null \
+            || { echo "::error::NEXCESS_SSH_KEY did not parse as a private key. Check the secret was pasted whole, including the BEGIN and END lines."; exit 1; }
+          echo "key ok: $(ssh-keygen -lf ~/.ssh/nexcess_ci | awk '{print $1, $4}')"
+
+      # The scan is aimed by the control-plane run in the ledger, which is
+      # committed. It does not read reports/, which is gitignored and absent
+      # on a runner.
+      - name: Scan
+        run: |
+          ./scripts/nexcess-fleet-healthcheck.sh \
+            --key ~/.ssh/nexcess_ci \
+            --known-hosts data/nexcess-known-hosts \
+            --stamp "$(date -u +%Y-%m-%d_%H%M)" \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.sites != '' && format('--sites {0}', inputs.sites) || '' }}
+
+      - name: Summarise
+        if: always()
+        run: |
+          f=$(ls -t reports/fleet-health-nexcess-*.json 2>/dev/null | head -1) || true
+          if [ -z "$f" ]; then echo "No scan file produced."; exit 0; fi
+          python3 - "$f" <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          ok = [r for r in d if r.get("wp_checked")]
+          bad = [r for r in d if not r.get("wp_checked")]
+          print("## Nexcess SSH health\n")
+          print("| | |\n|---|---|")
+          print("| sites | %d |" % len(d))
+          print("| measured | %d |" % len(ok))
+          print("| not measured | %d |" % len(bad))
+          print("| plugin updates pending | %d |"
+                % sum(r.get("plugin_updates") or 0 for r in ok))
+          if bad:
+              print("\n**Not measured, named rather than counted:**\n")
+              for r in bad:
+                  print("- `%s` %s" % (r.get("site_id"),
+                                       r.get("scan_error") or "no WordPress version"))
+          print("\nBackup age is NOT measured and cannot be: Nexcess exposes no "
+                "equivalent of `terminus backup:list`. Those sites stay WARN "
+                "with a named gap rather than reaching OK.")
+          PY
+
+      - name: Upload the scan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexcess-health
+          path: reports/fleet-health-nexcess-*.json
+          retention-days: 90
+
+      - name: Remove the key
+        if: always()
+        run: rm -f ~/.ssh/nexcess_ci

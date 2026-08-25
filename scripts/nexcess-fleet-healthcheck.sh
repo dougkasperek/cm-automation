@@ -137,10 +137,28 @@ log "Nexcess SSH health scan: $TOTAL target(s), key $SSH_KEY"
 # afterwards. It is NOT `no`, which would accept a changed key silently and
 # hand a write-capable credential to whatever answered. Pass --known-hosts with
 # a pre-populated file in CI, where trust-on-first-use is not good enough.
-SSH_OPTS=(-i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT"
-          -o StrictHostKeyChecking=accept-new)
-[ -n "$KNOWN_HOSTS" ] && SSH_OPTS+=(-o UserKnownHostsFile="$KNOWN_HOSTS"
-                                    -o StrictHostKeyChecking=yes)
+# StrictHostKeyChecking APPEARS EXACTLY ONCE. ssh takes the FIRST value it is
+# given for an option, not the last, so appending `=yes` after `=accept-new`
+# left accept-new in force and the pin enforcing nothing. The negative control
+# caught it: removing a host from the pinned file and scanning it anyway
+# succeeded, and accept-new then WROTE the host into the file it had been told
+# to treat as authoritative.
+#
+# A control that is present, looks correct and enforces nothing is worse than
+# no control, because it is the one nobody re-tests.
+if [ -n "$KNOWN_HOSTS" ]; then
+  # Pinned. A host not in this file is refused, and the file is never written
+  # to, so a run cannot quietly widen its own trust.
+  SSH_OPTS=(-i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT"
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$KNOWN_HOSTS")
+else
+  # Trust on first use. Fine on a laptop where a person sees the fingerprint.
+  # NOT fine on a runner: this credential can write to client sites. CI passes
+  # --known-hosts data/nexcess-known-hosts.
+  SSH_OPTS=(-i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT"
+            -o StrictHostKeyChecking=accept-new)
+fi
 
 # ---------------------------------------------------------------------------
 # run_wp: one WP-CLI call on one site.

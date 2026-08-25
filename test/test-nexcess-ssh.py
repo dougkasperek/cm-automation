@@ -108,5 +108,46 @@ ok("reports/" not in src.split('"""')[2] if src.count('"""') > 2 else True,
 
 print()
 print("-" * 67)
+print("the pinned host keys, and the CI job that requires them")
+print("-" * 67)
+
+KH = os.path.join(HERE, "..", "data", "nexcess-known-hosts")
+WF = os.path.join(HERE, "..", ".github", "workflows",
+                  "nexcess-fleet-healthcheck.yml")
+SCAN = os.path.join(HERE, "..", "scripts", "nexcess-fleet-healthcheck.sh")
+
+ok(os.path.exists(KH), "the pinned host-key file is committed, not gitignored")
+_kh = [l for l in open(KH) if l.strip() and not l.startswith("#")]
+_hosts = {l.split()[0] for l in _kh}
+ok(len(_hosts) > 0 and all("." in h for h in _hosts),
+   "every pinned line names a real hostname")
+ok(len(_kh) > len(_hosts),
+   "more key lines than hosts, so several key types are pinned per host")
+
+_scan = open(SCAN).read()
+# The bug this pair of assertions exists for: StrictHostKeyChecking appeared
+# TWICE, ssh took the first value, and the pin enforced nothing while looking
+# correct. Verified by removing a host from the file and watching the scan
+# succeed anyway.
+ok(_scan.count("StrictHostKeyChecking=yes") == 1
+   and _scan.count("StrictHostKeyChecking=accept-new") == 1,
+   "each StrictHostKeyChecking value appears exactly once")
+ok("StrictHostKeyChecking=accept-new" not in
+   _scan.split("if [ -n \"$KNOWN_HOSTS\" ]; then")[1].split("else")[0],
+   "the pinned branch never mentions accept-new, since ssh takes the FIRST value")
+
+_wf = open(WF).read()
+ok("data/nexcess-known-hosts" in _wf,
+   "CI passes the pinned host-key file")
+ok("exit 1" in _wf and "nexcess-known-hosts is missing" in _wf,
+   "CI REFUSES to run if the pinned file is missing or empty")
+ok("rm -f ~/.ssh/nexcess_ci" in _wf,
+   "CI removes the private key even when the scan fails")
+ok("schedule:" not in _wf,
+   "the job is dispatch-only: it carries a credential that can write to "
+   "client sites")
+
+print()
+print("-" * 67)
 print("%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
