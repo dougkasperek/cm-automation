@@ -1531,19 +1531,30 @@ def render(m):
               '<span class=wfmininum>%d/%d</span></div>'
               % (e(label), tone, pct, k, n))
     A('</div>')
-    A('<div class=wfnote>Scored per SENDING DOMAIN, not per site, so it has no '
-      'status chip of its own. Several sites '
-      'share one sending domain and therefore one result. The fleet table '
-      'below carries the per-site result in its <strong>Sends from</strong>, '
-      'SPF, DKIM and DMARC columns. <strong>%d open '
-      'cause(s)</strong>, listed under Still open.'
-      '<div style="margin-top:6px">The sending domain is <strong>recorded by a '
-      'person</strong> in the audit workbook. Nothing in DNS '
-      'reveals where a WordPress site was configured to send from, so it '
-      'cannot be derived. <strong>%d site(s) have none recorded</strong> and '
-      'are UNKNOWN here, never a pass. A further %d site(s) are outside this '
-      'check entirely and have no row in it.</div>%s</div>'
-      % (len(email_causes), _no_sending, _out_of_scope, _measured_note))
+    # TRIMMED TO MATCH THE OTHER TWO CARDS. This carried 276 visible words
+    # against 134 for fleet health and 93 for consent -- the most copy on the
+    # page, for the card that answers the least urgent question.
+    #
+    # What stayed is the same shape the other cards use: exception lines, and
+    # the one qualification a reader cannot do without. "6 have none recorded"
+    # must stay in the path, because those six read UNKNOWN in every column
+    # and a reader who does not know why will read the blanks as passes.
+    # Everything about HOW the lookups work moved into the disclosure.
+    A('<div class=wfdetail>'
+      '<span class=wfrow><b>%d</b> open cause(s), listed under Still open</span>'
+      '<span class=wfrow><b>%d</b> site(s) have no sending domain recorded, so '
+      'every column reads UNKNOWN &mdash; never a pass</span>'
+      '<span class=wfrow><b>%d</b> site(s) are outside this check and have no '
+      'row in it</span>%s</div>'
+      % (len(email_causes), _no_sending, _out_of_scope,
+         ('<span class=wfrow><b>%d</b> site(s) now have their From: address '
+          'measured off the site%s</span>'
+          % (len(_measured),
+             (', and <b>%d</b> disagree(s) with what was recorded' % len(_disagree))
+             if _disagree else ', all agreeing with what was recorded')
+          if _measured else "")))
+    A('<div class=wfnote>Scored per <strong>sending domain</strong>, not per '
+      'site, so it has no status chip of its own.</div>')
     md(A, "Where each record is looked up, and what is not verified", [
         "SPF and DKIM are queried at the <b>sending domain</b>. DMARC is "
         "queried at <code>_dmarc.&lt;sending domain&gt;</code> and again at "
@@ -1567,6 +1578,10 @@ def render(m):
         "A DNS lookup that times out is recorded as unknown, never as a "
         "missing record. &ldquo;No SPF record&rdquo; once meant the resolver "
         "had not answered.",
+        "Several sites share one sending domain and therefore one result, "
+        "which is why this card has no per-site status. The fleet table below "
+        "carries the per-site answer in its <b>Sends from</b>, SPF, DKIM and "
+        "DMARC columns.",
     ])
     A('</div>')
 
