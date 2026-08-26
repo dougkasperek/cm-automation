@@ -57,8 +57,16 @@ Documented in `docs/DATA-MODEL.md` section 2a.
 
 Two corrections to the backlog entry, both measured: post-smtp is on **59**
 deep-scanned sites, not 39 (that figure was Pantheon-only, written before the
-Nexcess SSH scan existed), and this closes at most **6** of the 7 blanks —
-`woodmarkpharmacy.com` is on Azure, which no deep scan reaches.
+Nexcess SSH scan existed), and this closes **one** of the 7 blanks, not 6.
+
+That second correction was itself wrong when first written and is in the bug
+table. Five of the six blanks run **no mailer at all** — PHP `mail()` or the
+host's relay — so there is no option to read and no version of this design
+reaches them. The blank workbook cell and the missing plugin are the same
+fact. The one blank within reach, `hitsfoundation.org`, is on **Nexcess**, so
+**the half that needed no approval closes no blanks at all.** What the built
+half delivers is 38 workbook claims cross-checked; the Nexcess half would add
+19 more plus that one blank.
 
 **Nothing has run, so the coverage line reads `0 of 75`**, which is what it
 should read before the first scan.

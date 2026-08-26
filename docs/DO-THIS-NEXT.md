@@ -374,10 +374,25 @@ Two things in the original entry were wrong and are corrected in place below:
   written before the Nexcess SSH scan existed. Measured from the component
   catalogue 2026-08-26: **39 of 47 inventoried Pantheon sites and 20 of 21
   Nexcess sites, 59 in all.**
-- **It said this closes the 7 blanks.** It closes at most **6**. Four of the
-  seven are Pantheon, two are Nexcess, and `woodmarkpharmacy.com` is on Azure,
-  which no deep scan reaches. (It is also already checked at its own domain,
-  derived from `from_address`, so its column is not blank on the page.)
+- **It said this closes the 7 blanks. It closes ONE**, and that one is on the
+  Nexcess side that has not been built. Corrected 2026-08-26 after measuring
+  the component catalogue rather than the host column.
+
+  **The sites with no recorded sending domain are, with one exception, the
+  sites with no SMTP plugin.** That is not a coincidence — the workbook cell
+  is blank because there was nothing to write in it. `lactalisamericangroup`,
+  `lactalisheritagedairy`, `lactalisyogurtusa`, `midwestyogurt` and
+  `eamusicfest` run no mailer at all: they send through PHP `mail()` or the
+  host's own relay, so there is no plugin option to read and **no version of
+  this design reaches them**. Extending it to `wp-mail-smtp` would not help;
+  they do not run that either.
+
+  `hitsfoundation.org` is the exception, and the only blank this feature can
+  close. It is on Nexcess and it runs post-smtp.
+
+  `woodmarkpharmacy.com` is on Azure, which no deep scan reaches. It is also
+  already checked at its own domain, derived from `from_address`, so its
+  column is not blank on the page.
 
 ### What was built
 
@@ -399,9 +414,17 @@ sites. Adding a seventh command invalidates that approval, and nothing on the
 host would stop the change — there is no permission error to hit.
 
 The command to add is the same read: `wp option get postman_options
---format=json`. It reads one WordPress option and writes nothing. It would take
-the sending-domain measurement from 39 sites to 59. **Re-review it, record the
-new approval in the script header, then add it** — not the other way round.
+--format=json`. It reads one WordPress option and writes nothing.
+
+**Measured 2026-08-26, what the Nexcess half is actually worth:** 20 of the 21
+Nexcess sites run post-smtp, so it takes the measurement from 39 sites to 59 —
+**a third of the achievable coverage**. It adds 19 workbook claims to
+cross-check. And it closes `hitsfoundation.org`, **the only one of the six
+blanks any version of this feature can close.**
+
+So the half that needed no approval closes no blanks, and the one blank within
+reach is behind the approval. **Re-review it, record the new approval in the
+script header, then add it** — not the other way round.
 
 ---
 
