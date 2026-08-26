@@ -136,6 +136,27 @@ ok("StrictHostKeyChecking=accept-new" not in
    _scan.split("if [ -n \"$KNOWN_HOSTS\" ]; then")[1].split("else")[0],
    "the pinned branch never mentions accept-new, since ssh takes the FIRST value")
 
+# ---------------------------------------------------------------------------
+# The sending domain: this transport does NOT measure it, and says so
+# ---------------------------------------------------------------------------
+# The Pantheon scan reads post-smtp options; this one does not, because that
+# needs a seventh command and the command list is a security control with a
+# named approval on it.
+#
+# Both emit paths must therefore write the three smtp_* keys as the literal
+# "n/a". Absent keys are read by the ledger as UNKNOWN on a deep-scanned row,
+# and UNKNOWN means "we asked and could not tell" -- so 21 Nexcess sites would
+# report a mailer that had defeated us when in truth nothing asked.
+ok(_scan.count('smtp_plugin_seen:"n/a"') == 2,
+   "both emit paths say the sending domain was NOT LOOKED AT, not unknown")
+ok('smtp_from_domain:"n/a"' in _scan and 'smtp_relay_host:"n/a"' in _scan,
+   "...for all three sending-domain facts")
+# THE CONTROL. If this ever fires, the command list has grown and the approval
+# recorded in the script header no longer covers what runs.
+ok("option get" not in _scan,
+   "no `wp option get` here: adding it needs a fresh review of the command "
+   "list, not a scan tweak")
+
 _wf = open(WF).read()
 ok("data/nexcess-known-hosts" in _wf,
    "CI passes the pinned host-key file")

@@ -510,10 +510,7 @@ python3 test/test-wp-calls.py     #  45   offline, drives the mock
 
 ## Style
 
-Plain English. Lead with the finding, then the reason. No rhetorical framing,
-no metaphors, and do not make a straightforward technical finding sound
-profound. Prefer *"the workbook says all 78 sites run 7.0.2, and exactly one
-does"* over any dressed-up version of it.
+THIS IS CRITICAL:
 
 Use simple, direct, professional language.
 
@@ -535,3 +532,5 @@ Do not add introductory or concluding prose unless it adds useful information.
 
 Comments in code explain **why**, especially why something non-obvious is the
 way it is. Most comments in this repo name a specific failure. Keep that.
+
+for Doug, provide explicite direction when a command is to be run. provide the exact command and sequence.

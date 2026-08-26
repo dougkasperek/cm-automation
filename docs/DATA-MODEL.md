@@ -130,6 +130,15 @@ anyone is maintaining it. Adding them there would move sites out of the
 health-coverage scoreboard without anything about maintenance having been
 measured.
 
+**The Nexcess SSH transport does not measure this, and says so explicitly.**
+It writes all three as the literal `n/a`. Reading post-smtp there needs a
+seventh command on a credential that can write to 22 client sites, and that
+command list is a reviewed security control. Without the explicit `n/a` the
+keys would be absent, and an absent deep-scan fact reads as `unknown` — so 21
+Nexcess sites would report a mailer that had defeated us when nothing had
+asked. `test/test-nexcess-ssh.py` asserts both emit paths carry the literal,
+and asserts `option get` does *not* appear in that scanner.
+
 **Coverage ceiling: post-smtp only, and deep-scanned hosts only.** 59 of the
 fleet's deep-scanned sites run post-smtp; the rest use other mailers or the
 host's own. 17 sites are on hosts no deep scan reaches. The coverage line

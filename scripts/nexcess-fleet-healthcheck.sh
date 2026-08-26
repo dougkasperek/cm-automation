@@ -230,6 +230,7 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
     unreachable=$((unreachable+1))
     row="$(jq -n --arg s "$site_id" \
       '{site:$s, site_id:$s, host_site_name:null, wp_checked:false,
+        smtp_plugin_seen:"n/a", smtp_from_domain:"n/a", smtp_relay_host:"n/a",
         components_checked:false, scan_error:"ssh failed or ~/public_html missing"}')"
   else
     # STDERR IS KEPT for this one call, deliberately. `wp core version` on a
@@ -294,6 +295,22 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
       --argjson themes  "$( [ -n "$tj" ] && echo "$tj" || echo null )" \
       '{site:$s, site_id:$s, host_site_name:null,
         wp_checked:$checked,
+        # THE SENDING DOMAIN IS NOT MEASURED BY THIS TRANSPORT, and these three
+        # fields exist to say exactly that. Added 2026-08-26 alongside the
+        # Pantheon scan that DOES measure it.
+        #
+        # They are literals. NOTHING RUNS ON A SITE FOR THEM, so the approved
+        # command list at the top of this file is untouched. Reading the
+        # post-smtp options here would need a seventh command and a fresh
+        # review.
+        #
+        # Without them the keys are simply absent from the row, and the ledger
+        # reads an absent deep-scan fact as UNKNOWN. On this cohort that is a
+        # lie of the exact kind this file is full of warnings about: UNKNOWN
+        # means we asked and could not tell, so 21 Nexcess sites would report
+        # a mailer we had failed to read when the truth is that nothing asked.
+        # "n/a" means the scan did not look.
+        smtp_plugin_seen:"n/a", smtp_from_domain:"n/a", smtp_relay_host:"n/a",
         wp_version:(if $wv == "" then null else $wv end),
         framework:(if $fw == "" then null else $fw end),
         wp_core_update:(if $core == null then null
