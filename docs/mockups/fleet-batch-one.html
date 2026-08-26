@@ -1,0 +1,1142 @@
+<!doctype html><html lang=en><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>clevermethod fleet &mdash; batch one</title><style>
+:root{--good:#1baf7a;--bad:#eb6834;--info:#2a78d6;--muted:#8d9199;--surface:#efefea;
+--card:#ffffff;--panel2:#f6f6f1;--ink:#241e31;--ink2:#6e6879;--faint:#9c98a5;
+--strong:#1c122d;--line:#d9d8d0;--line2:#e7e6df}
+*{box-sizing:border-box}
+body{margin:0;padding:24px 20px 72px;background:var(--surface);color:var(--ink);
+font:14px/1.5 "Helvetica Neue",Helvetica,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:24px;letter-spacing:-.01em;margin:0;color:var(--strong)}
+h2{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+color:var(--ink2);margin:30px 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:0;padding:14px 16px}
+.sub{color:var(--ink2);font-size:13px;margin:2px 0 0}
+.quiet{color:var(--faint);font-size:12px}
+.sweep{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;
+border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
+.sweep b{color:var(--strong)}
+/* --- exception tiles --- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);padding:14px 16px;
+text-align:left;font:inherit;color:inherit;cursor:pointer;border-left:3px solid var(--line)}
+.tile:hover{border-color:var(--ink2);border-left-color:var(--strong)}
+.tile.bad{border-left-color:var(--bad)}
+.tile.info{border-left-color:var(--info)}
+.tile.good{border-left-color:var(--good)}
+.tile .n{font-size:30px;font-weight:700;color:var(--strong);letter-spacing:-.02em;line-height:1.1}
+.tile .n small{font-size:13px;font-weight:600;color:var(--ink2);letter-spacing:0;margin-left:5px}
+.tile .lab{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+color:var(--ink2);margin-bottom:6px}
+.tile .why{font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.45}
+/* --- chips --- */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;
+letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;padding:3px 8px 3px 7px;
+border:1px solid color-mix(in srgb,currentColor 34%,transparent);
+background:color-mix(in srgb,currentColor 11%,transparent)}
+.chip .gl{font-size:10px;line-height:1}
+.chip.bad{color:color-mix(in srgb,var(--bad) 62%,var(--ink))}
+.chip.info{color:color-mix(in srgb,var(--info) 62%,var(--ink))}
+.chip.good{color:color-mix(in srgb,var(--good) 62%,var(--ink))}
+.chip.muted{color:var(--muted)}
+/* --- suite --- */
+.suite{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:10px}
+.wfhead{font-size:15px;font-weight:700;color:var(--strong);margin-bottom:2px}
+.wfq{font-size:12px;color:var(--ink2);margin-bottom:11px}
+.states{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:11px}
+.st{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.st .v{font-size:19px;font-weight:700;color:var(--strong);margin-top:3px}
+.st:hover .v{text-decoration:underline}
+.exc{border-top:1px solid var(--line2);padding-top:9px;font-size:12.5px;line-height:1.6}
+.exc div{margin-bottom:3px}
+.exc b{color:var(--strong)}
+.qual{color:var(--ink2)}
+.more{display:inline-block;margin-top:9px;font-size:12px;font-weight:700;color:var(--info);
+text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--info) 40%,transparent)}
+/* --- info disclosure --- */
+details.info-d{margin-top:9px}
+details.info-d summary{cursor:pointer;font-size:11px;font-weight:700;color:var(--ink2);
+list-style:none;display:inline-flex;align-items:center;gap:5px}
+details.info-d summary::-webkit-details-marker{display:none}
+details.info-d summary .i{display:inline-flex;align-items:center;justify-content:center;
+width:14px;height:14px;border:1px solid var(--line);font-size:9px;font-weight:800;color:var(--ink2)}
+details.info-d[open] summary{margin-bottom:6px}
+details.info-d p{margin:0 0 6px;font-size:12px;color:var(--ink2);line-height:1.55}
+/* --- coverage --- */
+.cov{display:grid;grid-template-columns:1fr auto;gap:2px 14px;align-items:baseline;
+padding:7px 0;border-bottom:1px solid var(--line2)}
+.cov:last-child{border-bottom:0}
+.cov .lab{font-size:13px}
+.cov .fig{font-size:13px;white-space:nowrap;text-align:right}
+.cov .fig b{color:var(--strong)}
+.cov .fig .gap{color:var(--bad);font-weight:700}
+.cov .fig .none{color:var(--muted)}
+.cov .of{color:var(--faint);font-size:12px}
+.meter{grid-column:1/-1;height:3px;background:var(--line2)}
+.meter i{display:block;height:3px;background:var(--info)}
+.meter i.full{background:var(--good)}
+/* --- changes --- */
+.chg{border-bottom:1px solid var(--line2);padding:10px 0}
+.chg:last-child{border-bottom:0}
+.chg .site{font-weight:700;color:var(--strong);font-size:13.5px}
+.chg .cnt{color:var(--ink2);font-weight:400;font-size:12.5px}
+.chg ul{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--ink2)}
+.chg li{margin-bottom:2px}
+.chg code{font-size:12px;background:var(--panel2);padding:1px 4px}
+/* --- decisions --- */
+.dec{display:grid;grid-template-columns:minmax(160px,1fr) minmax(150px,auto) 2fr;
+gap:10px 16px;padding:9px 0;border-bottom:1px solid var(--line2);align-items:baseline}
+.dec:last-child{border-bottom:0}
+.dec .who{font-weight:600;color:var(--strong);font-size:13px}
+.dec .act{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--info)}
+.dec .why{font-size:12.5px;color:var(--ink2)}
+/* --- table --- */
+.tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+color:var(--ink2);padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.dom{font-weight:600;color:var(--strong)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.absent{color:var(--muted);font-style:italic;font-size:12px}
+.exflag{display:inline-block;margin-left:6px;font-size:9px;font-weight:800;
+letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+border:1px solid var(--line);padding:1px 5px;vertical-align:1px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:9px}
+.filters input,.filters select{font:inherit;font-size:13px;padding:6px 9px;
+border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:0}
+.filters input{min-width:190px}
+.pill{font-size:11px;font-weight:700;padding:5px 10px;border:1px solid var(--line);
+background:var(--card);cursor:pointer;color:var(--ink2);border-radius:0}
+.pill.on{background:var(--strong);color:#fff;border-color:var(--strong)}
+.count{font-size:12px;color:var(--ink2);margin-left:auto}
+.note{background:var(--panel2);border-left:3px solid var(--info);padding:10px 13px;
+font-size:12.5px;color:var(--ink2);margin-top:10px}
+.note b{color:var(--strong)}
+@media(max-width:640px){.tile .n{font-size:25px}h1{font-size:20px}}
+</style>
+<div class=wrap>
+<h1>clevermethod fleet</h1>
+<p class=sub style="margin-bottom:14px">85 sites &middot; 6 hosts &middot; one ledger &middot; read-only</p>
+<div class=sweep>
+<span><b>Last sweep</b> Aug 26, 7:41 PM</span>
+<span class=quiet>5 sources &middot; 4 current &middot; 1 older than a day</span>
+<a class=more href="#" style="margin:0">Run &amp; coverage detail &rarr;</a>
+</div>
+<div class=tiles>
+<button class="tile bad" data-filter="attention"><div class=lab>Needs attention</div><div class=n>54<small>sites</small></div><div class=why>2 critical, 52 warning. Excludes 1 site marked non-production.</div></button>
+<button class="tile info" data-filter="decisions"><div class=lab>Decisions waiting</div><div class=n>5<small>sites</small></div><div class=why>No owner and no production ruling. A person decides these, not a scan.</div></button>
+<button class="tile info" data-filter="changed"><div class=lab>Sites changed</div><div class=n>19<small>sites</small></div><div class=why>20 fact(s) moved since each tool&rsquo;s previous run. 19 were routine counter drift.</div></button>
+<button class="tile" data-filter="noevidence"><div class=lab>No health evidence</div><div class=n>11<small>sites</small></div><div class=why>Looked at by some tool, but no backup age and no plugin count. Not the same as healthy.</div></button>
+</div>
+<h2>The suite</h2>
+<div class=suite>
+<div class=card>
+<div class=wfhead>Fleet health</div>
+<div class=wfq>Is this site being maintained?</div>
+<div class=states>
+<button class=st data-filter="health:CRIT"><span class="chip bad"><span class=gl>●</span>CRIT</span><div class=v>2 <span style="font-size:12px;font-weight:500;color:var(--ink2)">sites</span></div></button>
+<button class=st data-filter="health:WARN"><span class="chip info"><span class=gl>▲</span>WARN</span><div class=v>52 <span style="font-size:12px;font-weight:500;color:var(--ink2)">sites</span></div></button>
+<button class=st data-filter="health:OK"><span class="chip good"><span class=gl>✓</span>OK</span><div class=v>26 <span style="font-size:12px;font-weight:500;color:var(--ink2)">sites</span></div></button>
+</div>
+<div class=exc>
+<div><b>2 sites</b> have no recent database backup &mdash; <span class=qual>of the <b>48</b> whose backup age can be read at all. The other 37 are on hosts that expose no backup API.</span></div>
+<div><b>32 sites</b> are behind on WordPress core</div>
+<div><b>24 sites</b> have a plugin backlog <span class=qual>&mdash; more updates pending than the threshold, not simply more than zero</span></div>
+<div><b>1 site</b> runs PHP past end of security support</div>
+</div>
+<details class=info-d><summary><span class=i>i</span>How this is calculated</summary><p>Scored from the ledger at render time, not at scan time, so changing a threshold rescores every run in history instead of reporting as a fleet change. Thresholds are named constants in the severity module.</p><p>A site with <code>production: null</code> scores as production. Nobody has ruled on it, and failing safe is the point.</p></details>
+<a class=more href="#" data-filter="attention">Work the 54 &rarr;</a>
+</div>
+<div class=card>
+<div class=wfhead>Cookie consent</div>
+<div class=wfq>Does the homepage fire trackers before anyone consents?</div>
+<div class=states>
+<button class=st data-filter="consent:WARN"><span class="chip info"><span class=gl>▲</span>WARN</span><div class=v>49 <span style="font-size:12px;font-weight:500;color:var(--ink2)">sites</span></div></button>
+<button class=st data-filter="consent:OK"><span class="chip good"><span class=gl>✓</span>OK</span><div class=v>22 <span style="font-size:12px;font-weight:500;color:var(--ink2)">sites</span></div></button>
+<button class=st data-filter="consent:UNKNOWN"><span class="chip muted"><span class=gl>?</span>UNKNOWN</span><div class=v>9 <span style="font-size:12px;font-weight:500;color:var(--ink2)">sites</span></div></button>
+</div>
+<div class=exc>
+<div><b>41 sites</b> fire trackers before consent</div>
+<div><b>45 sites</b> have no consent tooling at all</div>
+<div><b>9 sites</b> are <span class=qual>UNKNOWN &mdash; the sweep was refused or the page would not load. That is not a clean result.</span></div>
+</div>
+<details class=info-d><summary><span class=i>i</span>How this is calculated</summary><p>A real browser loads the public homepage and records what fired before any consent interaction. Observations only. The words compliant and non-compliant do not appear in this workflow.</p><p>Counts are a floor when the sweep runs headless: some trackers detect automation and decline to fire. The latest run was headed.</p></details>
+<a class=more href="#" data-filter="consent:WARN">See the 49 &rarr;</a>
+</div>
+<div class=card>
+<div class=wfhead>Email &amp; DNS</div>
+<div class=wfq>Can the domain each site sends from authenticate its mail?</div>
+<div class=exc style="border-top:0;padding-top:0">
+<div><b>72</b> pass, <b>6</b> unverified <span class=of style="color:var(--faint)">&mdash; of 78 sending domains</span> <span class=quiet>SPF</span></div>
+<div><b>70</b> pass, <b>8</b> unverified <span class=of style="color:var(--faint)">&mdash; of 78 sending domains</span> <span class=quiet>DKIM</span></div>
+<div><b>78</b> pass, <b>0</b> unverified <span class=of style="color:var(--faint)">&mdash; of 78 sending domains</span> <span class=quiet>DMARC</span></div>
+</div>
+<div class=exc style="margin-top:9px">
+<div><b>14 sites</b> have no DMARC on the domain recipients see</div>
+<div><b>9 sites</b> send from a domain not aligned with the sending domain</div>
+<div><b>2 sites</b> have no SPF record</div>
+</div>
+<details class=info-d><summary><span class=i>i</span>What this does and does not check</summary><p>Scored per <b>sending domain</b>, not per site. Several sites share one sending domain and therefore one result, so this card has no site status of its own.</p><p>The sending domain is a <b>ruling</b> a person recorded. 59 of 75 sites now have their From: address measured off the site instead, and it is stored beside the ruling rather than over it. It does not verify the sending domain: most sites send through an API where the envelope sender is set by the provider.</p></details>
+<a class=more href="#">Open causes &rarr;</a>
+</div>
+</div>
+<h2>Coverage</h2>
+<p class=sub style="margin:-6px 0 10px">What is <em>not</em> checked is the operational number. Each row states its own denominator.</p>
+<div class=card>
+<div class=cov><div class=lab>Pantheon platform facts (plan, PHP, backups, upstream)</div><div class=fig><b>48</b> checked &middot; <span class=gap>4 not checked</span> <span class=of>&mdash; of 52</span></div><div class=meter><i class="" style="width:92.3%"></i></div></div>
+<div class=cov><div class=lab>WordPress core, plugins, themes on Pantheon (SSH)</div><div class=fig><b>47</b> checked &middot; <span class=gap>5 not checked</span> <span class=of>&mdash; of 52</span></div><div class=meter><i class="" style="width:90.4%"></i></div></div>
+<div class=cov><div class=lab>WordPress core, plugins, themes on Nexcess (SSH)</div><div class=fig><b>21</b> checked &middot; <span class=gap>1 not checked</span> <span class=of>&mdash; of 22</span></div><div class=meter><i class="" style="width:95.5%"></i></div></div>
+<div class=cov><div class=lab>SPF</div><div class=fig><b>72</b> checked &middot; <span class=gap>6 not checked</span> <span class=of>&mdash; of 78</span></div><div class=meter><i class="" style="width:92.3%"></i></div></div>
+<div class=cov><div class=lab>DKIM (selector must be known to verify)</div><div class=fig><b>70</b> checked &middot; <span class=gap>8 not checked</span> <span class=of>&mdash; of 78</span></div><div class=meter><i class="" style="width:89.7%"></i></div></div>
+<div class=cov><div class=lab>DMARC</div><div class=fig><b>78</b> checked &middot; <span class=none>none missing</span> <span class=of>&mdash; of 78</span></div><div class=meter><i class="full" style="width:100.0%"></i></div></div>
+<div class=cov><div class=lab>Cookie consent (public homepage, needs a browser)</div><div class=fig><b>71</b> checked &middot; <span class=gap>8 not checked</span> <span class=of>&mdash; of 79</span></div><div class=meter><i class="" style="width:89.9%"></i></div></div>
+<div class=cov><div class=lab>Component inventory (plugins, mu-plugins, themes)</div><div class=fig><b>68</b> checked &middot; <span class=gap>7 not checked</span> <span class=of>&mdash; of 75</span></div><div class=meter><i class="" style="width:90.7%"></i></div></div>
+<div class=cov><div class=lab>Sending domain, measured on the site (post-smtp only)</div><div class=fig><b>59</b> checked &middot; <span class=gap>16 not checked</span> <span class=of>&mdash; of 75</span></div><div class=meter><i class="" style="width:78.7%"></i></div></div>
+<div class=cov><div class=lab>Nexcess estate (PHP, WordPress version, via the portal API)</div><div class=fig><b>22</b> checked &middot; <span class=none>none missing</span> <span class=of>&mdash; of 22</span></div><div class=meter><i class="full" style="width:100.0%"></i></div></div>
+</div>
+<h2>What changed</h2>
+<p class=sub style="margin:-6px 0 10px"><b>20 fact(s) across 19 site(s)</b> since the previous run of each tool. Grouped by site, because one upgrade moves several facts at once.</p>
+<div class=card>
+<div class=chg><div class=site>lifebreath.com <span class=cnt>&mdash; 2 change(s)</span></div><ul>
+<li>status <code>OK</code> &rarr; <code>WARN</code></li>
+<li>plugin_updates <code>9</code> &rarr; <code>10</code> <span class=quiet>routine</span></li>
+</ul></div>
+<div class=chg><div class=site>actioncarting.com <span class=cnt>&mdash; 1 change(s), all routine counter drift</span></div><ul>
+<li>plugin_updates <code>19</code> &rarr; <code>20</code> <span class=quiet>routine</span></li>
+</ul></div>
+<div class=chg><div class=site>choosechq.com <span class=cnt>&mdash; 1 change(s), all routine counter drift</span></div><ul>
+<li>plugin_updates <code>14</code> &rarr; <code>15</code> <span class=quiet>routine</span></li>
+</ul></div>
+<div class=chg><div class=site>ciminelli.com <span class=cnt>&mdash; 1 change(s), all routine counter drift</span></div><ul>
+<li>plugin_updates <code>7</code> &rarr; <code>8</code> <span class=quiet>routine</span></li>
+</ul></div>
+<div class=chg><div class=site>ciminelliflorida.com <span class=cnt>&mdash; 1 change(s), all routine counter drift</span></div><ul>
+<li>plugin_updates <code>5</code> &rarr; <code>6</code> <span class=quiet>routine</span></li>
+</ul></div>
+<div class=chg><div class=site>drspietrantone.com <span class=cnt>&mdash; 1 change(s), all routine counter drift</span></div><ul>
+<li>plugin_updates <code>4</code> &rarr; <code>5</code> <span class=quiet>routine</span></li>
+</ul></div>
+<div class=chg><div class=site>elmanyhistory.org <span class=cnt>&mdash; 1 change(s), all routine counter drift</span></div><ul>
+<li>plugin_updates <code>10</code> &rarr; <code>11</code> <span class=quiet>routine</span></li>
+</ul></div>
+<div class=chg><div class=site>firstaurorafinancial.com <span class=cnt>&mdash; 1 change(s), all routine counter drift</span></div><ul>
+<li>plugin_updates <code>8</code> &rarr; <code>9</code> <span class=quiet>routine</span></li>
+</ul></div>
+</div>
+<div class=note><b>Direction is deliberately not labelled here.</b> A count moving is not automatically better or worse: when the consent sweep changed from a headless to a headed browser, tracker counts rose on many sites at once and nothing had started firing &mdash; we started being able to see it. The ledger already separates <b>the fleet changed</b> from <b>the instrument changed</b>, and that classification is what drives this list.</div>
+<h2>Decisions waiting</h2>
+<p class=sub style="margin:-6px 0 10px">A ruling is the half of the data model a person decides rather than a tool measures. Nothing here is editable on this page &mdash; it is generated, and it is read-only by design.</p>
+<div class=card>
+<div class=dec><div class=who>clevermethod-forward</div><div class=act>Set production status</div><div class=why>In the Pantheon account with no client, owner or production ruling recorded.</div></div>
+<div class=dec><div class=who>hoffmanscheese</div><div class=act>Set production status</div><div class=why>In the Pantheon account with no client, owner or production ruling recorded.</div></div>
+<div class=dec><div class=who>moorseville-nc</div><div class=act>Set production status</div><div class=why>In the Pantheon account with no client, owner or production ruling recorded.</div></div>
+<div class=dec><div class=who>nc-moorseville</div><div class=act>Set production status</div><div class=why>In the Pantheon account with no client, owner or production ruling recorded.</div></div>
+<div class=dec><div class=who>pfannenbergsales</div><div class=act>Set production status</div><div class=why>In the Pantheon account with no client, owner or production ruling recorded.</div></div>
+</div>
+<div class=note><b>83 of 84 sites have no production ruling at all.</b> The five above are the narrow set that also has no ownership record. The wider number is a coverage fact about the fleet, not a per-site flag, and no interface improves it &mdash; the ruling pass has to be run once.</div>
+<h2>Every site</h2>
+<div class=filters>
+<input id=q type=search placeholder="Search sites" aria-label="Search sites">
+<select id=host><option value="">All hosts</option><option>Azure</option><option>CM Nexcess</option><option>CM Pantheon</option><option>Flywheel</option><option>Pressable</option><option>WP Engine</option></select>
+<button class="pill on" data-filter="">All</button>
+<button class="pill" data-filter="attention">Attention</button>
+<button class="pill" data-filter="changed">Changed</button>
+<button class="pill" data-filter="decisions">Decisions</button>
+<button class="pill" data-filter="noevidence">No health evidence</button>
+<span class=count id=cnt></span>
+</div>
+<div class=tablewrap><table id=t><thead><tr><th>Site</th><th>Health</th><th>Consent</th><th>Host</th><th>WordPress</th><th class=num>Plugin updates</th><th class=num>Backup age</th><th>Sends from</th></tr></thead><tbody>
+<tr data-f="attention" data-host="CM Nexcess" data-site="1-800-dumpster.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>1-800-dumpster.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>19</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Pantheon" data-site="11daypowerplay.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>11daypowerplay.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>4</td>
+<td class=num>0 d</td>
+<td>app.11daypowerplay.com</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="42northbrewing.com" data-health="OK" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>42northbrewing.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>5</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Pantheon" data-site="acibg.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>acibg.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>3</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="actioncarting.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>actioncarting.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>20</td>
+<td class=num>0 d</td>
+<td>app.actioncarting.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Nexcess" data-site="alliedcircuits.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>alliedcircuits.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>20</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention noevidence" data-host="WP Engine" data-site="animatics.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>animatics.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>WP Engine</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>support.animatics.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Nexcess" data-site="app.eastauroracc.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>app.eastauroracc.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="bhargavalaw.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>bhargavalaw.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>3</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Pressable" data-site="blockclub.co" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>blockclub.co</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Pressable</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>blockclub.co</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="breakstones.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>breakstones.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>12</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="buffalobeds.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>buffalobeds.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>2</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Pressable" data-site="buffalorecycles.org" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>buffalorecycles.org</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Pressable</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Pantheon" data-site="celticindustrialservices.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>celticindustrialservices.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>4</td>
+<td class=num>0 d</td>
+<td>celticindustrialservices.com</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="choosechq.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>choosechq.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>15</td>
+<td class=num>0 d</td>
+<td>choosechq.com</td>
+</tr>
+<tr data-f="changed" data-host="CM Pantheon" data-site="ciminelli.com" data-health="OK" data-consent="OK" data-excluded="">
+<td class=dom>ciminelli.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>8</td>
+<td class=num>0 d</td>
+<td>e.ciminelli.com</td>
+</tr>
+<tr data-f="changed" data-host="CM Pantheon" data-site="ciminelliflorida.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>ciminelliflorida.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>6</td>
+<td class=num>0 d</td>
+<td>e.ciminelliflorida.com</td>
+</tr>
+<tr data-f="decisions" data-host="CM Pantheon" data-site="clevermethod-forward" data-health="SKIP" data-consent="SKIP" data-excluded="">
+<td class=dom>clevermethod-forward</td>
+<td><span class="chip muted"><span class=gl>–</span>SKIP</span></td>
+<td><span class="chip muted"><span class=gl>–</span>SKIP</span></td>
+<td class=quiet>CM Pantheon</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="" data-host="CM Pantheon" data-site="clevermethod.com" data-health="OK" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>clevermethod.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>4</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="cm-whitelabel" data-health="CRIT" data-consent="UNKNOWN" data-excluded="1">
+<td class=dom>cm-whitelabel <span class=exflag title="production: false, set by a person">not counted</span></td>
+<td><span class="chip bad"><span class=gl>●</span>CRIT</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>6.9.4</td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num>2154 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="" data-host="CM Pantheon" data-site="cottrillspharmacy.com" data-health="OK" data-consent="OK" data-excluded="">
+<td class=dom>cottrillspharmacy.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>4</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="crackerbarrelcheese.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>crackerbarrelcheese.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>15</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="changed" data-host="CM Pantheon" data-site="drspietrantone.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>drspietrantone.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>5</td>
+<td class=num>0 d</td>
+<td>web.drspietrantone.com</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="dslawfirm.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>dslawfirm.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>6</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Flywheel" data-site="dynapurge.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>dynapurge.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Flywheel</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Nexcess" data-site="eamusicfest.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>eamusicfest.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>13</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="eastauroracc.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>eastauroracc.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>5</td>
+<td class=num>0 d</td>
+<td>app.eastauroracc.com</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="eastauroraef.org" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>eastauroraef.org</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>9</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Nexcess" data-site="ecmea.org" data-health="WARN" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>ecmea.org</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>18</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>ecmea.org</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Azure" data-site="elderwoodipa.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>elderwoodipa.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Azure</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>web.elderwoodipa.com</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Nexcess" data-site="elmanyhistory.org" data-health="WARN" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>elmanyhistory.org</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>11</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="fairchildcapitalpartners.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>fairchildcapitalpartners.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>7</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="firstaurorafinancial.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>firstaurorafinancial.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>9</td>
+<td class=num>0 d</td>
+<td>firstaurora.com</td>
+</tr>
+<tr data-f="changed" data-host="CM Pantheon" data-site="galbanicheese.com" data-health="OK" data-consent="OK" data-excluded="">
+<td class=dom>galbanicheese.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>6</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="gmroot.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>gmroot.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>23</td>
+<td class=num>0 d</td>
+<td>app.gmroot.com</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="heartofmusicfestival.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>heartofmusicfestival.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>4</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Nexcess" data-site="hitsfoundation.org" data-health="WARN" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>hitsfoundation.org</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>12</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention changed decisions" data-host="CM Pantheon" data-site="hoffmanscheese" data-health="CRIT" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>hoffmanscheese</td>
+<td><span class="chip bad"><span class=gl>●</span>CRIT</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>27</td>
+<td class=num>729 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention noevidence" data-host="CM Pantheon" data-site="hoosierfeeder.com" data-health="WARN" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>hoosierfeeder.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>web.hoosierfeedercompany.com</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="icegame.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>icegame.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>16</td>
+<td class=num>0 d</td>
+<td>icegame.com</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="internationaljuniormasters.com" data-health="OK" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>internationaljuniormasters.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>7</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="changed" data-host="CM Pantheon" data-site="interstatewaste.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>interstatewaste.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>6</td>
+<td class=num>0 d</td>
+<td>web.interstatewaste.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="iroquoisfence.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>iroquoisfence.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>7</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="kingsdumpstersny.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>kingsdumpstersny.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>9</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>web.kingsdumpstersny.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="knudsen.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>knudsen.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>10</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Pantheon" data-site="kraftnaturalcheese.com" data-health="OK" data-consent="OK" data-excluded="">
+<td class=dom>kraftnaturalcheese.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>7</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="kulinskigolf.com" data-health="OK" data-consent="UNKNOWN" data-excluded="">
+<td class=dom>kulinskigolf.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip muted"><span class=gl>?</span>UNKNOWN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>4</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="lactalisamericangroup.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>lactalisamericangroup.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>7</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="lactalisheritagedairy.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>lactalisheritagedairy.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>7</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="lactalisyogurtusa.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>lactalisyogurtusa.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>6</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="lancastervillageny.gov" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>lancastervillageny.gov</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>8</td>
+<td class=num>0 d</td>
+<td>email.lancastervillageny.gov</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="lasershows.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>lasershows.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>12</td>
+<td class=num>0 d</td>
+<td>app.lasershows.com</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="lifebreath.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>lifebreath.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>10</td>
+<td class=num>0 d</td>
+<td>web.airiabrands.com</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="live-frontline-construction.pantheonsite.io" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>live-frontline-construction.pantheonsite.io</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>7</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="local92afm.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>local92afm.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>14</td>
+<td class=num>0 d</td>
+<td>local92afm.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="midwestyogurt.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>midwestyogurt.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>6</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="decisions" data-host="CM Pantheon" data-site="moorseville-nc" data-health="SKIP" data-consent="SKIP" data-excluded="">
+<td class=dom>moorseville-nc</td>
+<td><span class="chip muted"><span class=gl>–</span>SKIP</span></td>
+<td><span class="chip muted"><span class=gl>–</span>SKIP</span></td>
+<td class=quiet>CM Pantheon</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="morrison-chs.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>morrison-chs.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>7</td>
+<td class=num>0 d</td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="decisions" data-host="CM Pantheon" data-site="nc-moorseville" data-health="FROZEN" data-consent="FROZEN" data-excluded="">
+<td class=dom>nc-moorseville</td>
+<td><span class="chip muted"><span class=gl>‖</span>FROZEN</span></td>
+<td><span class="chip muted"><span class=gl>‖</span>FROZEN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="newmarkciminelli.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>newmarkciminelli.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>14</td>
+<td class=num>0 d</td>
+<td>e.ciminelli.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="ntlibrary.org" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>ntlibrary.org</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>12</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="ontracksitedevelopment.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>ontracksitedevelopment.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>5</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="packagedesignsupply.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>packagedesignsupply.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>12</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="palmettoresidentialelectric.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>palmettoresidentialelectric.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>6</td>
+<td class=num>0 d</td>
+<td>palmettoresidentialelectric.com</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Pressable" data-site="paramaxcorp.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>paramaxcorp.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Pressable</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Azure" data-site="pediatricspecialty.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>pediatricspecialty.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Azure</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>e.pediatricspecialty.com</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Azure" data-site="pediatricspecialtymedicalday.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>pediatricspecialtymedicalday.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Azure</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>e.pediatricspecialtymedicalday.com</td>
+</tr>
+<tr data-f="decisions" data-host="CM Pantheon" data-site="pfannenbergsales" data-health="SKIP" data-consent="SKIP" data-excluded="">
+<td class=dom>pfannenbergsales</td>
+<td><span class="chip muted"><span class=gl>–</span>SKIP</span></td>
+<td><span class="chip muted"><span class=gl>–</span>SKIP</span></td>
+<td class=quiet>CM Pantheon</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td><span class=absent>not measured</span></td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="pfannenbergusa.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>pfannenbergusa.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>10</td>
+<td class=num>0 d</td>
+<td>gmail.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="runtalnorthamerica.com" data-health="CRIT" data-consent="OK" data-excluded="">
+<td class=dom>runtalnorthamerica.com</td>
+<td><span class="chip bad"><span class=gl>●</span>CRIT</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>23</td>
+<td class=num>0 d</td>
+<td>app.runtalnorthamerica.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="scottishcheddarcheese.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>scottishcheddarcheese.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>9</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention changed" data-host="CM Pantheon" data-site="senecafinancialadvisors.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>senecafinancialadvisors.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>6</td>
+<td class=num>0 d</td>
+<td>web.senecafinancialadvisors.com</td>
+</tr>
+<tr data-f="changed" data-host="CM Pantheon" data-site="sgroilawley.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>sgroilawley.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.1</td>
+<td class=num>8</td>
+<td class=num>0 d</td>
+<td>sgroilawley.com</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Flywheel" data-site="shuman-plastics.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>shuman-plastics.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Flywheel</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="statlerfoundation.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>statlerfoundation.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>5</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Nexcess" data-site="summerstreetcapital.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>summerstreetcapital.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>17</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="thehambycollection.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>thehambycollection.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>6</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>thehambycollection.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="thenorthstarcompanies.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>thenorthstarcompanies.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>5</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="thermalfoams.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>thermalfoams.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>9</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="twostuds.net" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>twostuds.net</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>5</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>twostuds.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="valbresocheese.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>valbresocheese.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.2</td>
+<td class=num>8</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="" data-host="CM Nexcess" data-site="websterszanyi.com" data-health="OK" data-consent="WARN" data-excluded="">
+<td class=dom>websterszanyi.com</td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>CM Nexcess</td>
+<td>7.1</td>
+<td class=num>6</td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention noevidence" data-host="Azure" data-site="woodmarkpharmacy.com" data-health="WARN" data-consent="WARN" data-excluded="">
+<td class=dom>woodmarkpharmacy.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td class=quiet>Azure</td>
+<td><span class=absent>not measured</span></td>
+<td class=num><span class=absent>not measured</span></td>
+<td class=num><span class=absent>no backup API</span></td>
+<td>woodmarkpharmacy.com</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="zehnder-rittling.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>zehnder-rittling.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.4</td>
+<td class=num>9</td>
+<td class=num>0 d</td>
+<td>smtp.clevermethod.net</td>
+</tr>
+<tr data-f="attention" data-host="CM Pantheon" data-site="zehnderamerica.com" data-health="WARN" data-consent="OK" data-excluded="">
+<td class=dom>zehnderamerica.com</td>
+<td><span class="chip info"><span class=gl>▲</span>WARN</span></td>
+<td><span class="chip good"><span class=gl>✓</span>OK</span></td>
+<td class=quiet>CM Pantheon</td>
+<td>7.0.3</td>
+<td class=num>23</td>
+<td class=num>0 d</td>
+<td>zehnderamerica.com</td>
+</tr>
+</tbody></table></div>
+<div class=note><b>&ldquo;Not measured&rdquo; is printed, never left blank and never shown as a zero.</b> A blank cell reads as nothing to report. Every empty value on this page says which kind of absence it is: nobody looked, the host exposes no such API, or the call failed.</div>
+
+<script>
+var rows=[].slice.call(document.querySelectorAll('#t tbody tr'));
+var q=document.getElementById('q'),hs=document.getElementById('host'),
+    cnt=document.getElementById('cnt'),active='';
+function apply(){
+  var term=(q.value||'').toLowerCase(), host=hs.value, n=0;
+  rows.forEach(function(r){
+    var ok=true;
+    if(term && r.dataset.site.toLowerCase().indexOf(term)<0) ok=false;
+    if(host && r.dataset.host!==host) ok=false;
+    if(active){
+      if(active.indexOf(':')>0){
+        var p=active.split(':');
+        if(r.dataset[p[0]]!==p[1]) ok=false;
+      } else if((' '+r.dataset.f+' ').indexOf(' '+active+' ')<0) ok=false;
+    }
+    r.style.display=ok?'':'none'; if(ok)n++;
+  });
+  var ex=rows.filter(function(r){return r.style.display!=='none'&&r.dataset.excluded;}).length;
+  cnt.textContent=n+' of '+rows.length+' sites shown'
+    +(ex?' · '+ex+' not counted in the cards above':'');
+}
+function setFilter(f){
+  active=f;
+  document.querySelectorAll('.pill').forEach(function(p){
+    p.classList.toggle('on',p.dataset.filter===f);
+  });
+  apply();
+  document.getElementById('t').scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.querySelectorAll('[data-filter]').forEach(function(el){
+  el.addEventListener('click',function(ev){ev.preventDefault();setFilter(el.dataset.filter);});
+});
+q.addEventListener('input',apply); hs.addEventListener('change',apply);
+apply();
+</script>
+
+</div>
