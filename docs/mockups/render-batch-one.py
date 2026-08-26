@@ -974,7 +974,10 @@ def coverage_section(A, m, e):
                         - datetime.datetime.fromisoformat(t)).days >= 1]
         A('<div class=sweepline>')
         A('<span><b>Last sweep</b> %s</span>' % e(when(_newest)))
-        A('<span class=quiet>%d cohort(s) &middot; %d current &middot; '
+        # "cohort" is our word, not the reader's. It means one scan of one
+        # site set by one transport, and nothing on the page defines it. The
+        # count is of SCANS, so the line says scans. Renamed 2026-08-26.
+        A('<span class=quiet>%d scan(s) &middot; %d current &middot; '
           '%d older than a day%s</span>'
           % (len(_stamps), len(_stamps) - len(_lagging), len(_lagging),
              " &middot; %d source(s) never run" % len(_never) if _never else ""))

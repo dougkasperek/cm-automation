@@ -1566,7 +1566,11 @@ check("...and the bare 'N of M' coverage form is gone",
 # deleted -- a freshness line that names the wrong instrument is worse than
 # none, and that bug shipped once.
 check("there is one sweep line, not a card per source",
-      "Last sweep" in _page and "cohort(s)" in _page)
+      "Last sweep" in _page and "scan(s)" in _page)
+# "cohort" is an internal word for one scan of one site set by one transport.
+# The page never defines it, so it must not use it.
+check("...and it does not use our internal word for a scan",
+      "cohort" not in _page.lower(), "the page says cohort")
 check("...and the per-tool timestamps are still reachable",
       "Which tool looked, and when" in _page
       and _page.count("class=srcdetail") >= 1)
