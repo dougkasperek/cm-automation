@@ -1567,6 +1567,16 @@ check("...and the bare 'N of M' coverage form is gone",
 # none, and that bug shipped once.
 check("there is one sweep line, not a card per source",
       "Last sweep" in _page and "scan(s)" in _page)
+# POSITION, not just presence. It was first written inside the coverage
+# section, which put it 1,500px down the page -- below the masthead, the
+# headline card and the whole suite -- under a heading about METHOD. "How
+# fresh is this page" is the first question a reader has, so the answer sits
+# above everything that depends on it.
+check("...and it sits above the headline card, not 1,500px down",
+      _page.find("Last sweep") < _page.find("class=\"card topband\""),
+      "the sweep line is below the topband")
+check("...with a route to the per-scan detail rather than a dead end",
+      'href="#knows"' in _page and 'id=knows' in _page)
 # "cohort" is an internal word for one scan of one site set by one transport.
 # The page never defines it, so it must not use it.
 check("...and it does not use our internal word for a scan",

@@ -666,7 +666,10 @@ td.num{font-variant-numeric:tabular-nums}
 code{font:11.5px/1.55 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:var(--ink)}
 /* Chip: colour is never the only signal. The label is always present. */
 .sweepline{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;
- margin:0 0 8px;font-size:13px}
+ margin:6px 0 12px;font-size:13px;padding-bottom:10px;
+ border-bottom:1px solid var(--line)}
+.sweeplink{color:var(--info);text-decoration:none;
+ border-bottom:1px solid color-mix(in srgb,var(--info) 40%,transparent)}
 .sweepline b{color:var(--strong)}
 .srcdetail{margin-bottom:10px}
 .srcdetail summary{cursor:pointer;font-size:11px;font-weight:800;
@@ -807,6 +810,31 @@ SOURCE_ANSWERS = {
 }
 
 
+def sweep_line(A, m, e):
+    """One line: how fresh is this page, and is anything lagging."""
+    cohorts = m.get("latest_by_cohort") or {}
+    stamps = sorted((r.get("observed_at") or "") for r in cohorts.values())
+    never = [src for src in sorted(L.FACT_FAMILIES)
+             if not any(k[0] == src for k in cohorts)]
+    if not stamps:
+        return
+    newest = stamps[-1]
+    lagging = [t for t in stamps
+               if (datetime.datetime.fromisoformat(newest)
+                   - datetime.datetime.fromisoformat(t)).days >= 1]
+    A('<div class=sweepline>')
+    A('<span><b>Last sweep</b> %s</span>' % e(when(newest)))
+    # "cohort" is our word, not the reader's. It means one scan of one site
+    # set by one transport, and nothing on the page defines it. The count is
+    # of SCANS, so the line says scans. Renamed 2026-08-26.
+    A('<span class=quiet>%d scan(s) &middot; %d current &middot; '
+      '%d older than a day%s</span>'
+      % (len(stamps), len(stamps) - len(lagging), len(lagging),
+         " &middot; %d source(s) never run" % len(never) if never else ""))
+    A('<a class=sweeplink href="#knows">Which tool looked, and when</a>')
+    A('</div>')
+
+
 def coverage_section(A, m, e):
     """The one place that says who looked, when, and at how much.
 
@@ -817,7 +845,7 @@ def coverage_section(A, m, e):
     general provenance moved.
     """
     # --- coverage ---------------------------------------------------------
-    A("<h2>What this page knows, and what it does not</h2>")
+    A('<h2 id=knows>What this page knows, and what it does not</h2>')
     # NO NAMED ARTIFACT, and no em dash. Both 2026-08-24.
     #
     # This used to say a ruling was "recorded in the inventory file". That named
@@ -874,25 +902,6 @@ def coverage_section(A, m, e):
     # that bug shipped once, when a single `health` row carried the Nexcess
     # timestamp against the Pantheon description. 2026-08-26.
     _cohorts = m.get("latest_by_cohort") or {}
-    _stamps = sorted((r.get("observed_at") or "") for r in _cohorts.values())
-    _never = [src for src in sorted(L.FACT_FAMILIES)
-              if not any(k[0] == src for k in _cohorts)]
-    if _stamps:
-        _newest = _stamps[-1]
-        _lagging = [t for t in _stamps
-                    if (datetime.datetime.fromisoformat(_newest)
-                        - datetime.datetime.fromisoformat(t)).days >= 1]
-        A('<div class=sweepline>')
-        A('<span><b>Last sweep</b> %s</span>' % e(when(_newest)))
-        # "cohort" is our word, not the reader's. It means one scan of one
-        # site set by one transport, and nothing on the page defines it. The
-        # count is of SCANS, so the line says scans. Renamed 2026-08-26.
-        A('<span class=quiet>%d scan(s) &middot; %d current &middot; '
-          '%d older than a day%s</span>'
-          % (len(_stamps), len(_stamps) - len(_lagging), len(_lagging),
-             " &middot; %d source(s) never run" % len(_never) if _never else ""))
-        A('</div>')
-
     A('<details class=srcdetail><summary>Which tool looked, and when</summary>')
     A('<div class=card style="margin-bottom:10px"><div class=kpis>')
     _seen = set()
@@ -1035,6 +1044,16 @@ def render(m):
     A('<p class=sub style="margin:2px 0 0">%d sites across %d hosts &middot; '
       'one ledger &middot; read-only</p>' % (m["inventory_count"], nhosts))
     A('</div>')
+
+    # HOW FRESH IS THIS PAGE is the first question a reader has, so the answer
+    # sits directly under the masthead. It was first written inside the
+    # coverage section, which put it 1,500px down, below the whole suite --
+    # under the heading "What this page knows, and what it does not", which is
+    # where the METHOD belongs and not where the DATE does.
+    #
+    # The per-scan breakdown stays down there, folded. This line is the
+    # answer; that block is the evidence for it.
+    sweep_line(A, m, e)
 
     A('<div class="card topband">')
     A('<div class=topmain>')
