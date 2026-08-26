@@ -54,7 +54,13 @@
 # EXIT CODES
 #   0  every call on every site was a real measurement
 #   1  could not start (missing tool, no Pantheon session, no sites given)
-#   2  at least one call FABRICATED a clean value -- item 22 is live
+#   2  at least one call FABRICATED a clean value -- item 22 has REGRESSED
+#   3  at least one call did not answer and was recorded honestly as unknown.
+#      Nothing is wrong with the scanner; something is wrong with the site or
+#      the connection, and no measurement came back. Added 2026-08-26, because
+#      once item 22 was fixed a totally failed site had nothing left to score
+#      and would have exited 0 -- which reads as "every call was a real
+#      measurement", the exact sentence exit 0 is documented to mean.
 #
 set -uo pipefail
 
@@ -215,16 +221,27 @@ scanner_would_record() {
       [ -n "$parsed" ] && printf 'wp_version=<the version>' \
                        || printf 'wp_version=unknown' ;;
     "core check-update"*)
-      if [ -n "$parsed" ] && [ "$parsed" != "[]" ]; then
-        printf 'wp_core_update=<the available version>'
+      # THREE OUTCOMES, NOT TWO. This said "up-to-date" for both an empty
+      # result and a failed call until 2026-08-26, which is the behaviour the
+      # scanner had until item 22 was fixed on 2026-08-23. The mirror was
+      # never updated, so this script reported the scanner fabricating a value
+      # the scanner had stopped fabricating three days earlier.
+      if [ -z "$parsed" ]; then
+        printf 'wp_core_update=unknown (the call failed; nobody looked)'
+      elif [ "$parsed" = "[]" ]; then
+        printf 'wp_core_update=up-to-date (measured: nothing pending)'
       else
-        printf 'wp_core_update=up-to-date'
+        printf 'wp_core_update=<the available version>'
       fi ;;
     "plugin list --status=must-use"*)
       if [ -n "$parsed" ] && [ "$parsed" != "[]" ]; then
         printf 'mu-plugins=<count> into the component inventory'
+      elif [ -z "$parsed" ]; then
+        # "no mu-plugins recorded" read as a fact about the site. The scanner
+        # records the FAILURE, in component_scan, which is a different thing.
+        printf 'mu-plugins=unknown, and component_scan records mu-plugin:false'
       else
-        printf 'no mu-plugins recorded'
+        printf 'no mu-plugins on this site (measured, the list was empty)'
       fi ;;
     "plugin list"*)
       # The count is now DERIVED from the full list by selecting
@@ -315,31 +332,45 @@ for given in "$@"; do
     # name, so nothing was measured and nothing was fabricated -- the input was
     # wrong. Calling this FABRICATED, as this script did on its first real run,
     # puts a typo in the same column as a site whose plugin count is a lie.
+    #
+    # THE VERDICT IS DERIVED FROM THE DESCRIPTION, so the two cannot disagree.
+    # They already did, on every failing call: this script printed
+    #
+    #     => FABRICATED (exit 1)
+    #        the scanner records: plugin_updates=unknown, no inventory
+    #
+    # two lines apart, and then exited 2 with "ITEM 22 IS LIVE". FABRICATED
+    # means the scanner writes a CLEAN value where it should write unknown --
+    # and the line under it says it writes unknown. Item 22 was fixed on
+    # 2026-08-23; this mirror of the scanner branches was not updated, so the
+    # detector had been reporting the bug it was built to catch as live ever
+    # since the bug was fixed, about the very site that motivated the fix.
+    #
+    # Same failure as the gitignored ci/github-actions/ mirror. test-wp-calls.py
+    # guards the COMMAND LIST against drift and nothing guarded the BRANCH
+    # MODEL. Deriving one from the other is the guard.
+    records="$(scanner_would_record "$call" "$parsed")"
+    fabricates=1
+    case "$records" in
+      *unknown*|*"no inventory"*|*"nobody looked"*) fabricates=0 ;;
+    esac
     if printf '%s' "$errtxt" | grep -qE 'was not found|Could not locate a site'; then
       verdict="NOT-A-SITE"; cause="no Pantheon site by this name"
       any_notasite=1
     elif [ "$rc" -eq 124 ]; then
-      verdict="FABRICATED"; cause="TIMED OUT after ${WP_CLI_TIMEOUT}s"
       any_timeout=1
-    elif [ "$rc" -ne 0 ] && [ "${call#option get}" != "$call" ]; then
-      # NOT FABRICATED. Item 22 is about calls whose failure branch writes a
-      # CLEAN value -- 0 updates, "up-to-date" -- so a failure becomes good
-      # news. The sending-domain call has no such branch: it records `unknown`
-      # and `smtp_plugin_seen=post-smtp`, which is the honest answer and the
-      # whole reason it was written that way.
-      #
-      # Its first real run scored it FABRICATED on cm-whitelabel and set the
-      # exit code to 2, which would put an accurate `unknown` in the same
-      # column as a plugin count that is a lie. Added 2026-08-26.
-      verdict="UNMEASURED"; cause="exit $rc, and the scanner records unknown"
-    elif [ "$rc" -ne 0 ]; then
-      verdict="FABRICATED"; cause="exit $rc"
-    elif [ "${call#option get}" != "$call" ] && [ -z "$parsed" ]; then
-      verdict="UNMEASURED"; cause="$why, and the scanner records unknown"
-    elif [ "$call" != "core version" ] && [ -z "$parsed" ]; then
-      verdict="FABRICATED"; cause="$why"
-    elif [ "$call" = "core version" ] && [ -z "$parsed" ]; then
-      verdict="FABRICATED"; cause="$why"
+      if [ "$fabricates" -eq 1 ]; then
+        verdict="FABRICATED"; cause="TIMED OUT after ${WP_CLI_TIMEOUT}s"
+      else
+        verdict="UNMEASURED"; cause="TIMED OUT after ${WP_CLI_TIMEOUT}s, recorded as unknown"
+      fi
+    elif [ "$rc" -ne 0 ] || [ -z "$parsed" ]; then
+      [ "$rc" -ne 0 ] && cause="exit $rc" || cause="$why"
+      if [ "$fabricates" -eq 1 ]; then
+        verdict="FABRICATED"
+      else
+        verdict="UNMEASURED"; cause="$cause, and the scanner records unknown"
+      fi
     elif [ "$parsed" = "[]" ]; then
       verdict="MEASURED"; cause="genuinely nothing pending"
     else
@@ -366,7 +397,7 @@ for given in "$@"; do
     # site:list, so it never asks about a name that does not exist -- saying
     # "the scanner records: theme_updates=0" would invent a consequence.
     if [ "$verdict" != "NOT-A-SITE" ]; then
-      printf '       the scanner records: %s\n' "$(scanner_would_record "$call" "$parsed")"
+      printf '       the scanner records: %s\n' "$records"
     fi
 
     json_rows="$json_rows$(jq -nc \
@@ -400,21 +431,33 @@ if [ "$any_notasite" -eq 1 ]; then
   printf 'and it will be translated; pass a name in neither column and it will\n'
   printf 'reach Pantheon as typed.\n\n'
 fi
+# THE LOCAL-FAULT WARNING COMES FIRST, AND IS NOT NESTED IN ANY VERDICT.
+#
+# It used to sit inside the `any_fabricated` branch. Once item 22 was fixed
+# nothing fabricates, so on 2026-08-26 that branch stopped firing and took the
+# warning with it -- the one thing on this page that explains a wall of
+# timeouts as a passphrase prompt on this laptop rather than a fleet finding.
+# It is a fact about the RUN, so it is reported before any verdict is scored.
+if [ "$any_timeout" -eq 1 ] && [ "$AGENT_EMPTY" -eq 1 ]; then
+  printf 'READ THIS FIRST. Calls timed out AND ssh-agent held no identities\n'
+  printf 'when this run started. If your Pantheon key has a passphrase, those\n'
+  printf 'timeouts are ssh waiting on a prompt on THIS MACHINE, not a site\n'
+  printf 'failing to answer. That is a local fault wearing a fleet finding\x27s\n'
+  printf 'clothes. Run:  ssh-add --apple-use-keychain ~/.ssh/id_rsa\n'
+  printf 'then run this again before recording anything about these sites.\n\n'
+fi
 if [ "$any_fabricated" -eq 1 ]; then
-  printf 'ITEM 22 IS LIVE: at least one call failed and the scanner would have\n'
-  printf 'recorded a clean value for it. The defaults need to become "unknown".\n'
-  if [ "$any_timeout" -eq 1 ] && [ "$AGENT_EMPTY" -eq 1 ]; then
-    printf '\nBUT READ THIS FIRST. Calls timed out AND ssh-agent held no identities\n'
-    printf 'when this run started. If your Pantheon key has a passphrase, those\n'
-    printf 'timeouts are ssh waiting on a prompt on THIS MACHINE, not a site\n'
-    printf 'failing to answer. That is a local fault wearing a fleet finding\x27s\n'
-    printf 'clothes. Run:  ssh-add --apple-use-keychain ~/.ssh/id_rsa\n'
-    printf 'then run this again before recording anything about item 22.\n'
-  fi
+  printf 'ITEM 22 HAS REGRESSED: a call failed and the scanner would record a\n'
+  printf 'CLEAN value for it. This should be impossible since 2026-08-23, when\n'
+  printf 'the failure branches became unknown. Read the scanner before anything\n'
+  printf 'else -- a default has been reintroduced.\n'
   exit 2
 fi
 if [ "$any_notasite" -eq 1 ]; then
   exit 1
+fi
+if [ "$any_unmeasured" -eq 1 ]; then
+  exit 3
 fi
 if [ "$any_unmeasured" -eq 1 ]; then
   printf 'One or more calls did not answer, and the scanner records UNKNOWN for\n'

@@ -129,36 +129,89 @@ check("...and exits 0", rc == 0, "exit %d" % rc)
 check("an empty [] is called a real measurement, not silence",
       "genuinely nothing pending" in out)
 
-# The heart of item 22: the scanner records a clean value off a failed call.
+# ---------------------------------------------------------------------------
+# THE VERDICT MUST AGREE WITH THE LINE UNDER IT. Rewritten 2026-08-26.
+#
+# These assertions used to demand FABRICATED on every failing call, which was
+# true of the scanner until item 22 was fixed on 2026-08-23. The fix made the
+# failure branches record `unknown`; this mirror of them was never updated, so
+# the detector reported the bug it exists to catch as LIVE on every failing
+# call for three days, and exited 2 while doing it. Its own output said so:
+#
+#     => FABRICATED (exit 1)
+#        the scanner records: plugin_updates=unknown, no inventory
+#
+# Two lines, printed together, contradicting each other. A comment four lines
+# above this block had already noticed half of it -- the plugin_updates
+# wording was corrected and the verdict beside it was left alone.
+#
+# So assert the PROPERTY rather than either string: FABRICATED means the
+# scanner writes a clean value, so it must never appear over a line saying the
+# scanner writes unknown. That holds whatever the branches say next year.
+# ---------------------------------------------------------------------------
+
+
+def verdict_blocks(out):
+    """(verdict, the 'scanner records' line under it) for each call."""
+    blocks, cur = [], None
+    for line in out.splitlines():
+        t = line.strip()
+        if t.startswith("=> "):
+            cur = t[3:].split(" ")[0]
+        elif t.startswith("the scanner records:") and cur:
+            blocks.append((cur, t.split(":", 1)[1].strip()))
+            cur = None
+    return blocks
+
+
+def contradictions(out):
+    return [(v, r) for v, r in verdict_blocks(out)
+            if v == "FABRICATED" and ("unknown" in r or "no inventory" in r)]
+
+
+# The heart of item 22: a call fails, and the question is what the scanner
+# writes for it.
 rc, out = run("wpclifail")
-check("a non-zero exit is FABRICATED, never a clean value", "FABRICATED" in out)
+check("a failed call whose value is recorded as unknown is NOT FABRICATED",
+      not contradictions(out),
+      "verdict contradicts its own record line: %r" % (contradictions(out),))
+check("...it is UNMEASURED, which is a fact about the site",
+      "UNMEASURED" in out, out[-500:])
 check("...and it names the exit code", "exit 1" in out, out[-500:])
 check("...and it surfaces the stderr the scanner throws away",
       "Could not establish a connection" in out)
-# `plugin_updates=0` used to be the expected string here, and it described the
-# scanner BEFORE item 22 was fixed on 2026-08-23. The scanner now writes null
-# for a failed call, which the ledger reads as unknown -- verified against the
-# mock: a dbmissing site ingests as plugin_updates=unknown, never 0. The
-# diagnostic's wording was left describing the old, buggy behaviour and this
-# assertion was pinning it there.
-check("...and it says what the scanner would have written",
-      "wp_core_update=up-to-date" in out and "plugin_updates=unknown" in out,
-      out[-500:])
-check("...and exits 2 so a caller can act on it", rc == 2, "exit %d" % rc)
+# The scanner's real branches, read from pantheon-fleet-healthcheck.sh:
+# an empty core_json is "unknown", never "up-to-date". "up-to-date" is
+# reserved for a literal [], which means measured and nothing pending.
+check("...and it says the scanner records unknown, not up-to-date",
+      "wp_core_update=unknown" in out and "plugin_updates=unknown" in out,
+      out[-800:])
+check("...and exits 3: nothing fabricated, nothing measured either",
+      rc == 3, "exit %d" % rc)
 
 # The nastiest case: exit 0, output on stdout, and none of it is JSON.
 rc, out = run("wpclijunk")
-check("exit 0 with non-JSON output is still FABRICATED", "FABRICATED" in out)
+check("exit 0 with non-JSON output is caught, and not called FABRICATED",
+      "UNMEASURED" in out and not contradictions(out), out[-500:])
 check("...and it says json_or_empty is what rejected it",
       "NOT JSON" in out, out[-500:])
-check("...and exits 2", rc == 2, "exit %d" % rc)
+check("...and exits 3", rc == 3, "exit %d" % rc)
 
 rc, out = run("wpclihang", timeout_override=2)
-check("a hung call is FABRICATED and named as a timeout",
-      "FABRICATED" in out and "TIMED OUT" in out, out[-400:])
-check("...and exits 2", rc == 2, "exit %d" % rc)
+check("a hung call is named as a timeout and recorded as unknown",
+      "TIMED OUT" in out and not contradictions(out), out[-400:])
+check("...and exits 3", rc == 3, "exit %d" % rc)
 check("the shell's own job-control noise is not in the report",
       "Terminated" not in out, out[-400:])
+
+# THE REGRESSION DETECTOR STILL WORKS. FABRICATED is now reachable only if a
+# clean default is reintroduced, which is exactly what it should mean. Assert
+# the machinery is live rather than dead code: a site that succeeds everywhere
+# must produce no FABRICATED, and the summary text for it must still exist.
+_diag_src = open(DIAG).read()
+check("the FABRICATED path is still reachable, not deleted",
+      'verdict="FABRICATED"' in _diag_src
+      and "ITEM 22 HAS REGRESSED" in _diag_src)
 
 # The control call. `core version` and `core check-update` share one SSH
 # session, so a site that answers the first and not the second is telling us
@@ -198,11 +251,16 @@ rc, out = run("wpclihang", timeout_override=2)
 check("an empty ssh-agent is warned about before any call runs",
       "ssh-agent holds no identities" in out, out[:500])
 check("a timeout with an empty agent is flagged as possibly LOCAL",
-      "BUT READ THIS FIRST" in out and "not a site" in out, out[-700:])
+      "READ THIS FIRST" in out and "not a site" in out, out[-700:])
 check("...and it names the one command that fixes it",
       "ssh-add --apple-use-keychain" in out)
-check("...but the verdict is still FABRICATED and the exit is still 2",
-      "FABRICATED" in out and rc == 2, "exit %d" % rc)
+# It must NOT be nested inside a verdict. It was inside the `any_fabricated`
+# branch, and when nothing fabricated any more the warning disappeared with
+# it -- the one line that tells you a wall of timeouts is a passphrase prompt
+# on your own laptop. It is a fact about the RUN, not about a verdict.
+check("...and the warning survives a run where nothing is FABRICATED",
+      "FABRICATED" not in out and "READ THIS FIRST" in out, out[-700:])
+check("...and the run still fails, at exit 3", rc == 3, "exit %d" % rc)
 
 # The warning must not fire on every failure, or it becomes noise that hides
 # the real ones. A loaded agent means a timeout is a genuine finding.
