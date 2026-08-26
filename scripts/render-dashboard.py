@@ -119,6 +119,24 @@ def build_model(history_dir, inventory_path, today):
         raise SystemExit("ledger is empty; run `fleet-ledger.py ingest` first")
     _, _, inv = L.load_inventory(inventory_path)
 
+    # THE EMAIL WORKBOOK IS A SECOND RULINGS FILE, and the sending-domain
+    # comparison needs it. Loaded here rather than threaded through a flag
+    # because it sits beside fleet-inventory.json and is read the same way.
+    #
+    # Optional on purpose: this is the rulings layer, and a render must still
+    # work from the ledger alone. Absent means no comparison is drawn, never a
+    # comparison against nothing.
+    email_rulings = {}
+    _ep = os.path.join(os.path.dirname(inventory_path) or ".",
+                       "fleet-email-inventory.json")
+    if os.path.exists(_ep):
+        try:
+            for _s in (json.load(open(_ep)).get("sites") or []):
+                if _s.get("domain"):
+                    email_rulings[_s["domain"]] = _s
+        except (ValueError, OSError):
+            email_rulings = {}
+
     # Latest run per (source, COHORT), and the diff against the previous run of
     # the same cohort.
     #
@@ -324,6 +342,15 @@ def build_model(history_dir, inventory_path, today):
                         if s.get("nexcess_app_version") not in (None, L.UNKNOWN))
         coverage.append(("Nexcess estate (PHP, WordPress version, via the portal API)",
                          (nx_known, len(nexcess_sites))))
+
+    # The From: header domain a person recorded, next to the one the site
+    # reports. Attached per site rather than compared here, so the comparison
+    # lives with the copy that explains it.
+    for _s in sites:
+        _w = email_rulings.get(_s.get("site_id")) or {}
+        _fa = str(_w.get("from_address") or "")
+        _s["recorded_from_domain"] = (_fa.rsplit("@", 1)[-1].lower()
+                                      if "@" in _fa else None)
 
     unreconciled = [s for s in sites
                     if s.get("in_workbook") is False or s.get("reconciliation")]
@@ -1211,15 +1238,33 @@ def render(m):
         str(x["spf_checked_at"]).lower() for x in _in_scope
         if str(x.get("spf_checked_at")).lower() != L.UNKNOWN)
     _top_domain, _top_n = (_shared.most_common(1) or [("", 0)])[0]
-    # MEASURED vs RECORDED. The whole reason the scan now reads post-smtp.
-    # A disagreement is the finding: SPF, DKIM and DMARC were queried at
-    # `spf_checked_at`, so if the site actually sends from somewhere else,
-    # every green cell on that row is an answer about the wrong domain.
+    # MEASURED vs RECORDED, AND AGAINST THE RIGHT FIELD.
+    #
+    # This compared `smtp_from_domain` to `spf_checked_at` and would have
+    # reported EIGHT disagreements on the first real run. All eight were false.
+    # The two are different questions:
+    #
+    #   smtp_from_domain  the domain the mail claims to come FROM, the header
+    #                     From:. It is what DMARC aligns against.
+    #   spf_checked_at    the SENDING domain, where SPF and DKIM are published.
+    #
+    # A site can legitimately send From: sgroilawley.com through the sending
+    # domain web.sgroilawley.com, and 7 of the 8 were exactly that shape.
+    # The workbook records both, so the comparable field is `from_address`.
+    # Against that, 37 of 39 agreed on 2026-08-26.
+    #
+    # AND THE MEASUREMENT CANNOT CHECK THE SENDING DOMAIN AT ALL on most
+    # sites. 35 of 52 use `transport_type: mailgun_api`, where the envelope
+    # sender is set by Mailgun rather than stored in the WordPress option.
+    # This confirms the From: ruling; the sending-domain ruling stays a ruling.
     _measured = [x for x in m["sites"]
                  if x.get("smtp_from_domain") not in (None, L.UNKNOWN, "n/a")]
-    _disagree = [x for x in _measured
+    _comparable = [x for x in _measured if x.get("recorded_from_domain")]
+    _disagree = [x for x in _comparable
                  if str(x["smtp_from_domain"]).lower()
-                 != str(x.get("spf_checked_at", "")).lower()]
+                 != str(x["recorded_from_domain"]).lower()]
+    # Measured, and nobody had recorded a From: address to compare it with.
+    _newly_known = [x for x in _measured if not x.get("recorded_from_domain")]
     email_causes = [g for g in m["standing"]
                     if g["axis"] == "RISK"
                     and ("DMARC" in g["cause"] or "SPF" in g["cause"]
@@ -1231,19 +1276,29 @@ def render(m):
     _measured_note = ""
     if _measured:
         _measured_note = (
-            '<div style="margin-top:6px"><strong>%d site(s) now have it '
-            'MEASURED</strong> off the site, from post-smtp\'s own '
-            'configuration, and stored beside the recorded value rather than '
-            'over it. %s</div>'
-            % (len(_measured),
-               ('All of them agree with what was recorded.' if not _disagree
-                else '<strong>%d disagree</strong> with the recorded value, '
-                     'which means SPF, DKIM and DMARC for those sites were '
-                     'queried at a domain the site does not send from: %s.'
+            '<div style="margin-top:6px">On <strong>%d site(s)</strong> the '
+            'address the mail claims to come <em>from</em> is now '
+            '<strong>measured</strong>, read out of post-smtp, and kept beside '
+            'the recorded value rather than over it. Checked against the '
+            '%d that have a recorded From: address: %s</div>'
+            '<div class=quiet style="margin-top:4px">This does <strong>not</strong> '
+            'verify the sending domain above. Most of these sites send through '
+            'the Mailgun API, where the envelope sender is set by Mailgun and '
+            'is not stored on the site, so the sending domain stays a ruling. '
+            'The two are different: a site can legitimately send From: '
+            '<code>example.com</code> through the sending domain '
+            '<code>web.example.com</code>.%s</div>'
+            % (len(_measured), len(_comparable),
+               ('<strong>all agree</strong>.' if not _disagree
+                else '<strong>%d disagree</strong> and are worth a look: %s.'
                      % (len(_disagree),
                         ", ".join("<code>%s</code>" % e(x["site_id"])
                                   for x in _disagree[:6])
-                        + (" and more" if len(_disagree) > 6 else ""))))
+                        + (" and more" if len(_disagree) > 6 else ""))),
+               ('' if not _newly_known
+                else ' <strong>%d site(s)</strong> had no recorded From: '
+                     'address at all and now have a measured one.'
+                     % len(_newly_known)))
         )
     A('<div class="card wfcard">')
     A('<div class=wfhead>Email DNS</div>')

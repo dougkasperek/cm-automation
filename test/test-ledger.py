@@ -1504,26 +1504,58 @@ check("...with the INVENTORY as its denominator, not the rows that answered",
       _cov[_sd_line[0]][1] > 0,
       "denominator is %r" % (_cov[_sd_line[0]],))
 
-# A MEASUREMENT THAT DISAGREES WITH THE RULING IS THE FINDING. If the site
-# sends from somewhere else, every green cell on that row is an answer about
-# the wrong domain.
+# ---------------------------------------------------------------------------
+# THE MEASURED VALUE IS COMPARED AGAINST THE RIGHT FIELD
+#
+# The first real run reported EIGHT disagreements. All eight were false. The
+# comparison was `smtp_from_domain` against `spf_checked_at`, and those answer
+# different questions:
+#
+#   smtp_from_domain  the domain the mail claims to come FROM (header From:),
+#                     which is what DMARC aligns against
+#   spf_checked_at    the SENDING domain, where SPF and DKIM are published
+#
+# sgroilawley.com legitimately sends From: sgroilawley.com through the sending
+# domain web.sgroilawley.com. Seven of the eight were exactly that. Compared
+# against the workbook's `from_address`, 37 of 39 agreed.
+# ---------------------------------------------------------------------------
 _target = [x for x in _scoped
            if str(x.get("spf_checked_at")).lower() not in ("unknown", "")][0]
-_target["smtp_from_domain"] = "somewhere-else.example"
+
+# THE REGRESSION ASSERTION. A site whose From: domain matches what was
+# recorded, but whose SENDING domain is a different host, is NOT a
+# disagreement. This is the exact false positive, reproduced.
 _target["smtp_plugin_seen"] = "post-smtp"
+_target["smtp_from_domain"] = "example.com"
+_target["recorded_from_domain"] = "example.com"
+_target["spf_checked_at"] = "web.example.com"
+check("a From: domain under a different SENDING domain is NOT a disagreement",
+      "disagree" not in RD.render(_sm),
+      "the sending domain was compared against the From: domain again")
+
+# A real disagreement: the site says one thing, the workbook says another.
+_target["smtp_from_domain"] = "somewhere-else.example"
 _dpage = RD.render(_sm)
-check("a measured sending domain that disagrees is reported",
+check("a measured From: domain that disagrees with the record is reported",
       "1 disagree" in _dpage and _target["site_id"] in _dpage,
       "disagreement not on the page")
-check("...and says what a disagreement MEANS for the row's other columns",
-      "queried at a domain the site does not send from" in _dpage)
+check("...and the page does not claim to have verified the SENDING domain",
+      "does <strong>not</strong> verify the sending domain" in _dpage
+      and "envelope sender is set by Mailgun" in _dpage)
 
-# Agreement is not silence: the count of measured sites is stated either way,
-# so "we measured 40 and all agreed" cannot be mistaken for "we measured none".
-_target["smtp_from_domain"] = str(_target["spf_checked_at"])
+# Agreement is not silence: the count is stated either way, so "we measured 39
+# and all agreed" cannot be mistaken for "we measured none".
+_target["smtp_from_domain"] = "example.com"
 check("agreement still says how many were measured",
-      "1 site(s) now have it MEASURED" in RD.render(_sm)
-      and "All of them agree" in RD.render(_sm))
+      "On <strong>1 site(s)</strong>" in RD.render(_sm)
+      and "all agree" in RD.render(_sm))
+
+# Measured where nobody had recorded anything is a THIRD outcome, not an
+# agreement and not a disagreement. hoffmanscheese is in no email row at all
+# and its mailer answered on the first real run.
+_target["recorded_from_domain"] = None
+check("a site with no recorded From: address is counted separately",
+      "had no recorded From: address at all" in RD.render(_sm))
 
 # ---------------------------------------------------------------------------
 # Component catalogue: slug casing, 2026-08-24
