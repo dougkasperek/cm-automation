@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-23.** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-26.** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,7 +8,79 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-24, the Nexcess reply
+## PICK UP HERE — 2026-08-26, two typed numbers
+
+**Nothing is broken and nothing is running.** Repo clean, `HEAD` pushed through
+`37c9507` at the start of the day; two commits sit on top of it unpushed
+(`323bd03`, `6ed6f62`). All nine offline suites pass: ledger **224**, severity
+127, nexcess 96, consent 76, nexcess-ssh 34, worker-exposure 40,
+access-policies 46, wp-calls 45, email-dns 58.
+
+Ledger as of 2026-08-25, all four sources current:
+
+| source | run | measured |
+|---|---|---|
+| health (Pantheon) | `health-2026-08-25_2110` | 52 sites, 48 deep |
+| health (Nexcess SSH) | `health-nexcess-2026-08-25_1615` | 22 sites, 21 deep |
+| email-dns | `email-dns-2026-08-25_2002` | 70 of 78 |
+| consent | `consent-2026-08-25_2204` | 71 of 79 |
+| nexcess (control plane) | `nexcess-2026-08-25_1749` | 22 of 22 |
+
+Health **2 CRIT / 51 WARN / 27 OK / 3 SKIP / 1 FROZEN**, one excluded.
+Health-coverage scoreboard **11**. UNKNOWN **0**. Component catalogue **362
+distinct, 2,346 installs, 68 of 75 sites**. All measured today by rendering,
+not carried forward.
+
+### What was fixed
+
+**The dashboard printed `that number is 0` as literal copy.** In the one
+paragraph whose job is to explain that UNKNOWN and health-coverage are
+different questions. It was wrong for part of 2026-08-25, when
+`app.eastauroracc.com` arrived from the Nexcess API and UNKNOWN was 1. It is
+computed now, over production and non-production sites alike, and the sentence
+changes shape rather than changing a digit. Two of the three new tests were
+verified to fail against the old copy.
+
+**CI committed one of the two pages it renders.** `persist-ledger.sh` rendered
+and staged `fleet.html` only, so the repo's `components.html` was whatever
+someone last ran by hand — one health run behind since 2026-08-25, showing 360
+components against a ledger holding 362. `publish-dashboard.sh` re-renders
+both, so the live page was right and only the review copy was stale. Both are
+rendered and staged now.
+
+### Next, undecided — Doug picks
+
+Nothing here is blocked and nothing is urgent. In rough order of what the
+evidence argues for:
+
+1. **Measure the sending domain** (`post-smtp` on 39 sites, one extra WP-CLI
+   call in a scan that already runs). Closes the 7 UNKNOWN sending domains
+   with a measurement and cross-checks the other 71 workbook claims. Full
+   entry at the end of `docs/DO-THIS-NEXT.md`.
+2. **The ruling pass.** 83 of 84 sites are `production: null` and exactly one
+   ruling has ever been recorded. One bulk worksheet, a handful of real
+   decisions, one commit. Do the pass, not the editor — reasoning at the end
+   of `docs/DO-THIS-NEXT.md`.
+3. **Fold Pantheon's inline publish into `_publish-dashboard.yml`.** Named as
+   the next tidy-up in `CLAUDE.md`; the other three workflows already call the
+   shared one.
+4. **Asana routing**, still the missing shared plumbing and still unbuilt.
+
+### Still a human task, unchanged
+
+- **Push.** Two commits are local.
+- **Send the Nexcess question-1 reply**, thread
+  `thread::sJecUJQ2cS6EeEacWJKo2D0::`, drafted at the bottom of
+  `docs/NEXCESS-SUPPORT.md`. Do not send the request/response headers they
+  asked for; the challenge was our own missing `post_handshake_auth`.
+- **Check the `github-deploy-[removed]` token scope** in the Cloudflare
+  dashboard. Re-scope, do not delete.
+- **Publish**, if the copy fix should reach `fleet.thudstaff.com` before the
+  next ingest does it. `./scripts/publish-dashboard.sh`.
+
+---
+
+## Previously — 2026-08-24, the Nexcess reply
 
 **Nexcess answered the 2026-08-22 ticket. Two of three questions settled, and
 the SSH deep scan is no longer gated.** Analysis in `docs/NEXCESS-SUPPORT.md`,
