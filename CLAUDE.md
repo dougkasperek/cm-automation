@@ -15,7 +15,7 @@ a second scoring model or a second site list.
 | Email DNS (all hosts) | live, CI, 78 sites, no credentials |
 | Cookie consent, headed | live, 77 of 78 sites. CI headed via xvfb, **proven on a runner 2026-08-22** |
 | **Nexcess estate discovery** | **UNBLOCKED 2026-08-25.** The challenge was OURS, not Nexcess's: a hand-built SSL context omitted `post_handshake_auth`. `probe` now returns `ok 200 site list returned`. See the bug table |
-| **Nexcess SSH deep scan** | **BUILT 2026-08-25, proven on one real site.** Writes to the `health` source over SSH. Not yet run fleet-wide. **No read-only SSH user exists, so the command list in the script is a security control** |
+| **Nexcess SSH deep scan** | **live, 21 of 22 sites, ran fleet-wide 2026-08-25.** Writes to the `health` source over SSH, under `kind: health-nexcess`. CI is manual dispatch only. **No read-only SSH user exists, so the command list in the script is a security control** |
 | ~~Nexcess SSH deep scan (old)~~ | ~~not built. UNGATED 2026-08-24~~ — one account-level key reaches all 21 sites, existing and future. And there is **no read-only SSH user**: the credential is write-capable, so the workflow's command list is a security control |
 | **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
 | Asana routing | not built. The missing shared plumbing |
@@ -43,15 +43,18 @@ not by reading the rule.
 
 **It used to be the UNKNOWN count, and quoting UNKNOWN today is wrong.**
 UNKNOWN answers "has ANY scan reached this site", and the consent sweep reaches
-all 78 domains, so UNKNOWN was **0** for a week. **It is 1 as of 2026-08-25**:
-`app.eastauroracc.com`, discovered by the Nexcess API, in no roster before
-that, and reached by no scan yet.
+all 78 domains, so UNKNOWN was **0** for a week. It went to **1** on
+2026-08-25 when `app.eastauroracc.com` arrived from the Nexcess API in no
+roster, reached by no scan; the SSH scan reached it hours later and it is
+**0 again, measured 2026-08-26** by scoring the ledger, not by reading a page.
 
-That is the two questions coming apart again, in the useful direction. The
-scoreboard did NOT move, and stayed at 32, because `coverage_partial` fires on
-`(nexcess_seen or consent_seen) and not health_seen` and no source has seen the
-new site at all. A site nothing has looked at is UNKNOWN, not
-partially-covered. Verified by scoring, not by reading the rule. The two were the same figure by coincidence until
+Do not read that round trip as nothing happening. For part of one day the
+dashboard printed `UNKNOWN ... that number is 0` as literal copy while the
+answer was 1 — see the bug table. The scoreboard did NOT move, and stayed at
+32, because `coverage_partial` fires on `(nexcess_seen or consent_seen) and not
+health_seen` and no source had seen the new site at all. A site nothing has
+looked at is UNKNOWN, not partially-covered. Verified by scoring, not by
+reading the rule. The two were the same figure by coincidence until
 2026-08-19; they are different questions. See the `UNKNOWN: 0` row in the table
 below — this paragraph is what that row was about, and it sat here
 contradicting it for two days.
@@ -259,6 +262,7 @@ do not add a total.
 | `updates pending` inside a per-site view | the fleet-wide flag. The filter listed components whose update is waiting on some OTHER site, in a view whose every other number was about the one selected |
 | `the 1 component(s) installed on <site>` | 31 were installed; 1 was merely being shown. The banner counted VISIBLE rows, so switching on a filter rewrote a fact about the site into a fact about the view |
 | `the Nexcess discovery workflow should take the scoreboard to 11` | it cannot move it at all. Discovery writes `nexcess_*` facts, `coverage_partial` fires on exactly that — a site seen by the control plane and not by a health scan. The 11 is real and belongs to the **SSH** scan. The sentence sat in this file for five days, one paragraph above the rule that contradicts it, and was believed because the number was right |
+| the dashboard's `no site is UNKNOWN on health and that number is 0` | it was the literal characters `0`, typed on 2026-08-19 when the consent sweep had just taken UNKNOWN to zero, in a sentence explaining that UNKNOWN and coverage are different questions. It was **wrong on 2026-08-25**: `app.eastauroracc.com` arrived from the Nexcess API, no source had seen it, UNKNOWN was 1 and the page said 0. The SSH scan reached it the same day and took it back to 0, which is the worst case — a hardcoded claim that is usually right is the one nobody rereads. Computed 2026-08-26, across production and non-production alike, with a test that was verified to fail |
 | `16 commits are unpushed, that is the first thing to do` | everything was pushed. Inferred from the rule that `push` is a human action and repeated four times without checking. `git status --short` reports working-tree changes ONLY and says nothing about ahead/behind; `git ls-remote origin main` is the check that talks to the remote |
 
 One of them was our own diagnostic: `probe` printed one word for a DNS

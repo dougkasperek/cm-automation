@@ -1249,14 +1249,28 @@ def render(m):
     no_health = [s for s in m["sites"]
                  if any(r.get("code") == "coverage_partial"
                         for r in (s.get("severity") or {}).get("reasons", []))]
+    #
+    # THE UNKNOWN FIGURE IN THIS SENTENCE IS MEASURED, NOT TYPED. It read
+    # "that number is 0" as literal copy from 2026-08-19 until 2026-08-26, and
+    # it was WRONG for a day: `app.eastauroracc.com` arrived from the Nexcess
+    # API on 2026-08-25 in no roster, no source had seen it, and UNKNOWN was 1
+    # while the page said 0. The SSH scan reached it and took it back to 0,
+    # which is the worst case -- a hardcoded claim that is usually right.
+    # Counted across ALL sites, production and not, because the sentence is a
+    # statement about the fleet and `counts` alone drops the excluded ones.
+    unknown_n = counts.get("UNKNOWN", 0) + excl.get("UNKNOWN", 0)
     if no_health:
         A('<p class=sub style="margin:10px 0 0">The <strong>%d site(s) with no '
           'health evidence</strong> named on the health card above are NOT the '
           'same question as UNKNOWN. UNKNOWN asks whether any scan reached a '
-          'site at all; the consent sweep reaches every domain, so no site is '
-          'UNKNOWN on health and that number is 0. Coverage asks whether we '
+          'site at all; %s. Coverage asks whether we '
           'know how a site is <em>maintained</em>, which is the number to '
-          'watch.</p>' % len(no_health))
+          'watch.</p>'
+          % (len(no_health),
+             ('the consent sweep reaches every domain, so <strong>no site is '
+              'UNKNOWN on health</strong> right now' if not unknown_n else
+              '<strong>%d site(s) are UNKNOWN</strong>, reached by no scan of '
+              'any kind' % unknown_n)))
         # The 32 domains used to be printed here. Measured 2026-08-23: 233px
         # of a 879px section, in a block headed "What the states mean", which
         # is not what a site list is. The same sentence already appears on the

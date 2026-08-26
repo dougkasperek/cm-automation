@@ -1425,6 +1425,43 @@ check("...and the suite is still three cards, not four",
       "site does not have" % _page.count('class="card wfcard"'))
 
 # ---------------------------------------------------------------------------
+# The UNKNOWN figure in the coverage paragraph, 2026-08-26
+#
+# It was the literal characters "that number is 0", typed on 2026-08-19 when
+# the consent sweep had just taken UNKNOWN to zero. It was WRONG on
+# 2026-08-25: app.eastauroracc.com arrived from the Nexcess API in no roster,
+# no source had seen it, UNKNOWN was 1 and the page said 0. The SSH scan
+# reached it the same day and took it back to 0, which is the worst case for
+# a hardcoded claim -- usually right, so nobody rereads it.
+#
+# Assert the PROPERTY, never the number: the sentence has to agree with the
+# model it was rendered from, whatever that model says.
+# ---------------------------------------------------------------------------
+_um = RD.build_model("./history", "./data/fleet-inventory.json",
+                     datetime.date(2026, 8, 23))
+_uh = _um["health"]
+_un = _uh["counts"].get("UNKNOWN", 0) + _uh["excluded"].get("UNKNOWN", 0)
+check("the page's UNKNOWN claim agrees with the model it rendered from",
+      ("no site is UNKNOWN on health" in RD.render(_um)) == (_un == 0),
+      "the model says %d UNKNOWN" % _un)
+
+# The half that fails against hardcoded copy. Counted across production and
+# non-production alike, because the sentence is a claim about the fleet.
+_uh["counts"]["UNKNOWN"] = _uh["counts"].get("UNKNOWN", 0) + 1
+_uh["counts"]["OK"] = max(0, _uh["counts"].get("OK", 0) - 1)
+_upage = RD.render(_um)
+check("...and one site going UNKNOWN changes what the sentence says",
+      "no site is UNKNOWN on health" not in _upage
+      and "1 site(s) are UNKNOWN" in _upage,
+      "the sentence did not move when the model did")
+
+_uh["counts"]["UNKNOWN"] = 0
+_uh["excluded"]["UNKNOWN"] = 1
+check("...including an UNKNOWN on a non-production site",
+      "no site is UNKNOWN on health" not in RD.render(_um),
+      "an excluded site was dropped from a fleet-wide claim")
+
+# ---------------------------------------------------------------------------
 # Component catalogue: slug casing, 2026-08-24
 #
 # WP-CLI reports the plugin DIRECTORY name, and the same component is spelled
