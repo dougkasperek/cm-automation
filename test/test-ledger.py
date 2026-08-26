@@ -1533,6 +1533,44 @@ check("chip labels are darkened for contrast while the dot keeps the pure hue",
       "color-mix(in srgb,var(--good) 62%,var(--ink))" in _page
       and ".chip.good .dot{background:var(--good)}" in _page)
 
+# ---------------------------------------------------------------------------
+# Batch one of the UI direction, 2026-08-26
+# ---------------------------------------------------------------------------
+
+# TWO UNRELATED THINGS WERE BOTH CALLED "NEEDS A DECISION": the headline
+# number, which counts facts that MOVED, and a section listing sites with no
+# production ruling, which nothing measured and no scan will ever resolve.
+# Same words, same page, 3,000 words apart.
+_hero_zone = _page[:_page.find("<h2>")]
+check("the headline number is not called a decision",
+      "decision" not in _hero_zone.lower(),
+      "the masthead still calls a moved fact a decision")
+check("...it states its unit, and the sites it spans",
+      "fact(s) moved on" in _page and "site(s) since the previous run" in _page)
+check("...and the ruling queue is named for what it is",
+      "Rulings waiting on a person" in _page)
+
+# COVERAGE: what is NOT checked is the operational number, and an exception
+# count with no denominator cannot be sized, so both halves are printed.
+check("coverage states checked, not-checked AND the denominator",
+      "checked" in _page and "not checked" in _page and "&mdash; of " in _page)
+check("...and full coverage says so rather than showing a zero",
+      "none missing" in _page)
+# The old form must be gone, or two vocabularies describe one number.
+import re as _re2
+check("...and the bare 'N of M' coverage form is gone",
+      not _re2.search(r'<div class=n>\d+ of \d+</div>', _page),
+      "found the old coverage figure form")
+
+# FRESHNESS: one sweep line, with the per-tool detail folded away rather than
+# deleted -- a freshness line that names the wrong instrument is worse than
+# none, and that bug shipped once.
+check("there is one sweep line, not a card per source",
+      "Last sweep" in _page and "cohort(s)" in _page)
+check("...and the per-tool timestamps are still reachable",
+      "Which tool looked, and when" in _page
+      and _page.count("class=srcdetail") >= 1)
+
 check("the page does not promise a trend chart it cannot draw",
       "Trend charts appear" not in _page and "No trend chart is drawn" in _page)
 

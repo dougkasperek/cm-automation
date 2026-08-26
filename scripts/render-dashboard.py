@@ -665,6 +665,21 @@ tr:last-child td{border-bottom:none}
 td.num{font-variant-numeric:tabular-nums}
 code{font:11.5px/1.55 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:var(--ink)}
 /* Chip: colour is never the only signal. The label is always present. */
+.sweepline{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;
+ margin:0 0 8px;font-size:13px}
+.sweepline b{color:var(--strong)}
+.srcdetail{margin-bottom:10px}
+.srcdetail summary{cursor:pointer;font-size:11px;font-weight:800;
+ letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
+ list-style:none;display:inline-block;padding:2px 0;
+ border-bottom:1px solid var(--line)}
+.srcdetail summary::-webkit-details-marker{display:none}
+.srcdetail summary::before{content:"+ ";font-weight:800}
+.srcdetail[open] summary::before{content:"\2212 "}
+.srcdetail[open] summary{margin-bottom:8px}
+.covof{color:var(--faint);font-weight:400}
+.covnone{color:var(--muted);font-weight:400}
+.covgap{color:var(--bad)}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;
  letter-spacing:.08em;text-transform:uppercase;
  white-space:nowrap;padding:3px 8px 3px 7px;border-radius:0;
@@ -851,8 +866,32 @@ def coverage_section(A, m, e):
     # days old. A freshness line that reports the wrong instrument is worse
     # than none, because a stale page nobody can tell is stale is this project
     # oldest failure.
-    A('<div class=card style="margin-bottom:10px"><div class=kpis>')
+    # ONE SWEEP LINE, then the per-source detail folded away. Five timestamp
+    # cards is four more than the question deserves: the question is "how
+    # fresh is this page", and the answer is one date plus whether anything is
+    # lagging. The per-source detail is still here, one click away, because a
+    # freshness line that reports the wrong instrument is worse than none --
+    # that bug shipped once, when a single `health` row carried the Nexcess
+    # timestamp against the Pantheon description. 2026-08-26.
     _cohorts = m.get("latest_by_cohort") or {}
+    _stamps = sorted((r.get("observed_at") or "") for r in _cohorts.values())
+    _never = [src for src in sorted(L.FACT_FAMILIES)
+              if not any(k[0] == src for k in _cohorts)]
+    if _stamps:
+        _newest = _stamps[-1]
+        _lagging = [t for t in _stamps
+                    if (datetime.datetime.fromisoformat(_newest)
+                        - datetime.datetime.fromisoformat(t)).days >= 1]
+        A('<div class=sweepline>')
+        A('<span><b>Last sweep</b> %s</span>' % e(when(_newest)))
+        A('<span class=quiet>%d cohort(s) &middot; %d current &middot; '
+          '%d older than a day%s</span>'
+          % (len(_stamps), len(_stamps) - len(_lagging), len(_lagging),
+             " &middot; %d source(s) never run" % len(_never) if _never else ""))
+        A('</div>')
+
+    A('<details class=srcdetail><summary>Which tool looked, and when</summary>')
+    A('<div class=card style="margin-bottom:10px"><div class=kpis>')
     _seen = set()
     for src in sorted(L.FACT_FAMILIES):
         runs = sorted((k, v) for k, v in _cohorts.items() if k[0] == src)
@@ -874,7 +913,7 @@ def coverage_section(A, m, e):
               '<div class=val style="font-size:15px"><span>%s</span></div>'
               '<div class=note>%s</div></div>'
               % (e(label), e(when(meta.get("observed_at"))), e(note)))
-    A("</div></div>")
+    A("</div></div></details>")
 
     # A coverage number that went DOWN. Directly above the coverage box,
     # because without it that box states a smaller number in the same
@@ -933,10 +972,16 @@ def coverage_section(A, m, e):
              g["previous_deep_scanned"], g["lost"],
              e(g["run_id"]), e(g["previous_run_id"])))
 
+    # WHAT IS NOT CHECKED IS THE OPERATIONAL NUMBER. "68 of 74" makes the
+    # reader subtract to find the six sites nobody has looked at, and the six
+    # are the reason this box exists. Both halves are printed now, with the
+    # denominator kept: an exception count with no total cannot be sized.
+    # 2026-08-26.
     A("<div class=card>")
     for label, (known, total) in m["coverage"]:
         pct = (100.0 * known / total) if total else 0
         tone = "good" if pct >= 99 else ("info" if pct >= 50 else "bad")
+        gap = total - known
         # The component line is the only coverage row with a page behind it.
         # Linked HERE because this box is where a reader is already asking
         # "what does this page know" -- until now the only route into the
@@ -947,9 +992,13 @@ def coverage_section(A, m, e):
         if label.startswith("Component inventory"):
             text = ('<a href="/components">%s</a>' % text)
         A('<div class="cov %s"><div style="color:var(--ink)">%s</div>'
-          '<div class=n>%d of %d</div>'
+          '<div class=n><b>%d</b> checked &middot; %s '
+          '<span class=covof>&mdash; of %d</span></div>'
           '<div class="m meter"><i style="width:%.1f%%"></i></div></div>'
-          % (tone, text, known, total, pct))
+          % (tone, text, known,
+             ('<span class=covnone>none missing</span>' if not gap
+              else '<b class=covgap>%d not checked</b>' % gap),
+             total, pct))
     A("</div>")
 
 
@@ -986,12 +1035,23 @@ def render(m):
 
     A('<div class="card topband">')
     A('<div class=topmain>')
+    # TWO DIFFERENT THINGS WERE BOTH CALLED "NEEDS A DECISION". This number is
+    # facts that MOVED since the previous run; the section headed "Needs a
+    # decision" 3,000 words below is sites with no production ruling, which
+    # nothing measured and no scan will ever resolve. Same words, same page,
+    # unrelated questions. Renamed 2026-08-26.
+    #
+    # It also said "change(s)" while counting facts across several sites -- one
+    # WordPress upgrade moves three facts on one site -- so the unit is now
+    # stated and the site count with it.
+    _chg_sites = len({c.get("site") or c.get("site_id") for c in pushable})
     A('<div class=hero>%d</div>' % len(pushable))
     A('<div class=hero-sub>%s</div>'
-      % ("change(s) needing a decision since the previous run of each tool."
+      % (("fact(s) moved on %d site(s) since the previous run of each tool. "
+          "Routine counter drift is suppressed." % _chg_sites)
          if pushable else
-         "changes needing a decision. The fleet is stable; the standing "
-         "findings below are unchanged."))
+         "facts moved since the previous run of each tool. The fleet is "
+         "stable; the standing findings below are unchanged."))
     A('</div>')
 
     A('<div class=topside>')
@@ -1422,12 +1482,16 @@ def render(m):
     # looked at them. Deliberately NOT every site whose `production` is null,
     # which is all 84 and would be ignored.
     if h["unreviewed"]:
-        A("<h2>Needs a decision</h2>")
-        A('<p class=sub style="margin:-4px 0 10px">%d site(s) with no ownership '
-          'record and no production ruling. Nobody has decided whether these '
-          'matter, so they are counted as production until someone does. On '
-          'this fleet that set has included the two worst-maintained sites, so '
-          'it is worth clearing once.</p>' % len(h["unreviewed"]))
+        # "Needs a decision" collided with the headline number, which counts
+        # facts that moved. This one is a RULING waiting on a person, and no
+        # scan can ever clear it. Renamed 2026-08-26.
+        A("<h2>Rulings waiting on a person</h2>")
+        A('<p class=sub style="margin:-4px 0 10px"><b>%d site(s)</b> with no '
+          'ownership record and no production ruling. Nobody has decided '
+          'whether these matter, so they are counted as production until '
+          'someone does. On this fleet that set has included the two '
+          'worst-maintained sites, so it is worth clearing once.</p>'
+          % len(h["unreviewed"]))
         A("<div class=card><div class=tablewrap><table>"
           "<tr><th>Site</th><th>State</th><th>Plan</th>"
           "<th>Why it is here</th></tr>")
@@ -2229,10 +2293,20 @@ def main():
               % (sum(m["health"]["excluded"].values()),
                  ", ".join(m["health"]["excluded_sites"])))
              if m["health"]["excluded_sites"] else ""))
+    # A NARROW SET DESCRIBED IN BROAD WORDS -- the signature shape in
+    # CLAUDE.md's table. `unreviewed` is sites with no ownership record AND no
+    # ruling, which is five. The number of sites needing a production ruling is
+    # every site whose `production` is null, which is most of the fleet. The
+    # on-page copy was always accurate; this line said the wrong thing in
+    # fewer words. Logged in docs/DO-THIS-NEXT.md, fixed 2026-08-26.
+    _unruled = len([x for x in m["sites"] if x.get("production") is None])
     if m["health"]["unreviewed"]:
-        print("  %d site(s) need a production ruling: %s"
+        print("  %d site(s) have no owner AND no production ruling: %s"
               % (len(m["health"]["unreviewed"]),
                  ", ".join(m["health"]["unreviewed"])))
+    if _unruled:
+        print("  %d of %d site(s) have no production ruling at all"
+              % (_unruled, len(m["sites"])))
 
     # Severity looked up an inventory record and did not find one. That means a
     # `production: false` ruling would have been silently ignored, which is the

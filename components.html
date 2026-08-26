@@ -36,6 +36,21 @@ tr:last-child td{border-bottom:none}
 td.num{font-variant-numeric:tabular-nums}
 code{font:11.5px/1.55 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:var(--ink)}
 /* Chip: colour is never the only signal. The label is always present. */
+.sweepline{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;
+ margin:0 0 8px;font-size:13px}
+.sweepline b{color:var(--strong)}
+.srcdetail{margin-bottom:10px}
+.srcdetail summary{cursor:pointer;font-size:11px;font-weight:800;
+ letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
+ list-style:none;display:inline-block;padding:2px 0;
+ border-bottom:1px solid var(--line)}
+.srcdetail summary::-webkit-details-marker{display:none}
+.srcdetail summary::before{content:"+ ";font-weight:800}
+.srcdetail[open] summary::before{content:"2 "}
+.srcdetail[open] summary{margin-bottom:8px}
+.covof{color:var(--faint);font-weight:400}
+.covnone{color:var(--muted);font-weight:400}
+.covgap{color:var(--bad)}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;
  letter-spacing:.08em;text-transform:uppercase;
  white-space:nowrap;padding:3px 8px 3px 7px;border-radius:0;

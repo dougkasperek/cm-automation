@@ -287,10 +287,12 @@ recorded**, `cm-whitelabel` as `false`. No site has ever been explicitly marked
 would be ignored." That was written as a display decision. Read as a fact about
 the fleet, it says the ruling concept is unused.
 
-Note the CLI line under it prints "%d site(s) need a production ruling" for the
-narrow set of five that have no ownership record AND no ruling. **83 need one.**
-The on-page copy is accurate; the CLI line is the project's signature shape, a
-narrow set described in broad words. Worth fixing when someone is next in there.
+~~Note the CLI line under it prints "%d site(s) need a production ruling" for
+the narrow set of five that have no ownership record AND no ruling. **83 need
+one.**~~ **FIXED 2026-08-26.** It now prints both, and says which is which:
+the five with no owner and no ruling, then "83 of 85 site(s) have no
+production ruling at all". The on-page copy was always accurate; the CLI line
+was the project's signature shape, a narrow set described in broad words.
 
 ### Recommendation: do the pass, do not build the editor
 
