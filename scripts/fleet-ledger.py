@@ -669,11 +669,30 @@ def ingest(reports_dir, history_dir, inventory=None):
         os.makedirs(history_dir)
 
     seen = set()
-    # The newest already-ingested run of each source, so a run that measured
+    # The newest already-ingested run of each COHORT, so a run that measured
     # LESS than the one before it can be noticed at the moment it lands.
-    # runs.jsonl is append-ordered, so the last record per source is the one to
+    # runs.jsonl is append-ordered, so the last record per cohort is the one to
     # compare against.
+    #
+    # KEYED ON (source, kind), NOT source. Third and last place this had to be
+    # fixed on 2026-08-26. `health` has two transports over disjoint site sets,
+    # so a source key compared the 22-site Nexcess run against the 52-site
+    # Pantheon run and printed
+    #
+    #   health-nexcess-...  21 of 22 measured, was 48 in health-...  (-27)
+    #
+    # on every alternating ingest since 2026-08-25. Nothing had dropped.
+    #
+    # The renderer was fixed for the cohort split on 2026-08-25 and these three
+    # were not. Fixing the other two first did NOT silence the warning, because
+    # this is the copy ingest actually runs -- the tests for those two passed
+    # while the real path was untouched. Grep for every place that groups runs
+    # before believing one is fixed.
     last_by_source = {}
+
+    def _cohort(rec):
+        return (rec.get("source"), rec.get("kind") or rec.get("source"))
+
     if os.path.exists(runs_path):
         with open(runs_path) as fh:
             for line in fh:
@@ -683,7 +702,7 @@ def ingest(reports_dir, history_dir, inventory=None):
                 rec = json.loads(line)
                 seen.add(rec["run_id"])
                 if rec.get("source"):
-                    last_by_source[rec["source"]] = rec
+                    last_by_source[_cohort(rec)] = rec
 
     by_host, by_domain, inv_recs = load_inventory(inventory)
 
@@ -801,20 +820,22 @@ def ingest(reports_dir, history_dir, inventory=None):
             # source, the live page silently lost 16 measured sites. All three
             # runs wrote 78 rows over 78 sites, so nothing about the shape of
             # the data told the good run from the bad one.
-            prev = last_by_source.get(source)
+            prev = last_by_source.get(_cohort(meta))
             if (prev is not None
                     and isinstance(prev.get("deep_scanned"), int)
                     and deep < prev["deep_scanned"]):
                 coverage_drops.append({
                     "run_id": meta["run_id"],
-                    "source": source,
+                    # The COHORT, so the message names the instrument that
+                    # actually lost sight of them.
+                    "source": _cohort(meta)[1],
                     "deep_scanned": deep,
                     "site_count": len(rows),
                     "previous_run_id": prev["run_id"],
                     "previous_deep_scanned": prev["deep_scanned"],
                     "lost": prev["deep_scanned"] - deep,
                 })
-            last_by_source[source] = meta
+            last_by_source[_cohort(meta)] = meta
 
             runs_fh.write(json.dumps(meta, sort_keys=True) + "\n")
             added_runs += 1
@@ -911,18 +932,29 @@ def coverage_regressions(runs):
     defect this whole area exists to prevent, so this deliberately does not
     recompute it from observations.
 
-    Only the latest run of each source is considered. A drop three runs ago
+    Only the latest run of each COHORT is considered. A drop three runs ago
     that has since recovered is history, not a reason to hold up today's page.
+
+    PER COHORT, NOT PER SOURCE, since 2026-08-26. `health` has two transports
+    over disjoint site sets, so grouping by source alone compared the 22-site
+    Nexcess run against the 52-site Pantheon run and reported
+
+        health-nexcess-...  21 of 22 measured, was 48 in health-...  (-27)
+
+    on every alternating ingest from 2026-08-25. Nothing had dropped; the two
+    runs measure different sites. A guard that cries wolf on every other run is
+    a guard nobody reads, and this one gates a publish.
 
     Returns [] when everything is fine, so a caller can treat truthiness as
     "something to say".
     """
-    by_source = {}
+    by_cohort = {}
     for r in sorted(runs, key=lambda x: x["observed_at"]):
-        by_source.setdefault(r.get("source"), []).append(r)
+        src = r.get("source")
+        by_cohort.setdefault((src, r.get("kind") or src), []).append(r)
 
     out = []
-    for source, rs in sorted(by_source.items()):
+    for (source, kind), rs in sorted(by_cohort.items(), key=lambda kv: str(kv[0])):
         if source is None or len(rs) < 2:
             continue
         curr, prev = rs[-1], rs[-2]
@@ -937,7 +969,10 @@ def coverage_regressions(runs):
         if curr.get("mode") and prev.get("mode") and curr["mode"] != prev["mode"]:
             continue
         out.append({
-            "source": source,
+            # The COHORT is what a reader needs -- "coverage went down for
+            # health" over two transports names the wrong instrument, which is
+            # the same mistake the provenance block made before 2026-08-25.
+            "source": kind if kind != source else source,
             "run_id": curr["run_id"],
             "deep_scanned": c,
             "site_count": curr.get("site_count"),
@@ -981,8 +1016,32 @@ def previous_run_of_same_source(runs, idx=-1, obs=None):
     # None when the source has no coverage rule, in which case rule 2 below
     # cannot be applied and rule 1 stands on its own.
     curr_measured = measured_sites(obs, curr["run_id"], src) if obs is not None else None
+    # SAME COHORT, NOT JUST SAME SOURCE. Added 2026-08-26.
+    #
+    # `health` has two transports over DISJOINT site sets: Pantheon terminus
+    # (52 sites) and Nexcess SSH (22). Matching on source alone let a Nexcess
+    # run take a Pantheon run as its baseline, and the coverage guard then
+    # reported
+    #
+    #   health-nexcess-...  21 of 22 measured, was 48 in health-...  (-27)
+    #
+    # on every alternating ingest since 2026-08-25. Nothing had dropped. The
+    # two runs measure different sites.
+    #
+    # The renderer was fixed for this on 2026-08-25 and this function was not,
+    # because the renderer pre-groups by (source, kind) and passes one cohort's
+    # runs in. Ingest passes ALL runs. So the same defect survived in the one
+    # caller whose job is to notice a real coverage drop -- and a guard that
+    # cries wolf on every other run is a guard nobody reads. Same lesson as the
+    # reconciliation that reported 36 false findings.
+    #
+    # Rules 1 and 2 below could not catch it either: they skip a candidate
+    # whose site set is a strict SUBSET, and disjoint sets are not subsets.
+    curr_kind = curr.get("kind") or src
     for r in reversed(runs[:idx if idx != -1 else len(runs) - 1]):
         if r.get("source") != src:
+            continue
+        if (r.get("kind") or r.get("source")) != curr_kind:
             continue
         if curr_sites is not None:
             # Rule 1, since 2026-08-19: a candidate whose ROW set is a strict

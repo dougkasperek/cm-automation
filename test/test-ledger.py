@@ -327,6 +327,123 @@ _runs = [{"run_id": "r1", "source": "health"},
 _obs = ([dict(o, run_id="r1") for o in to_obs([row("alpha"), row("bravo"), row("charlie")], "r1").values()]
         + [dict(o, run_id="cohort") for o in to_obs([row("alpha")], "cohort").values()]
         + [dict(o, run_id="r2") for o in to_obs([row("alpha"), row("bravo"), row("charlie")], "r2").values()])
+# ---------------------------------------------------------------------------
+# A BASELINE MUST COME FROM THE SAME COHORT, not just the same source
+#
+# `health` has two transports over disjoint site sets. Matching on source
+# alone let the 22-site Nexcess run take the 52-site Pantheon run as its
+# baseline, and the coverage guard reported "21 of 22 measured, was 48 (-27)"
+# on every alternating ingest from 2026-08-25. Nothing had dropped.
+#
+# Rules 1 and 2 cannot catch it: they skip a candidate whose site set is a
+# strict SUBSET, and disjoint sets are not subsets.
+_ck_runs = [
+    {"run_id": "health-p1", "source": "health", "kind": "health", "mode": "full"},
+    {"run_id": "health-n1", "source": "health", "kind": "health-nexcess",
+     "mode": "full"},
+    {"run_id": "health-n2", "source": "health", "kind": "health-nexcess",
+     "mode": "full"},
+]
+_ck_obs = ([{"run_id": "health-p1", "site": "p%d" % i, "wp_checked": True}
+            for i in range(52)]
+           + [{"run_id": "health-n1", "site": "n%d" % i, "wp_checked": True}
+              for i in range(21)]
+           + [{"run_id": "health-n2", "site": "n%d" % i, "wp_checked": True}
+              for i in range(21)])
+_ckp, _ckc = L.previous_run_of_same_source(_ck_runs, obs=_ck_obs)
+check("a cohort run is never baselined against the other transport",
+      _ckp is not None and _ckp["run_id"] == "health-n1",
+      "baseline was %r" % ((_ckp or {}).get("run_id"),))
+# And with no earlier run of its own cohort, there is NO baseline -- never the
+# other cohort's run, which would report every site as appearing or vanishing.
+_ckp2, _ = L.previous_run_of_same_source(_ck_runs[:2], obs=_ck_obs)
+check("...and with no earlier run of its cohort there is no baseline at all",
+      _ckp2 is None, "baseline was %r" % ((_ckp2 or {}).get("run_id"),))
+
+# THE SAME DEFECT LIVED IN A SECOND PLACE. coverage_regressions() grouped by
+# source too, and it is the function that gates a publish -- so the false
+# alarm arrived on every alternating ingest AND on every hand-run publish.
+_cr_runs = [
+    {"run_id": "health-2026-08-26_1351", "source": "health", "kind": "health",
+     "mode": "full", "observed_at": "2026-08-26T13:51:00",
+     "deep_scanned": 48, "site_count": 52},
+    {"run_id": "health-nexcess-2026-08-26_1941", "source": "health",
+     "kind": "health-nexcess", "mode": "full",
+     "observed_at": "2026-08-26T19:41:00", "deep_scanned": 21, "site_count": 22},
+]
+# AND THE SAME DEFECT LIVED IN A THIRD PLACE: ingest's own `last_by_source`.
+# Fixing the two functions above did NOT silence the warning, because ingest
+# does not call either of them -- the tests for those two passed while the
+# path that actually runs was untouched. So this drives ingest() end to end.
+_ct = tempfile.mkdtemp()
+try:
+    _ch, _cr = os.path.join(_ct, "history"), os.path.join(_ct, "reports")
+    os.makedirs(_ch); os.makedirs(_cr)
+    _ci = os.path.join(_ct, "inv.json")
+    json.dump({"sites": [{"site_id": "s%d.com" % i, "domain": "s%d.com" % i,
+                          "host_site_name": "s%d" % i} for i in range(60)]},
+              open(_ci, "w"))
+
+    def _hrow(name, measured):
+        r = {"site": name, "framework": "wordpress", "plan": "x", "env": "live",
+             "php_version": "8.2", "db_backup_age_days": 1,
+             "upstream_pending": 0, "wp_checked": bool(measured),
+             "status": "OK", "notes": "", "frozen": False}
+        if measured:
+            r.update({"wp_version": "7.1", "wp_core_update": "up-to-date",
+                      "plugin_updates": 0, "theme_updates": 0,
+                      "components": [], "components_checked": True})
+        return r
+
+    # A 40-site Pantheon run, then a 12-site Nexcess run. Disjoint sites.
+    json.dump([_hrow("s%d" % i, True) for i in range(40)],
+              open(os.path.join(_cr, "fleet-health-2026-08-26_0100.json"), "w"))
+    L.ingest(_cr, _ch, inventory=_ci)
+    json.dump([_hrow("s%d" % i, True) for i in range(40, 52)],
+              open(os.path.join(_cr, "fleet-health-nexcess-2026-08-26_0200.json"), "w"))
+    _res = L.ingest(_cr, _ch, inventory=_ci)
+    check("ingest does not call a 12-site cohort a drop from a 40-site one",
+          _res["coverage_drops"] == [],
+          "reported %r" % (_res["coverage_drops"],))
+
+    # The guard must still REFUSE a real drop, or the fix has switched it off.
+    # Test that it refuses, never only that it permits.
+    json.dump([_hrow("s%d" % i, i < 45) for i in range(40, 52)],
+              open(os.path.join(_cr, "fleet-health-nexcess-2026-08-26_0300.json"), "w"))
+    _res2 = L.ingest(_cr, _ch, inventory=_ci)
+    check("...but a real drop inside the Nexcess cohort is still refused",
+          len(_res2["coverage_drops"]) == 1
+          and _res2["coverage_drops"][0]["previous_run_id"]
+              == "health-nexcess-2026-08-26_0200",
+          "reported %r" % (_res2["coverage_drops"],))
+    check("...and the drop names the cohort, not the shared source",
+          _res2["coverage_drops"]
+          and _res2["coverage_drops"][0]["source"] == "health-nexcess",
+          "named %r" % (_res2["coverage_drops"][0]["source"]
+                        if _res2["coverage_drops"] else None,))
+finally:
+    shutil.rmtree(_ct, ignore_errors=True)
+
+check("a 21-site cohort after a 48-site one is not a coverage drop",
+      L.coverage_regressions(_cr_runs) == [],
+      "reported %r" % (L.coverage_regressions(_cr_runs),))
+
+# And a REAL drop inside one cohort must still be caught, or the fix above
+# has simply switched the guard off.
+_cr_real = _cr_runs + [
+    {"run_id": "health-nexcess-2026-08-26_2200", "source": "health",
+     "kind": "health-nexcess", "mode": "full",
+     "observed_at": "2026-08-26T22:00:00", "deep_scanned": 9, "site_count": 22},
+]
+_hit = L.coverage_regressions(_cr_real)
+check("...but a real drop within one cohort is still caught",
+      len(_hit) == 1 and _hit[0]["lost"] == 12
+      and _hit[0]["previous_run_id"] == "health-nexcess-2026-08-26_1941",
+      "reported %r" % (_hit,))
+check("...and it names the COHORT, not the source shared with the other one",
+      _hit and _hit[0]["source"] == "health-nexcess",
+      "named %r" % (_hit[0]["source"] if _hit else None,))
+
 _p, _c = L.previous_run_of_same_source(_runs, obs=_obs)
 check("a strict-subset run is skipped as a baseline", _p["run_id"] == "r1", str(_p))
 check("...and the current run is still the newest", _c["run_id"] == "r2")
