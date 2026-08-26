@@ -290,6 +290,14 @@ while IFS= read -r site <&3; do
   # means it looked and could not tell. Keeping them distinct is the whole
   # reason the WP columns could be trusted the day full mode came on.
   wp_version="n/a"
+  # RESET PER SITE, before the case. These are assigned inside the WordPress
+  # branch only, and this loop reuses one shell: without the reset, a
+  # non-WordPress site or an --api-only run would inherit the PREVIOUS site's
+  # sending domain and publish it as its own. Same trap as every other
+  # accumulating variable in this loop.
+  smtp_plugin_seen="n/a"
+  smtp_from_domain="n/a"
+  smtp_relay_host="n/a"
   case "$framework" in
     wordpress*)
       if [ "$API_ONLY" -eq 0 ]; then
@@ -367,6 +375,72 @@ while IFS= read -r site <&3; do
         else
           theme_updates="$(printf '%s' "$tj" | jq '[.[]|select(.update=="available")]|length' 2>/dev/null || echo null)"
           tj_ok="true"
+        fi
+
+        # THE SENDING DOMAIN, MEASURED RATHER THAN READ OFF THE WORKBOOK.
+        #
+        # SPF, DKIM and DMARC are all queried at the SENDING domain, and that
+        # value is a RULING: a person typed it into the audit workbook and
+        # nothing has ever checked it. Nothing in DNS reveals where a
+        # WordPress site was configured to send from, so it cannot be derived
+        # -- but the site itself knows, and this scan is already inside it.
+        #
+        # A wrong ruling does not fail loudly. It queries _dmarc. at a host
+        # nobody sends from and returns a confident PASS about the wrong
+        # domain. 7 of 78 sites have no ruling at all and report UNKNOWN.
+        #
+        # STORED UNDER ITS OWN NAME, never overwriting the workbook's value.
+        # That is the `nexcess_php_version` precedent: one name per way of
+        # knowing, so a disagreement is a fact rather than a silent
+        # resolution in favour of whichever ran last.
+        #
+        # Gated on the plugin list this run already fetched, so a site with no
+        # post-smtp costs no extra WP-CLI call and records WHY there is no
+        # measurement instead of a bare unknown.
+        smtp_plugin_seen="none"
+        smtp_from_domain="n/a"
+        smtp_relay_host="n/a"
+        if [ "$pj_ok" = "false" ]; then
+          # The plugin list itself did not answer. We do not know which mailer
+          # is installed, let alone how it is set up. "none" here would read as
+          # "this site sends no mail", which is the fabricated negative the
+          # whole ledger is built to refuse.
+          smtp_plugin_seen="unknown"
+          smtp_from_domain="unknown"
+          smtp_relay_host="unknown"
+        elif printf '%s' "$pj" | jq -e 'any(.[]; (.name|ascii_downcase)=="post-smtp")' >/dev/null 2>&1; then
+          smtp_plugin_seen="post-smtp"
+          # Present but not yet read: if the option call below fails these stay
+          # unknown, which is a different answer from "no mailer installed".
+          smtp_from_domain="unknown"
+          smtp_relay_host="unknown"
+          # `option get` exits non-zero when the option does not exist, so an
+          # empty result covers a missing option, a failed call and a timeout
+          # alike -- all three are "we could not tell", none is a value.
+          po="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- option get postman_options --format=json | json_or_empty)" || po=""
+          if [ -n "$po" ]; then
+            # SEVERAL KEYS, NOT ONE. post-smtp has carried the sender under
+            # different names across its Postman-era and post-smtp-era
+            # releases, and the option key was never verified against a live
+            # site before this shipped. Trying the known spellings and
+            # recording `unknown` when none match is the honest failure; a
+            # single hardcoded key would silently report "unknown" on whole
+            # families of versions and look like a coverage gap instead of a
+            # parser that is out of date.
+            fe="$(printf '%s' "$po" | jq -r '(.from_email // .envelope_sender // .from_email_address // empty) | tostring' 2>/dev/null)" || fe=""
+            case "$fe" in
+              *@*.*) smtp_from_domain="$(printf '%s' "${fe##*@}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" ;;
+            esac
+            rh="$(printf '%s' "$po" | jq -r '(.hostname // .host // empty) | tostring' 2>/dev/null)" || rh=""
+            case "$rh" in
+              *.*) smtp_relay_host="$(printf '%s' "$rh" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" ;;
+            esac
+          fi
+        elif printf '%s' "$pj" | jq -e 'any(.[]; (.name|ascii_downcase)=="wp-mail-smtp")' >/dev/null 2>&1; then
+          # Recorded, not read. Its options live under a different key and no
+          # rule for it has been verified against a live site. n/a is right:
+          # this scan did not look, which is not the same as could not tell.
+          smtp_plugin_seen="wp-mail-smtp"
         fi
 
         # One array per site, typed. A call that FAILED contributes nothing and
@@ -451,6 +525,9 @@ while IFS= read -r site <&3; do
     --argjson components "$components" \
     --argjson component_scan "$component_scan" \
     --argjson components_checked "$components_checked" \
+    --arg smtp_plugin_seen "$smtp_plugin_seen" \
+    --arg smtp_from_domain "$smtp_from_domain" \
+    --arg smtp_relay_host "$smtp_relay_host" \
     --arg status "$status" --arg notes "$notes" \
     '{site:$site,framework:$fw,plan:$plan,env:$env,php_version:$php,
       db_backup_age_days:$backup_age,upstream_pending:$upstream,
@@ -458,6 +535,9 @@ while IFS= read -r site <&3; do
       plugin_updates:$plugins,theme_updates:$themes,
       components:$components,component_scan:$component_scan,
       components_checked:$components_checked,
+      smtp_plugin_seen:$smtp_plugin_seen,
+      smtp_from_domain:$smtp_from_domain,
+      smtp_relay_host:$smtp_relay_host,
       status:$status,notes:$notes,frozen:false}')"
   results="$(jq --argjson o "$obj" '. + [$o]' <<<"$results")"
 

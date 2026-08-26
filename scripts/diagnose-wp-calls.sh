@@ -4,7 +4,7 @@
 # Settles item 22: are the WP-CLI calls in the health scan SUCCEEDING and
 # returning "nothing pending", or FAILING and being recorded as clean?
 #
-# READ-ONLY. All four calls are WP-CLI reads. Nothing is written to any site.
+# READ-ONLY. Every call is a WP-CLI read. Nothing is written to any site.
 #
 # WHY THIS EXISTS
 #
@@ -36,7 +36,7 @@
 # stdout, stderr and the exit code separately. That is the ONLY intended
 # difference from the scanner -- see the drift guard below.
 #
-# DRIFT GUARD. The four WP-CLI argument lists are declared once, in WP_CALLS,
+# DRIFT GUARD. The WP-CLI argument lists are declared once, in WP_CALLS,
 # and `test/test-wp-calls.py` asserts they are exactly the set the scanner
 # invokes. A diagnostic that runs slightly different commands than the thing it
 # is diagnosing answers a different question and looks like it answered this
@@ -102,7 +102,8 @@ WP_CALLS='core version
 core check-update --format=json
 plugin list --fields=name,status,update,version,update_version --format=json
 plugin list --status=must-use --fields=name,status,version --format=json
-theme list --fields=name,status,update,version,update_version --format=json'
+theme list --fields=name,status,update,version,update_version --format=json
+option get postman_options --format=json'
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -138,7 +139,7 @@ resolve_site() {
 # SSH PREFLIGHT. `terminus remote:wp` spawns ssh, and ssh reads a passphrase
 # prompt from /dev/tty -- which the `< /dev/null` in run_capture does NOT
 # suppress, because that only closes stdin. With no key in the agent, every one
-# of the four calls per site prompts, and any prompt left unanswered is killed
+# of the calls per site prompts, and any prompt left unanswered is killed
 # by the timeout and reported as a failed call.
 #
 # That verdict would be true of the scanner as well, but it would be a finding

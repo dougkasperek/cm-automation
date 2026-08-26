@@ -362,9 +362,50 @@ appears in both lists.
 
 ---
 
-## Backlog: measure the sending domain instead of trusting it
+## Measure the sending domain instead of trusting it
 
-**Logged 2026-08-24, from Victoria's question in the first outside review.**
+**Logged 2026-08-24 from Victoria's question in the first outside review.
+BUILT for Pantheon 2026-08-26; the Nexcess half needs a re-approval, below.
+Nothing has run yet, so the coverage line reads `0 of 75` on the page.**
+
+Two things in the original entry were wrong and are corrected in place below:
+
+- **It said post-smtp is on 39 sites.** That was the Pantheon-only count,
+  written before the Nexcess SSH scan existed. Measured from the component
+  catalogue 2026-08-26: **39 of 47 inventoried Pantheon sites and 20 of 21
+  Nexcess sites, 59 in all.**
+- **It said this closes the 7 blanks.** It closes at most **6**. Four of the
+  seven are Pantheon, two are Nexcess, and `woodmarkpharmacy.com` is on Azure,
+  which no deep scan reaches. (It is also already checked at its own domain,
+  derived from `from_address`, so its column is not blank on the page.)
+
+### What was built
+
+`wp option get postman_options --format=json`, gated on post-smtp appearing in
+the plugin list the scan already fetched, so a site without it costs no extra
+call. Three facts — `smtp_plugin_seen`, `smtp_from_domain`, `smtp_relay_host` —
+documented in `docs/DATA-MODEL.md` section 2a. The option key is tried under
+several spellings and records `unknown` when none match, because **it has never
+been verified against a live site**: `terminus` is not authenticated on this
+laptop. `scripts/diagnose-wp-calls.sh` now runs the same call and is the cheap
+way to settle it on one real site before trusting a fleet-wide number.
+
+### The Nexcess half needs a re-approval, and was NOT done
+
+`scripts/nexcess-fleet-healthcheck.sh` runs a list of six commands that is a
+**security control**, reviewed and approved by Doug on 2026-08-25, because
+Nexcess issues no read-only SSH user and the credential can write to 22 client
+sites. Adding a seventh command invalidates that approval, and nothing on the
+host would stop the change — there is no permission error to hit.
+
+The command to add is the same read: `wp option get postman_options
+--format=json`. It reads one WordPress option and writes nothing. It would take
+the sending-domain measurement from 39 sites to 59. **Re-review it, record the
+new approval in the script header, then add it** — not the other way round.
+
+---
+
+**Original entry, 2026-08-24.**
 
 SPF, DKIM and DMARC are all queried at the **sending domain**, and that value
 is a ruling: a person types it into the "Email Sending Domain" column of the

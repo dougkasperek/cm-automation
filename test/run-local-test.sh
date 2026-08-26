@@ -126,6 +126,44 @@ else
   settled() { jq -r --arg s "$1" '[.[]|select(.site==$s)|.components[]|select(.type=="plugin" and .update!="available")]|length' "$J"; }
   check "noticysite: components with nothing pending are kept" "5" "$(settled noticysite)"
 
+  # THE SENDING DOMAIN, MEASURED, added 2026-08-26. SPF, DKIM and DMARC are
+  # all queried at a value a person typed into the workbook, and nothing had
+  # ever checked it. post-smtp knows, and the deep scan is already inside the
+  # site.
+  #
+  # Four answers, and they must stay four. Collapsing any pair is the bug this
+  # project keeps making: "no mailer installed" is not "we could not read the
+  # mailer", and neither is "this scan never asked".
+  sd_of() { jq -r --arg s "$1" '.[]|select(.site==$s)|.smtp_from_domain' "$J"; }
+  sp_of() { jq -r --arg s "$1" '.[]|select(.site==$s)|.smtp_plugin_seen' "$J"; }
+  check "normalsite: the sending domain is MEASURED off the site" \
+        "smtp.clevermethod.net" "$(sd_of normalsite)"
+  check "normalsite: and the relay host is kept apart from it" \
+        "smtp.mailgun.org" \
+        "$(jq -r '.[]|select(.site=="normalsite")|.smtp_relay_host' "$J")"
+  check "normalsite: the mailer it was read from is named" \
+        "post-smtp" "$(sp_of normalsite)"
+  # post-smtp IS installed, its options would not answer. Not "none".
+  check "staleback: an unreadable mailer is unknown, NOT none" \
+        "unknown" "$(sd_of staleback)"
+  check "staleback: and the mailer is still named as present" \
+        "post-smtp" "$(sp_of staleback)"
+  # No post-smtp in noticysite's list. We looked and there is nothing to read,
+  # which is an ANSWER -- it must not read `unknown`.
+  check "noticysite: no mailer installed is none, NOT unknown" \
+        "none" "$(sp_of noticysite)"
+  check "noticysite: and n/a for the domain, because nothing was asked" \
+        "n/a" "$(sd_of noticysite)"
+  # Every WP-CLI call failed, so WHICH mailer is installed is unknown too.
+  # "none" here would read as "this site sends no mail".
+  check "dbmissing: a failed plugin list leaves the mailer unknown" \
+        "unknown" "$(sp_of dbmissing)"
+  # Never asked at all. n/a, and it must not inherit the previous site's value.
+  check "drupalsite: a non-WordPress site is never asked" \
+        "n/a" "$(sp_of drupalsite)"
+  check "drupalsite: and carries no borrowed sending domain" \
+        "n/a" "$(sd_of drupalsite)"
+
   # The observed WordPress version, added 2026-08-18. check-update alone only
   # ever says whether something is PENDING, so a fleet claimed to be on 7.0.2
   # read as "up-to-date" everywhere and the claim stayed unverified.

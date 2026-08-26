@@ -73,7 +73,7 @@ m = re.search(r"^WP_CALLS='(.*?)'$", diag_src, re.M | re.S)
 check("the diagnostic declares WP_CALLS", m is not None)
 diag_calls = set(x.strip() for x in (m.group(1).splitlines() if m else []) if x.strip())
 
-check("the diagnostic runs exactly the scanner's four calls, no more, no less",
+check("the diagnostic runs exactly the scanner's calls, no more, no less",
       diag_calls == scanner_calls,
       "only in diagnostic: %s | only in scanner: %s"
       % (sorted(diag_calls - scanner_calls), sorted(scanner_calls - diag_calls)))

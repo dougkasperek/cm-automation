@@ -70,6 +70,28 @@ OBSERVED = (
     # per component. This is the scalar the page needs so that "no vulnerable
     # plugin found" can be told apart from "we never listed the plugins".
     "components_checked",
+    # THE SENDING DOMAIN, MEASURED. SPF, DKIM and DMARC are queried at the
+    # sending domain, and until now that value existed only as a workbook
+    # ruling nothing had checked. These are the site's own answer, read out of
+    # post-smtp's options by the deep scan.
+    #
+    # Kept UNDER THEIR OWN NAMES rather than merged into the inventory's
+    # `sending_domain`, which is the `nexcess_php_version` precedent: one name
+    # per way of knowing, so a disagreement is a fact rather than a silent
+    # resolution in favour of whichever was written last.
+    #
+    # `smtp_plugin_seen` is here so "no measurement" says WHY: no mailer
+    # installed, a mailer this scan does not read, or a plugin list that would
+    # not answer. Those are three different absences and one bare `unknown`
+    # would flatten them.
+    #
+    # DELIBERATELY NOT IN severity.HEALTH_FACTS. How a site sends mail is not
+    # evidence that anyone is maintaining it, and adding them there would move
+    # sites out of the coverage scoreboard without anything having been
+    # measured about maintenance.
+    "smtp_plugin_seen",
+    "smtp_from_domain",
+    "smtp_relay_host",
 )
 
 DERIVED = ("status",)
@@ -96,8 +118,15 @@ UNKNOWN = "unknown"
 # when none is, so a fleet on any version at all looked identical to a fleet on
 # 7.0.2. Belongs here because reading it needs SSH, so on an api-only run it
 # must be unknown and never a value.
+# The smtp_* three joined on 2026-08-26 for the same reason: they are read by
+# WP-CLI inside the site, so an --api-only run has not looked at them and must
+# store UNKNOWN rather than the scanner's per-site "n/a" placeholder. Note the
+# two are different absences and both are kept: UNKNOWN here means no deep scan
+# happened at all, while an "n/a" that survives a deep scan means the scan ran
+# and found no mailer worth reading -- which `smtp_plugin_seen` names.
 DEEP_ONLY = ("wp_version", "wp_core_update", "plugin_updates", "theme_updates",
-             "components_checked")
+             "components_checked",
+             "smtp_plugin_seen", "smtp_from_domain", "smtp_relay_host")
 
 
 def fact(row, key):

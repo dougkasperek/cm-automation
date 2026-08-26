@@ -94,6 +94,47 @@ Rows that match no inventory entry are recorded per run in
 `sites_not_in_inventory` and never silently dropped. An unknown site is the
 highest-signal finding there is.
 
+### 2a. The sending domain, measured
+
+Added 2026-08-26, in the `health` source. Three facts, all deep-scan only:
+
+| fact | what it says |
+|---|---|
+| `smtp_plugin_seen` | which mailer the plugin list showed: `post-smtp`, `wp-mail-smtp`, `none`, `unknown`, `n/a` |
+| `smtp_from_domain` | the domain half of post-smtp's configured from address |
+| `smtp_relay_host` | the host post-smtp relays through, e.g. `smtp.mailgun.org` |
+
+**Why it exists.** SPF, DKIM and DMARC are all queried at the *sending domain*,
+and nothing in DNS reveals where a WordPress site was configured to send from,
+so that value has always been a **ruling** — a person typed it into the audit
+workbook. A wrong one does not fail loudly: it queries `_dmarc.` at a host
+nobody sends from and returns a confident PASS about the wrong domain. Six
+sites have no ruling at all.
+
+**Stored beside the ruling, never over it.** That is the `nexcess_php_version`
+precedent: one name per way of knowing, so a disagreement is a fact rather than
+a silent resolution in favour of whichever was written last. The dashboard
+reports a disagreement as a finding and says what it means — that every SPF,
+DKIM and DMARC cell on that row is an answer about the wrong domain.
+
+**Five answers, and they must stay five.** `n/a` means this scan never asked
+(api-only, or not WordPress). `none` means it asked and the site runs no mailer
+this scan reads. `unknown` on `smtp_plugin_seen` means the plugin list itself
+would not answer. `unknown` on `smtp_from_domain` with `smtp_plugin_seen:
+post-smtp` means the mailer is installed and its options would not answer.
+Anything else is a measurement. Collapsing any pair is the bug in CLAUDE.md's
+table, and `test/run-local-test.sh` asserts all five against the mock.
+
+**Not in `severity.HEALTH_FACTS`.** How a site sends mail is not evidence that
+anyone is maintaining it. Adding them there would move sites out of the
+health-coverage scoreboard without anything about maintenance having been
+measured.
+
+**Coverage ceiling: post-smtp only, and deep-scanned hosts only.** 59 of the
+fleet's deep-scanned sites run post-smtp; the rest use other mailers or the
+host's own. 17 sites are on hosts no deep scan reaches. The coverage line
+states the denominator rather than implying the fleet.
+
 ### 2b. Components, `history/components.jsonl`
 
 Added 2026-08-23. One row per site per installed component:

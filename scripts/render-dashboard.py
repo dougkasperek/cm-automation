@@ -35,6 +35,7 @@ Design decisions, and why (see docs/DATA-MODEL.md for the data side):
   this page is both.
 """
 import argparse
+import collections
 import datetime
 import html
 import importlib.util
@@ -296,6 +297,26 @@ def build_model(history_dir, inventory_path, today):
         coverage.append(("Component inventory (plugins, mu-plugins, themes)",
                          (len(inventoried & set(s["site_id"] for s in component_sites)),
                           len(component_sites))))
+
+    # THE SENDING DOMAIN, MEASURED ON THE SITE. Added 2026-08-26.
+    #
+    # SPF, DKIM and DMARC are all queried at the sending domain, and that value
+    # was a RULING nothing had ever checked -- a person typed it into the audit
+    # workbook. post-smtp stores the site's own answer, and the deep scan is
+    # already inside the site, so it is one more WP-CLI call.
+    #
+    # DENOMINATOR FROM THE INVENTORY, like every line above it: the sites a
+    # deep scan can reach at all. Counting only the rows that answered would
+    # make a scan that read one site look like full coverage. The ceiling is
+    # not 85 and the line says so -- 17 sites are on hosts no deep scan
+    # reaches, and post-smtp is the only mailer read, so this can never be
+    # complete. A partial number that states its own denominator is the point.
+    if component_sites:
+        _sd_known = sum(1 for s in component_sites
+                        if s.get("smtp_from_domain") not in
+                        (None, L.UNKNOWN, "n/a"))
+        coverage.append(("Sending domain, measured on the site (post-smtp only)",
+                         (_sd_known, len(component_sites))))
 
     nexcess_sites = [s for s in sites if s.get("host") == "CM Nexcess"]
     if nexcess_sites:
@@ -1167,13 +1188,63 @@ def render(m):
     # Sites where no sending domain was recorded, so SPF/DKIM/DMARC were never
     # queried anywhere. `spf_checked_at` names the domain actually looked up,
     # so its absence IS the absence of a recorded sending domain.
-    _no_sending = len([x for x in m["sites"]
-                       if x.get("spf_present") is None
-                       and not x.get("spf_checked_at")])
+    #
+    # THESE FOUR NUMBERS ARE COUNTED, AND THREE OF THEM USED TO BE WRONG OR
+    # TYPED. 2026-08-26.
+    #
+    # `_no_sending` read `spf_present is None and not spf_checked_at`, and the
+    # card printed it as "N site(s) have none recorded". That counted sites
+    # with no email row AT ALL -- app.eastauroracc.com, cm-whitelabel,
+    # moorseville-nc and four more that are outside the email workflow's 78
+    # entirely. The sites that genuinely have no recorded sending domain carry
+    # the STRING "unknown" in `spf_checked_at`, which is truthy, so not one of
+    # them was counted. Both figures happened to be 7 on the day it was
+    # noticed, which is why nobody noticed. Two different questions, two
+    # numbers, both stated.
+    _in_scope = [x for x in m["sites"] if x.get("spf_checked_at") is not None]
+    _no_sending = len([x for x in _in_scope
+                       if str(x.get("spf_checked_at")).lower() == L.UNKNOWN])
+    _out_of_scope = len(m["sites"]) - len(_in_scope)
+    # The shared sending domain was the literal number 34 in the blurb below.
+    # It is right today and was never going to stay right on its own.
+    _shared = collections.Counter(
+        str(x["spf_checked_at"]).lower() for x in _in_scope
+        if str(x.get("spf_checked_at")).lower() != L.UNKNOWN)
+    _top_domain, _top_n = (_shared.most_common(1) or [("", 0)])[0]
+    # MEASURED vs RECORDED. The whole reason the scan now reads post-smtp.
+    # A disagreement is the finding: SPF, DKIM and DMARC were queried at
+    # `spf_checked_at`, so if the site actually sends from somewhere else,
+    # every green cell on that row is an answer about the wrong domain.
+    _measured = [x for x in m["sites"]
+                 if x.get("smtp_from_domain") not in (None, L.UNKNOWN, "n/a")]
+    _disagree = [x for x in _measured
+                 if str(x["smtp_from_domain"]).lower()
+                 != str(x.get("spf_checked_at", "")).lower()]
     email_causes = [g for g in m["standing"]
                     if g["axis"] == "RISK"
                     and ("DMARC" in g["cause"] or "SPF" in g["cause"]
                          or "aligned" in g["cause"])]
+    # The site's OWN answer, where a deep scan could read it. Stated only once
+    # a scan has actually read one: before the first run this whole block is
+    # silent rather than printing "0 measured", which reads as a finding about
+    # the fleet instead of a tool that has not run yet.
+    _measured_note = ""
+    if _measured:
+        _measured_note = (
+            '<div style="margin-top:6px"><strong>%d site(s) now have it '
+            'MEASURED</strong> off the site, from post-smtp\'s own '
+            'configuration, and stored beside the recorded value rather than '
+            'over it. %s</div>'
+            % (len(_measured),
+               ('All of them agree with what was recorded.' if not _disagree
+                else '<strong>%d disagree</strong> with the recorded value, '
+                     'which means SPF, DKIM and DMARC for those sites were '
+                     'queried at a domain the site does not send from: %s.'
+                     % (len(_disagree),
+                        ", ".join("<code>%s</code>" % e(x["site_id"])
+                                  for x in _disagree[:6])
+                        + (" and more" if len(_disagree) > 6 else ""))))
+        )
     A('<div class="card wfcard">')
     A('<div class=wfhead>Email DNS</div>')
     # WHICH DOMAIN. Victoria asked this in the 2026-08-24 review, which is the
@@ -1185,9 +1256,9 @@ def render(m):
     # A site at example.com sending through smtp.clevermethod.net is scored on
     # smtp.clevermethod.net, and nothing on the page said so.
     A('<div class=wfblurb>Can the domain each site <em>sends from</em> '
-      'authenticate its mail. Usually not the site\'s own domain: 34 sites '
-      'send through <code>smtp.clevermethod.net</code>, so they are scored on '
-      'that.</div>')
+      'authenticate its mail. Usually not the site\'s own domain: %d sites '
+      'send through <code>%s</code>, so they are scored on '
+      'that.</div>' % (_top_n, e(_top_domain)))
     A('<div class=wfmini>')
     for label, prefix in (("SPF", "SPF"), ("DKIM", "DKIM"), ("DMARC", "DMARC")):
         k, n = _cov(prefix)
@@ -1206,10 +1277,12 @@ def render(m):
       'SPF, DKIM and DMARC columns. <strong>%d open '
       'cause(s)</strong>, listed under Still open.'
       '<div style="margin-top:6px">The sending domain is <strong>recorded by a '
-      'person</strong> in the audit workbook, not measured. Nothing in DNS '
-      'reveals where a WordPress site was configured to send from. '
-      '<strong>%d site(s) have none recorded</strong> and are UNKNOWN here, '
-      'never a pass.</div></div>' % (len(email_causes), _no_sending))
+      'person</strong> in the audit workbook. Nothing in DNS '
+      'reveals where a WordPress site was configured to send from, so it '
+      'cannot be derived. <strong>%d site(s) have none recorded</strong> and '
+      'are UNKNOWN here, never a pass. A further %d site(s) are outside this '
+      'check entirely and have no row in it.</div>%s</div>'
+      % (len(email_causes), _no_sending, _out_of_scope, _measured_note))
     A('</div>')
 
     A('</div>')

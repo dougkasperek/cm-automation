@@ -1462,6 +1462,70 @@ check("...including an UNKNOWN on a non-production site",
       "an excluded site was dropped from a fleet-wide claim")
 
 # ---------------------------------------------------------------------------
+# The sending domain: recorded vs measured, 2026-08-26
+#
+# SPF, DKIM and DMARC are all queried at the SENDING domain, and that value
+# was a ruling nothing had ever checked. post-smtp stores the site's own
+# answer and the deep scan is already inside the site.
+#
+# The card's "N site(s) have none recorded" was counted as
+# `spf_present is None and not spf_checked_at`, which is sites with no email
+# row AT ALL -- outside the workflow's 78. The sites that genuinely have none
+# recorded carry the STRING "unknown" in spf_checked_at, which is truthy, so
+# none of them was ever counted. Both figures were 7 on the day it was found.
+# ---------------------------------------------------------------------------
+_sm = RD.build_model("./history", "./data/fleet-inventory.json",
+                     datetime.date(2026, 8, 23))
+_scoped = [x for x in _sm["sites"] if x.get("spf_checked_at") is not None]
+_none_recorded = [x for x in _scoped
+                  if str(x.get("spf_checked_at")).lower() == "unknown"]
+_outside = [x for x in _sm["sites"] if x.get("spf_checked_at") is None]
+_spage = RD.render(_sm)
+check("the count of sites with no RECORDED sending domain is the right set",
+      ("%d site(s) have none recorded" % len(_none_recorded)) in _spage,
+      "page does not state %d" % len(_none_recorded))
+check("...and sites outside the email check are counted separately",
+      ("further %d site(s) are outside this check" % len(_outside)) in _spage,
+      "page does not state %d outside" % len(_outside))
+# The two sets must not be confused again: if they ever have the same size the
+# assertions above cannot tell them apart, so assert they are different sets
+# rather than different numbers.
+check("...and the two are different sets, not one number counted twice",
+      set(x["site_id"] for x in _none_recorded)
+      != set(x["site_id"] for x in _outside))
+
+# THE COVERAGE LINE EXISTS BEFORE THE FIRST RUN. Step 5 of "adding a workflow
+# to the suite": a line gated on rows would simply never appear, and a reader
+# could not tell "not covered" from "not built".
+_cov = dict((lab, kn) for lab, kn in _sm["coverage"])
+_sd_line = [lab for lab in _cov if lab.startswith("Sending domain")]
+check("the sending-domain coverage line is present from day one", bool(_sd_line))
+check("...with the INVENTORY as its denominator, not the rows that answered",
+      _cov[_sd_line[0]][1] > 0,
+      "denominator is %r" % (_cov[_sd_line[0]],))
+
+# A MEASUREMENT THAT DISAGREES WITH THE RULING IS THE FINDING. If the site
+# sends from somewhere else, every green cell on that row is an answer about
+# the wrong domain.
+_target = [x for x in _scoped
+           if str(x.get("spf_checked_at")).lower() not in ("unknown", "")][0]
+_target["smtp_from_domain"] = "somewhere-else.example"
+_target["smtp_plugin_seen"] = "post-smtp"
+_dpage = RD.render(_sm)
+check("a measured sending domain that disagrees is reported",
+      "1 disagree" in _dpage and _target["site_id"] in _dpage,
+      "disagreement not on the page")
+check("...and says what a disagreement MEANS for the row's other columns",
+      "queried at a domain the site does not send from" in _dpage)
+
+# Agreement is not silence: the count of measured sites is stated either way,
+# so "we measured 40 and all agreed" cannot be mistaken for "we measured none".
+_target["smtp_from_domain"] = str(_target["spf_checked_at"])
+check("agreement still says how many were measured",
+      "1 site(s) now have it MEASURED" in RD.render(_sm)
+      and "All of them agree" in RD.render(_sm))
+
+# ---------------------------------------------------------------------------
 # Component catalogue: slug casing, 2026-08-24
 #
 # WP-CLI reports the plugin DIRECTORY name, and the same component is spelled

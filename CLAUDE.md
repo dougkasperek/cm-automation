@@ -262,6 +262,8 @@ do not add a total.
 | `updates pending` inside a per-site view | the fleet-wide flag. The filter listed components whose update is waiting on some OTHER site, in a view whose every other number was about the one selected |
 | `the 1 component(s) installed on <site>` | 31 were installed; 1 was merely being shown. The banner counted VISIBLE rows, so switching on a filter rewrote a fact about the site into a fact about the view |
 | `the Nexcess discovery workflow should take the scoreboard to 11` | it cannot move it at all. Discovery writes `nexcess_*` facts, `coverage_partial` fires on exactly that — a site seen by the control plane and not by a health scan. The 11 is real and belongs to the **SSH** scan. The sentence sat in this file for five days, one paragraph above the rule that contradicts it, and was believed because the number was right |
+| the email card's `7 site(s) have none recorded` sending domain | those 7 are sites with **no email row at all** — outside the check's 78 entirely. The sites that genuinely have no recorded sending domain carry the STRING `"unknown"` in `spf_checked_at`, which is truthy, so the test `not x.get("spf_checked_at")` counted **none of them**. There are 6. Both figures were 7 on the day it was found, which is why nobody found it sooner. Same family as the `<code>unknown</code>` row above, one layer up: the sentinel defeated the absence test rather than the display |
+| `34 sites send through smtp.clevermethod.net` | correct, and typed. Third hardcoded number found on this page in one day. Computed 2026-08-26 |
 | the dashboard's `no site is UNKNOWN on health and that number is 0` | it was the literal characters `0`, typed on 2026-08-19 when the consent sweep had just taken UNKNOWN to zero, in a sentence explaining that UNKNOWN and coverage are different questions. It was **wrong on 2026-08-25**: `app.eastauroracc.com` arrived from the Nexcess API, no source had seen it, UNKNOWN was 1 and the page said 0. The SSH scan reached it the same day and took it back to 0, which is the worst case — a hardcoded claim that is usually right is the one nobody rereads. Computed 2026-08-26, across production and non-production alike, with a test that was verified to fail |
 | `16 commits are unpushed, that is the first thing to do` | everything was pushed. Inferred from the rule that `push` is a human action and repeated four times without checking. `git status --short` reports working-tree changes ONLY and says nothing about ahead/behind; `git ls-remote origin main` is the check that talks to the remote |
 
@@ -438,6 +440,7 @@ consent sweep ran and nothing about maintenance had changed.
 ./scripts/pantheon-fleet-healthcheck.sh --no-fail-on-crit             # scan (full)
 ./scripts/pantheon-fleet-healthcheck.sh --api-only --no-fail-on-crit  # no SSH
 ./scripts/diagnose-wp-calls.sh cm-whitelabel sgroilawley.com          # item 22: did the WP-CLI calls actually run?
+                                                                      # also the cheap way to settle the post-smtp option key on one real site
 ./scripts/nexcess-fleet-healthcheck.sh --dry-run                      # who would the SSH scan connect to?
 ./scripts/nexcess-fleet-healthcheck.sh --sites eamusicfest.com        # one site, real
 ./scripts/fleet-nexcess.py probe                                      # confirm the base URL
