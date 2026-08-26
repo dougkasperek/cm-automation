@@ -78,15 +78,23 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   # being reported after the data is safe.
   python3 scripts/fleet-ledger.py ingest --reports "$REPORTS" \
     --allow-coverage-drop 2>&1 | tee "$INGEST_LOG"
-  python3 scripts/render-dashboard.py --out fleet.html
+  # BOTH pages, not just fleet.html. Until 2026-08-26 this rendered only
+  # fleet.html, so the committed components.html was whatever a person last
+  # ran by hand -- one health run behind after 2026-08-25, showing a component
+  # catalogue that no longer matched the ledger beside it, with nothing on it
+  # saying so. publish-dashboard.sh re-renders both, so the LIVE page was
+  # right and only the review copy in the repo was stale, which is the
+  # familiar shape: the copy that loses is the one nobody is looking at.
+  python3 scripts/render-dashboard.py --out fleet.html \
+    --components-out components.html
 
-  if git diff --quiet -- history/ fleet.html; then
+  if git diff --quiet -- history/ fleet.html components.html; then
     echo "ledger already current at origin/${BRANCH}; nothing to push"
     pushed="skipped"
     break
   fi
 
-  git add history/ fleet.html
+  git add history/ fleet.html components.html
   git commit --quiet -m "Ledger: ${LABEL}" \
     -m "Ingested by ${GITHUB_WORKFLOW:-local} run ${GITHUB_RUN_NUMBER:-0}." \
     -m "${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-.}/actions/runs/${GITHUB_RUN_ID:-0}"
