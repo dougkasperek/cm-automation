@@ -15,7 +15,7 @@ a second scoring model or a second site list.
 | Email DNS (all hosts) | live, CI, 78 sites, no credentials |
 | Cookie consent, headed | live, 77 of 78 sites. CI headed via xvfb, **proven on a runner 2026-08-22** |
 | **Nexcess estate discovery** | **UNBLOCKED 2026-08-25.** The challenge was OURS, not Nexcess's: a hand-built SSL context omitted `post_handshake_auth`. `probe` now returns `ok 200 site list returned`. See the bug table |
-| **Nexcess SSH deep scan** | **live, 21 of 22 sites, ran fleet-wide 2026-08-25.** Writes to the `health` source over SSH, under `kind: health-nexcess`. CI is manual dispatch only. **No read-only SSH user exists, so the command list in the script is a security control** |
+| **Nexcess SSH deep scan** | **live, 21 of 22 sites, ran fleet-wide 2026-08-25.** Writes to the `health` source over SSH, under `kind: health-nexcess`. CI is manual dispatch only. **No read-only SSH user exists, so the command list in the script is a security control.** Seven commands, all reads; the seventh re-approved 2026-08-26 |
 | ~~Nexcess SSH deep scan (old)~~ | ~~not built. UNGATED 2026-08-24~~ — one account-level key reaches all 21 sites, existing and future. And there is **no read-only SSH user**: the credential is write-capable, so the workflow's command list is a security control |
 | **Cookie consent monitor** | **built, in the suite.** 78 domains, no credentials. `docs/CONSENT.md` |
 | Asana routing | not built. The missing shared plumbing |
@@ -81,11 +81,20 @@ runs is the only thing standing between a read-only tool and a write-capable
 one — review it as a security control, not as a scan definition.
 
 **That list was reviewed and approved by Doug Kasperek on 2026-08-25**, in
-`scripts/nexcess-fleet-healthcheck.sh`, before the first fleet-wide run. Six
-commands, all reads. **Changing it invalidates the approval**, and nothing in
-the system will stop the change: there is no permission error to hit, because
-the credential can already write. Re-review and record the new approval in the
-script header.
+`scripts/nexcess-fleet-healthcheck.sh`, before the first fleet-wide run, and
+**re-approved on 2026-08-26** when `wp option get postman_options` was added.
+Seven commands, all reads. **Changing it invalidates the approval**, and
+nothing in the system will stop the change: there is no permission error to
+hit, because the credential can already write. Re-review and record the new
+approval in the script header.
+
+**`test-nexcess-ssh.py` now checks the LIST rather than one command's
+absence.** It asserts every command the script runs is enumerated in the
+header, every enumerated command is actually run, and the header's stated
+count matches the list it sits over. The old assertion was "`option get` does
+not appear", which a legitimate approval had to DELETE — a control that a
+correct change removes teaches people to remove controls. Both directions were
+tested by breaking them.
 
 **Claude edits files with asserted replacements, never a raw computed slice.**
 On 2026-08-20 a patch built its needle as `s[s.index(START):s.index(END)]`

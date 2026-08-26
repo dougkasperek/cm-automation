@@ -1519,6 +1519,19 @@ check("...with the INVENTORY as its denominator, not the rows that answered",
 # domain web.sgroilawley.com. Seven of the eight were exactly that. Compared
 # against the workbook's `from_address`, 37 of 39 agreed.
 # ---------------------------------------------------------------------------
+# CONTROL THE POPULATION, DO NOT PIN A COUNT. These assertions said
+# "1 disagree", which was true while no site had a measured sending domain.
+# The first real scan landed 39 of them on 2026-08-26 and turned all three
+# red -- a test pinning a number a new run was entitled to move, which is the
+# rule in CLAUDE.md that this file has now broken four times.
+#
+# The fixture clears every measured value first, so the assertions are about
+# the ONE site the test sets up and hold whatever the ledger holds.
+for _x in _sm["sites"]:
+    _x.pop("smtp_from_domain", None)
+    _x.pop("smtp_plugin_seen", None)
+    _x["recorded_from_domain"] = None
+
 _target = [x for x in _scoped
            if str(x.get("spf_checked_at")).lower() not in ("unknown", "")][0]
 

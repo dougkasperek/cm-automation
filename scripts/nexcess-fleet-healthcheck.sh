@@ -30,8 +30,9 @@
 #   wp plugin list --fields=... --format=json
 #   wp plugin list --status=must-use --fields=... --format=json
 #   wp theme list --fields=... --format=json
+#   wp option get postman_options --format=json
 #
-# All six are reads. If you add one, it needs the same review as a firewall
+# All seven are reads. If you add one, it needs the same review as a firewall
 # rule, not the same review as a scan tweak.
 #
 # REVIEWED AND APPROVED 2026-08-25 by Doug Kasperek, before the first
@@ -46,7 +47,19 @@
 # listed above now, and this note stays as the record that the list drifted
 # from the code within hours of being signed off.
 #
-# **A change to this list invalidates that approval.** Adding a sixth command
+# SEVENTH COMMAND ADDED AND RE-APPROVED 2026-08-26 by Doug Kasperek:
+# `wp option get postman_options --format=json`. He confirmed it is a read.
+# It returns one row of the WordPress options table and writes nothing, and
+# the identical call had already run on 39 Pantheon sites and two diagnostic
+# sites before this approval was sought.
+#
+# What it buys: the SENDING DOMAIN, measured off the site instead of taken
+# from the audit workbook. 20 of the 21 Nexcess sites run post-smtp, so this
+# takes fleet coverage from 39 of 75 to 59 of 75, and closes
+# hitsfoundation.org -- the only site with no recorded sending domain that any
+# version of this measurement can reach.
+#
+# **A change to this list invalidates that approval.** Adding an eighth command
 # is not a scan tweak, and nothing in the system will stop you: there is no
 # permission error to hit, because the credential can already write. Get it
 # re-reviewed and record the new approval here.
@@ -258,6 +271,51 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
     pj="$(run_wp "$target" "plugin list --fields=name,status,update,version,update_version --format=json" | json_or_empty)" || pj=""
     mj="$(run_wp "$target" "plugin list --status=must-use --fields=name,status,version --format=json" | json_or_empty)" || mj=""
     tj="$(run_wp "$target" "theme list --fields=name,status,update,version,update_version --format=json" | json_or_empty)" || tj=""
+    # THE SENDING DOMAIN. Seventh command, approved 2026-08-26 -- see the
+    # header. Gated on post-smtp appearing in the plugin list already fetched,
+    # so a site without it costs no extra SSH round trip and records WHY there
+    # is no measurement rather than a bare unknown.
+    smtp_plugin_seen="none"; smtp_from_domain="n/a"
+    smtp_relay_host="n/a";   smtp_transport="n/a"
+    if [ -z "$pj" ]; then
+      # The plugin list did not answer, so which mailer is installed is
+      # unknown too. "none" would read as "this site sends no mail".
+      smtp_plugin_seen="unknown"; smtp_from_domain="unknown"
+      smtp_relay_host="unknown";  smtp_transport="unknown"
+    elif printf '%s' "$pj" | jq -e 'any(.[]; (.name|ascii_downcase)=="post-smtp")' >/dev/null 2>&1; then
+      smtp_plugin_seen="post-smtp"; smtp_from_domain="unknown"
+      smtp_relay_host="unknown";    smtp_transport="unknown"
+      po="$(run_wp "$target" "option get postman_options --format=json" | json_or_empty)" || po=""
+      if [ -n "$po" ]; then
+        # Same parser as the Pantheon scanner, and the key names are the ones
+        # a real site returned on 2026-08-26, not the ones post-smtp looks
+        # like it ought to use. envelope_sender first: SPF is evaluated
+        # against the envelope sender. jq -- select on non-empty, because "//"
+        # falls back on null and false but NOT on the empty string, and
+        # post-smtp stores "" in fields it is not using.
+        fe="$(printf '%s' "$po" \
+              | jq -r '[.envelope_sender, .sender_email, .from_email]
+                       | map(select(type == "string" and . != ""))
+                       | first // empty' 2>/dev/null)" || fe=""
+        case "$fe" in
+          *@*.*) smtp_from_domain="$(printf '%s' "${fe##*@}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" ;;
+        esac
+        tt="$(printf '%s' "$po" | jq -r '.transport_type // empty' 2>/dev/null)" || tt=""
+        rh="$(printf '%s' "$po" \
+              | jq -r '[.hostname, .host]
+                       | map(select(type == "string" and . != ""))
+                       | first // empty' 2>/dev/null)" || rh=""
+        case "$rh" in
+          *.*) smtp_relay_host="$(printf '%s' "$rh" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" ;;
+          *)   [ -n "$tt" ] && smtp_relay_host="n/a" ;;
+        esac
+        [ -n "$tt" ] && smtp_transport="$(printf '%s' "$tt" | tr -d '[:space:]')"
+      fi
+    elif printf '%s' "$pj" | jq -e 'any(.[]; (.name|ascii_downcase)=="wp-mail-smtp")' >/dev/null 2>&1; then
+      # Recorded, not read: its options live under a different key and no rule
+      # for it has been verified against a live site.
+      smtp_plugin_seen="wp-mail-smtp"
+    fi
 
     # NO `${pj:-[]}` DEFAULTS. A failed call must not become an empty list:
     # that turned four WP-CLI failures into "we inventoried it and it runs
@@ -290,6 +348,10 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
       --argjson checked "$( [ -n "$wp_version" ] && echo true || echo false )" \
       --argjson comp    "$have_components" \
       --arg fw  "$framework" \
+      --arg smtp_plugin_seen "$smtp_plugin_seen" \
+      --arg smtp_from_domain "$smtp_from_domain" \
+      --arg smtp_relay_host  "$smtp_relay_host" \
+      --arg smtp_transport   "$smtp_transport" \
       --argjson core "$( [ -n "$core_json" ] && echo "$core_json" || echo null )" \
       --argjson plugins "$( [ -n "$pj" ] && echo "$pj" || echo null )" \
       --argjson muplugins "$( [ -n "$mj" ] && echo "$mj" || echo null )" \
@@ -311,8 +373,10 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
         # means we asked and could not tell, so 21 Nexcess sites would report
         # a mailer we had failed to read when the truth is that nothing asked.
         # "n/a" means the scan did not look.
-        smtp_plugin_seen:"n/a", smtp_from_domain:"n/a", smtp_relay_host:"n/a",
-        smtp_transport:"n/a",
+        smtp_plugin_seen:$smtp_plugin_seen,
+        smtp_from_domain:$smtp_from_domain,
+        smtp_relay_host:$smtp_relay_host,
+        smtp_transport:$smtp_transport,
         wp_version:(if $wv == "" then null else $wv end),
         framework:(if $fw == "" then null else $fw end),
         wp_core_update:(if $core == null then null

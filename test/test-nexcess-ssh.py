@@ -8,6 +8,7 @@ mode is not a failed connection, it is a successful one to the wrong host.
 
 import importlib.util
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -147,15 +148,66 @@ ok("StrictHostKeyChecking=accept-new" not in
 # "n/a". Absent keys are read by the ledger as UNKNOWN on a deep-scanned row,
 # and UNKNOWN means "we asked and could not tell" -- so 21 Nexcess sites would
 # report a mailer that had defeated us when in truth nothing asked.
-ok(_scan.count('smtp_plugin_seen:"n/a"') == 2,
-   "both emit paths say the sending domain was NOT LOOKED AT, not unknown")
 ok('smtp_from_domain:"n/a"' in _scan and 'smtp_relay_host:"n/a"' in _scan,
-   "...for all three sending-domain facts")
-# THE CONTROL. If this ever fires, the command list has grown and the approval
-# recorded in the script header no longer covers what runs.
-ok("option get" not in _scan,
-   "no `wp option get` here: adding it needs a fresh review of the command "
-   "list, not a scan tweak")
+   "the unreachable path still says the scan did not look, never unknown")
+# ---------------------------------------------------------------------------
+# THE COMMAND LIST IS THE SECURITY CONTROL, so the test checks the LIST, not
+# one command's absence.
+#
+# This asserted `option get` did not appear, which was right up to 2026-08-26
+# and became wrong the moment the seventh command was approved. A control that
+# a legitimate change has to DELETE teaches people to delete controls. So it
+# now asserts the thing that has to stay true forever: every WP-CLI command
+# the script runs is enumerated in the approved list in its header, and every
+# enumerated command is actually run.
+#
+# The list drifted once already, within hours of being signed off:
+# `test -d ~/public_html` was running and was not written down.
+# ---------------------------------------------------------------------------
+_hdr = _scan.split("set -euo pipefail")[0]
+_declared = set()
+for _l in _hdr.splitlines():
+    _m = re.match(r"#\s{2,}(wp .+?)\s*$", _l)
+    if _m:
+        _declared.add(re.sub(r"--fields=\S+", "--fields=...", _m.group(1)).strip())
+_run = set()
+for _m in re.finditer(r'run_wp(?:_stderr)?\s+"\$target"\s+"([^"]+)"', _scan):
+    _run.add(re.sub(r"--fields=\S+", "--fields=...", "wp " + _m.group(1)).strip())
+
+ok(bool(_declared) and bool(_run),
+   "the header list and the run calls were both found at all")
+ok(not (_run - _declared),
+   "every command run is enumerated in the approved header list "
+   "(undeclared: %s)" % sorted(_run - _declared))
+ok(not (_declared - _run),
+   "every command in the approved list is actually run "
+   "(declared but unused: %s)" % sorted(_declared - _run))
+
+# The approval must name a date and a person.
+ok("RE-APPROVED 2026-08-26" in _scan and "Doug Kasperek" in _scan,
+   "the seventh command carries a dated, named approval")
+
+# THE STATED COUNT MUST MATCH THE LIST IT SITS OVER, and it is derived rather
+# than pinned: the number is entitled to change when a command is approved,
+# the agreement between the sentence and the list is not. `cd ~/public_html`
+# is not counted, which is how the header read "All six" over five wp calls
+# before today.
+_WORDS = {"five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
+_m = re.search(r"# All (\w+) are reads", _hdr)
+ok(_m is not None, "the header states how many commands it lists")
+_probe = len(re.findall(r"^#\s{2,}test -d ", _hdr, re.M))
+ok(_m and _WORDS.get(_m.group(1)) == len(_declared) + _probe,
+   "the stated count matches the list: header says %r, list holds %d wp "
+   "call(s) plus %d probe(s)"
+   % (_m.group(1) if _m else None, len(_declared), _probe))
+
+# The measurement itself: both emit paths must carry all four smtp_* keys, and
+# the measuring one must carry the VARIABLES rather than the n/a literals.
+ok(_scan.count('smtp_plugin_seen:"n/a"') == 1,
+   "only the unreachable path writes the n/a literals now")
+ok("smtp_plugin_seen:$smtp_plugin_seen" in _scan
+   and "smtp_from_domain:$smtp_from_domain" in _scan,
+   "the measuring path emits what it measured")
 
 _wf = open(WF).read()
 ok("data/nexcess-known-hosts" in _wf,
