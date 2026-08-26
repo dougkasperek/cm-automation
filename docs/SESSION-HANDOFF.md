@@ -12,9 +12,10 @@ written down.
 
 **Nothing is broken and nothing is running.** Repo clean, `HEAD` pushed through
 `37c9507` at the start of the day; two commits sit on top of it unpushed
-(`323bd03`, `6ed6f62`). All nine offline suites pass: ledger **224**, severity
-127, nexcess 96, consent 76, nexcess-ssh 34, worker-exposure 40,
-access-policies 46, wp-calls 45, email-dns 58.
+(`323bd03`, `6ed6f62`, `a08e03e`, and this one). All nine offline suites pass:
+ledger **232**, severity 127, nexcess 96, consent 76, nexcess-ssh 34,
+worker-exposure 40, access-policies 46, wp-calls 45, email-dns 58, plus
+`run-local-test.sh` at **59**.
 
 Ledger as of 2026-08-25, all four sources current:
 
@@ -48,23 +49,50 @@ components against a ledger holding 362. `publish-dashboard.sh` re-renders
 both, so the live page was right and only the review copy was stale. Both are
 rendered and staged now.
 
+**The sending domain is measured now, not trusted — Pantheon half.**
+`wp option get postman_options`, gated on post-smtp appearing in the plugin
+list the scan already fetched. Three facts stored BESIDE the workbook's ruling,
+never over it, so a disagreement is a finding rather than a silent overwrite.
+Documented in `docs/DATA-MODEL.md` section 2a.
+
+Two corrections to the backlog entry, both measured: post-smtp is on **59**
+deep-scanned sites, not 39 (that figure was Pantheon-only, written before the
+Nexcess SSH scan existed), and this closes at most **6** of the 7 blanks —
+`woodmarkpharmacy.com` is on Azure, which no deep scan reaches.
+
+**Nothing has run, so the coverage line reads `0 of 75`**, which is what it
+should read before the first scan.
+
+Two more typed numbers on the same card, found while adding to it: `7 site(s)
+have none recorded` counted sites with no email row at all (the real answer is
+6, and the string `"unknown"` is truthy so none of them was counted), and `34
+sites send through smtp.clevermethod.net` was right and typed. Both computed
+now, both in the bug table.
+
 ### Next, undecided — Doug picks
 
-Nothing here is blocked and nothing is urgent. In rough order of what the
-evidence argues for:
+Nothing here is blocked and nothing is urgent. The first two follow directly
+from today:
 
-1. **Measure the sending domain** (`post-smtp` on 39 sites, one extra WP-CLI
-   call in a scan that already runs). Closes the 7 UNKNOWN sending domains
-   with a measurement and cross-checks the other 71 workbook claims. Full
-   entry at the end of `docs/DO-THIS-NEXT.md`.
-2. **The ruling pass.** 83 of 84 sites are `production: null` and exactly one
+1. **Settle the post-smtp option key on one real site.** It has never been
+   verified against a live install — `terminus` is not authenticated on this
+   laptop — so the parser tries several spellings and records `unknown` when
+   none match. `./scripts/diagnose-wp-calls.sh <site>` runs the same call.
+   Until that is done, a low measured count could be a wrong key rather than a
+   fleet fact.
+2. **The Nexcess half needs a re-approval, and was deliberately not done.**
+   Its command list is a security control approved by Doug on 2026-08-25;
+   a seventh command invalidates the approval and nothing on the host would
+   stop the change. The command to add is written down in
+   `docs/DO-THIS-NEXT.md`. It would take the measurement from 39 sites to 59.
+3. **The ruling pass.** 83 of 84 sites are `production: null` and exactly one
    ruling has ever been recorded. One bulk worksheet, a handful of real
    decisions, one commit. Do the pass, not the editor — reasoning at the end
    of `docs/DO-THIS-NEXT.md`.
-3. **Fold Pantheon's inline publish into `_publish-dashboard.yml`.** Named as
+4. **Fold Pantheon's inline publish into `_publish-dashboard.yml`.** Named as
    the next tidy-up in `CLAUDE.md`; the other three workflows already call the
    shared one.
-4. **Asana routing**, still the missing shared plumbing and still unbuilt.
+5. **Asana routing**, still the missing shared plumbing and still unbuilt.
 
 ### Still a human task, unchanged
 
