@@ -8,111 +8,125 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-26, two typed numbers
+## PICK UP HERE — 2026-08-26, the sending domain
 
-**Nothing is broken and nothing is running.** Repo clean, `HEAD` pushed through
-`37c9507` at the start of the day; two commits sit on top of it unpushed
-(`323bd03`, `6ed6f62`, `a08e03e`, and this one). All nine offline suites pass:
-ledger **232**, severity 127, nexcess 96, consent 76, nexcess-ssh 34,
-worker-exposure 40, access-policies 46, wp-calls 45, email-dns 58, plus
-`run-local-test.sh` at **59**.
+**Nothing is broken and nothing is running.** One commit is local
+(`be1c857`); `origin/main` is at `3752d90`. All nine offline suites pass:
+ledger **234**, severity 127, nexcess 96, consent 76, nexcess-ssh **43**,
+worker-exposure 40, access-policies 46, wp-calls **48**, email-dns 58, plus
+`run-local-test.sh` at **60**.
 
-Ledger as of 2026-08-25, all four sources current:
+Ledger, measured by scoring it today:
 
 | source | run | measured |
 |---|---|---|
-| health (Pantheon) | `health-2026-08-25_2110` | 52 sites, 48 deep |
+| health (Pantheon) | `health-2026-08-26_1351` | 52 sites, 48 deep |
 | health (Nexcess SSH) | `health-nexcess-2026-08-25_1615` | 22 sites, 21 deep |
 | email-dns | `email-dns-2026-08-25_2002` | 70 of 78 |
 | consent | `consent-2026-08-25_2204` | 71 of 79 |
 | nexcess (control plane) | `nexcess-2026-08-25_1749` | 22 of 22 |
 
-Health **2 CRIT / 51 WARN / 27 OK / 3 SKIP / 1 FROZEN**, one excluded.
-Health-coverage scoreboard **11**. UNKNOWN **0**. Component catalogue **362
-distinct, 2,346 installs, 68 of 75 sites**. All measured today by rendering,
-not carried forward.
+Health **2 CRIT / 52 WARN / 26 OK / 3 SKIP / 1 FROZEN**, one excluded.
+Health-coverage scoreboard **11**. UNKNOWN **0**. Sending domain measured on
+**39 of 75**. Published and verified by pulling the object back out of R2, md5
+`21e53c7484c89041812a025acc0a219a`, matching the committed `fleet.html`.
 
-### What was fixed
+### The one thing waiting
 
-**The dashboard printed `that number is 0` as literal copy.** In the one
-paragraph whose job is to explain that UNKNOWN and health-coverage are
-different questions. It was wrong for part of 2026-08-25, when
-`app.eastauroracc.com` arrived from the Nexcess API and UNKNOWN was 1. It is
-computed now, over production and non-production sites alike, and the sentence
-changes shape rather than changing a digit. Two of the three new tests were
-verified to fail against the old copy.
+**Run the Nexcess SSH scan.** The seventh command is approved and in place and
+has never run:
 
-**CI committed one of the two pages it renders.** `persist-ledger.sh` rendered
-and staged `fleet.html` only, so the repo's `components.html` was whatever
-someone last ran by hand — one health run behind since 2026-08-25, showing 360
-components against a ledger holding 362. `publish-dashboard.sh` re-renders
-both, so the live page was right and only the review copy was stale. Both are
-rendered and staged now.
+```
+./scripts/nexcess-fleet-healthcheck.sh --stamp "$(date -u +%Y-%m-%d_%H%M)"
+./scripts/fleet-ledger.py ingest --reports ./reports --history ./history
+./scripts/render-dashboard.py --out fleet.html --components-out components.html
+./scripts/publish-dashboard.sh
+```
 
-**The sending domain is measured now, not trusted — Pantheon half.**
+It should take the sending-domain coverage from 39 of 75 to about **59 of 75**
+and give `hitsfoundation.org` a measured value. Check the email card afterwards
+for disagreements, and re-read the R2 object rather than trusting the publish
+exit code.
+
+### What was built
+
+**The sending domain is measured, not trusted.**
 `wp option get postman_options`, gated on post-smtp appearing in the plugin
-list the scan already fetched. Three facts stored BESIDE the workbook's ruling,
-never over it, so a disagreement is a finding rather than a silent overwrite.
-Documented in `docs/DATA-MODEL.md` section 2a.
+list the scan already fetches. Four facts — `smtp_plugin_seen`,
+`smtp_from_domain`, `smtp_relay_host`, `smtp_transport` — stored beside the
+workbook's ruling, never over it. `docs/DATA-MODEL.md` section 2a.
 
-Two corrections to the backlog entry, both measured: post-smtp is on **59**
-deep-scanned sites, not 39 (that figure was Pantheon-only, written before the
-Nexcess SSH scan existed), and this closes **one** of the 7 blanks, not 6.
+**On Nexcess it is the seventh command, approved by Doug Kasperek on
+2026-08-26**, recorded in the script header. That list is the only thing
+keeping a write-capable credential read-only, so the approval is the control.
+`test-nexcess-ssh.py` now checks the LIST rather than one command's absence:
+every command run is enumerated, every enumerated command is run, and the
+header's stated count matches the list under it. Both directions tested by
+breaking them.
 
-That second correction was itself wrong when first written and is in the bug
-table. Five of the six blanks run **no mailer at all** — PHP `mail()` or the
-host's relay — so there is no option to read and no version of this design
-reaches them. The blank workbook cell and the missing plugin are the same
-fact. The one blank within reach, `hitsfoundation.org`, is on **Nexcess**, so
-**the half that needed no approval closes no blanks at all.** What the built
-half delivers is 38 workbook claims cross-checked; the Nexcess half would add
-19 more plus that one blank.
+### What was found, in the order it was found
 
-**Nothing has run, so the coverage line reads `0 of 75`**, which is what it
-should read before the first scan.
+Seven defects, five of them in work written the same day.
 
-Two more typed numbers on the same card, found while adding to it: `7 site(s)
-have none recorded` counted sites with no email row at all (the real answer is
-6, and the string `"unknown"` is truthy so none of them was counted), and `34
-sites send through smtp.clevermethod.net` was right and typed. Both computed
-now, both in the bug table.
+1. **The dashboard printed `that number is 0` as literal copy**, in the one
+   paragraph explaining that UNKNOWN and health-coverage are different
+   questions. It was wrong for part of 2026-08-25. Computed now.
+2. **CI committed one of the two pages it renders.** `persist-ledger.sh`
+   staged `fleet.html` only, so the repo's `components.html` was one health run
+   stale. The live page was right; only the review copy was wrong.
+3. **`7 site(s) have none recorded`** counted sites with no email row at all.
+   The sites that genuinely have none carry the truthy string `"unknown"`, so
+   none of them was counted. The real answer is 6. Both figures were 7.
+4. **`measuring post-smtp closes 6 of the 7 blanks`** — my own claim, made from
+   the inventory's host column. It closes **one**. Five of the six blanks run
+   no mailer at all; the blank workbook cell and the missing plugin are the
+   same fact.
+5. **post-smtp stores neither key the parser looked for.** It uses
+   `envelope_sender` and `sender_email`, not `from_email`, and `hostname` is
+   the empty string on an API transport, which jq's `//` does not treat as a
+   fallback. Both halves passed every test, because the mock had been built to
+   match the parser rather than the world.
+6. **The item-22 detector reported item 22 as live**, three days after item 22
+   was fixed, about the site that motivated the fix, exiting 2. Its own output
+   carried the contradiction two lines apart. The verdict is derived from the
+   record line now, and a new exit 3 covers "nothing fabricated, nothing
+   measured either".
+7. **The measured From: domain was compared against the SENDING domain**, and
+   the first fleet run reported eight disagreements. All eight were false.
+   Against the workbook's `from_address`, 37 of 38 agree.
 
-### Next, undecided — Doug picks
+### Carried forward
 
-Nothing here is blocked and nothing is urgent. The first two follow directly
-from today:
+- **`lancastervillageny.gov`** records `...@mail.smtp2go.com` as its from
+  address in the workbook. That is the relay. The site says
+  `email.lancastervillageny.gov`. A workbook correction, not a code change.
+- **`hoffmanscheese`** has no row in the email check at all and sends through
+  `smtp.clevermethod.net`. It is also on the production-ruling list.
+- **The measurement cannot verify the sending domain** on most sites. 35 of 52
+  use `transport_type: mailgun_api`, where the envelope sender is set by
+  Mailgun and is not stored on the site. It confirms the From: ruling only, and
+  the card says so.
 
-1. **Settle the post-smtp option key on one real site.** It has never been
-   verified against a live install — `terminus` is not authenticated on this
-   laptop — so the parser tries several spellings and records `unknown` when
-   none match. `./scripts/diagnose-wp-calls.sh <site>` runs the same call.
-   Until that is done, a low measured count could be a wrong key rather than a
-   fleet fact.
-2. **The Nexcess half needs a re-approval, and was deliberately not done.**
-   Its command list is a security control approved by Doug on 2026-08-25;
-   a seventh command invalidates the approval and nothing on the host would
-   stop the change. The command to add is written down in
-   `docs/DO-THIS-NEXT.md`. It would take the measurement from 39 sites to 59.
-3. **The ruling pass.** 83 of 84 sites are `production: null` and exactly one
+### Next, undecided
+
+1. **The ruling pass.** 83 of 84 sites are `production: null` and exactly one
    ruling has ever been recorded. One bulk worksheet, a handful of real
-   decisions, one commit. Do the pass, not the editor — reasoning at the end
-   of `docs/DO-THIS-NEXT.md`.
-4. **Fold Pantheon's inline publish into `_publish-dashboard.yml`.** Named as
+   decisions, one commit. Do the pass, not the editor — reasoning at the end of
+   `docs/DO-THIS-NEXT.md`.
+2. **Fold Pantheon's inline publish into `_publish-dashboard.yml`.** Named as
    the next tidy-up in `CLAUDE.md`; the other three workflows already call the
    shared one.
-5. **Asana routing**, still the missing shared plumbing and still unbuilt.
+3. **Asana routing**, still the missing shared plumbing and still unbuilt.
 
-### Still a human task, unchanged
+### Still a human task
 
-- **Push.** Two commits are local.
+- **Push `be1c857`.**
 - **Send the Nexcess question-1 reply**, thread
   `thread::sJecUJQ2cS6EeEacWJKo2D0::`, drafted at the bottom of
   `docs/NEXCESS-SUPPORT.md`. Do not send the request/response headers they
   asked for; the challenge was our own missing `post_handshake_auth`.
 - **Check the `github-deploy-[removed]` token scope** in the Cloudflare
   dashboard. Re-scope, do not delete.
-- **Publish**, if the copy fix should reach `fleet.thudstaff.com` before the
-  next ingest does it. `./scripts/publish-dashboard.sh`.
 
 ---
 
