@@ -241,12 +241,28 @@ scanner_would_record() {
       else
         printf 'theme_updates=unknown, no inventory'
       fi ;;
+    "option get postman_options"*)
+      # Added 2026-08-26 with the call itself. Its first real run printed this
+      # line EMPTY, because the call was added to WP_CALLS and not here -- a
+      # diagnostic that shows a consequence for five calls and a blank for the
+      # sixth reads as "this one has no consequence".
+      if [ -n "$parsed" ]; then
+        printf 'smtp_from_domain=<domain of envelope_sender or sender_email>, smtp_transport=<transport_type>'
+      else
+        printf 'smtp_from_domain=unknown, smtp_plugin_seen=post-smtp (installed, unreadable)'
+      fi ;;
   esac
 }
 
 trunc() { cut -c1-400 | head -6; }
 
 any_fabricated=0
+# A call that failed and was recorded HONESTLY. Tracked separately from
+# any_fabricated because the two need opposite reactions: a fabrication is a
+# bug in the scanner, an unmeasured call is a fact about the site. Without
+# this the summary below prints "every call was a real measurement" over a run
+# where one was not, which is the same shape as everything in the bug table.
+any_unmeasured=0
 any_timeout=0
 any_notasite=0
 json_rows=""
@@ -305,8 +321,21 @@ for given in "$@"; do
     elif [ "$rc" -eq 124 ]; then
       verdict="FABRICATED"; cause="TIMED OUT after ${WP_CLI_TIMEOUT}s"
       any_timeout=1
+    elif [ "$rc" -ne 0 ] && [ "${call#option get}" != "$call" ]; then
+      # NOT FABRICATED. Item 22 is about calls whose failure branch writes a
+      # CLEAN value -- 0 updates, "up-to-date" -- so a failure becomes good
+      # news. The sending-domain call has no such branch: it records `unknown`
+      # and `smtp_plugin_seen=post-smtp`, which is the honest answer and the
+      # whole reason it was written that way.
+      #
+      # Its first real run scored it FABRICATED on cm-whitelabel and set the
+      # exit code to 2, which would put an accurate `unknown` in the same
+      # column as a plugin count that is a lie. Added 2026-08-26.
+      verdict="UNMEASURED"; cause="exit $rc, and the scanner records unknown"
     elif [ "$rc" -ne 0 ]; then
       verdict="FABRICATED"; cause="exit $rc"
+    elif [ "${call#option get}" != "$call" ] && [ -z "$parsed" ]; then
+      verdict="UNMEASURED"; cause="$why, and the scanner records unknown"
     elif [ "$call" != "core version" ] && [ -z "$parsed" ]; then
       verdict="FABRICATED"; cause="$why"
     elif [ "$call" = "core version" ] && [ -z "$parsed" ]; then
@@ -317,6 +346,7 @@ for given in "$@"; do
       verdict="MEASURED"; cause="returned data"
     fi
     [ "$verdict" = "FABRICATED" ] && any_fabricated=1
+    [ "$verdict" = "UNMEASURED" ] && any_unmeasured=1
 
     printf -- '--- wp %s\n' "$call"
     printf '    exit=%s  elapsed=%ss  stdout=%s bytes  stderr=%s bytes\n' \
@@ -386,7 +416,13 @@ fi
 if [ "$any_notasite" -eq 1 ]; then
   exit 1
 fi
-printf 'Every call was a real measurement. The clean values in the ledger are\n'
+if [ "$any_unmeasured" -eq 1 ]; then
+  printf 'One or more calls did not answer, and the scanner records UNKNOWN for\n'
+  printf 'them rather than a clean value. That is the design working: nothing\n'
+  printf 'was fabricated, and nothing was measured either. Do not read a low\n'
+  printf 'coverage number from this run as a fact about the fleet.\n\n'
+fi
+printf 'No call fabricated a clean value. The clean values in the ledger are\n'
 printf 'answers, not silence -- item 22 is theoretical on these sites.\n'
 printf 'This is evidence about THESE sites on THIS run, not a proof about the\n'
 printf 'fleet: run it again on a site that is behaving differently before\n'

@@ -89,9 +89,14 @@ OBSERVED = (
     # evidence that anyone is maintaining it, and adding them there would move
     # sites out of the coverage scoreboard without anything having been
     # measured about maintenance.
+    # `smtp_transport` is here because a site can have no relay host and still
+    # be sending: actioncarting uses `transport_type: mailgun_api`, Mailgun
+    # over HTTP, so `hostname` is the empty string. Recording only the host
+    # would report `unknown` about a site that had answered plainly.
     "smtp_plugin_seen",
     "smtp_from_domain",
     "smtp_relay_host",
+    "smtp_transport",
 )
 
 DERIVED = ("status",)
@@ -126,7 +131,8 @@ UNKNOWN = "unknown"
 # and found no mailer worth reading -- which `smtp_plugin_seen` names.
 DEEP_ONLY = ("wp_version", "wp_core_update", "plugin_updates", "theme_updates",
              "components_checked",
-             "smtp_plugin_seen", "smtp_from_domain", "smtp_relay_host")
+             "smtp_plugin_seen", "smtp_from_domain", "smtp_relay_host",
+             "smtp_transport")
 
 
 def fact(row, key):

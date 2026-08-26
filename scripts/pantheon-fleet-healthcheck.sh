@@ -298,6 +298,7 @@ while IFS= read -r site <&3; do
   smtp_plugin_seen="n/a"
   smtp_from_domain="n/a"
   smtp_relay_host="n/a"
+  smtp_transport="n/a"
   case "$framework" in
     wordpress*)
       if [ "$API_ONLY" -eq 0 ]; then
@@ -400,6 +401,7 @@ while IFS= read -r site <&3; do
         smtp_plugin_seen="none"
         smtp_from_domain="n/a"
         smtp_relay_host="n/a"
+        smtp_transport="n/a"
         if [ "$pj_ok" = "false" ]; then
           # The plugin list itself did not answer. We do not know which mailer
           # is installed, let alone how it is set up. "none" here would read as
@@ -408,33 +410,62 @@ while IFS= read -r site <&3; do
           smtp_plugin_seen="unknown"
           smtp_from_domain="unknown"
           smtp_relay_host="unknown"
+          smtp_transport="unknown"
         elif printf '%s' "$pj" | jq -e 'any(.[]; (.name|ascii_downcase)=="post-smtp")' >/dev/null 2>&1; then
           smtp_plugin_seen="post-smtp"
           # Present but not yet read: if the option call below fails these stay
           # unknown, which is a different answer from "no mailer installed".
           smtp_from_domain="unknown"
           smtp_relay_host="unknown"
+          smtp_transport="unknown"
           # `option get` exits non-zero when the option does not exist, so an
           # empty result covers a missing option, a failed call and a timeout
           # alike -- all three are "we could not tell", none is a value.
           po="$(run_with_timeout "$WP_CLI_TIMEOUT" terminus remote:wp "$se" -- option get postman_options --format=json | json_or_empty)" || po=""
           if [ -n "$po" ]; then
-            # SEVERAL KEYS, NOT ONE. post-smtp has carried the sender under
-            # different names across its Postman-era and post-smtp-era
-            # releases, and the option key was never verified against a live
-            # site before this shipped. Trying the known spellings and
-            # recording `unknown` when none match is the honest failure; a
-            # single hardcoded key would silently report "unknown" on whole
-            # families of versions and look like a coverage gap instead of a
-            # parser that is out of date.
-            fe="$(printf '%s' "$po" | jq -r '(.from_email // .envelope_sender // .from_email_address // empty) | tostring' 2>/dev/null)" || fe=""
+            # THE KEY NAMES ARE FROM A REAL SITE, not from guesswork. Verified
+            # against actioncarting.live on 2026-08-26 with
+            # diagnose-wp-calls.sh. The first version of this tried
+            # `.from_email` first, which post-smtp does not use at all; it
+            # happened to work only because `.envelope_sender` was the second
+            # fallback.
+            #
+            # ENVELOPE_SENDER FIRST, DELIBERATELY. SPF is evaluated against the
+            # envelope sender (MAIL FROM), which is the question the email
+            # workflow is asking. `sender_email` is the From: header, which is
+            # what DMARC aligns against. On the site measured they are the same
+            # address; where they differ, SPF is the one being scored, so it
+            # wins.
+            #
+            # `// empty` is not enough on its own: jq falls back on null and
+            # false but NOT on the empty string, and post-smtp stores "" in
+            # fields it is not using. select(. != "") is what makes the
+            # fallback chain actually fall through.
+            fe="$(printf '%s' "$po" \
+                  | jq -r '[.envelope_sender, .sender_email, .from_email]
+                           | map(select(type == "string" and . != ""))
+                           | first // empty' 2>/dev/null)" || fe=""
             case "$fe" in
               *@*.*) smtp_from_domain="$(printf '%s' "${fe##*@}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" ;;
             esac
-            rh="$(printf '%s' "$po" | jq -r '(.hostname // .host // empty) | tostring' 2>/dev/null)" || rh=""
+            # THE TRANSPORT, NOT JUST THE HOST. actioncarting sends through
+            # `transport_type: mailgun_api` -- Mailgun over HTTP, not SMTP --
+            # and its `hostname` is therefore the EMPTY STRING. Recording that
+            # as `unknown` would say "we could not tell" about a site that had
+            # told us plainly that it does not use an SMTP relay. So an empty
+            # hostname on a known transport is "n/a", and the transport itself
+            # is kept, because how a site sends is the more useful fact and it
+            # is right there in the same option.
+            tt="$(printf '%s' "$po" | jq -r '.transport_type // empty' 2>/dev/null)" || tt=""
+            rh="$(printf '%s' "$po" \
+                  | jq -r '[.hostname, .host]
+                           | map(select(type == "string" and . != ""))
+                           | first // empty' 2>/dev/null)" || rh=""
             case "$rh" in
               *.*) smtp_relay_host="$(printf '%s' "$rh" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" ;;
+              *)   [ -n "$tt" ] && smtp_relay_host="n/a" ;;
             esac
+            [ -n "$tt" ] && smtp_transport="$(printf '%s' "$tt" | tr -d '[:space:]')"
           fi
         elif printf '%s' "$pj" | jq -e 'any(.[]; (.name|ascii_downcase)=="wp-mail-smtp")' >/dev/null 2>&1; then
           # Recorded, not read. Its options live under a different key and no
@@ -528,6 +559,7 @@ while IFS= read -r site <&3; do
     --arg smtp_plugin_seen "$smtp_plugin_seen" \
     --arg smtp_from_domain "$smtp_from_domain" \
     --arg smtp_relay_host "$smtp_relay_host" \
+    --arg smtp_transport "$smtp_transport" \
     --arg status "$status" --arg notes "$notes" \
     '{site:$site,framework:$fw,plan:$plan,env:$env,php_version:$php,
       db_backup_age_days:$backup_age,upstream_pending:$upstream,
@@ -538,6 +570,7 @@ while IFS= read -r site <&3; do
       smtp_plugin_seen:$smtp_plugin_seen,
       smtp_from_domain:$smtp_from_domain,
       smtp_relay_host:$smtp_relay_host,
+      smtp_transport:$smtp_transport,
       status:$status,notes:$notes,frozen:false}')"
   results="$(jq --argjson o "$obj" '. + [$o]' <<<"$results")"
 

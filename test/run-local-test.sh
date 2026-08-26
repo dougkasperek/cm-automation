@@ -137,10 +137,17 @@ else
   sd_of() { jq -r --arg s "$1" '.[]|select(.site==$s)|.smtp_from_domain' "$J"; }
   sp_of() { jq -r --arg s "$1" '.[]|select(.site==$s)|.smtp_plugin_seen' "$J"; }
   check "normalsite: the sending domain is MEASURED off the site" \
-        "smtp.clevermethod.net" "$(sd_of normalsite)"
-  check "normalsite: and the relay host is kept apart from it" \
-        "smtp.mailgun.org" \
+        "app.smtp-mock.net" "$(sd_of normalsite)"
+  # THE TWO THINGS THE FIRST REAL RUN CAUGHT, 2026-08-26. post-smtp does not
+  # use `from_email`, and on an API transport `hostname` is the EMPTY STRING,
+  # which jq's `//` does not treat as a fallback. The mock now carries the
+  # real payload, so a regression to either mistake fails here.
+  check "normalsite: an API transport has NO relay host, and says n/a" \
+        "n/a" \
         "$(jq -r '.[]|select(.site=="normalsite")|.smtp_relay_host' "$J")"
+  check "normalsite: ...and the transport itself is kept, since it is the fact" \
+        "mailgun_api" \
+        "$(jq -r '.[]|select(.site=="normalsite")|.smtp_transport' "$J")"
   check "normalsite: the mailer it was read from is named" \
         "post-smtp" "$(sp_of normalsite)"
   # post-smtp IS installed, its options would not answer. Not "none".

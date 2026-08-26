@@ -101,8 +101,25 @@ Added 2026-08-26, in the `health` source. Three facts, all deep-scan only:
 | fact | what it says |
 |---|---|
 | `smtp_plugin_seen` | which mailer the plugin list showed: `post-smtp`, `wp-mail-smtp`, `none`, `unknown`, `n/a` |
-| `smtp_from_domain` | the domain half of post-smtp's configured from address |
-| `smtp_relay_host` | the host post-smtp relays through, e.g. `smtp.mailgun.org` |
+| `smtp_from_domain` | the domain half of `envelope_sender`, falling back to `sender_email` |
+| `smtp_relay_host` | the SMTP host it relays through, or `n/a` on a non-SMTP transport |
+| `smtp_transport` | `transport_type`, e.g. `mailgun_api`, `smtp` |
+
+**The key names are measured, not guessed.** Verified against
+`actioncarting.live` on 2026-08-26 with `diagnose-wp-calls.sh`. Two things that
+run had to correct in the first cut:
+
+- **post-smtp does not use `from_email`.** It stores `envelope_sender` and
+  `sender_email`. `envelope_sender` is read first on purpose: SPF is evaluated
+  against the envelope sender, which is the question the email workflow asks.
+  `sender_email` is the `From:` header, which is what DMARC aligns against. On
+  the site measured they are the same address.
+- **`hostname` is the empty string on an API transport.** actioncarting sends
+  via `transport_type: mailgun_api` — Mailgun over HTTP, no SMTP relay at all.
+  jq's `//` falls back on null and false but **not** on `""`, so a naive
+  `.hostname // .host` returns the empty string and the fact would have read
+  `unknown` about a site that answered plainly. Hence `n/a` for the host and
+  `smtp_transport` kept as the fact that actually says how the site sends.
 
 **Why it exists.** SPF, DKIM and DMARC are all queried at the *sending domain*,
 and nothing in DNS reveals where a WordPress site was configured to send from,
@@ -117,7 +134,8 @@ a silent resolution in favour of whichever was written last. The dashboard
 reports a disagreement as a finding and says what it means — that every SPF,
 DKIM and DMARC cell on that row is an answer about the wrong domain.
 
-**Five answers, and they must stay five.** `n/a` means this scan never asked
+**Six answers, and they must stay six.** (`n/a` on the relay host joined them
+when the first real site turned out not to use SMTP.) `n/a` means this scan never asked
 (api-only, or not WordPress). `none` means it asked and the site runs no mailer
 this scan reads. `unknown` on `smtp_plugin_seen` means the plugin list itself
 would not answer. `unknown` on `smtp_from_domain` with `smtp_plugin_seen:

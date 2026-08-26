@@ -231,6 +231,7 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
     row="$(jq -n --arg s "$site_id" \
       '{site:$s, site_id:$s, host_site_name:null, wp_checked:false,
         smtp_plugin_seen:"n/a", smtp_from_domain:"n/a", smtp_relay_host:"n/a",
+        smtp_transport:"n/a",
         components_checked:false, scan_error:"ssh failed or ~/public_html missing"}')"
   else
     # STDERR IS KEPT for this one call, deliberately. `wp core version` on a
@@ -311,6 +312,7 @@ while IFS=$'\t' read -r site_id ssh_user ssh_host; do
         # a mailer we had failed to read when the truth is that nothing asked.
         # "n/a" means the scan did not look.
         smtp_plugin_seen:"n/a", smtp_from_domain:"n/a", smtp_relay_host:"n/a",
+        smtp_transport:"n/a",
         wp_version:(if $wv == "" then null else $wv end),
         framework:(if $fw == "" then null else $fw end),
         wp_core_update:(if $core == null then null
