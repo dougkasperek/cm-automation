@@ -447,7 +447,14 @@ function draw() {
   const groups = []; let last = null;
   for (const c of cols) { if (c.group !== last) { groups.push({ name: c.group, n: 1 }); last = c.group; } else groups[groups.length - 1].n++; }
   const thead = h('thead', {},
-    h('tr', { class: 'groups' }, h('th', { class: 'site' }), ...groups.map(g => h('th', { colspan: g.n }, g.name))),
+    h('tr', { class: 'groups' }, h('th', { class: 'site' }), ...groups.map(g => h('th', { colspan: g.n },
+      g.name === 'Consent'
+        // These three columns are all the matrix can hold. Whether the tags
+        // stop when a visitor REJECTS is per tracker per pass, so it lives on
+        // its own page -- and the route to it belongs here, where a reader is
+        // already looking at consent, not only in the footer.
+        ? h('a', { href: '/consent', title: 'Consent detail: what fires on load, what still fires after Reject All, who manages each site' }, g.name)
+        : g.name))),
     h('tr', { class: 'cols' }, h('th', { class: 'site' }, 'Site', h('span', { class: 'cov' }, rows.length + ' of ' + SITES.length)),
       ...cols.map(c => h('th', { title: c.title || '' }, c.label, c.cov ? h('span', { class: 'cov' + (c.cov[0] < c.cov[1] ? ' short' : '') }, c.cov[0] + ' of ' + c.cov[1] + (c.covLabel ? ' ' + c.covLabel : '')) : h('span', { class: 'cov' }, c.axis ? 'scored' : '')))),
     h('tr', { class: 'census' }, h('th', { class: 'site' }, h('span', { class: 'cov' }, 'column census, all ' + SITES.length)), ...cols.map(census)));
@@ -633,7 +640,7 @@ $('#app').append(h('div', { class: 'wrap' },
       h('p', {}, D.coverage_changes.length + ' facts became visible this run (' + D.coverage_changes.map(c => c.fact).join(', ') + ', on ' + D.coverage_changes[0]?.sites.length + ' sites): the instrument changed, not the fleet.'))),
   h('footer', { class: 'foot' },
     h('p', {}, 'Health counts: ' + D.counts.CRIT + ' critical · ' + D.counts.WARN + ' warning · ' + D.counts.OK + ' OK · ' + D.counts.SKIP + ' skip · ' + D.counts.FROZEN + ' frozen, ' + D.excluded_sites.length + ' excluded by ruling (' + D.excluded_sites.join(', ') + '). Consent: ' + D.axes.consent.WARN + ' warning · ' + D.axes.consent.OK + ' OK · ' + D.axes.consent.UNKNOWN + ' unknown. Column headers carry each question\'s own denominator; a census bar under each shows how the whole fleet answers it, hatched where nobody could.'),
-    h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. ', h('a', { href: '/api/fleet-scan' }, 'JSON feed'), ' · ', h('a', { href: '/components' }, 'component catalogue'), '. Read-only: nothing on this page changes a site.'))));
+    h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. ', h('a', { href: '/api/fleet-scan' }, 'JSON feed'), ' · ', h('a', { href: '/components' }, 'component catalogue'), ' · ', h('a', { href: '/consent' }, 'consent'), '. Read-only: nothing on this page changes a site.'))));
 readUrl();
 draw();
 if (new URLSearchParams(location.search).get('view') === 'schedule') setView('schedule');

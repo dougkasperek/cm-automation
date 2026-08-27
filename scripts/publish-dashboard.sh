@@ -228,6 +228,7 @@ python3 "$SCRIPT_DIR/render-dashboard.py" \
   --inventory "$INVENTORY" \
   --out "$WORK/dashboard.html" \
   --components-out "$WORK/components.html" \
+  --consent-out "$WORK/consent.html" \
   --emit-data "$WORK/latest.json" \
   --strict || { err "render failed; nothing published"; exit 1; }
 
@@ -246,6 +247,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   log "Dry run. Nothing was published."
   log "  page: $WORK/dashboard.html"
   log "  components: $WORK/components.html"
+  log "  consent: $WORK/consent.html"
   log "  data: $WORK/latest.json"
   log ""
   log "Open the page and read it before publishing for real."
@@ -253,12 +255,13 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 rc=0
-# components.html ships in the SAME loop as the page that links to it. If it
+# EVERY PAGE THE FLEET PAGE LINKS TO SHIPS IN THE SAME LOOP as the page that
+# links to it -- components.html and, since 2026-08-27, consent.html. If it
 # were published separately, or conditionally, the fleet table's plugin count
 # would point at a 404 for however long the two were out of step -- the same
 # shape as the ledger moving while the dashboard did not.
 for pair in "dashboard.html:text/html" "components.html:text/html" \
-            "latest.json:application/json"; do
+            "consent.html:text/html" "latest.json:application/json"; do
   name="${pair%%:*}"
   ctype="${pair##*:}"
   key="${R2_PREFIX}${name}"

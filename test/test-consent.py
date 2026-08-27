@@ -674,5 +674,78 @@ check("the consent-related script srcs are kept, so 'no CMP' and 'a CMP we do "
       "not recognise' stay distinguishable",
       "cmpScripts" in _sweep_code)
 
+
+# ---------------------------------------------------------------------------
+# The CONSENT PAGE, added 2026-08-27. Its own page because the gating results
+# are per tracker per pass, which does not fit one row per site -- the same
+# argument that earned the component catalogue a page of its own.
+# ---------------------------------------------------------------------------
+print("\n--- the consent page ---")
+import importlib.util as _ilu2, datetime as _dt2
+_rs = _ilu2.spec_from_file_location("rend2", os.path.join(ROOT, "scripts", "render-dashboard.py"))
+_R2 = _ilu2.module_from_spec(_rs); _rs.loader.exec_module(_R2)
+_m2 = _R2.build_model("./history", "./data/fleet-inventory.json", _dt2.date.today())
+_cp = _R2.render_consent(_m2)
+
+check("the consent page renders", len(_cp) > 2000, len(_cp))
+check("it routes back to the fleet page", 'href="/"' in _cp)
+
+# THE THREE STATES are the reason the page exists: act on what we manage, tell
+# clients about what we do not, and do not imply we broke theirs.
+for _lab in ("Ours, and a tag ignores the rejection", "Ours, and gated", "Not ours"):
+    check("the page names the state %r" % _lab[:24], _lab in _cp)
+
+# COVERAGE BEFORE FINDINGS, and each with its own denominator: the two sweeps
+# ask different populations, so one number would be wrong for one of them.
+check("coverage is stated before the findings",
+      _cp.index("Homepage loaded") < _cp.index("Where it stands"))
+check("...for the cold sweep and the gating test separately",
+      "Consent tooling detected" in _cp and "Rejection tested" in _cp)
+
+# UNTESTED IS NOT CLEAN. "Nothing still fires after rejection" is the best
+# possible result, so a site the test could not complete must never fall into
+# the gated column.
+check("sites that could not be gating-tested are called out, not folded in",
+      "could not be tested for gating" in _cp and "unread" in _cp)
+_gated_untested = [x for x in _m2["sites"]
+                   if "gating_tested" in x and x.get("gating_tested") is not True]
+check("...and each is named", all(x["site_id"] in _cp for x in _gated_untested),
+      repr([x["site_id"] for x in _gated_untested]))
+
+# A COOKIELESS GOOGLE PING IS NOT A LEAK, and the page has to show that
+# distinction rather than imply it: the first fleet run reported 9 sites where
+# the answer was 2, because the verdict lost the G100 case.
+check("cookieless pings get their own column, not the finding column",
+      "Cookieless" in _cp and "gcs=G100" in _cp)
+
+# NOT A COMPLIANCE VERDICT, and the caveats a reader needs are ON the page
+# rather than in a doc nobody opens.
+check("the page states what it does not establish",
+      "does not establish" in _cp)
+for _c in ("Location", "One page", "floor, not a total", "Not a compliance verdict"):
+    check("...including %r" % _c[:22], _c in _cp)
+check("no compliance verdict is stated anywhere on it",
+      "non-compliant" not in _cp.lower())
+
+# THE FLEET PAGE MUST STILL CARRY CONSENT. The axis split exists so a
+# well-maintained site can be flagged as leaking; if consent vanishes from the
+# main page, that is lost.
+_pjs = open(os.path.join(ROOT, "scripts", "dashboard", "page.js")).read()
+check("the fleet page keeps its consent columns",
+      "group: 'Consent'" in _pjs)
+check("...and routes to the consent page from the consent group itself, "
+      "not only the footer",
+      "href: '/consent'" in _pjs and _pjs.count("'/consent'") >= 2)
+
+# A PAGE THE FLEET PAGE LINKS TO AND THE PUBLISH SCRIPT DOES NOT UPLOAD IS A
+# 404 IN PRODUCTION, and it would look exactly like a working link locally.
+# The same reasoning that already keeps components.html in the upload loop.
+_pub = open(os.path.join(ROOT, "scripts", "publish-dashboard.sh")).read()
+check("the publish script renders the consent page", "--consent-out" in _pub)
+check("...and uploads it in the same loop as the page that links to it",
+      "consent.html:text/html" in _pub)
+check("...and names it in the dry-run output, so a person can open it",
+      "consent: $WORK/consent.html" in _pub)
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)
