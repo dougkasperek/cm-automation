@@ -665,6 +665,21 @@ tr:last-child td{border-bottom:none}
 td.num{font-variant-numeric:tabular-nums}
 code{font:11.5px/1.55 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:var(--ink)}
 /* Chip: colour is never the only signal. The label is always present. */
+/* THE INFO DISCLOSURE. Methodology folds; qualification never does.
+   A qualification says what a number is OF -- "of the 48 whose backup age can
+   be read at all" -- and without it the number is wrong. Methodology says how
+   the number was computed, and a reader can act on the page without it. */
+details.md{margin-top:9px;border-top:1px solid var(--line2);padding-top:8px}
+details.md summary{cursor:pointer;font-size:11px;font-weight:700;color:var(--ink2);
+ list-style:none;display:inline-flex;align-items:center;gap:6px}
+details.md summary::-webkit-details-marker{display:none}
+details.md summary .ic{display:inline-flex;align-items:center;justify-content:center;
+ width:15px;height:15px;border:1px solid var(--line);font-size:10px;font-weight:800;
+ font-style:italic;color:var(--ink2)}
+details.md summary:hover{color:var(--strong)}
+details.md[open] summary{margin-bottom:7px}
+details.md p{margin:0 0 7px;font-size:12px;line-height:1.55;color:var(--ink2)}
+details.md p:last-child{margin-bottom:0}
 .sweepline{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;
  margin:6px 0 12px;font-size:13px;padding-bottom:10px;
  border-bottom:1px solid var(--line)}
@@ -808,6 +823,29 @@ SOURCE_ANSWERS = {
     "email-dns": "public DNS, per domain",
     "nexcess":   "Nexcess control plane",
 }
+
+
+def md(A, title, paras):
+    """A folded methodology block.
+
+    THE SPLIT THIS IMPLEMENTS. Two kinds of text share this page and they were
+    being treated as one category by anyone proposing to "reduce the prose":
+
+      QUALIFICATION says what a number is OF. "2 sites have no recent backup,
+      of the 48 whose backup age can be read at all." Fold it and the number
+      becomes false. It stays inline, in the reader's path, in body type.
+
+      METHODOLOGY says how the number was computed, which threshold applied,
+      and what the tool cannot see. A reader can act on the page without it
+      and needs it when they doubt a number. It folds.
+
+    The test for which is which: if hiding the sentence would let a reader
+    draw a conclusion the evidence does not support, it is qualification.
+    """
+    A('<details class=md><summary><span class=ic>i</span>%s</summary>' % title)
+    for para in paras:
+        A('<p>%s</p>' % para)
+    A('</details>')
 
 
 def sweep_line(A, m, e):
@@ -1407,19 +1445,70 @@ def render(m):
               '<span class=wfmininum>%d/%d</span></div>'
               % (e(label), tone, pct, k, n))
     A('</div>')
-    A('<div class=wfnote>Scored per SENDING DOMAIN, not per site, so it has no '
-      'status chip of its own. Several sites '
-      'share one sending domain and therefore one result. The fleet table '
-      'below carries the per-site result in its <strong>Sends from</strong>, '
-      'SPF, DKIM and DMARC columns. <strong>%d open '
-      'cause(s)</strong>, listed under Still open.'
-      '<div style="margin-top:6px">The sending domain is <strong>recorded by a '
-      'person</strong> in the audit workbook. Nothing in DNS '
-      'reveals where a WordPress site was configured to send from, so it '
-      'cannot be derived. <strong>%d site(s) have none recorded</strong> and '
-      'are UNKNOWN here, never a pass. A further %d site(s) are outside this '
-      'check entirely and have no row in it.</div>%s</div>'
-      % (len(email_causes), _no_sending, _out_of_scope, _measured_note))
+    # TRIMMED TO MATCH THE OTHER TWO CARDS. This carried 276 visible words
+    # against 134 for fleet health and 93 for consent -- the most copy on the
+    # page, for the card that answers the least urgent question.
+    #
+    # What stayed is the same shape the other cards use: exception lines, and
+    # the one qualification a reader cannot do without. "6 have none recorded"
+    # must stay in the path, because those six read UNKNOWN in every column
+    # and a reader who does not know why will read the blanks as passes.
+    # Everything about HOW the lookups work moved into the disclosure.
+    A('<div class=wfdetail>'
+      '<span class=wfrow><b>%d</b> open cause(s), listed under Still open</span>'
+      '<span class=wfrow><b>%d</b> site(s) have no sending domain recorded, so '
+      'every column reads UNKNOWN &mdash; never a pass</span>'
+      '<span class=wfrow><b>%d</b> site(s) are outside this check and have no '
+      'row in it</span>%s</div>'
+      % (len(email_causes), _no_sending, _out_of_scope,
+         ('<span class=wfrow><b>%d</b> site(s) now have their From: address '
+          'measured off the site%s</span>'
+          % (len(_measured),
+             (', and <b>%d</b> disagree(s) with what was recorded' % len(_disagree))
+             if _disagree else ', all agreeing with what was recorded')
+          if _measured else "")))
+    A('<div class=wfnote>Scored per <strong>sending domain</strong>, not per '
+      'site, so it has no status chip of its own.</div>')
+    # EVERY NUMBER IN HERE IS COMPUTED. The fork this was lifted from had
+    # "59 of 75" and "37 of 38" typed into the prose, which is the defect this
+    # project keeps finding -- and folding a number behind a disclosure makes
+    # it MORE likely to go stale unnoticed, not less.
+    _sd_cov = [(kk, nn) for lab, (kk, nn) in m["coverage"]
+               if lab.startswith("Sending domain")]
+    md(A, "Where each record is looked up, and what is not verified", [
+        "SPF and DKIM are queried at the <b>sending domain</b>. DMARC is "
+        "queried at <code>_dmarc.&lt;sending domain&gt;</code> and again at "
+        "the domain recipients actually see, because a site sending as "
+        "<code>example.com</code> through <code>web.example.com</code> has "
+        "two answers and only one of them is what a recipient's mail server "
+        "checks.",
+        "<b>DKIM cannot be discovered.</b> A selector has to be known before "
+        "it can be verified, so an unverified DKIM row means the selector is "
+        "unknown &mdash; not that DKIM is absent. The two readings are "
+        "opposite, and the column says which one it is showing.",
+        ("The sending domain is a <b>ruling</b>. On %s the From: address is "
+         "now measured off the site itself, from post-smtp's own "
+         "configuration, and stored beside the ruling rather than over it, so "
+         "a disagreement shows instead of resolving silently. %d of %d "
+         "comparable sites agree."
+         % (("%d of %d sites" % _sd_cov[0]) if _sd_cov else "some sites",
+            len(_comparable) - len(_disagree), len(_comparable))),
+        "That measurement does <b>not</b> verify the sending domain. Most of "
+        "these sites send through the Mailgun API, where the envelope sender "
+        "is set by the provider and is not stored on the site at all. It "
+        "confirms the From: ruling only.",
+        ("<b>%d site(s)</b> had no recorded From: address at all and now have "
+         "a measured one." % len(_newly_known)) if _newly_known else
+        "Every measured site had a recorded From: address to compare against.",
+        "A DNS lookup that times out is recorded as unknown, never as a "
+        "missing record. &ldquo;No SPF record&rdquo; once meant the resolver "
+        "had not answered.",
+        "Several sites share one sending domain and therefore one result, "
+        "which is why this card has no per-site status. The fleet table below "
+        "carries the per-site answer in its <b>Sends from</b>, SPF, DKIM and "
+        "DMARC columns.",
+    ])
+
     A('</div>')
 
     A('</div>')
@@ -1729,6 +1818,46 @@ def render(m):
         return ('<a href="/components?site=%s" title="Which plugins, and at '
                 'what versions">%s</a>' % (e(s["site_id"]), cell))
 
+    def upstream_cell(s):
+        """Pending upstream commits, or the reason there is no number.
+
+        This printed `e(s.get("upstream_pending", "—"))` -- the raw ledger
+        value -- so the string `unknown` reached the page bare, on 26 rows.
+        Every other cell in this table already says WHICH absence it is
+        showing. Upstream is a PANTHEON fact: it comes from
+        `terminus upstream:updates:list` and Nexcess exposes no equivalent, so
+        for those sites there is nothing to measure rather than something
+        unmeasured. Those are different answers and the cell now says which.
+        """
+        v = s.get("upstream_pending")
+        if v in (None, L.UNKNOWN, ""):
+            if (s.get("host") or "") != "CM Pantheon":
+                return ('<span class=quiet title="Upstream tracking is a '
+                        'Pantheon feature. This host exposes no equivalent, so '
+                        'there is nothing to measure.">no upstream</span>')
+            return '<span class=quiet>not checked</span>'
+        return e(v)
+
+    def selector_cell(s):
+        """The DKIM selector, or why there is none to show.
+
+        Same defect as upstream: the raw value went straight to the cell, so
+        `unknown` printed bare. A DKIM selector cannot be discovered from DNS
+        -- you can only verify one you already know -- so an absent selector
+        means the check could not run, not that DKIM is missing. Printing the
+        word `unknown` under a DKIM header invites the opposite reading.
+        """
+        v = s.get("dkim_selector")
+        if v in (None, L.UNKNOWN, "", "—"):
+            if s.get("spf_checked_at") in (None, L.UNKNOWN):
+                return ('<span class=quiet title="No sending domain is '
+                        'recorded for this site, so nothing was queried.">'
+                        'no sending domain</span>')
+            return ('<span class=quiet title="A DKIM selector cannot be '
+                    'discovered from DNS. Without one, DKIM can be neither '
+                    'confirmed nor ruled out.">selector not known</span>')
+        return e(v)
+
     def wp_version_cell(v, plane=None):
         """The WordPress version, and where it was read from.
 
@@ -1833,13 +1962,13 @@ def render(m):
              e(s.get("host") or "—"), state, consent_cell(s),
              observed(s.get("php_version"), s.get("nexcess_php_version")),
              backup(s.get("db_backup_age_days")),
-             e(s.get("upstream_pending", "—")),
+             upstream_cell(s),
              wp_version_cell(s.get("wp_version"), s.get("nexcess_app_version")),
              observed(s.get("wp_core_update")),
              plugin_cell(s),
              observed(s.get("theme_updates")),
              sends_from(s),
-             yn(s.get("spf_present")), e(s.get("dkim_selector") or "—"),
+             yn(s.get("spf_present")), selector_cell(s),
              yn(s.get("dmarc_at_sending_present")), yn(s.get("dmarc_at_from_present")),
              yn(s.get("relaxed_aligned"))))
     A("</table></div>")

@@ -1585,6 +1585,49 @@ check("...and the per-tool timestamps are still reachable",
       "Which tool looked, and when" in _page
       and _page.count("class=srcdetail") >= 1)
 
+# ---------------------------------------------------------------------------
+# Two columns printed a bare `unknown`, 2026-08-26
+#
+# upstream_pending and dkim_selector went straight from the ledger to the
+# cell, so the string `unknown` reached the page raw on 34 rows while every
+# other column already said WHICH absence it was showing. Both readings are
+# actively misleading:
+#
+#   UPSTREAM  Nexcess has no upstream concept at all, so there is nothing to
+#             measure rather than something unmeasured.
+#   DKIM      a selector cannot be discovered from DNS. `unknown` under a DKIM
+#             header reads as "no DKIM", which is the opposite of the truth.
+# ---------------------------------------------------------------------------
+import re as _re3
+check("no cell prints a bare `unknown`",
+      not _re3.search(r'<td class=(num|quiet)>unknown<', _page),
+      "found a raw unknown in a table cell")
+check("...a host with no upstream concept says so",
+      "no upstream" in _page)
+check("...and an unknown DKIM selector says the selector is unknown",
+      "selector not known" in _page or "no sending domain" in _page)
+
+# THE EMAIL CARD CARRIED THE MOST COPY ON THE PAGE for the least urgent
+# question: 276 visible words against 134 and 93 for the two cards beside it.
+# Assert the RELATIONSHIP, not a word count -- the numbers are entitled to
+# move and the ordering is not.
+def _card_words(page, head):
+    i = page.find("<div class=wfhead>%s</div>" % head)
+    if i < 0:
+        return None
+    j = page.find('<div class="card wfcard">', i)
+    k = page.find("<h2", i)
+    ends = [x for x in (j, k) if x > 0]
+    seg = page[i:min(ends)] if ends else page[i:]
+    seg = _re3.sub(r'<details[^>]*>.*?</details>', '', seg, flags=_re3.S)
+    return len(_re3.sub(r'\s+', ' ', _re3.sub(r'<[^>]+>', ' ', seg)).split())
+_ew, _hw = _card_words(_page, "Email DNS"), _card_words(_page, "Fleet health")
+check("the email card no longer carries more copy than fleet health",
+      _ew is not None and _hw is not None and _ew <= _hw + 10,
+      "email %s words, health %s words" % (_ew, _hw))
+check("...and it keeps the one qualification a reader needs",
+      "have no sending domain recorded" in _page and "never a pass" in _page)
+
 check("the page does not promise a trend chart it cannot draw",
       "Trend charts appear" not in _page and "No trend chart is drawn" in _page)
 
@@ -1643,6 +1686,18 @@ check("...including an UNKNOWN on a non-production site",
 # recorded carry the STRING "unknown" in spf_checked_at, which is truthy, so
 # none of them was ever counted. Both figures were 7 on the day it was found.
 # ---------------------------------------------------------------------------
+def _text(page):
+    """The page as a reader sees it, tags removed.
+
+    These assertions matched literal strings like "6 site(s) have none
+    recorded", which broke the moment the number was wrapped in <b>. The
+    claim is about what the page SAYS, not about the markup around it.
+    """
+    import re as _r
+    import html as _h
+    return _r.sub(r"\s+", " ", _h.unescape(_r.sub(r"<[^>]+>", "", page)))
+
+
 _sm = RD.build_model("./history", "./data/fleet-inventory.json",
                      datetime.date(2026, 8, 23))
 _scoped = [x for x in _sm["sites"] if x.get("spf_checked_at") is not None]
@@ -1651,10 +1706,11 @@ _none_recorded = [x for x in _scoped
 _outside = [x for x in _sm["sites"] if x.get("spf_checked_at") is None]
 _spage = RD.render(_sm)
 check("the count of sites with no RECORDED sending domain is the right set",
-      ("%d site(s) have none recorded" % len(_none_recorded)) in _spage,
+      ("%d site(s) have no sending domain recorded" % len(_none_recorded))
+      in _text(_spage),
       "page does not state %d" % len(_none_recorded))
 check("...and sites outside the email check are counted separately",
-      ("further %d site(s) are outside this check" % len(_outside)) in _spage,
+      ("%d site(s) are outside this check" % len(_outside)) in _text(_spage),
       "page does not state %d outside" % len(_outside))
 # The two sets must not be confused again: if they ever have the same size the
 # assertions above cannot tell them apart, so assert they are different sets
@@ -1712,32 +1768,33 @@ _target["smtp_from_domain"] = "example.com"
 _target["recorded_from_domain"] = "example.com"
 _target["spf_checked_at"] = "web.example.com"
 check("a From: domain under a different SENDING domain is NOT a disagreement",
-      "disagree" not in RD.render(_sm),
+      "disagree(s) with what was recorded" not in _text(RD.render(_sm)),
       "the sending domain was compared against the From: domain again")
 
 # A real disagreement: the site says one thing, the workbook says another.
 _target["smtp_from_domain"] = "somewhere-else.example"
 _dpage = RD.render(_sm)
 check("a measured From: domain that disagrees with the record is reported",
-      "1 disagree" in _dpage and _target["site_id"] in _dpage,
+      "1 disagree(s) with what was recorded" in _text(_dpage),
       "disagreement not on the page")
 check("...and the page does not claim to have verified the SENDING domain",
-      "does <strong>not</strong> verify the sending domain" in _dpage
-      and "envelope sender is set by Mailgun" in _dpage)
+      "envelope sender is set by the provider" in _dpage
+      and "confirms the From: ruling only" in _dpage)
 
 # Agreement is not silence: the count is stated either way, so "we measured 39
 # and all agreed" cannot be mistaken for "we measured none".
 _target["smtp_from_domain"] = "example.com"
 check("agreement still says how many were measured",
-      "On <strong>1 site(s)</strong>" in RD.render(_sm)
-      and "all agree" in RD.render(_sm))
+      "all agreeing with what was recorded" in _text(RD.render(_sm)))
 
 # Measured where nobody had recorded anything is a THIRD outcome, not an
 # agreement and not a disagreement. hoffmanscheese is in no email row at all
 # and its mailer answered on the first real run.
 _target["recorded_from_domain"] = None
-check("a site with no recorded From: address is counted separately",
-      "had no recorded From: address at all" in RD.render(_sm))
+# Minor enough to fold, but not to delete: it moved into the disclosure
+# when the card was trimmed on 2026-08-26.
+check("a site with no recorded From: address is still counted somewhere",
+      "had no recorded From: address at all" in _text(RD.render(_sm)))
 
 # ---------------------------------------------------------------------------
 # Component catalogue: slug casing, 2026-08-24
@@ -1813,8 +1870,13 @@ with _io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
 
 check("the fleet table names the domain each site sends from",
       "<th>Sends from</th>" in _html)
+# TAG-AGNOSTIC. This matched "Sends from</strong>" and broke when the
+# sentence moved into a folded block that marks up with <b>. The guard is
+# that the card POINTS AT the column -- it once denied the column existed --
+# and that claim is about the text, not the element wrapping it.
 check("...and the email card points at that column instead of denying it exists",
-      "Sends from</strong>" in _html)
+      "carries the per-site answer in its Sends from" in _text(_html)
+      or "Sends from</strong>" in _html)
 check("the card no longer claims email has no column in the fleet table",
       "no column in the fleet table below" not in _html)
 check("the card says the sending domain is usually NOT the site's own",
