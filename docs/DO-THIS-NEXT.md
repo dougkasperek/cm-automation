@@ -687,61 +687,33 @@ person with git. An edit form means auth, an audit trail, and a way to tell a
 scan-derived fact from a typed one. Worth doing deliberately; not worth
 sliding into.
 
-## B5. Are the eleven Lactalis sites ours? — ASK BEFORE BUILDING ANYTHING
+## B5. CLOSED 2026-08-27 — the Lactalis sites are not ours, and the map is right
 
-**Held 2026-08-27 pending an answer from Nick. Do not act on it until then.**
+The consent page marks 14 sites as running consent tooling clevermethod does
+not manage. Eleven of them are Lactalis brands on OneTrust, all with zero
+trackers before consent, and **none is in Nick's `onetrust-audit.xlsx` Sites
+sheet**, which holds 15. SharePoint also holds a signed
+`lag-ambrosi-onetrust-integration-sow.docx` -- *"OneTrust Cookie Banner
+Integration, Client: Lactalis American Group, Inc."*
 
-The consent page marks 14 sites as running consent tooling that clevermethod
-does not manage. Three are settled: `blockclub.co` and `summerstreetcapital.com`
-run generic banners and Nick said plainly we do not manage their consent, and
-`animatics.com` does not fit the pattern below.
+That looked like a gap. **Doug confirmed it is not: the 15 in the sheet are the
+complete list, and the eleven Lactalis sites run their own OneTrust.**
 
-The other **eleven are all Lactalis brands**, all OneTrust, all with **zero
-trackers before consent** -- which is what a correctly configured OneTrust
-looks like:
+So `data/fleet-inventory.json` is correct as seeded and the consent page's
+numbers are right as rendered: 12 managed sites in this fleet, 39 not ours, 10
+ours-and-gated.
 
-```
-breakstones.com            crackerbarrelcheese.com    galbanicheese.com
-knudsen.com                kraftnaturalcheese.com     lactalisamericangroup.com
-lactalisheritagedairy.com  lactalisyogurtusa.com      midwestyogurt.com
-scottishcheddarcheese.com  valbresocheese.com
-```
+**The distinction that resolved it is worth keeping.** "We built it" and "we
+manage it" are different, and `consent_managed` means the second. An
+integration SOW is a project and it ends; clevermethod stood these up and
+Lactalis has run them since. A future reader who finds that SOW will have the
+same question, which is why the answer lives here and not only in a Teams
+thread.
 
-None is in Nick's `onetrust-audit.xlsx` Sites sheet, which has 15 rows. And
-SharePoint holds a signed **`lag-ambrosi-onetrust-integration-sow.docx`** --
-*"OneTrust Cookie Banner Integration, Client: Lactalis American Group, Inc."*
-
-**"We built it" and "we manage it" are different things**, and
-`consent_managed` means the second. An integration SOW is a project and it
-ends; it is entirely coherent for clevermethod to have stood these up and for
-Lactalis to have run them since.
-
-### The question for Nick
-
-> The eleven Lactalis brand sites run OneTrust and are not in your audit sheet.
-> We have a signed OneTrust integration SOW for LAG. Are those in our tenant
-> and just not audited, or did we hand them over? Same question for
-> `animatics.com`.
-
-### Why this is held rather than built
-
-**Doug expects the answer to be "ours, and the sheet is 15 not 26"** and wants
-it confirmed first. He is probably right, and that is exactly why nothing is
-built on the current numbers: if it is 26, then
-
-- `consent_managed` is wrong on eleven sites in `data/fleet-inventory.json`
-- the consent page's "Not ours" count of 39 is wrong by eleven
-- "Ours, and gated" is 10 and should be 21
-- and the gating sweep already tested most of them, so the evidence is
-  sitting in the ledger under the wrong owner
-
-Building B1's maintenance split on top of an ownership map that is wrong by
-eleven sites would put the error in two places instead of one.
-
-**If the answer is "ours":** re-run `scripts/seed-consent-rulings.py` with the
-extended list. It REFUSES to overwrite a differing value without `--force`,
-which is the correct behaviour here -- the change should be deliberate and
-visible in a diff.
+**What NOT to infer from this.** Do not read management from an SOW, from
+OneTrust being present, or from a site being a client. The only source for
+`consent_managed` is a person saying so -- which is why the seed script refuses
+to overwrite it without `--force`.
 
 ## B6. The consent page does not say where "ours" comes from
 
