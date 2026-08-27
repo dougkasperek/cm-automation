@@ -472,3 +472,44 @@ wp option get postman_options --format=json
   reaching them, so they stay on the workbook value regardless.
 - **The option key may vary by post-smtp version.** Verify against one site
   before writing a rule, per the usual.
+
+---
+
+## The UI revision, 2026-08-26
+
+**Done.** `docs/clevermethod-fleet-ui-improvement-direction.md` was assessed,
+and the parts worth taking were applied to `render-dashboard.py` directly. The
+mockups and the forked renderer that carried them are deleted: a second copy of
+the thing that publishes is a place for the two to disagree.
+
+Applied: four exception tiles that each filter the table, a change feed grouped
+by site, coverage stated as `48 checked · 4 not checked — of 52`, one sweep
+line under the masthead, folded methodology with qualification kept inline, and
+two columns that had been printing a bare `unknown`.
+
+**Refused, and why.** Each of these would have re-created a defect already in
+CLAUDE.md's table:
+
+- **OK renamed to "Healthy".** 14 of the 26 OK sites have no measurable backup
+  age. OK means nothing is pending that needs a person; it is not a statement
+  that the site is fine.
+- **Improved / Regressed / Informational.** The headless-to-headed browser
+  switch raised tracker counts on many sites at once and nothing had started
+  firing. The ledger's own classification already separates the fleet changing
+  from the instrument changing.
+- **Action buttons in the decision queue.** The page is read-only by decision,
+  and a write route was removed from the Worker once and found still deployed
+  a day later.
+- **Compressing qualification along with methodology.** A qualification says
+  what a number is *of*. Fold it and the number is wrong.
+
+**Not done, and it is the app question.** Site detail, tabs, saved views,
+persistent navigation. That turns two static files into a client-side
+application. Worth deciding on its own merits.
+
+**And one measurement that argues against the premise.** The direction document
+opens on there being too much prose. There isn't, or at least that is not where
+the bulk is: above the site table the page carries about 2,250 visible words;
+the table itself carries 2,277, and "Still open" and "Sites that do not
+reconcile" carry 805 between them. This revision reorganises the top of the
+page. It does not shorten the page.

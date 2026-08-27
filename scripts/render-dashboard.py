@@ -695,6 +695,25 @@ details.md p:last-child{margin-bottom:0}
 .srcdetail summary::before{content:"+ ";font-weight:800}
 .srcdetail[open] summary::before{content:"\2212 "}
 .srcdetail[open] summary{margin-bottom:8px}
+.chgsite{border-bottom:1px solid var(--line2);padding:10px 0}
+.chgsite:last-child{border-bottom:0}
+.chgsite.quietonly{opacity:.72}
+.chghead{font-size:13.5px;font-weight:600;color:var(--strong)}
+.chglist{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--ink2)}
+.chglist li{margin-bottom:3px}
+.rowcount{margin-left:auto;font-size:12px;color:var(--ink2)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);
+ padding:14px 16px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.tile:hover{border-color:var(--ink2);border-left-color:var(--strong)}
+.tile.bad{border-left-color:var(--bad)}
+.tile.info{border-left-color:var(--info)}
+.tile.on{background:var(--panel2);border-left-color:var(--strong)}
+.tlab{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+ color:var(--ink2);margin-bottom:6px}
+.tnum{font-size:30px;font-weight:700;color:var(--strong);letter-spacing:-.02em;line-height:1.1}
+.tnum small{font-size:13px;font-weight:600;color:var(--ink2);letter-spacing:0;margin-left:5px}
+.twhy{font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.45}
 .covof{color:var(--faint);font-weight:400}
 .covnone{color:var(--muted);font-weight:400}
 .covgap{color:var(--bad)}
@@ -903,16 +922,28 @@ def coverage_section(A, m, e):
     # So: keep the two categories, describe the ruling by WHO MADE IT rather
     # than by WHERE IT LIVES, and close the question with "nothing here is
     # editable" instead of the narrower "nobody edits this page".
-    A('<p class=sub style="margin:-4px 0 10px">Every value on this page is one '
-      'of two things, and they are labelled. A <strong>measurement</strong> was '
-      'read off a site, a DNS record or a hosting API by one of the tools below '
-      'and stored in an append-only ledger. A <strong>ruling</strong> is a '
-      'decision someone on the team has already made: which sites exist, who '
-      'hosts them, and whether a site counts as production. Nothing on this '
-      'page is editable. It is generated, and both the measurements and the '
-      'rulings come from source data kept outside it. A green row is worth '
-      'exactly as much as the coverage behind it, so the coverage is on the '
-      'same screen. Unknown is shown as unknown, never as a pass.</p>')
+    # ONE SENTENCE INLINE, THE REST FOLDED. The measurement/ruling distinction
+    # is how a reader interprets every number on the page, so it stays in the
+    # path. Where the data lives, what is editable and why coverage sits on
+    # the same screen are all methodology: useful, and not needed to read a
+    # row correctly.
+    A('<p class=sub style="margin:-4px 0 10px">Every value here is either a '
+      '<strong>measurement</strong> or a <strong>ruling</strong>, and they are '
+      'labelled. Unknown is shown as unknown, never as a pass.</p>')
+    md(A, "What that distinction means, and why coverage sits here", [
+        "A <b>measurement</b> was read off a site, a DNS record or a hosting "
+        "API by one of the tools below, and stored in an append-only ledger. "
+        "A <b>ruling</b> is a decision someone on the team has already made: "
+        "which sites exist, who hosts them, and whether a site counts as "
+        "production.",
+        "Nothing on this page is editable. It is generated, and both the "
+        "measurements and the rulings come from source data kept outside it.",
+        "A green row is worth exactly as much as the coverage behind it, which "
+        "is why the coverage numbers are on this screen rather than in an "
+        "appendix. A page that reports 80 healthy sites without saying how "
+        "many it could actually see is the failure this section exists to "
+        "prevent.",
+    ])
 
     # WHO LOOKED, AND WHEN. This used to be a bare line of timestamps under the
     # masthead, three sections above the coverage bars it explains. Provenance
@@ -1093,42 +1124,55 @@ def render(m):
     # answer; that block is the evidence for it.
     sweep_line(A, m, e)
 
-    A('<div class="card topband">')
-    A('<div class=topmain>')
-    # TWO DIFFERENT THINGS WERE BOTH CALLED "NEEDS A DECISION". This number is
-    # facts that MOVED since the previous run; the section headed "Needs a
-    # decision" 3,000 words below is sites with no production ruling, which
-    # nothing measured and no scan will ever resolve. Same words, same page,
-    # unrelated questions. Renamed 2026-08-26.
+    # FOUR EXCEPTION TILES, replacing one hero and three sub-rows.
     #
-    # It also said "change(s)" while counting facts across several sites -- one
-    # WordPress upgrade moves three facts on one site -- so the unit is now
-    # stated and the site count with it.
-    _chg_sites = len({c.get("site") or c.get("site_id") for c in pushable})
-    A('<div class=hero>%d</div>' % len(pushable))
-    A('<div class=hero-sub>%s</div>'
-      % (("fact(s) moved on %d site(s) since the previous run of each tool. "
-          "Routine counter drift is suppressed." % _chg_sites)
-         if pushable else
-         "facts moved since the previous run of each tool. The fleet is "
-         "stable; the standing findings below are unchanged."))
+    # The hero answered "what moved". The three rows beside it answered four
+    # other questions in small type. A reader arriving cold needs the same
+    # four answers at the same weight: is anything wrong, what is waiting on
+    # ME, what moved, and what do we still not know.
+    #
+    # Each tile states its UNIT and is clickable: it filters the table below
+    # to exactly the rows it counts. A summary number that cannot be opened is
+    # a number the reader has to take on trust.
+    _chg_sites = sorted({c.get("site") or c.get("site_id") for c in pushable})
+    h = m["health"]
+    _attention = h["counts"]["CRIT"] + h["counts"]["WARN"]
+    _no_ev = [x for x in m["sites"]
+              if any(r.get("code") == "coverage_partial"
+                     for r in (x.get("severity") or {}).get("reasons", []))]
+    A('<div class=tiles>')
+    A('<button class="tile bad" data-tile="attention">'
+      '<div class=tlab>Needs attention</div>'
+      '<div class=tnum>%d<small>sites</small></div>'
+      '<div class=twhy>%d critical, %d warning. %d excluded as '
+      'non-production.</div></button>'
+      % (_attention, h["counts"]["CRIT"], h["counts"]["WARN"],
+         sum(h["excluded"].values())))
+    A('<button class="tile info" data-tile="decisions">'
+      '<div class=tlab>Rulings waiting on a person</div>'
+      '<div class=tnum>%d<small>sites</small></div>'
+      '<div class=twhy>No owner, no ruling. No scan can clear these.</div>'
+      '</button>' % len(h["unreviewed"]))
+    A('<button class="tile info" data-tile="changed">'
+      '<div class=tlab>Changed since the last run</div>'
+      '<div class=tnum>%d<small>sites</small></div>'
+      '<div class=twhy>%d fact(s) moved. %d routine, %d coverage-only, both '
+      'reported below.</div></button>'
+      % (len(_chg_sites), len(pushable), len(drift),
+         sum(len(g["sites"]) for g in m["coverage_changes"])))
+    A('<button class="tile" data-tile="nohealth">'
+      '<div class=tlab>No health evidence</div>'
+      '<div class=tnum>%d<small>sites</small></div>'
+      '<div class=twhy>Looked at, but no backup age and no plugin count. '
+      'Not the same as healthy.</div></button>' % len(_no_ev))
     A('</div>')
 
-    A('<div class=topside>')
-    cov_n = sum(len(g["sites"]) for g in m["coverage_changes"])
-    cov_sites = len(set(x for g in m["coverage_changes"] for x in g["sites"]))
-    for val, label in [
-        (len(risk), "open risk causes, grouped by cause not by site"),
-        (len(m["unreconciled"]), "sites in one source but not the other"),
-        (len(drift), "counters moved on findings already open, suppressed"),
-        (cov_n, "facts crossed the unknown boundary on %d site(s): this "
-                "tool&rsquo;s coverage changing, not the fleet&rsquo;s" % cov_sites),
-    ]:
-        if not val:
-            continue
-        A('<div class=toprow><b>%s</b><span>%s</span></div>' % (e(val), label))
-    A('</div>')
-    A('</div>')
+    # The two counts that are not about sites keep a line of their own rather
+    # than a tile, because they count CAUSES and ROWS, not sites, and putting
+    # them in the same grid would invite reading them as sites.
+    A('<p class=sub style="margin:10px 0 0">'
+      '<b>%d</b> open risk cause(s) &middot; <b>%d</b> site(s) in one source '
+      'and not the other.</p>' % (len(risk), len(m["unreconciled"])))
 
     # --- the suite ---------------------------------------------------------
     # ONE TILE GROUP PER QUESTION, added 2026-08-20.
@@ -1173,7 +1217,8 @@ def render(m):
       'change.</p>')
     A('<div class=suite>')
 
-    def card(title, blurb, counts_map, cov, detail=None, note=None, axis=None):
+    def card(title, blurb, counts_map, cov, detail=None, note=None,
+             axis=None, method=None):
         A('<div class="card wfcard">')
         A('<div class=wfhead>%s</div>' % e(title))
         A('<div class=wfblurb>%s</div>' % blurb)
@@ -1211,6 +1256,8 @@ def render(m):
         A('<div class=wfcov>%s</div>' % cov)
         if note:
             A('<div class=wfnote>%s</div>' % note)
+        if method:
+            md(A, method[0], method[1])
         A('</div>')
 
     # HEALTH ----------------------------------------------------------------
@@ -1277,6 +1324,28 @@ def render(m):
     card("Fleet health",
          "Is this site being maintained: backups, PHP, WordPress, plugins.",
          ax.get("health") or h["counts"], _bar(k, n, _bar_label),
+         method=("How a health state is decided", [
+             "Scored from the ledger at <b>render time</b>, not at scan time. "
+             "Changing a threshold therefore rescores every run in history "
+             "rather than reporting as a fleet change. The thresholds are "
+             "named constants in one module; there is no second scorer.",
+             "<b>CRIT</b> means act now: no database backup inside the "
+             "threshold, a WordPress version below the security floor, or a "
+             "core update waiting. <b>WARN</b> means schedule it. <b>OK</b> "
+             "means nothing is pending that needs a person &mdash; it is not "
+             "a statement that the site is healthy, because a site can reach "
+             "OK on evidence this tool cannot gather.",
+             "A rule never fires on an unknown value. That is deliberate: a "
+             "site nobody measured must not fall out the bottom into OK, and "
+             "it must not be scored CRIT on an absence either. It is reported "
+             "as an absence, which is what the coverage line beside these "
+             "counts is for.",
+             "A site with no production ruling is scored <b>as production</b>. "
+             "Nobody has decided, and failing safe is the point: the fleet's "
+             "worst-maintained site sits on a Sandbox plan, so inferring "
+             "non-production from the hosting plan would have excluded exactly "
+             "the site that most needed looking at.",
+         ]),
          detail="".join(hbits) or None,
          note=("<strong>%d site(s) have been looked at but have NO health "
                "evidence</strong>: no backup age, no plugin or theme count. "
@@ -1315,6 +1384,25 @@ def render(m):
     card("Cookie consent",
          "Does the homepage fire trackers before anyone consents.",
          ax.get("consent"), _bar(k, n, "homepages the sweep could load"),
+         method=("How the consent sweep works, and what it cannot see", [
+             "A real browser loads the public homepage and records which "
+             "third-party trackers fired <b>before any consent interaction</b>. "
+             "Nothing is clicked and no cookie banner is dismissed.",
+             "The counts are a <b>floor</b> whenever the sweep runs headless: "
+             "some trackers detect automation and decline to fire. Measured on "
+             "one site the sweep could already read: 4 trackers headless, 6 "
+             "headed, reproducibly. The latest run was headed. A headless "
+             "number is never high and may be low.",
+             "A site behind a bot challenge returns a block page rather than "
+             "the homepage. That is recorded as UNKNOWN, never as a clean "
+             "result &mdash; 23 sites once read &ldquo;no banner, no "
+             "trackers&rdquo; when what they had returned was HTTP 403.",
+             "These are <b>observations, not compliance verdicts</b>. The "
+             "words compliant and non-compliant do not appear in this "
+             "workflow, and should not be added: whether a given tracker "
+             "needs consent depends on jurisdiction, purpose and the "
+             "controller's own basis, none of which a browser can see.",
+         ]),
          detail=(
              '<span class=wfrow><b>%d</b> fire trackers before consent</span>'
              '<span class=wfrow><b>%d</b> of those have consent tooling '
@@ -1621,20 +1709,50 @@ def render(m):
         A("</table></div></div>")
 
     # --- what changed -----------------------------------------------------
-    A("<h2>What changed</h2><div class=card>")
+    # GROUPED BY SITE. One WordPress upgrade moves three facts -- the version,
+    # the update status, and the site's own status -- and as one row per fact
+    # that reads as three events on three lines. The site is the unit a person
+    # works in, so it is the unit the feed groups on.
+    #
+    # DIRECTION IS DELIBERATELY NOT LABELLED. "Improved" and "regressed" were
+    # proposed and are refused: when the consent sweep changed from a headless
+    # to a headed browser, tracker counts rose on many sites at once and
+    # nothing had started firing -- we had started being able to see it. The
+    # ledger already separates the fleet changing from the instrument
+    # changing, and that classification is what drives this list. A second
+    # vocabulary on top of it would be a second answer.
+    A("<h2>What changed</h2>")
     if not m["changes"]:
-        A('<p class=big-quiet>Nothing, in either source.</p>')
+        A('<div class=card><p class=big-quiet>Nothing, in either source.</p></div>')
     else:
-        A("<div class=tablewrap><table>"
-          "<tr><th>Class</th><th>Site</th><th>Fact</th><th>Before</th>"
-          "<th>After</th><th>Source</th></tr>")
+        _grouped = {}
         for c in m["changes"]:
-            A("<tr><td>%s</td><td><code>%s</code></td><td>%s</td><td class=num>%s</td>"
-              "<td class=num>%s</td><td class=quiet>%s</td></tr>"
-              % (chip(c["class"], CLASS_TONE.get(c["class"], "info")), e(c["site"]),
-                 e(c["fact"]), e(c["before"]), e(c["after"]), e(c.get("source"))))
-        A("</table></div>")
-    A("</div>")
+            _grouped.setdefault(c["site"], []).append(c)
+        _loud = sum(1 for cs in _grouped.values()
+                    if any(x["class"] not in L.QUIET_CLASSES for x in cs))
+        A('<p class=sub style="margin:-4px 0 10px"><b>%d fact(s)</b> moved '
+          'across <b>%d site(s)</b> since the previous run of each tool. '
+          '%d site(s) moved only on a routine counter.</p>'
+          % (len(m["changes"]), len(_grouped), len(_grouped) - _loud))
+        A("<div class=card>")
+        for site in sorted(_grouped,
+                           key=lambda k: (-len([x for x in _grouped[k]
+                                                if x["class"] not in L.QUIET_CLASSES]),
+                                          -len(_grouped[k]), k)):
+            cs = _grouped[site]
+            quiet_only = all(x["class"] in L.QUIET_CLASSES for x in cs)
+            A('<div class="chgsite%s">' % (" quietonly" if quiet_only else ""))
+            A('<div class=chghead><code>%s</code> <span class=quiet>&mdash; '
+              '%d fact(s)%s</span></div>'
+              % (e(site), len(cs),
+                 ", all routine counter movement" if quiet_only else ""))
+            A("<ul class=chglist>")
+            for c in cs:
+                A('<li>%s <code>%s</code> &rarr; <code>%s</code> %s</li>'
+                  % (e(c["fact"]), e(c["before"]), e(c["after"]),
+                     chip(c["class"], CLASS_TONE.get(c["class"], "info"))))
+            A("</ul></div>")
+        A("</div>")
 
     if m["coverage_changes"]:
         # RENAMED 2026-08-23. It was "What this tool can now see", which a
@@ -1720,8 +1838,12 @@ def render(m):
       '<input id=q placeholder="Filter by site name" autocomplete=off>'
       '<select id=host><option value="">All hosts</option></select>'
       '<select id=state><option value="">All health states</option>'
+      '<option value="__attention">Needs attention</option>'
+      '<option value="__changed">Changed since the last run</option>'
+      '<option value="__decision">Ruling waiting on a person</option>'
       '<option value="__nohealth">No health evidence</option></select>'
-      '<select id=consent><option value="">All consent states</option></select></div>')
+      '<select id=consent><option value="">All consent states</option></select>'
+      '<span id=rowcount class=rowcount></span></div>')
     A('<div class="card tablewrap"><table id=fleet>'
       "<tr><th>Site</th><th>Host</th><th>Health</th><th>Consent</th><th>PHP</th>"
       "<th>Newest backup</th><th>Upstream</th>"
@@ -1948,7 +2070,8 @@ def render(m):
         # only in a sentence two sections away.
         excluded = s.get("production") is False
         A('<tr data-site="%s" data-host="%s" data-state="%s" data-consent="%s"'
-          ' data-nohealth="%s">'
+          ' data-nohealth="%s" data-decision="%s" data-changed="%s"'
+          ' data-excluded="%s">'
           "<td><code>%s</code>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td>"
           "<td class=num>%s</td><td>%s</td><td class=num>%s</td>"
           "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
@@ -1956,6 +2079,9 @@ def render(m):
           "<td>%s</td><td class=quiet>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
           % (e(s["site_id"].lower()), e(s.get("host") or ""), e(st or ""), e(cst),
              nohealth,
+             "1" if s["site_id"] in set(h["unreviewed"]) else "",
+             "1" if s["site_id"] in set(_chg_sites) else "",
+             "1" if excluded else "",
              e(s["site_id"]),
              ('<br><span class=quiet style="font-size:11.5px">not production, '
               'excluded from the counts above</span>' if excluded else ""),
@@ -2015,11 +2141,35 @@ def render(m):
        s=document.getElementById('state').value,
        c=document.getElementById('consent').value;
    rows.forEach(function(r){
-     var okState = !s || (s==='__nohealth' ? r.dataset.nohealth==='1'
-                                           : r.dataset.state===s);
+     var okState = !s || (
+       s==='__nohealth'  ? r.dataset.nohealth==='1'  :
+       s==='__attention' ? (r.dataset.state==='CRIT'||r.dataset.state==='WARN') :
+       s==='__decision'  ? r.dataset.decision==='1'  :
+       s==='__changed'   ? r.dataset.changed==='1'   :
+                           r.dataset.state===s);
      r.style.display=(!q||r.dataset.site.indexOf(q)>-1)&&(!h||r.dataset.host===h)
        &&okState&&(!c||r.dataset.consent===c)?'':'none';});
+   // THE CARD COUNT AND THE ROW COUNT MUST RECONCILE. Clicking a tile that
+   // says 54 returns 55 rows, because a production:false site is shown and
+   // not counted. Without saying so, the card reads as wrong.
+   var shown=rows.filter(function(r){return r.style.display!=='none';});
+   var ex=shown.filter(function(r){return r.dataset.excluded==='1';}).length;
+   var out=document.getElementById('rowcount');
+   if(out) out.textContent = shown.length+' of '+rows.length+' sites shown'
+     +(ex? ' \u00b7 '+ex+' shown but not counted in the cards above':'');
  }
+ [].slice.call(document.querySelectorAll('[data-tile]')).forEach(function(b){
+   b.addEventListener('click',function(){
+     var map={attention:'__attention',decisions:'__decision',
+              changed:'__changed',nohealth:'__nohealth'};
+     document.querySelectorAll('[data-tile]').forEach(function(x){
+       x.classList.toggle('on', x===b);});
+     document.getElementById('state').value = map[b.dataset.tile]||'';
+     document.getElementById('consent').value='';
+     apply();
+     var t=document.getElementById('fleet');
+     if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+   });});
  [].slice.call(document.querySelectorAll('.wfjump')).forEach(function(b){
    b.addEventListener('click',function(){
      var ax=b.dataset.axis, st=b.dataset.state;
@@ -2032,6 +2182,7 @@ def render(m):
  ['q','host','state','consent'].forEach(function(id){
    var el=document.getElementById(id);
    el.addEventListener('input',apply);el.addEventListener('change',apply);});
+ apply();
 })();
 </script></html>""")
     return "".join(o)

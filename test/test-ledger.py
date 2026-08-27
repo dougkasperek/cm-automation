@@ -1541,12 +1541,19 @@ check("chip labels are darkened for contrast while the dot keeps the pure hue",
 # number, which counts facts that MOVED, and a section listing sites with no
 # production ruling, which nothing measured and no scan will ever resolve.
 # Same words, same page, 3,000 words apart.
+# The headline used to be one number labelled "changes needing a decision",
+# colliding with a section 3,000 words below listing sites that need a RULING.
+# It is now four tiles, and the two questions are separate tiles.
 _hero_zone = _page[:_page.find("<h2>")]
-check("the headline number is not called a decision",
-      "decision" not in _hero_zone.lower(),
-      "the masthead still calls a moved fact a decision")
-check("...it states its unit, and the sites it spans",
-      "fact(s) moved on" in _page and "site(s) since the previous run" in _page)
+check("the change count and the ruling queue are separate headline numbers",
+      "Changed since the last run" in _hero_zone
+      and "Rulings waiting on a person" in _hero_zone,
+      "the two questions are not both named at the top")
+check("...and neither is described as a change needing a decision",
+      "needing a decision" not in _hero_zone.lower())
+check("...each headline number states what it counts",
+      _hero_zone.count("<small>sites</small>") >= 4,
+      "a tile does not name its unit")
 check("...and the ruling queue is named for what it is",
       "Rulings waiting on a person" in _page)
 
@@ -1572,9 +1579,14 @@ check("there is one sweep line, not a card per source",
 # headline card and the whole suite -- under a heading about METHOD. "How
 # fresh is this page" is the first question a reader has, so the answer sits
 # above everything that depends on it.
-check("...and it sits above the headline card, not 1,500px down",
-      _page.find("Last sweep") < _page.find("class=\"card topband\""),
-      "the sweep line is below the topband")
+# ONE sweep line. The tiles block was lifted from a fork that rendered its
+# own, so the page briefly carried two identical freshness lines stacked.
+check("there is exactly one sweep line",
+      _page.count("Last sweep") == 1,
+      "found %d" % _page.count("Last sweep"))
+check("...and it sits above the headline numbers, not 1,500px down",
+      _page.find("Last sweep") < _page.find("class=tiles"),
+      "the sweep line is below the headline tiles")
 check("...with a route to the per-scan detail rather than a dead end",
       'href="#knows"' in _page and 'id=knows' in _page)
 # "cohort" is an internal word for one scan of one site set by one transport.
@@ -1627,6 +1639,57 @@ check("the email card no longer carries more copy than fleet health",
       "email %s words, health %s words" % (_ew, _hw))
 check("...and it keeps the one qualification a reader needs",
       "have no sending domain recorded" in _page and "never a pass" in _page)
+
+def _text(page):
+    """The page as a reader sees it, tags removed.
+
+    These assertions matched literal strings like "6 site(s) have none
+    recorded", which broke the moment the number was wrapped in <b>. The
+    claim is about what the page SAYS, not about the markup around it.
+    """
+    import re as _r
+    import html as _h
+    return _r.sub(r"\s+", " ", _h.unescape(_r.sub(r"<[^>]+>", "", page)))
+
+
+# ---------------------------------------------------------------------------
+# The headline numbers open, and the change feed groups by site, 2026-08-26
+# ---------------------------------------------------------------------------
+# A summary number that cannot be opened is one the reader has to take on
+# trust. Each tile filters the table to exactly the rows it counts.
+check("every headline number filters the table",
+      _page.count("data-tile=") >= 4 and "__attention" in _page
+      and "__decision" in _page and "__changed" in _page)
+# The card counts EXCLUDE production:false sites and the table SHOWS them, so
+# clicking a tile reading 54 returns 55 rows. Without saying so the card reads
+# as wrong -- the defect is already in CLAUDE.md's table.
+check("...and the row count reconciles shown against counted",
+      "shown but not counted in the cards above" in _page)
+check("...and every row carries what the tiles filter on",
+      'data-decision="' in _page and 'data-changed="' in _page
+      and 'data-excluded="' in _page)
+
+# ONE WORDPRESS UPGRADE MOVES THREE FACTS on one site. As one row per fact
+# that reads as three events. The site is the unit a person works in.
+check("the change feed groups by site, not by fact",
+      'class="chgsite' in _page and "class=chghead" in _page)
+check("...and states the fact count and the site count separately",
+      "fact(s)</b> moved across <b>" in _page)
+# Improved/regressed was proposed and refused: the headless-to-headed browser
+# switch raised tracker counts on many sites at once and nothing had started
+# firing. The ledger's own classification drives the list instead.
+check("...and does not label a direction the ledger cannot know",
+      "improved" not in _text(_page).lower()
+      and "regressed" not in _text(_page).lower())
+
+# METHODOLOGY FOLDS, QUALIFICATION DOES NOT. A qualification says what a
+# number is OF; fold it and the number is wrong.
+check("each card offers its methodology without putting it in the way",
+      _page.count("details class=md") >= 3)
+check("...and the qualifications stay in the reader's path",
+      "whose backup age can be read at all" in _text(_page)
+      and "have no sending domain recorded" in _text(_page)
+      and "refused the scanner, not a clean site" in _text(_page))
 
 check("the page does not promise a trend chart it cannot draw",
       "Trend charts appear" not in _page and "No trend chart is drawn" in _page)
@@ -1686,18 +1749,6 @@ check("...including an UNKNOWN on a non-production site",
 # recorded carry the STRING "unknown" in spf_checked_at, which is truthy, so
 # none of them was ever counted. Both figures were 7 on the day it was found.
 # ---------------------------------------------------------------------------
-def _text(page):
-    """The page as a reader sees it, tags removed.
-
-    These assertions matched literal strings like "6 site(s) have none
-    recorded", which broke the moment the number was wrapped in <b>. The
-    claim is about what the page SAYS, not about the markup around it.
-    """
-    import re as _r
-    import html as _h
-    return _r.sub(r"\s+", " ", _h.unescape(_r.sub(r"<[^>]+>", "", page)))
-
-
 _sm = RD.build_model("./history", "./data/fleet-inventory.json",
                      datetime.date(2026, 8, 23))
 _scoped = [x for x in _sm["sites"] if x.get("spf_checked_at") is not None]
