@@ -526,6 +526,62 @@ check("a failed scan is retried once, and the retry is recorded rather than "
 check("a navigation that did not throw is not treated as a site that was seen: "
       "the sweep requires a 2xx",
       "twoXX" in _sweep_code and "httpBlocked" in _sweep_code)
+
+# ---------------------------------------------------------------------------
+# The GATING test, added 2026-08-27. A separate tool with a DIFFERENT contract
+# from the cold sweep: it has to click, and it exists because the cold sweep's
+# single load cannot tell a correctly configured opt-out site from an ungated
+# one.
+# ---------------------------------------------------------------------------
+print("\n--- gating test contract ---")
+_gate_src = open(os.path.join(ROOT, "scripts", "consent",
+                              "test-gating.mjs")).read()
+_gsweep_src = open(os.path.join(ROOT, "scripts", "consent",
+                                "run-gating-sweep.mjs")).read()
+
+# IT CLICKS EXACTLY ONE THING. The cold sweep's read-only guarantee is asserted
+# above and still holds; this tool is allowed to click, and the scope of that
+# permission is the assertion. If it ever grows past the banner's own Reject
+# control, this fails and the change gets looked at.
+check("the gating test clicks only the consent banner's Reject control",
+      _gate_src.count(".click(") == 1 and "onetrust-reject-all-handler" in _gate_src,
+      "%d click(s)" % _gate_src.count(".click("))
+check("...and never fills, types or submits anything",
+      not any(w in _gate_src for w in (".fill(", ".type(", "selectOption",
+                                       ".press(", ".setInputFiles(")))
+check("no credentials of any kind are read", "process.env" not in _gate_src)
+
+# A GOOGLE TAG AT gcs=G100 IS A COOKIELESS CONSENT-MODE PING, NOT A LEAK, and
+# the first fleet-wide run is why this is asserted. The verdict was rewritten to
+# be driven by the click pass and the G100 case was dropped in the rewrite: it
+# reported NOT FULLY GATED on 9 sites where the true answer was 2, because on 7
+# of them Google had switched to cookieless exactly as designed.
+check("a cookieless consent-mode ping is excluded from the finding",
+      "G100" in _gate_src and "googleDenied" in _gate_src)
+check("...and is reported separately rather than silently dropped",
+      "cookieless_after_reject" in _gate_src)
+
+# THE CLICK PASS IS THE ANSWER, not the pre-set cookie. A cookie present at
+# load fires no update event, so a trigger bound to that event never
+# re-evaluates -- which made the cookie pass report GA4 and DoubleClick as
+# ungated on a site where a real rejection stops both.
+check("the verdict is driven by the real click, not the synthetic cookie",
+      "rejected.fired" in _gate_src
+      and "diagnostic_preset_cookie_pass" in _gate_src)
+
+# A CRASH IS NOT A CLEAN SITE. "Nothing fired after rejection" is the best
+# possible result, so a failed run that returned an empty tracker list would
+# read as a pass.
+check("a site the gating test could not complete is INCONCLUSIVE, never clean",
+      "INCONCLUSIVE" in _gate_src and "INCONCLUSIVE" in _gsweep_src)
+check("...and the sweep counts it separately from the tested ones",
+      "sites_inconclusive" in _gsweep_src and "sites_tested" in _gsweep_src)
+check("the gating sweep requires an explicit UTC stamp too",
+      "--stamp is required" in _gsweep_src)
+# SCOPE: a site with no banner has no Reject button, so the question does not
+# apply and a "could not click" there would be noise, not a finding.
+check("the sweep only runs where consent tooling was detected",
+      "bannerDetected" in _gsweep_src)
 # ---------------------------------------------------------------------------
 # THE INSTRUMENT
 # ---------------------------------------------------------------------------

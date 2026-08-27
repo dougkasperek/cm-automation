@@ -168,7 +168,19 @@ await browser.close();
 const usable = !cold.error && !rejected.error
   && cold.status && cold.status < 400 && rejected.status && rejected.status < 400;
 
-const stillFiring = rejected.fired;
+// A GOOGLE TAG THAT KEEPS FIRING AT gcs=G100 IS NOT A LEAK. Under Consent
+// Mode a denied visitor still gets a GA/Ads request; it is COOKIELESS, and it
+// is what a correctly configured site does. docs/CONSENT.md has said so since
+// the first sweep, and check-site.mjs already declines to count it.
+//
+// The first fleet-wide run, 2026-08-27, is why this is here: the verdict below
+// was rewritten to be driven by the click pass and the G100 case was dropped in
+// the rewrite. It reported NOT FULLY GATED on 9 sites when 7 of them had
+// Google switching to cookieless exactly as designed. The real answer was 2.
+const googleDenied = rejected.gcs.length > 0 && rejected.gcs.every(g => g === 'G100');
+const stillFiring = rejected.fired.filter(
+  t => !(googleDenied && /GA4|DoubleClick/.test(t)));
+const compliantGoogle = rejected.fired.filter(t => !stillFiring.includes(t));
 const stoppedByReject = cold.fired.filter(t => !rejected.fired.includes(t));
 
 const out = {
@@ -181,7 +193,11 @@ const out = {
   consent_groups_default: cold.optanon_groups_after_load,
   // The finding, if there is one.
   stopped_by_reject_all: stoppedByReject,
+  // The finding. Google tags that switched to cookieless are NOT in here.
   still_firing_after_reject_all: stillFiring,
+  // Reported separately so the distinction is visible rather than implied:
+  // these fired, and firing was correct.
+  cookieless_after_reject: compliantGoogle,
   google_stopped_after_reject: !rejected.gcs.length
     || rejected.gcs.every(g => g === 'G100'),
   // Diagnostic only. A tag that ignores a pre-set cookie but honours a click
