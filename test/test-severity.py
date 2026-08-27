@@ -788,5 +788,76 @@ if "database backup" in _pg:
           int(_re_bk.search(_pg).group(1)) < int(_re_bk.search(_pg).group(2)),
           _re_bk.search(_pg).group(0) if _re_bk.search(_pg) else "no match")
 
+# ------------------------- the consent model: what the site is SUPPOSED to do
+print("\n-- an observation is only a finding if the model says so --")
+
+
+def _consent(pre=4, model=None, **kw):
+    r = {"consent_scan_ok": True, "consent_banner_detected": True,
+         "consent_pre_trackers": pre,
+         "consent_pre_tracker_names": "GA4 collect, Meta Pixel"}
+    if model is not None:
+        r["consent_model"] = model
+    r.update(kw)
+    return S.evaluate(r, TODAY)
+
+
+def _ccodes(ev):
+    return {x["code"] for x in (ev.get("axes", {}).get("consent", {}) or {}).get("reasons", [])}
+
+
+# THE FALSE POSITIVE THIS EXISTS FOR. interstatewaste.com was reported as
+# leaking four trackers on 2026-08-25. It is opt-out outside California, doing
+# what it was configured to do, and the agency-side audit records it compliant.
+# The sweep observed correctly; the rule drew a conclusion the observation
+# could not support.
+_oo = _consent(model="opt-out")
+check("an opt-out site firing on load raises NO consent finding",
+      not _ccodes(_oo), repr(_ccodes(_oo)))
+check("...and reads OK on the consent axis",
+      _oo["axes"]["consent"]["status"] == "OK", _oo["axes"]["consent"]["status"])
+# NOT SILENCE: the observation is real and stays on the page.
+check("...but the observation is still reported",
+      any("fired on load" in t for t in _oo.get("info", [])), repr(_oo.get("info")))
+check("...and it says the rejection path was never tested",
+      any("reject" in t.lower() for t in _oo.get("info", [])), repr(_oo.get("info")))
+
+_in = _consent(model="opt-in")
+check("an opt-in site firing before consent IS a finding",
+      "consent_pre_consent_trackers" in _ccodes(_in), repr(_ccodes(_in)))
+check("...and the text names the model, so the reason is legible",
+      any("opt-in" in x["text"] for x in _in["axes"]["consent"]["reasons"]))
+
+# NOBODY HAS RULED. The observation is real; whether it is intended has not
+# been established, and calling it a defect is the same mistake pointed the
+# other way.
+_un = _consent()
+check("with no model recorded, the finding gets its OWN code",
+      "consent_trackers_unruled" in _ccodes(_un), repr(_ccodes(_un)))
+check("...never the opt-in defect code",
+      "consent_pre_consent_trackers" not in _ccodes(_un), repr(_ccodes(_un)))
+check("...and it says the model has not been established",
+      any("has not been established" in x["text"]
+          for x in _un["axes"]["consent"]["reasons"]))
+
+# An unmapped code makes axis_of() raise, which is how a consent finding would
+# land on the health headline.
+check("the new code is mapped to the consent axis",
+      S.AXIS_OF_CODE.get("consent_trackers_unruled") == "consent",
+      repr(S.AXIS_OF_CODE.get("consent_trackers_unruled")))
+
+for _m in (None, "opt-in", "opt-out"):
+    _clean = _consent(pre=0, model=_m)
+    check("a clean site raises no tracker finding, model=%r" % (_m,),
+          not (_ccodes(_clean) - {"consent_no_tooling"}), repr(_ccodes(_clean)))
+
+# A RULING IS NOT EVIDENCE THAT ANYTHING LOOKED. consent_model and
+# consent_managed were briefly added to CONSENT_FACTS, which IS the definition
+# of `consent_seen`. Every site in the inventory carries them, so all 85 read
+# as swept and three sites with no environment to measure moved SKIP -> WARN.
+check("an inventory ruling is not counted as the sweep having seen a site",
+      not any(f in S.CONSENT_FACTS for f in ("consent_model", "consent_managed")),
+      repr(S.CONSENT_FACTS))
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

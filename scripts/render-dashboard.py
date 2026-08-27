@@ -252,10 +252,14 @@ def build_model(history_dir, inventory_path, today):
                 c["against"] = prev["run_id"]
                 changes.append(c)
 
+    # `inv` goes in because the consent groups need the human rulings to tell a
+    # defect from configured behaviour, and ours from theirs. Passed to the
+    # BASELINE too: a group scored with the rulings against a baseline scored
+    # without them would report the difference as a fleet change.
     for source in sorted(standing_rows):
-        standing.extend(L.standing(standing_rows[source], today))
+        standing.extend(L.standing(standing_rows[source], today, inv))
     for source in sorted(standing_prev):
-        for g in L.standing(standing_prev[source], today):
+        for g in L.standing(standing_prev[source], today, inv):
             standing_was[g["cause"]] = len(g["sites"])
 
     order = {c: i for i, c in enumerate(L.CLASS_ORDER + ["RULE_CHANGE"])}
@@ -300,6 +304,14 @@ def build_model(history_dir, inventory_path, today):
         m["in_workbook"] = rec.get("in_workbook", True)
         m["reconciliation"] = rec.get("reconciliation")
         m["production"] = rec.get("production")
+        # The consent rulings, alongside `production` and for the same reason:
+        # a human decided them and no scan can. `consent_model` is what stops
+        # an opt-out site being reported as leaking when it is doing what it
+        # was configured to do.
+        m["consent_managed"] = rec.get("consent_managed")
+        m["consent_model"] = rec.get("consent_model")
+        m["consent_rule"] = rec.get("consent_rule")
+        m["consent_note"] = rec.get("consent_note")
         m["notes"] = rec.get("notes")
         m["in_inventory"] = True
     for m in merged.values():
@@ -493,7 +505,14 @@ EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               "consent_scan_ok", "consent_banner_vendor",
               "consent_banner_detected", "consent_pre_trackers",
               "consent_pre_tracker_names", "consent_mode_denied",
-              "consent_http_status", "consent_final_url")
+              "consent_http_status", "consent_final_url",
+              # INVENTORY RULINGS, added 2026-08-27. Not measurements -- these
+              # come from data/fleet-inventory.json, and they are here because
+              # `consent_model` CHANGES THE SCORE. The same four trackers on a
+              # cold load are a defect on an opt-in site and the configured
+              # behaviour on an opt-out one, so a consumer reading a consent
+              # finding cannot interpret it without this.
+              "consent_model", "consent_managed")
 
 
 def build_components(rows, sites, inventoried, expected_sites):
@@ -2463,7 +2482,19 @@ def render(m):
             bits.append("no tooling")
         try:
             if int(pre) > 0:
-                bits.append("%d before consent" % int(pre))
+                # "OK" beside "4 before consent" reads as a contradiction, and
+                # on an opt-out site it is not one: the tags are supposed to
+                # fire on load outside the restricted region. The cell has to
+                # carry the reason or the status looks wrong next to its own
+                # evidence. Caught by looking at the rendered row, 2026-08-27.
+                if s.get("consent_model") == "opt-out":
+                    bits.append('<span title="This site is opt-out outside its '
+                                'restricted region, so tags firing on load is '
+                                'the configured behaviour. Whether they stop on '
+                                'a rejection is not tested by this sweep."'
+                                '>%d on load, as configured</span>' % int(pre))
+                else:
+                    bits.append("%d before consent" % int(pre))
         except (TypeError, ValueError):
             pass
         if bits:

@@ -43,6 +43,10 @@ S = _load("severity", os.path.join(ROOT, "scripts", "lib", "severity.py"))
 
 PASS, FAIL = [], []
 
+# Both codes are a tracker observation on the consent axis; see the note at
+# the first use for why the tests accept either.
+TRACKER_CODES = ("consent_pre_consent_trackers", "consent_trackers_unruled")
+
 
 def check(name, cond, detail=""):
     (PASS if cond else FAIL).append(name)
@@ -315,9 +319,15 @@ try:
     # `reasons` deliberately carries only what agrees with the top-level
     # status. Asserting against `all_reasons` here would pass even if the axis
     # split were wired up backwards.
+    # WHICH tracker code fires depends on the site's recorded consent model --
+    # `consent_pre_consent_trackers` when it is opt-in, `consent_trackers_unruled`
+    # when nobody has ruled. These fixtures carry no ruling. The property under
+    # test is that a tracker observation lands on the CONSENT axis as a WARN,
+    # not which of the two codes carried it, so pinning one name here would
+    # break on a legitimate change and test nothing extra.
     check("trackers firing before consent is a WARN, not a CRIT",
           s_leak["axes"]["consent"]["status"] == "WARN"
-          and any(r["code"] == "consent_pre_consent_trackers"
+          and any(r["code"] in TRACKER_CODES
                   for r in s_leak["axes"]["consent"]["reasons"]), repr(s_leak))
     check("...and the reason names the trackers, so nobody has to open the scan",
           any("MS Clarity" in r["text"]
@@ -333,7 +343,7 @@ try:
 
     check("consent-mode denied pings alone are NOT reported as a leak, or every "
           "correctly configured site would fail",
-          not any(r["code"] == "consent_pre_consent_trackers"
+          not any(r["code"] in TRACKER_CODES
                   for r in s_cm["all_reasons"]), repr(s_cm))
 
     # A page that would not load scores nothing, but says so.
@@ -389,11 +399,11 @@ try:
           repr(s_leak_both["status"]))
     check("...but is NOT lost: it scores WARN on the consent axis",
           s_leak_both["axes"]["consent"]["status"] == "WARN"
-          and any(r["code"] == "consent_pre_consent_trackers"
+          and any(r["code"] in TRACKER_CODES
                   for r in s_leak_both["axes"]["consent"]["reasons"]),
           repr(s_leak_both["axes"]["consent"]))
     check("...and still appears in all_reasons, tagged with its axis",
-          any(r["code"] == "consent_pre_consent_trackers"
+          any(r["code"] in TRACKER_CODES
               and r["axis"] == "consent" for r in s_leak_both["all_reasons"]))
     check("a health finding never lands on the consent axis",
           all(r["axis"] == "health"
@@ -420,14 +430,20 @@ try:
     # Standing findings: grouped by cause, like everything else on the page.
     # ------------------------------------------------------------------
     print("\n--- standing findings ---")
-    _st = L._standing_consent(rows)
+    # WITHOUT RULINGS, nothing can be called our defect. `_standing_consent`
+    # takes the inventory now, and with an empty one every leaking site is
+    # "we do not manage" -- which is the honest default: ownership is a human
+    # ruling and an absent ruling is not a claim of ownership.
+    _st = L._standing_consent(rows, {})
     _causes = {g["cause"]: g for g in _st}
     check("a consent sweep produces grouped standing findings at all",
           len(_st) >= 3, repr(sorted(_causes)))
-    check("tooling-present-but-leaking is its OWN group, because it is a build "
-          "defect we own rather than a scope question for the client",
-          any("tooling present" in c.lower() and "fire before consent" in c.lower()
-              for c in _causes), repr(sorted(_causes)))
+    check("with no ruling, a leaking tooled site is NOT called our defect",
+          not any("tooling present" in c.lower() for c in _causes),
+          repr(sorted(_causes)))
+    check("...it is reported as a site we do not manage",
+          any("we do not manage" in c.lower() for c in _causes),
+          repr(sorted(_causes)))
     check("...and the no-tooling leak is a separate group",
           any("no consent tooling is present" in c.lower() for c in _causes))
     check("the leaking groups name the trackers per site",
@@ -441,16 +457,44 @@ try:
               and any("403" in v for v in g["detail"].values()) for g in _st))
     check("no standing finding states a compliance verdict",
           all("compliant" not in json.dumps(g).lower() for g in _st))
-    # Sort order is a finding in its own right. The tooling-present-but-leaking
-    # group is 3 sites next to a 34-site group, and sorting RISK by size alone
-    # buried the one group describing a defect in something we built.
-    _tooled = [g for g in _st if "tooling present" in g["cause"].lower()][0]
+
+    # WITH the ruling that we manage it, the same rows become our defect.
+    _leaky = sorted(s_ for s_, r in rows.items()
+                    if isinstance(r.get("consent_pre_trackers"), int)
+                    and r["consent_pre_trackers"] > 0
+                    and r.get("consent_banner_detected") is True)
+    check("the fixture has a tooled, leaking site to rule on", bool(_leaky), repr(_leaky))
+    _ours = {s_: {"consent_managed": True, "consent_model": "opt-in"} for s_ in _leaky}
+    _st_ours = L._standing_consent(rows, _ours)
+    _c_ours = {g["cause"]: g for g in _st_ours}
+    check("a site we DO manage, configured opt-in, is a build defect we own",
+          any("tooling present" in c.lower() and "fire before consent" in c.lower()
+              for c in _c_ours), repr(sorted(_c_ours)))
+
+    # Sort order is a finding in its own right: that group is small next to a
+    # 34-site scope question, and sorting RISK by size alone buried the one
+    # group describing a defect in something we built.
+    _tooled = [g for g in _st_ours if "tooling present" in g["cause"].lower()][0]
     check("the tooling-present-but-leaking group carries an explicit priority, "
-          "so a 3-site defect we own outranks a 34-site client scope question",
+          "so a small defect we own outranks a large client scope question",
           _tooled.get("priority", 0) > 0, repr(_tooled.get("priority")))
-    check("...and no other consent group claims priority, so the key stays "
-          "meaningful rather than becoming decoration",
-          sum(1 for g in _st if g.get("priority", 0) > 0) == 1)
+
+    # THE FALSE POSITIVE THIS WAS BUILT FOR. An opt-out site firing on load is
+    # doing what it was configured to do; the sweep's single cold load cannot
+    # see the difference, so the ruling has to.
+    _optout = {s_: {"consent_managed": True, "consent_model": "opt-out"} for s_ in _leaky}
+    _st_oo = L._standing_consent(rows, _optout)
+    _c_oo = {g["cause"]: g for g in _st_oo}
+    check("an opt-out site firing on load is NOT reported as a defect",
+          not any("tooling present" in c.lower() for c in _c_oo), repr(sorted(_c_oo)))
+    check("...it is reported as configured behaviour, not hidden",
+          any("as configured" in c.lower() for c in _c_oo), repr(sorted(_c_oo)))
+    check("...and filed off the RISK axis, since nothing is wrong",
+          all(g["axis"] != "RISK" for g in _st_oo
+              if "as configured" in g["cause"].lower()))
+    check("...while still saying what was NOT tested",
+          any("reject" in json.dumps(g).lower() for g in _st_oo
+              if "as configured" in g["cause"].lower()))
 
     res2 = L.ingest(_reports, _history, inventory=INV_PATH)
     check("re-ingesting the same run adds nothing",

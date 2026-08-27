@@ -66,12 +66,22 @@ else
   check "normalsite healthy"                    "OK"     "$(status_of "$J" normalsite)"
   check "staleback CRIT (10d old backup)"       "CRIT"   "$(status_of "$J" staleback)"
   check "coredrift CRIT (WP core update)"       "CRIT"   "$(status_of "$J" coredrift)"
-  check "plugindrift WARN (plugins+upstream)"   "WARN"   "$(status_of "$J" plugindrift)"
+  # WAS "WARN" UNTIL 2026-08-27, under the scanner's own bash model where ANY
+  # pending plugin was a WARN and ANY upstream commit was a WARN. The scanner
+  # now scores through severity.py: 3 plugin updates is below PLUGIN_WARN_COUNT
+  # (10), and upstream commits are informational because every site has one.
+  # OK is the model's answer and it is the right one.
+  check "plugindrift OK (3 plugins, under the threshold)" "OK" "$(status_of "$J" plugindrift)"
   check "frozensite FROZEN"                     "FROZEN" "$(status_of "$J" frozensite)"
   check "pfannenbergpartners SKIP (uninit env)" "SKIP"   "$(status_of "$J" pfannenbergpartners)"
   check "ghostenv SKIP (no live env)"           "SKIP"   "$(status_of "$J" ghostenv)"
   check "timeoutsite ERROR not SKIP"            "ERROR"  "$(status_of "$J" timeoutsite)"
-  check "noisysite parsed despite stdout noise" "OK"     "$(status_of "$J" noisysite)"
+  # WAS "OK". This mock runs PHP 8.1, which stopped receiving security patches
+  # on 2025-12-31 -- and the old bash model had NO PHP rule at all, so it called
+  # a site on unsupported PHP clean. The rename keeps the original point (the
+  # row parsed despite stdout noise) and the version assertion below still
+  # proves it; the STATUS now reflects the PHP finding.
+  check "noisysite CRIT (PHP 8.1, past end of support)" "CRIT" "$(status_of "$J" noisysite)"
   check "drupalsite scanned, WP checks n/a"     "n/a"    "$(jq -r '.[]|select(.site=="drupalsite")|.wp_core_update' "$J")"
 
   # ITEM 22, both halves, added 2026-08-23 after a live diagnosis.
@@ -89,7 +99,11 @@ else
   check "noticysite: plugin count survives the PHP notice wall" "15" "$(n_of noticysite plugin_updates)"
   check "noticysite: theme count survives it too"               "3"  "$(n_of noticysite theme_updates)"
   check "noticysite: the pending core update is not lost"       "7.1" "$(n_of noticysite wp_core_update)"
-  check "noticysite: and it is therefore NOT clean"             "CRIT" "$(status_of "$J" noticysite)"
+  # WAS "CRIT", from the bash rule `core update available -> CRIT`. severity.py
+  # demoted that to WARN on 2026-08-19: one release behind is a maintenance
+  # backlog, not an emergency, and that single rule had produced 32 of 33 CRITs.
+  # The assertion that matters is unchanged -- the site is NOT clean.
+  check "noticysite: and it is therefore NOT clean"             "WARN" "$(status_of "$J" noticysite)"
 
   # dbmissing: cm-whitelabel's shape. `core version` reads the version off disk
   # and needs no database, so it answers; every call that needs the database
@@ -99,7 +113,12 @@ else
   check "dbmissing: a failed core check is unknown, NOT up-to-date" "unknown" "$(n_of dbmissing wp_core_update)"
   check "dbmissing: a failed plugin call is null, NOT 0"     "null"   "$(n_of dbmissing plugin_updates)"
   check "dbmissing: a failed theme call is null, NOT 0"      "null"   "$(n_of dbmissing theme_updates)"
-  check "dbmissing: an unmeasured site does not read OK"     "WARN"   "$(status_of "$J" dbmissing)"
+  # WAS "WARN". This is cm-whitelabel's shape: WordPress 6.9.4 on disk, below
+  # the 7.0.2 wp2shell floor, with every database-backed call failing. The old
+  # bash model had no version floor, so the one genuinely dangerous site in the
+  # fleet could only reach WARN. WP_SECURITY_FLOOR is the rule that exists for
+  # exactly this row, and CRIT is what it should have read all along.
+  check "dbmissing: below the security floor, and CRIT for it" "CRIT"  "$(status_of "$J" dbmissing)"
 
   # THE COMPONENT INVENTORY, added 2026-08-23. The scanner now keeps the full
   # `plugin list` rather than only the update backlog, because during the ~36

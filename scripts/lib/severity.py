@@ -118,7 +118,14 @@ SCORING_FACTS = ("frozen", "wp_checked", "wp_version", "php_version",
                  "consent_pre_trackers",
                  # Read only to EXEMPT a positively non-WordPress site from
                  # `wp_unestablished`. It ranks nothing on its own.
-                 "framework")
+                 "framework",
+                 # INVENTORY RULINGS. `consent_model` decides whether trackers
+                 # on a cold load are a defect or the configured behaviour, so
+                 # it changes the score and therefore has to be published in
+                 # the feed like every other scoring input. `consent_managed`
+                 # routes rather than ranks, and is published for the same
+                 # reason: a reader asking "is this ours" needs the answer.
+                 "consent_model", "consent_managed")
 
 # The fact names a Pantheon health observation always carries, whatever their
 # values. Presence of ANY of these means the health scanner saw this site.
@@ -141,6 +148,19 @@ NEXCESS_FACTS = ("nexcess_site_id", "nexcess_php_version",
 # sweep reached this site" and its VALUE says whether the look succeeded.
 CONSENT_FACTS = ("consent_scan_ok", "consent_banner_detected",
                  "consent_pre_trackers")
+# `consent_model` and `consent_managed` are DELIBERATELY NOT in CONSENT_FACTS,
+# and they were for about ten minutes on 2026-08-27. That tuple answers "did
+# the consent sweep reach this site" -- `consent_seen` is literally
+# `any(k in site for k in CONSENT_FACTS)` -- and it feeds COVERAGE_FACTS, which
+# decides UNKNOWN. The rulings are seeded onto EVERY site in the inventory, so
+# putting them here made all 85 look scanned: three sites that had no
+# environment to measure moved SKIP -> WARN, because a site the sweep had
+# "seen" cannot be terminal.
+#
+# An inventory ruling is not evidence that anything looked. It is a fact about
+# what SHOULD happen, and this repo has a table of what mixing those two costs.
+# They belong in SCORING_FACTS, which is about what changes a score, and they
+# are there.
 
 # Any scan of any kind reached this site. Used ONLY to decide UNKNOWN. Adding
 # a provider means adding its fact tuple here, or 21 measured sites keep
@@ -200,6 +220,7 @@ AXIS_OF_CODE = {
     # Fires on the consent sweep, ANSWERS a health question. See above.
     "coverage_partial":            "health",
     "consent_pre_consent_trackers": "consent",
+    "consent_trackers_unruled":     "consent",
     "consent_no_tooling":           "consent",
 }
 
@@ -526,13 +547,52 @@ def evaluate(site, today=None):
     # NEITHER RULE IS A COMPLIANCE VERDICT, and the wording is the guardrail:
     # they report what was observed on the sampled page. Do not reword these
     # into "non-compliant" -- see docs/CONSENT.md.
+    # WHAT THE SITE IS SUPPOSED TO DO, which no scan can read. Added
+    # 2026-08-27 from the inventory, alongside `production`.
+    #
+    # The sweep does ONE COLD LOAD and records what fired. On an opt-in site
+    # that is a finding. On an OPT-OUT site it is the intended behaviour, and
+    # the two produce an identical observation -- so scoring the observation
+    # alone scores an absence.
+    #
+    # That is not hypothetical. `interstatewaste.com` was reported as leaking
+    # four trackers on 2026-08-25. It is opt-out outside California, working as
+    # designed, and its own agency-side audit records it as compliant. The
+    # scanner saw correctly and the rule drew the wrong conclusion.
+    model = site.get("consent_model")
+    names = (site.get("consent_pre_tracker_names")
+             if site.get("consent_pre_tracker_names") not in (None, UNKNOWN)
+             else "see the scan")
     pre = _num(site.get("consent_pre_trackers"))
     if pre:
-        add(warn, "consent_pre_consent_trackers",
-            "%d tracker(s) fired on the homepage before any consent "
-            "interaction: %s" % (pre, site.get("consent_pre_tracker_names")
-                                 if site.get("consent_pre_tracker_names")
-                                 not in (None, UNKNOWN) else "see the scan"))
+        if model == "opt-out":
+            # NOT a finding, and not silence either. The observation is real
+            # and it is reported; what is missing is any test of whether the
+            # tags honour a REJECTION, which is the only question that
+            # discriminates on an opt-out site. See scripts/consent/
+            # test-gating.mjs, which asks it properly.
+            info.append(
+                "%d tracker(s) fired on load (%s). This site is opt-out outside "
+                "its restricted region, so that is the configured behaviour, not "
+                "a finding. Whether the tags stop when a visitor rejects is NOT "
+                "tested by this scan." % (pre, names))
+        elif model == "opt-in":
+            add(warn, "consent_pre_consent_trackers",
+                "%d tracker(s) fired on the homepage before any consent "
+                "interaction, on a site configured opt-in: %s" % (pre, names))
+        else:
+            # NOBODY HAS RULED on this site's consent model, so the same
+            # observation cannot be called a defect. It gets its own code
+            # rather than the opt-in one, because the renderer has to be able
+            # to separate "we manage this and it is wrong" from "we observed
+            # this and it may be intended" -- Doug, 2026-08-27, on being able
+            # to tell clients about sites we do not manage without the page
+            # reading as though we broke them.
+            add(warn, "consent_trackers_unruled",
+                "%d tracker(s) fired on the homepage before any consent "
+                "interaction: %s. No consent model is recorded for this site, "
+                "so whether that is intended has not been established."
+                % (pre, names))
 
     if site.get("consent_banner_detected") is False:
         add(warn, "consent_no_tooling",

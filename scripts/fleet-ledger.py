@@ -1381,7 +1381,7 @@ def collapse_coverage(changes):
 # one cause reads as a crisis and is one merge.
 
 
-def _standing_consent(rows):
+def _standing_consent(rows, inv=None):
     """Consent findings, grouped by cause like everything else on the page.
 
     Added 2026-08-19 after the first real sweep. Without this the two largest
@@ -1401,8 +1401,63 @@ def _standing_consent(rows):
         # Split, because these are two different conversations. A site with
         # tooling that leaks anyway is a BUILD defect we own. A site with no
         # tooling at all is a scope question for the client.
-        tooled = [s for s in leaking if rows[s].get("consent_banner_detected") is True]
-        untooled = [s for s in leaking if s not in tooled]
+        inv = inv or {}
+
+        def ruling(site, key):
+            return (inv.get(site) or {}).get(key)
+
+        # AN OPT-OUT SITE FIRING ON LOAD IS NOT LEAKING. It is doing what it
+        # was configured to do outside its restricted region, and the sweep's
+        # single cold load cannot tell that apart from a defect. Dropping them
+        # here rather than scoring them is the same call severity.py makes.
+        #
+        # `interstatewaste.com` and `actioncarting.com` sat in the group below
+        # for two days, under an action line calling them "the highest-value
+        # rows here", while the agency-side audit recorded both as compliant.
+        expected = [s for s in leaking if ruling(s, "consent_model") == "opt-out"]
+        leaking = [s for s in leaking if s not in expected]
+
+        # OURS vs THEIRS, from the inventory rather than from whether a banner
+        # happens to exist. Tooling being present never meant we built it:
+        # 22 sites in this fleet run OneTrust that clevermethod does not
+        # manage. Doug, 2026-08-27: report those, flagged as theirs, because
+        # they are still clients -- but they are not our defect and must not
+        # sit in the same group as one.
+        tooled = [s for s in leaking
+                  if rows[s].get("consent_banner_detected") is True
+                  and ruling(s, "consent_managed") is True]
+        theirs = [s for s in leaking
+                  if rows[s].get("consent_banner_detected") is True
+                  and s not in tooled]
+        untooled = [s for s in leaking if s not in tooled and s not in theirs]
+
+        if expected:
+            out.append({
+                "cause": "Trackers fire on load, as configured (opt-out)",
+                "axis": "PLANNING",
+                "sites": sorted(expected),
+                "detail": dict((s, rows[s].get("consent_pre_tracker_names", ""))
+                               for s in expected),
+                "action": "Not a finding. These are opt-out outside their "
+                          "restricted region, so tags firing on load is the "
+                          "configured behaviour. What is NOT established is "
+                          "whether they stop when a visitor rejects -- this "
+                          "sweep never clicks. scripts/consent/test-gating.mjs "
+                          "asks that question properly.",
+            })
+        if theirs:
+            out.append({
+                "cause": "Trackers fire before consent, on a site we do not manage",
+                "axis": "RISK",
+                "priority": 5,
+                "sites": sorted(theirs),
+                "detail": dict((s, rows[s].get("consent_pre_tracker_names", ""))
+                               for s in theirs),
+                "action": "Consent tooling is present and clevermethod does not "
+                          "manage it. Worth telling the client, because they are "
+                          "our client and we noticed -- but this is a "
+                          "conversation to have, not a ticket for us to close.",
+            })
         if tooled:
             out.append({
                 "cause": "Consent tooling present, but trackers fire before consent",
@@ -1470,7 +1525,7 @@ def _standing_consent(rows):
     return out
 
 
-def standing(curr_rows, today):
+def standing(curr_rows, today, inv=None):
     """Grouped by cause, not by site. Only ever reads facts a row actually has."""
     groups = []
     health = {s: r for s, r in curr_rows.items()
@@ -1479,7 +1534,7 @@ def standing(curr_rows, today):
     consent = {s: r for s, r in curr_rows.items() if r.get("source") == "consent"}
 
     groups.extend(_standing_email(email))
-    groups.extend(_standing_consent(consent))
+    groups.extend(_standing_consent(consent, inv or {}))
     curr_rows = health
 
     upstream = sorted(s for s, r in curr_rows.items() if r.get("upstream_pending") not in (UNKNOWN, 0, None))

@@ -139,6 +139,26 @@ check("a row with a finding gets a non-empty note",
       [(r["site"], r.get("notes")) for r in scored if r["status"] in ("CRIT", "WARN")])
 
 
+# ERROR IS A SCAN OUTCOME, NOT A SEVERITY, and severity has no word for it.
+# Scoring a row with no facts turned "we could not reach this site" into SKIP,
+# which means "we looked and there is no live environment" -- a different and
+# more reassuring statement. Caught by the mock suite on `timeoutsite`.
+print("\n-- a row the scan could not read is not scored at all --")
+_err = {"site": "timeoutsite", "status": "ERROR", "frozen": False,
+        "wp_checked": None, "wp_version": None, "php_version": None,
+        "db_backup_age_days": None, "plugin_updates": None,
+        "notes": "Environment preflight failed (timeout or unparseable "
+                 "response). Status unknown, NOT confirmed absent."}
+_scored_err = SS.score_rows([dict(_err)], TODAY)[0]
+check("an ERROR row keeps ERROR, and is not downgraded to SKIP",
+      _scored_err["status"] == "ERROR", _scored_err["status"])
+check("...and keeps the diagnostic saying WHY it is empty",
+      "preflight failed" in (_scored_err.get("notes") or ""),
+      repr(_scored_err.get("notes")))
+check("...while a row that CAN be scored still is",
+      SS.score_rows([row("q", plugin_updates=19)], TODAY)[0]["status"] == "WARN")
+
+
 # ------------------------------------------------------ 3. the failure branch
 # A scorer that eats bad input and emits [] reads downstream as "the scan found
 # nothing" -- this project's oldest bug, pointed at its own tooling.

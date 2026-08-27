@@ -1,0 +1,100 @@
+<title>Fleet Redesign Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+:root { --bg: #f5f4f0; --surface: #fff; --ink: #1c1f24; --ink2: #5e6470; --line: #d8d6ce; --accent: #7a5c0c; --crit: #c8352b; --warn: #8a5606; --good: #23704a; --hatch: rgba(0,0,0,0.09);
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif; --sans: "Source Sans 3", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #16181c; --surface: #1e2126; --ink: #e8e6df; --ink2: #9aa0aa; --line: #32363d; --accent: #d8b25a; --crit: #ef5b4d; --warn: #e0a63a; --good: #5fc08c; --hatch: rgba(255,255,255,0.09); } }
+:root[data-theme="dark"] { --bg: #16181c; --surface: #1e2126; --ink: #e8e6df; --ink2: #9aa0aa; --line: #32363d; --accent: #d8b25a; --crit: #ef5b4d; --warn: #e0a63a; --good: #5fc08c; --hatch: rgba(255,255,255,0.09); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 36px 24px 70px; }
+h1 { font-family: var(--serif); font-weight: 600; font-size: 34px; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--ink2); margin: 0 0 28px; font-size: 15px; }
+h2 { font-family: var(--serif); font-weight: 600; font-size: 24px; margin: 38px 0 10px; letter-spacing: -0.01em; }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink2); margin: 26px 0 6px; font-weight: 700; }
+p { margin: 0 0 12px; max-width: 68ch; }
+.lead { font-size: 18px; font-family: var(--serif); }
+a { color: var(--accent); }
+.links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0 8px; }
+.links a { display: block; border: 1px solid var(--line); background: var(--surface); padding: 10px 12px; text-decoration: none; color: var(--ink); border-radius: 4px; }
+.links a b { display: block; font-family: var(--serif); font-size: 17px; }
+.links a span { color: var(--ink2); font-size: 13px; }
+.links a.rec { border-color: var(--accent); }
+.fact { border-left: 3px solid var(--line); padding: 4px 14px; margin: 14px 0; color: var(--ink2); font-size: 15px; }
+.fact b { color: var(--ink); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 10px 0 16px; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink2); padding: 6px 8px; border-bottom: 1px solid var(--ink); }
+td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.rev { background: var(--surface); border: 1px solid var(--line); padding: 12px 16px; margin: 14px 0; font-size: 15px; }
+.rev b { font-family: var(--serif); }
+.num { font-variant-numeric: tabular-nums; }
+.k { display: inline-block; padding: 0 6px; border: 1px dashed var(--ink2); border-radius: 2px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--ink2); background: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 4px); }
+@media (max-width: 640px) { .links { grid-template-columns: 1fr; } h1 { font-size: 28px; } .wrap { padding: 24px 16px 60px; } }
+</style>
+<div class="wrap">
+<h1>Fleet dashboard redesign: three concepts</h1>
+<p class="sub">Built 2026-08-27 from the live model export (85 sites, 43 runs, 11,178 component rows). Every number below was read from the data the concepts render, not typed.</p>
+
+<div class="links" id="links">
+  <a href="https://claude.ai/code/artifact/09a63b53-4b74-407f-b4c4-7f6d03160947" target="_blank" rel="noopener" data-c="a"><b>A · The Queue</b><span>Decisions are the primary object. Four columns: act now, schedule, decide, can't see.</span></a>
+  <a href="https://claude.ai/code/artifact/c06e7532-fdf2-4af9-a22d-89d6c3027691" target="_blank" rel="noopener" data-c="b" class="rec"><b>B · The Evidence Matrix</b><span>Site × question grid. Absence is a hatched cell, never a colour. Recommended.</span></a>
+  <a href="https://claude.ai/code/artifact/ccc4ab1d-204a-4570-a2a6-60dce2acf639" target="_blank" rel="noopener" data-c="c"><b>C · The Client Brief</b><span>One card per site, split by who has to act: the client, us, or nobody yet.</span></a>
+</div>
+<p class="fact">Each opens in a new tab. Check them at 1100px and 375px; every site name opens a drawer with everything recorded about it.</p>
+
+<h2>Critique of the current page</h2>
+<p class="lead">The page is organised by how the system is built, not by what a reader has to do next.</p>
+<p>Its eleven sections are the pipeline laid end to end: tiles, standing findings, one card per source, coverage per source, the key, rulings, changes, coverage changes, standing findings again in full, reconciliation, every site. A reader who wants to know what to do about one site meets it in up to ten places. On the rendered page <span class="num">hoffmanscheese</span> appears 10 times, <span class="num">eamusicfest.com</span> 11 times, <span class="num">actioncarting.com</span> 8 times, and nothing on the page joins those appearances into one answer.</p>
+<p>The unit of the table is the site, and the site's summary is one health status. Since 41 of the 53 warnings are a WordPress or plugin backlog, the table is amber by construction, and the page then explains the amber in prose. Measured on the render: 43 paragraphs, 28 <code>&lt;details&gt;</code> folds, and a quarter of the visible text is explanation rather than data. The page is 13,115px tall at 1100px wide. Most of that height is the page apologising for its own headline.</p>
+<p>Two smaller structural faults follow from the first. Absence is handled in copy: <em>not checked</em> is set in the same type and cell as a measured value, so a row of "not checked" reads like a row of results until the words are read. And the component catalogue, which is the one dataset that turns 27 backlog rows into a handful of fleet-wide update decisions, lives on a second page that the main page links to by count only.</p>
+
+<h3>What the data holds that the page does not show</h3>
+<p>The 53 warnings are three different things: 41 sites with a real, measured backlog; 11 sites that no health scan has reached (they warn so they cannot read as healthy); and 1 site the control plane called WordPress that is not. The page counts them as one number.</p>
+<p>The plugin backlog of 693 pending installs is 140 components, each wanting exactly one target version. The top 5 components account for 244 installs, the top 10 for 346. The page shows this backlog only as a per-site count.</p>
+<p>The ledger has 14 full health runs over 9 days. In that window 16 sites moved WordPress version (7.0.3 → 7.1 on 12 of them) and plugin backlogs grew on 43 of 69 sites, held on 16, shrank on 10. The page's change feed compares only against the previous run and so has never shown any of it.</p>
+<p>The inventory carries seven workbook attestations per site (2FA, hidden login, activity log, XML-RPC and so on), none confirmed by a person here. Where a claim names a plugin, the component inventory can check it: hidden login is confirmed on 66 of 78 claims, 2FA on 64 of 76, the activity log on 65 of 76, and one claim in each of those three has no matching plugin. The page never connects the two.</p>
+<p>Also recorded and never surfaced: Consent Mode denied-by-default (17 sites), the SPF <code>-all</code> versus <code>~all</code> qualifier, DKIM selectors, the measured sending domain beside the workbook's, the DNS host and mail provider per site, the two decommission flags, and free-text inventory notes that contain open questions ("Can we decommission this?").</p>
+<p>Surfaced and not needed on the main page: the full severity key as a permanent section, per-source timestamp cards, the "what changed" and "coverage change" sections when the answer is one transition and 23 counter ticks, and the DRIFT-class groups that exist only to say the fleet is the same as yesterday.</p>
+
+<h2>Concept A — The Queue</h2>
+<p><b>Who it serves.</b> The agency team that does the maintenance. It answers "what do I pick up next" without reading a site table.</p>
+<p><b>First five seconds.</b> Four columns with a count each: 8 sites need a person today; 6 batched maintenance items; 7 rulings; 6 coverage gaps. Each item carries its own denominator ("21 of 68 sites with a core reading") and its movement since the previous run from the ledger's own baseline.</p>
+<p><b>What it defers.</b> Per-site status. Sites appear inside items and in an index at the bottom, and the drawer holds everything recorded about one site. The change feed becomes a six-figure "movement" strip, and the two DRIFT-only groups that only restate the backlog are gone.</p>
+<p><b>What it gives up.</b> The fleet as a picture. You cannot see coverage as a shape here; you read it as items in the fourth column. The "act now" column is also built from a rule I chose (health CRIT, a banner that leaks, no SPF), printed in the column, and a reader who disagrees with that rule has to argue with the page.</p>
+<p><b>Reversals.</b> The three-band summary/detail/inventory framing and the card-per-source suite block are dropped: a source is how a fact was measured, not what the reader decides. The two "WordPress available" DRIFT groups and the "10 or more" group are recast as schedule items with the component list beside them, because that is where the decision actually lives.</p>
+
+<h2>Concept B — The Evidence Matrix</h2>
+<p><b>Who it serves.</b> Anyone who has to trust the page: the team, and whoever audits it. It is the only concept where a coverage gap and a finding are visibly different things at fleet scale.</p>
+<p><b>First five seconds.</b> One grid, 85 rows by 16 questions, grouped by what happens next (8 need a person, 10 not established, 38 need scheduling, 18 need a ruling, 6 nothing pending, 4 not measurable, 1 excluded). Every column header carries its own denominator and a census bar showing how the whole fleet answers it, hatched where nobody could. The Nexcess rows show "no API" under backup as a dotted cell, which is the first time that fact has been visible as a pattern rather than a footnote.</p>
+<p><b>What it defers.</b> Prose. The page has one thesis sentence, a key, and two short panels under the grid. Actions live in the drawer and in the row grouping, not in paragraphs.</p>
+<p><b>What it gives up.</b> Batching. The matrix shows that 32 sites want a core update; it does not say "this is one decision", and the 693-install backlog is still a column of per-site counts. It also needs 1240px to show all 16 questions; at 1100px the email columns are one horizontal scroll away, and at 375px it is a scrolling strip with a sticky site column, usable but not pleasant.</p>
+<p><b>Reversals.</b> One status per site is gone as a headline; the two axis chips stay on every row but the row is grouped by its next action, not its colour. The separate components page is folded into the drawer (pending list per site) and the toggleable "workbook claims vs inventory" column group. The static two-page publish becomes one page with client-side filtering over embedded data; nothing else about the deployment changes.</p>
+
+<h2>Concept C — The Client Brief</h2>
+<p><b>Who it serves.</b> Account people. Each card is written as the brief you would carry into a client call: what they could notice, what we need from them, what we owe them, what nobody has measured.</p>
+<p><b>First five seconds.</b> Four counts: 26 sites with a client-visible exposure, 71 that need a client decision, 70 we owe work, 25 with something not established. Then the ranked cards.</p>
+<p><b>What it defers.</b> Everything fleet-shaped. There is no grid and no batching; the same "is consent tooling in scope?" question is printed on 45 cards because it is true on 45 sites.</p>
+<p><b>Where it fails, and I am showing it anyway.</b> The premise was to rank by client exposure, and the inventory has no client, owner or contract tier on any of the 85 sites. Without those, "exposure" can only mean the count of exposure classes, and that count put two DNS gaps above a 730-day backup gap until I let the model's own CRIT level sort first. The result is honest but the ranking has long ties, and an account person cannot find their own clients because the data cannot say whose they are. The concept becomes useful the day the inventory's <code>client</code> and <code>owner</code> fields are filled; today it is a good drawer with a weak spine.</p>
+<p><b>Reversals.</b> Per-site status is replaced by four actor blocks. The palette is warm and the type is a serif, on purpose: this is the one page a client might see over someone's shoulder.</p>
+
+<h2>Recommendation</h2>
+<p class="lead">Ship B, and take A's batched schedule column into it as a second view.</p>
+<p>B is the only concept that solves the failure this project keeps having at the structural level rather than in copy. An unmeasured value cannot look like a measurement because the cell is hatched and the column header says how many sites answered. The scanner losing sight of a site is a row turning hatched, which does not look like a row turning amber. Denominators are on every column. It handles 85 rows, 53 amber ones and 11 unmeasured ones in one screen without a paragraph of explanation, and it is the concept whose numbers are easiest to check against the ledger by eye, which is how most of this project's bugs were found.</p>
+<p>It does not solve the batching problem, and A does. The fix is not a fourth concept: give B a second tab that is A's schedule column (WordPress by target release, plugins by component with the cumulative line, the PHP wave, the upstream merge), and let a row click in either view open the same drawer. That is roughly 200 lines on top of B.</p>
+<p>C should not ship, but its actor mapping (exposed / ask / we handle / not established) is the right vocabulary for the drawer's top section in whichever concept is built, and it becomes a real page once the inventory has clients on it.</p>
+
+<h3>Decisions the build will need</h3>
+<table>
+<tr><th>Decision</th><th>My position</th></tr>
+<tr><td>Client-side rendering</td><td>All three concepts render from embedded JSON in the browser. The renderer can keep producing static HTML and embed the same JSON; the filtering and drawer need about 300 lines of vanilla JS and no framework. The "no client-side code" rule in the docs was protecting simplicity, not correctness, and a 600KB single file with no network calls keeps that.</td></tr>
+<tr><td>The lane rule</td><td>The "what happens next" grouping in A and B is a workflow view over the two axes, with a printed priority order. It is not a third axis and must not be scored. Keep it in the renderer, not in severity.py.</td></tr>
+<tr><td>Lane counts vs status counts</td><td>25 sites are OK on health but only 6 have nothing pending on any axis, because 18 OK sites still carry a consent or DMARC ruling. Both numbers are true and the page has to show both; a reader will ask.</td></tr>
+<tr><td>test-ledger.py</td><td>Whichever concept is built, the assertions that pin section order, heading text and chip markup will fail. The ones that assert a property (unknown never renders as OK, a count has its denominator, no key lives inside a fold) should be kept and re-pointed at the new markup.</td></tr>
+<tr><td>Fonts</td><td>The concepts use Google Fonts because the artifact host allows it. The production page must inline or drop them; the fallback stacks are already set.</td></tr>
+</table>
+
+<h3>How the concepts were checked</h3>
+<p>Each page was rendered headless at 1100px and 375px in both themes, screenshotted and read. Headline counts (2 / 53 / 25 / 3 / 1, 11 without health evidence, 9 consent unknown, 48 of 52) were located in each rendered page's text and matched against <code>fleet-data.json</code> by script. No page loads anything from the network except the font stylesheet; the data is embedded. The per-site drawer was opened on hoffmanscheese, runtalnorthamerica.com and a Nexcess site and the absence tokens checked by eye.</p>
+</div>
+

@@ -67,6 +67,19 @@ def score_rows(rows, today=None):
     out = []
     for row in rows:
         r = dict(row)
+        # ERROR IS A SCAN OUTCOME, NOT A SEVERITY. severity.py has no ERROR
+        # state and should not: it scores facts, and this row has none because
+        # the scan could not look. Passing it through severity turns "we could
+        # not reach this site" into SKIP, which means "we looked and there is
+        # no live environment" -- a different statement, and a more reassuring
+        # one than the truth.
+        #
+        # Caught by the mock suite on `timeoutsite`, whose env preflight times
+        # out on purpose. Keeping ERROR here is not a second scorer; it is
+        # declining to score a row that carries nothing to score.
+        if row.get("status") == "ERROR":
+            out.append(r)
+            continue
         ev = SEV.evaluate(r, today)
         r["status"] = ev["status"]
         # ALL reasons, not just the health axis. The scanner's notes field is
@@ -81,13 +94,13 @@ def score_rows(rows, today=None):
         # scored as WARN. They belong in the note, not in the status.
         if not parts:
             parts = list(ev.get("info") or [])
-        # NO FALLBACK TO THE INCOMING NOTE. It was written by the model this
-        # script exists to replace, and keeping it "when severity has nothing
-        # to say" is precisely when the two disagree: a FROZEN row carried
-        # `written by the old bash model` straight through the first cut of
-        # this function, because severity gives a frozen site no reasons and
-        # no info. A stale verdict surviving in the one place nothing
-        # overwrites is this project's recurring bug. Caught by a test.
+        # NO FALLBACK TO THE INCOMING NOTE, and the ERROR branch above is why
+        # that is safe. The scanner writes notes in two places: run diagnostics
+        # ("Environment preflight failed...") which land only on ERROR rows and
+        # never reach here, and the old model's VERDICTS, which must not
+        # survive. A fallback was tried and reverted the same hour: it kept the
+        # old verdict on exactly the rows nothing else overwrites -- OK and
+        # FROZEN -- which is where a stale answer is hardest to notice.
         r["notes"] = "; ".join(parts)
         out.append(r)
     return out
