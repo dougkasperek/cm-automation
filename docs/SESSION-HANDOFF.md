@@ -8,119 +8,74 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-26, the sending domain
+## PICK UP HERE — 2026-08-26, end of day
 
-**Nothing is broken and nothing is running.** One commit is local
-(`be1c857`); `origin/main` is at `3752d90`. All nine offline suites pass:
-ledger **234**, severity 127, nexcess 96, consent 76, nexcess-ssh **43**,
-worker-exposure 40, access-policies 46, wp-calls **48**, email-dns 58, plus
-`run-local-test.sh` at **60**.
+**Everything is pushed and published, and both were verified rather than
+assumed.** `HEAD` and `origin/main` are both `3e016a8`; the R2 object matches
+the committed `fleet.html`, md5 `11c4f4e8b365fa38d60b7050fbc6706b`. Working
+tree clean. Suites: ledger **274**, severity 127, nexcess 96, consent 76,
+nexcess-ssh 43, wp-calls 48, email-dns 58, worker-exposure 40,
+access-policies 46, run-local 60.
 
-Ledger, measured by scoring it today:
+Measured by scoring the ledger today:
 
-| source | run | measured |
-|---|---|---|
-| health (Pantheon) | `health-2026-08-26_1351` | 52 sites, 48 deep |
-| health (Nexcess SSH) | `health-nexcess-2026-08-25_1615` | 22 sites, 21 deep |
-| email-dns | `email-dns-2026-08-25_2002` | 70 of 78 |
-| consent | `consent-2026-08-25_2204` | 71 of 79 |
-| nexcess (control plane) | `nexcess-2026-08-25_1749` | 22 of 22 |
+| | |
+|---|---|
+| health | 2 CRIT / 52 WARN / 26 OK / 3 SKIP / 1 FROZEN, one excluded |
+| health-coverage scoreboard | 11 |
+| UNKNOWN | 0 |
+| sending domain measured | 59 of 75 |
+| latest runs | `health-2026-08-26_1351`, `health-nexcess-2026-08-26_1941`, `email-dns-2026-08-25_2002`, `consent-2026-08-25_2204`, `nexcess-2026-08-25_1749` |
 
-Health **2 CRIT / 52 WARN / 26 OK / 3 SKIP / 1 FROZEN**, one excluded.
-Health-coverage scoreboard **11**. UNKNOWN **0**. Sending domain measured on
-**39 of 75**. Published and verified by pulling the object back out of R2, md5
-`21e53c7484c89041812a025acc0a219a`, matching the committed `fleet.html`.
+### The three open questions, in the order I would take them
 
-### The one thing waiting
+1. **52 of 85 sites read WARN, and that is the real problem with the page.**
+   30 for a WordPress core update, 22 for a plugin backlog, 11 for having no
+   health evidence at all. CLAUDE.md already says a fact true of every site
+   ranks nothing, and a core update pending on 30 sites is close to that. This
+   is a severity question and it is worth more than anything left in the UI
+   list. No layout fixes a fleet where two thirds of rows are amber.
+2. **The consent sweep has had no baseline since 2026-08-22.** Its coverage
+   improved monotonically (38, 50, 69, 71) and `previous_run_of_same_source`
+   refuses any candidate whose measured set is a strict subset, so every
+   earlier run is refused. That source produces no change rows and no trend.
+   The rule is right; the consequence is not obviously wanted. Probable fix:
+   diff over the INTERSECTION of the two site sets and state how many were
+   excluded. Written up at the end of `docs/DO-THIS-NEXT.md`. Not built.
+3. **`lancastervillageny.gov` records the relay as its from address** —
+   `...@mail.smtp2go.com`. The site says `email.lancastervillageny.gov`. A
+   workbook correction, not a code change. It is the only disagreement of the
+   38 comparable sites.
 
-**Run the Nexcess SSH scan.** The seventh command is approved and in place and
-has never run:
+### What shipped today
 
-```
-./scripts/nexcess-fleet-healthcheck.sh --stamp "$(date -u +%Y-%m-%d_%H%M)"
-./scripts/fleet-ledger.py ingest --reports ./reports --history ./history
-./scripts/render-dashboard.py --out fleet.html --components-out components.html
-./scripts/publish-dashboard.sh
-```
+**The sending domain is measured, on both transports.** `wp option get
+postman_options`, gated on post-smtp appearing in the plugin list the scan
+already fetches. Four facts, stored beside the workbook's ruling. On Nexcess it
+is the seventh command, **approved by Doug Kasperek 2026-08-26** and recorded in
+the script header. 59 of 75 sites, 37 of 38 agreeing.
 
-It should take the sending-domain coverage from 39 of 75 to about **59 of 75**
-and give `hitsfoundation.org` a measured value. Check the email card afterwards
-for disagreements, and re-read the R2 object rather than trusting the publish
-exit code.
+**The UI revision.** `docs/clevermethod-fleet-ui-improvement-direction.md` was
+assessed and the parts worth taking applied: four exception tiles that filter
+the table, a change feed grouped by site, coverage as `48 checked · 4 not
+checked — of 52`, one sweep line under the masthead, folded methodology with
+qualification kept inline, and a **Top issues** table with a direction against
+the previous run. What was refused is written up in `docs/DO-THIS-NEXT.md`, each
+because it would recreate a row already in CLAUDE.md's table. The mockups and
+the forked renderer are deleted.
 
-### What was built
+### Five defects found, all in the bug table
 
-**The sending domain is measured, not trusted.**
-`wp option get postman_options`, gated on post-smtp appearing in the plugin
-list the scan already fetches. Four facts — `smtp_plugin_seen`,
-`smtp_from_domain`, `smtp_relay_host`, `smtp_transport` — stored beside the
-workbook's ruling, never over it. `docs/DATA-MODEL.md` section 2a.
+`ITEM 22 IS LIVE` from the detector built to catch item 22, three days after it
+was fixed. Eight false sending-domain disagreements, from comparing the From:
+domain against the sending domain. The coverage guard comparing two disjoint
+cohorts, which needed fixing in three places and the two fixed first were not
+the one ingest runs. post-smtp storing neither key the parser looked for. And
+`measuring post-smtp closes 6 of the 7 blanks`, which was my own claim and
+closes one.
 
-**On Nexcess it is the seventh command, approved by Doug Kasperek on
-2026-08-26**, recorded in the script header. That list is the only thing
-keeping a write-capable credential read-only, so the approval is the control.
-`test-nexcess-ssh.py` now checks the LIST rather than one command's absence:
-every command run is enumerated, every enumerated command is run, and the
-header's stated count matches the list under it. Both directions tested by
-breaking them.
+### Still a human task, unchanged
 
-### What was found, in the order it was found
-
-Seven defects, five of them in work written the same day.
-
-1. **The dashboard printed `that number is 0` as literal copy**, in the one
-   paragraph explaining that UNKNOWN and health-coverage are different
-   questions. It was wrong for part of 2026-08-25. Computed now.
-2. **CI committed one of the two pages it renders.** `persist-ledger.sh`
-   staged `fleet.html` only, so the repo's `components.html` was one health run
-   stale. The live page was right; only the review copy was wrong.
-3. **`7 site(s) have none recorded`** counted sites with no email row at all.
-   The sites that genuinely have none carry the truthy string `"unknown"`, so
-   none of them was counted. The real answer is 6. Both figures were 7.
-4. **`measuring post-smtp closes 6 of the 7 blanks`** — my own claim, made from
-   the inventory's host column. It closes **one**. Five of the six blanks run
-   no mailer at all; the blank workbook cell and the missing plugin are the
-   same fact.
-5. **post-smtp stores neither key the parser looked for.** It uses
-   `envelope_sender` and `sender_email`, not `from_email`, and `hostname` is
-   the empty string on an API transport, which jq's `//` does not treat as a
-   fallback. Both halves passed every test, because the mock had been built to
-   match the parser rather than the world.
-6. **The item-22 detector reported item 22 as live**, three days after item 22
-   was fixed, about the site that motivated the fix, exiting 2. Its own output
-   carried the contradiction two lines apart. The verdict is derived from the
-   record line now, and a new exit 3 covers "nothing fabricated, nothing
-   measured either".
-7. **The measured From: domain was compared against the SENDING domain**, and
-   the first fleet run reported eight disagreements. All eight were false.
-   Against the workbook's `from_address`, 37 of 38 agree.
-
-### Carried forward
-
-- **`lancastervillageny.gov`** records `...@mail.smtp2go.com` as its from
-  address in the workbook. That is the relay. The site says
-  `email.lancastervillageny.gov`. A workbook correction, not a code change.
-- **`hoffmanscheese`** has no row in the email check at all and sends through
-  `smtp.clevermethod.net`. It is also on the production-ruling list.
-- **The measurement cannot verify the sending domain** on most sites. 35 of 52
-  use `transport_type: mailgun_api`, where the envelope sender is set by
-  Mailgun and is not stored on the site. It confirms the From: ruling only, and
-  the card says so.
-
-### Next, undecided
-
-1. **The ruling pass.** 83 of 84 sites are `production: null` and exactly one
-   ruling has ever been recorded. One bulk worksheet, a handful of real
-   decisions, one commit. Do the pass, not the editor — reasoning at the end of
-   `docs/DO-THIS-NEXT.md`.
-2. **Fold Pantheon's inline publish into `_publish-dashboard.yml`.** Named as
-   the next tidy-up in `CLAUDE.md`; the other three workflows already call the
-   shared one.
-3. **Asana routing**, still the missing shared plumbing and still unbuilt.
-
-### Still a human task
-
-- **Push `be1c857`.**
 - **Send the Nexcess question-1 reply**, thread
   `thread::sJecUJQ2cS6EeEacWJKo2D0::`, drafted at the bottom of
   `docs/NEXCESS-SUPPORT.md`. Do not send the request/response headers they
