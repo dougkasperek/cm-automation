@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-26.** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-27.** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,7 +8,83 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-27, evening: the new page is built, not pushed, not published
+## PICK UP HERE — 2026-08-27, end of day: everything is pushed, published and deployed
+
+`HEAD` and `origin/main` are both `1af5401`. All four pages are live and were
+verified by reading them back from R2 and from the deployed Worker, not by
+trusting a success message. **The Worker was redeployed today** — the first
+time in this project's history that a route was added, so it is worth knowing
+that `wrangler deploy` from `ci/cloudflare` is a human action and the file
+means nothing until it runs.
+
+Live: `/` (evidence matrix), `/components`, **`/consent` (new)**,
+`/api/fleet-scan`.
+
+### The consent work, which is most of today
+
+The dashboard used to report `interstatewaste.com` as leaking four trackers.
+It is opt-out outside California, working exactly as designed, and the agency's
+own OneTrust audit records it compliant. **The sweep observed correctly and the
+rule drew a conclusion the observation could not support** — the cold load
+cannot tell a correctly configured opt-out site from an ungated one, because
+both produce an identical result.
+
+Four things fixed that, in order:
+
+1. **`consent_model` and `consent_managed` are inventory rulings**, seeded from
+   Nick Federico's `onetrust-audit.xlsx` and living beside `production`. A scan
+   can never supply them. `scripts/seed-consent-rulings.py` refuses to
+   overwrite a differing value without `--force`, which is what makes the
+   inventory the master rather than a mirror of a spreadsheet being retired.
+2. **Severity reads the model.** Opt-out firing on load is reported as
+   configured behaviour on the PLANNING axis, not a finding. Opt-in is a
+   finding. No model recorded gets its own code, `consent_trackers_unruled`,
+   because whether it is intended has not been established.
+3. **The gating sweep**, `scripts/consent/run-gating-sweep.mjs`. Clicks Reject
+   All and reloads: does the site actually stop? Its own ledger source,
+   `consent-gating`. First run 26 tooled sites, 23 tested, **2 still firing**.
+4. **Its own page**, `/consent`, on the dashboard's chrome, with an ours-only
+   toggle.
+
+### The finding worth acting on
+
+**MS Clarity still fires on `actioncarting.com` and `interstatewaste.com` after
+a real Reject All.** Both ours, both Interstate Waste. The workbook categorises
+`_clck`/`_clsk` as **C0002 Performance**; the rejection sets `C0002:0`; Clarity
+fires anyway. The workbook records both sites as respecting consent.
+
+**The Teams message to Nick is drafted and NOT sent.** It is in the transcript,
+not the repo — rewrite it from this paragraph if it is lost. This is the first
+thing the scanner has caught that the manual audit missed.
+
+### Settled today, so nobody re-opens it
+
+- **The 11 Lactalis OneTrust sites are NOT ours.** Nick's sheet of 15 is the
+  complete list. There is a signed OneTrust SOW for Lactalis American Group in
+  SharePoint and it is an integration project, not ongoing management. Written
+  up as B5 in `docs/DO-THIS-NEXT.md`, closed.
+- **7 sites that look like they leak do not.** Google at `gcs=G100` after a
+  rejection is the cookieless consent-mode ping and is correct. The first
+  fleet-wide run reported 9 failures where the answer was 2.
+
+### Next, in the order I would take it
+
+1. **Send Nick the Clarity message.** Human task.
+2. **B1 in `docs/DO-THIS-NEXT.md` is blocked on CONTENT, not code.** Victoria
+   Brake asked how to handle clients not paying for maintenance. The field is
+   an hour's work; the answer is a list nobody has. `client` and `owner` have
+   existed on all 85 records since the inventory was created and are recorded
+   on **zero** of them. Do not add a third empty column.
+3. **The consent page does not say where "ours" comes from** (B6). It prints a
+   ruling with the confidence of a measurement, and Doug has said the list
+   grows as clients onboard.
+4. **No severity codes for gating yet, deliberately.** Whether "Reject All,
+   then nothing fires" is the standard is Nick's question. The measurements are
+   true whatever he answers.
+
+---
+
+## Previously — 2026-08-27, evening: the new page is built, not pushed, not published
 
 **`render-dashboard.py --out` now writes the evidence-matrix page.** Doug chose
 it from three rendered concepts and said "ship it". Everything below the
