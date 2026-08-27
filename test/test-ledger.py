@@ -1653,6 +1653,42 @@ def _text(page):
 
 
 # ---------------------------------------------------------------------------
+# Top issues, with a direction, 2026-08-26
+#
+# "54 sites need attention" is correct and useless: 30 are behind on WordPress
+# core, 22 have a plugin backlog. The actionable unit is the CAUSE, and a
+# backlog with no direction is the same sentence whether it grew or shrank.
+# ---------------------------------------------------------------------------
+check("the largest causes are named near the top, not only at the bottom",
+      _page.find("Top issues") < _page.find("Still open, as of"),
+      "the cause list is only at the bottom")
+check("...and each carries a site count and a direction",
+      "Since the previous run" in _page
+      and ("unchanged at" in _page or "&uarr;" in _page or "&darr;" in _page))
+check("...and it routes to the full list rather than replacing it",
+      'href="#stillopen"' in _page and "id=stillopen" in _page)
+
+# THE GUARD THAT MATTERS. A trend across a change of instrument reports new
+# visibility as a regression -- the defect the baseline rule was written for
+# the day the consent sweep went headed. Where there is no comparable run, the
+# page must say so rather than draw an arrow from nothing.
+check("a cause with no comparable earlier run draws NO direction",
+      "no baseline" in _page,
+      "every cause claims a direction, including ones with nothing to compare")
+_sm2 = RD.build_model("./history", "./data/fleet-inventory.json",
+                      datetime.date(2026, 8, 23))
+_causes = {g["cause"] for g in _sm2["standing"]}
+check("...and the baseline map never invents a cause that is not open now",
+      set(_sm2["standing_was"]) <= _causes | set(_sm2["standing_was"]),
+      "baseline map is not keyed on causes")
+# Direction is only meaningful because MORE sites carrying a finding is worse.
+# Assert the arrows point that way, or the colour says the opposite of the
+# number.
+check("growth is drawn as the bad direction, shrinkage as the good one",
+      ".trendup{color:color-mix(in srgb,var(--bad)" in _page
+      and ".trenddown{color:color-mix(in srgb,var(--good)" in _page)
+
+# ---------------------------------------------------------------------------
 # The headline numbers open, and the change feed groups by site, 2026-08-26
 # ---------------------------------------------------------------------------
 # A summary number that cannot be opened is one the reader has to take on

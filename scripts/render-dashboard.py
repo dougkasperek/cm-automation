@@ -160,10 +160,25 @@ def build_model(history_dir, inventory_path, today):
         by_cohort.setdefault(key, []).append(r)
 
     latest_by_cohort, changes, standing = {}, [], []
+    # HOW MANY SITES CARRIED EACH FINDING LAST TIME. A backlog with no
+    # direction is not actionable: "32 sites behind on WordPress" is the same
+    # sentence whether it was 26 last week or 38, and those are opposite
+    # situations.
+    #
+    # NO GUARD IS NEEDED FOR AN INSTRUMENT CHANGE, and that is not luck.
+    # previous_run_of_same_source() already refuses a baseline taken with a
+    # different instrument -- rule 3, added the day the consent sweep went
+    # headed -- so when the browser changes `prev` is None and there is simply
+    # no trend to draw. A trend computed across instruments would report new
+    # visibility as a regression, which is the defect that rule exists for.
+    standing_was = {}
     latest = {}
     for (source, kind), rs in by_cohort.items():
         prev, curr = L.previous_run_of_same_source(rs, obs=obs)
         latest_by_cohort[(source, kind)] = curr
+        if prev is not None:
+            for g in L.standing(L.rows_for(obs, prev["run_id"]), today):
+                standing_was[g["cause"]] = len(g["sites"])
         # `latest[source]` stays the most recent run of the source overall, for
         # the freshness line and the provenance block. Facts come from
         # latest_by_cohort below, never from this.
@@ -357,6 +372,10 @@ def build_model(history_dir, inventory_path, today):
 
     return {
         "runs": runs, "latest": latest, "changes": changes, "standing": standing,
+        # cause -> how many sites carried it in the previous comparable run.
+        # A cause absent from this map has no baseline: either it is new, or
+        # the run before it was taken with a different instrument.
+        "standing_was": standing_was,
         "sites": sites, "coverage": coverage, "inventory_count": len(inv),
         "components": build_components(comp_rows, sites, inventoried,
                                        component_sites),
@@ -701,6 +720,8 @@ details.md p:last-child{margin-bottom:0}
 .chghead{font-size:13.5px;font-weight:600;color:var(--strong)}
 .chglist{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--ink2)}
 .chglist li{margin-bottom:3px}
+.trendup{color:color-mix(in srgb,var(--bad) 70%,var(--ink))}
+.trenddown{color:color-mix(in srgb,var(--good) 70%,var(--ink))}
 .rowcount{margin-left:auto;font-size:12px;color:var(--ink2)}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
 .tile{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);
@@ -1207,6 +1228,52 @@ def render(m):
         return ('<div class=wfbar><i class="%s" style="width:%d%%"></i></div>'
                 '<div class=wfcovlab><strong>%d of %d</strong> %s</div>'
                 % (tone, pct, known, of, e(label)))
+
+    # TOP ISSUES, WITH A DIRECTION. Added 2026-08-26.
+    #
+    # The headline tile reads "54 sites need attention" and is correct and
+    # useless: 30 of them are behind on WordPress core and 22 have a plugin
+    # backlog. That is a maintenance backlog, not an exception list, and no
+    # layout makes 54 amber rows actionable. What IS actionable is the cause
+    # and its direction -- "45 sites have no consent tooling, up 6" names a
+    # job and says whether it is being won.
+    #
+    # These are the same groups rendered under "Still open" further down, cut
+    # to the largest few. The full list stays where it is; this is the way in.
+    _top = sorted(m["standing"], key=lambda g: -len(g["sites"]))[:6]
+    if _top:
+        A("<h2>Top issues</h2>")
+        A('<p class=sub style="margin:-4px 0 10px">Grouped by cause rather '
+          'than by site, because one decision usually covers the whole group. '
+          '<b>Since the previous run</b> compares against the last run of the '
+          'same tool taken with the same instrument &mdash; where there is no '
+          'such run, no direction is drawn rather than one being guessed.</p>')
+        A('<div class="card tablewrap"><table id=topissues>'
+          "<tr><th>Issue</th><th>Kind</th><th class=num>Sites</th>"
+          "<th>Since the previous run</th></tr>")
+        for g in _top:
+            n = len(g["sites"])
+            was = m["standing_was"].get(g["cause"])
+            if was is None:
+                trend = ('<span class=quiet title="No comparable earlier run: '
+                         'the cause is new, or the run before it was taken '
+                         'with a different instrument.">no baseline</span>')
+            elif n > was:
+                trend = ('<b class=trendup>&uarr; %d</b> '
+                         '<span class=quiet>was %d</span>' % (n - was, was))
+            elif n < was:
+                trend = ('<b class=trenddown>&darr; %d</b> '
+                         '<span class=quiet>was %d</span>' % (was - n, was))
+            else:
+                trend = '<span class=quiet>unchanged at %d</span>' % was
+            A("<tr><td>%s</td><td>%s</td><td class=num><b>%d</b></td>"
+              "<td>%s</td></tr>"
+              % (e(g["cause"]), chip(g["axis"], AXIS_TONE.get(g["axis"], "info")),
+                 n, trend))
+        A("</table></div>")
+        A('<p class=quiet style="margin:6px 0 0">'
+          '<a href="#stillopen">All %d open findings, with the sites in '
+          'each</a>.</p>' % len(m["standing"]))
 
     A("<h2>The suite</h2>")
     A('<p class=sub style="margin:-4px 0 10px">One card per question. A site has '
@@ -1786,7 +1853,7 @@ def render(m):
     # true since when? These are findings that are open as of the most recent
     # run of each tool, and the section above it is what CHANGED in that run.
     # The pairing only reads if both say what they are relative to.
-    A("<h2>Still open, as of the latest run of each tool</h2>")
+    A('<h2 id=stillopen>Still open, as of the latest run of each tool</h2>')
     A('<p class=sub style="margin:-4px 0 10px">Findings that were already true '
       'and still are. Nothing here is new in this run. New movement is '
       'under <em>What changed</em>. Grouped by cause rather than by site: one '

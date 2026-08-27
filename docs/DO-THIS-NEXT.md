@@ -513,3 +513,24 @@ the bulk is: above the site table the page carries about 2,250 visible words;
 the table itself carries 2,277, and "Still open" and "Sites that do not
 reconcile" carry 805 between them. This revision reorganises the top of the
 page. It does not shorten the page.
+
+### Top issues, and the source that has no baseline
+
+Added 2026-08-26 from the second concept. The largest standing findings are
+now named near the top with a direction against the previous comparable run.
+The full list stays where it was; this is the way in.
+
+**It surfaced a real limitation. The consent sweep has no baseline at all.**
+`previous_run_of_same_source` refuses a candidate whose measured site set is a
+strict subset of the current run's, which is right -- diffing a 38-site run
+against a 54-site one reports coverage gain as fleet change. But consent
+coverage has improved monotonically (38 -> 50 -> 69 -> 71), so *every* earlier
+run is a subset and none is comparable. That source therefore produces no
+change rows and no trend, and has not since 2026-08-22.
+
+That is honest rather than wrong, and it is not obviously the behaviour we
+want: a source that keeps getting better at seeing the fleet never gets to
+report what changed. The fix is not to relax the rule -- it exists for a
+measured reason. It is probably to diff over the INTERSECTION of the two
+site sets, which compares like with like on the sites both runs measured and
+says how many were excluded. Not built. Decide before building.
