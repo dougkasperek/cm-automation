@@ -90,3 +90,36 @@ is always a real list of site ids and any per-site extra lives in `detail`.
 
 Found by rendering the page and looking at it, which is the last step of the
 dataviz procedure and the one most easily skipped.
+
+### And a second, 2026-08-27
+
+Two standing groups were added — a pending WordPress core update and a plugin
+backlog — because the page had 52 amber rows and an action list that never
+said why. `standing()` emitted twelve causes and neither of those was among
+them, while 40 of the 52 WARN sites were WARN for exactly those two facts.
+
+The groups rendered **twice**: `Plugin updates pending — 17 sites` and, three
+rows down, `Plugin updates pending — 7 sites`. The truth is 24. The renderer
+calls `standing()` once per COHORT and extends a flat list, so any cause that
+both health cohorts can raise appears once per cohort with the fleet split
+between them — and each action line quotes its own half as the total, which is
+how one of them came to read `268 update(s) across 17 site(s)`.
+
+The twelve existing groups never collided. That is luck, not design: upstream
+commits, backup age and PHP version are facts only the Pantheon cohort
+carries, so no group had ever been raisable by both. The first group that was
+raisable by both duplicated immediately.
+
+Standing is now unioned **per source** and scored once. Per source, not across
+all sources: rows are keyed on site, and 46 sites carry both a health row and
+an email row, so a flat union would have silently kept one of each pair and
+dropped the other — a worse bug than the one being fixed, and a silent one. An
+assert refuses to guess if two cohorts of one source ever do overlap.
+
+`standing_was`, the baseline behind the "since the previous run" arrow, had the
+same defect one layer down: it keyed on cause, so the second cohort's count
+overwrote the first. A 24-site group whose baseline was also 24 would have
+rendered `↑ 17 was 7`. It is accumulated per source too.
+
+Found the same way as the first one: by rendering the page and reading the
+rows.

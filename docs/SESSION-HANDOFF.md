@@ -8,7 +8,77 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-26, end of day
+## PICK UP HERE — 2026-08-27
+
+**Open question 1 from yesterday is answered, and the answer was not the one
+the question assumed.** The premise was that 52 of 85 WARN is a severity
+problem and `core_update` should be demoted the way `upstream_pending` was.
+Measured today, that is wrong: `upstream_pending` was demoted because it was
+never zero, and `wp_core_update` reads up-to-date on **36 of 68** measurable
+sites against 32 pending. It discriminates, so it stays a per-site WARN.
+
+The real defect was next to it. `standing()` emitted twelve causes and **not
+one of them was a core update or a plugin backlog**, which is what 40 of the 52
+WARN sites are WARN for. The table was amber and the action list beside it was
+silent about why. Two groups added, one per core target version plus one for
+the backlog. Standing findings: 14 -> 17.
+
+Three defects found doing it, all in CLAUDE.md's table. The plugin group
+rendered **twice** (17 sites and 7) because `standing()` runs per cohort and
+both health cohorts can raise it; the twelve existing groups had never collided
+only because they read Pantheon-only facts. `standing_was` had the same bug, so
+the trend arrow would have read `was 7` on a 24-site group. And the first
+action line asserted "one release behind" over a site on 7.0.2, two patches
+back.
+
+Suites: ledger **288** (was 274), severity 127, nexcess 96, consent 76,
+nexcess-ssh 43, wp-calls 48, email-dns 58, worker-exposure 40,
+access-policies 46, run-local 60.
+
+**Not pushed, not published.** Both are human actions. `git log origin/main..`
+to see what is waiting.
+
+### State, measured today by scoring the ledger
+
+| | |
+|---|---|
+| health | 2 CRIT / 52 WARN / 26 OK / 3 SKIP / 1 FROZEN, one excluded |
+| health-coverage scoreboard | 11 |
+| standing findings | 17 |
+| core update pending | 32 sites — 21 want 7.0.4, 11 want 7.1 |
+| plugin backlog (>= 10) | 24 sites, 378 updates, worst `hoffmanscheese` at 27 |
+
+### What is still open
+
+1. **A fresh Pantheon scan was started 2026-08-27 and its result is not in
+   this document.** It runs about 2.4 minutes per site over 52 sites. If it
+   finished, ingest it and re-render; if it did not, nothing is lost — the
+   ledger is append-only and the numbers above come from `health-2026-08-26_1351`.
+2. **The consent baseline, unchanged from yesterday.** No baseline since
+   2026-08-22; the source produces no change rows and no trend. Probable fix is
+   to diff over the INTERSECTION of the two site sets and state how many were
+   excluded. Written up at the end of `docs/DO-THIS-NEXT.md`. Not built.
+3. **`lancastervillageny.gov` records the relay as its from address.** A
+   workbook correction, not a code change.
+4. **The Top issues table is capped at six by size**, so the two core-update
+   groups (21 and 11) sit below it while the 32 sites they cover are the
+   largest single driver of WARN. Splitting by target is still right — the
+   action line is only honest when it is one decision — but whether the ranking
+   should know that two groups share a cause is an open question. Not built,
+   and deliberately not guessed at.
+
+### Still a human task, unchanged
+
+- **Send the Nexcess question-1 reply**, thread
+  `thread::sJecUJQ2cS6EeEacWJKo2D0::`, drafted at the bottom of
+  `docs/NEXCESS-SUPPORT.md`. Do not send the request/response headers they
+  asked for; the challenge was our own missing `post_handshake_auth`.
+- **Check the `github-deploy-[removed]` token scope** in the Cloudflare
+  dashboard. Re-scope, do not delete.
+
+---
+
+## Previously — 2026-08-26, end of day
 
 **Everything is pushed and published, and both were verified rather than
 assumed.** `HEAD` and `origin/main` are both `3e016a8`; the R2 object matches

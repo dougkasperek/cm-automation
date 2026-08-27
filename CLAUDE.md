@@ -281,6 +281,9 @@ do not add a total.
 | `34 sites send through smtp.clevermethod.net` | correct, and typed. Third hardcoded number found on this page in one day. Computed 2026-08-26 |
 | the dashboard's `no site is UNKNOWN on health and that number is 0` | it was the literal characters `0`, typed on 2026-08-19 when the consent sweep had just taken UNKNOWN to zero, in a sentence explaining that UNKNOWN and coverage are different questions. It was **wrong on 2026-08-25**: `app.eastauroracc.com` arrived from the Nexcess API, no source had seen it, UNKNOWN was 1 and the page said 0. The SSH scan reached it the same day and took it back to 0, which is the worst case — a hardcoded claim that is usually right is the one nobody rereads. Computed 2026-08-26, across production and non-production alike, with a test that was verified to fail |
 | `16 commits are unpushed, that is the first thing to do` | everything was pushed. Inferred from the rule that `push` is a human action and repeated four times without checking. `git status --short` reports working-tree changes ONLY and says nothing about ahead/behind; `git ls-remote origin main` is the check that talks to the remote |
+| the standing list explains why the fleet is amber | it never mentioned the two facts that COLOUR it. Measured 2026-08-27: 52 of 85 sites read WARN and 40 of those were WARN for a core update, a plugin backlog, or both, while `standing()` emitted twelve causes and named neither. The table was amber and the action list beside it was silent on why. The tempting fix was to demote `core_update` the way `upstream_pending` was demoted, and the measurement REFUSES it: `upstream_pending` went because it was never zero, and `wp_core_update` reads up-to-date on 36 of 68 measurable sites against 32 pending. It discriminates. The gap was the grouped view, not the threshold |
+| `Plugin updates pending: 17 sites`, and a second row saying `7 sites` | 24. `standing()` is called once per COHORT, so a cause both health cohorts can raise renders twice with the fleet split across the two rows, each action line quoting its own half as the total (`268 update(s) across 17 site(s)`). The twelve existing groups never collided, but only by luck — upstream, backup and PHP read facts only the Pantheon cohort carries. Same family as the cohort split itself, and the fourth place that needed the same fix. Now unioned per SOURCE and scored once; a flat union across sources would have been worse, since 46 sites carry both a health row and an email row and one of each pair would have been dropped silently. The baseline had it too: `standing_was` keyed on cause, so the second cohort overwrote the first and a 24-site group whose baseline was 24 would have drawn `was 7` |
+| `One update decision covers all 21 site(s). Being one release behind...` | 20 of the 21 were one behind and `valbresocheese.com` was on 7.0.2, two patches back. A blanket distance nobody had measured, in an action line written the same hour. What is actually true of the group is the TARGET, so that is what it claims now; the per-site distance sits in `detail`. Caught by reading the rendered row, not the code |
 
 One of them was our own diagnostic: `probe` printed one word for a DNS
 failure, a TLS trust failure and a dead host alike, and sent Doug looking at
@@ -532,15 +535,9 @@ Prefer short sentences and short paragraphs. State the important point first.
 
 Avoid literary phrasing, rhetorical flourishes, metaphors, clever turns of phrase, dramatic framing, and sophisticated-sounding prose when plain language will do.
 
-Do not narrate your reasoning or make observations sound more profound than they are.
-
 Avoid phrases such as “the thing worth your attention,” “worth saying plainly,” “the argument for,” “what this really tells us,” or similar editorialized constructions.
 
 Write like an experienced colleague explaining something clearly and efficiently.
-
-Use technical terminology when it adds precision, but otherwise prefer ordinary language.
-
-Be concise, but do not omit important information.
 
 Do not add introductory or concluding prose unless it adds useful information.
 

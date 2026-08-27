@@ -635,6 +635,70 @@ check("the per-site extra lives in `detail`, not smuggled into the id",
       "900d" in g["detail"]["a"])
 check("a non-numeric backup value is not read as bad", L._backup_bad("n/a") is False)
 
+# ------------------------------------ 3b. the two facts that colour the fleet
+# Added 2026-08-27. Measured that day: 52 of 85 sites read WARN and 40 of those
+# were WARN for a core update, a plugin backlog, or both, while standing()
+# emitted twelve causes and named neither. The table was amber and the list
+# beside it could not say why.
+print("\n-- core update and plugin backlog have standing groups --")
+
+_cu = to_obs([row("a", wp_checked=True, wp_version="7.0.3", wp_core_update="7.0.4"),
+              row("b", wp_checked=True, wp_version="7.0.3", wp_core_update="7.0.4"),
+              row("c", wp_checked=True, wp_version="7.0.4", wp_core_update="7.1"),
+              row("d", wp_checked=True, wp_version="7.1",   wp_core_update="up-to-date")], "r")
+_g = [g for g in L.standing(_cu, TODAY) if "available, not applied" in g["cause"]]
+check("a pending core update produces a standing group",
+      len(_g) == 2, "%d group(s): %s" % (len(_g), [x["cause"] for x in _g]))
+# ONE GROUP PER TARGET. Lumping 7.0.4 and 7.1 together would produce an action
+# line claiming one decision covers sites that need two different releases.
+_by = {g["cause"]: g for g in _g}
+check("one group per target version, not one group for 'core updates'",
+      "WordPress 7.0.4 available, not applied" in _by
+      and "WordPress 7.1 available, not applied" in _by, str(sorted(_by)))
+# .get() rather than [] on purpose: a regression here must report FAIL, not
+# raise a KeyError that aborts the run and hides every test below it.
+check("each group lists only the sites wanting that target",
+      _by.get("WordPress 7.0.4 available, not applied", {}).get("sites") == ["a", "b"]
+      and _by.get("WordPress 7.1 available, not applied", {}).get("sites") == ["c"],
+      str([g["sites"] for g in _g]))
+check("an up-to-date site is in no core group",
+      _g and all("d" not in g["sites"] for g in _g))
+check("core backlog is filed as DRIFT, not RISK",
+      _g and all(g["axis"] == "DRIFT" for g in _g), str([g["axis"] for g in _g]))
+check("the per-site current version lives in `detail`",
+      _by.get("WordPress 7.0.4 available, not applied", {}).get("detail", {}).get("a") == "on 7.0.3")
+
+# UNKNOWN IS NEVER FOLDED INTO up-to-date. A site whose core status could not be
+# read must not silently drop out of the backlog as though it were current.
+_unk = to_obs([row("a", wp_checked=True, wp_core_update=L.UNKNOWN),
+               row("b", wp_checked=True, wp_core_update=None)], "r")
+check("an unreadable core status raises no core-update group",
+      not [g for g in L.standing(_unk, TODAY) if "available, not applied" in g["cause"]])
+
+_pb = to_obs([row("a", wp_checked=True, plugin_updates=L.SEV.PLUGIN_WARN_COUNT),
+              row("b", wp_checked=True, plugin_updates=L.SEV.PLUGIN_WARN_COUNT + 7),
+              row("c", wp_checked=True, plugin_updates=L.SEV.PLUGIN_WARN_COUNT - 1)], "r")
+_g = [g for g in L.standing(_pb, TODAY) if g["cause"].startswith("Plugin updates pending")]
+check("a plugin backlog produces exactly one standing group",
+      len(_g) == 1, "%d" % len(_g))
+check("the backlog group holds only sites at or above the threshold",
+      _g and _g[0]["sites"] == ["a", "b"], str(_g[0]["sites"] if _g else None))
+check("plugin backlog is filed as DRIFT", _g and _g[0]["axis"] == "DRIFT")
+check("the backlog group names the worst site by count",
+      _g and "b" in _g[0]["action"] and str(L.SEV.PLUGIN_WARN_COUNT + 7) in _g[0]["action"],
+      _g[0]["action"] if _g else None)
+# The threshold must come from severity, not a second copy. Two numbers that
+# have to agree is how the page reported a site past PHP end-of-support while
+# its severity row read fine.
+check("the backlog threshold is read from severity, not redeclared",
+      _g and str(L.SEV.PLUGIN_WARN_COUNT) in _g[0]["cause"], _g[0]["cause"] if _g else None)
+_none = to_obs([row("a", wp_checked=True, plugin_updates=0)], "r")
+check("no site over the threshold means no backlog group",
+      not [g for g in L.standing(_none, TODAY) if g["cause"].startswith("Plugin updates")])
+_absent = to_obs([row("a", wp_checked=True, plugin_updates=L.UNKNOWN)], "r")
+check("an unmeasured plugin count is not read as a backlog, nor as zero",
+      not [g for g in L.standing(_absent, TODAY) if g["cause"].startswith("Plugin updates")])
+
 # ------------------------------------------------- 4b. ingest, the write path
 # Every assertion in this block is a regression test for a defect that shipped.
 # The ledger is the one asset in this repo that cannot be regenerated, so the

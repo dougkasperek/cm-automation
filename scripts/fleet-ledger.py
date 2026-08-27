@@ -1493,6 +1493,75 @@ def standing(curr_rows, today):
             }
         )
 
+    # THE TWO FACTS THAT COLOUR THE FLEET, AND HAD NO GROUP HERE UNTIL
+    # 2026-08-27. Measured that day: 52 of 85 sites read WARN, and 40 of those
+    # 52 were WARN for a core update, a plugin backlog, or both. `standing()`
+    # emitted twelve causes and not one of them was either. So the table showed
+    # 52 amber rows and the "what to do about it" list beside it never said
+    # why -- the page could not explain its own colour.
+    #
+    # NOT a severity change. The per-site rules in severity.py are left alone,
+    # deliberately: the obvious-looking fix was to demote `core_update` the way
+    # `upstream_pending` was demoted, and the measurement refuses it. That rule
+    # went because it was never zero -- every site carried one, so OK was
+    # unreachable. `wp_core_update` is not that shape: 36 of 68 measurable
+    # sites read up-to-date against 32 pending. It discriminates, so it stays a
+    # per-site WARN. What was missing was the grouped view, not a threshold.
+    #
+    # ONE GROUP PER TARGET VERSION, not one group for "core updates". The value
+    # of the `upstream_pending` group is its action line -- one merge decision
+    # covers all N sites -- and that framing is only honest when it really is
+    # one decision. On 2026-08-27 the 32 sites split 21 wanting 7.0.4 and 11
+    # wanting 7.1. Those are two batches, so they are two rows.
+    core_by_target = {}
+    for s, r in curr_rows.items():
+        target = r.get("wp_core_update")
+        if target in (None, UNKNOWN, "up-to-date", "n/a"):
+            continue
+        core_by_target.setdefault(target, []).append((s, r.get("wp_version")))
+    for target in sorted(core_by_target):
+        batch = sorted(core_by_target[target])
+        groups.append(
+            {
+                "cause": "WordPress %s available, not applied" % target,
+                "axis": "DRIFT",
+                "sites": [s for s, _ in batch],
+                "detail": dict((s, "on %s" % (v if v not in (None, UNKNOWN) else "an unread version"))
+                               for s, v in batch),
+                # "One release behind" is NOT asserted here, and the first
+                # render is why: 20 of the 21 sites wanting 7.0.4 were on
+                # 7.0.3, and valbresocheese.com was on 7.0.2. A blanket "one
+                # behind" would have been a confident-looking value standing in
+                # for a distance nobody measured. What IS true of the whole
+                # group is the target, so that is what the action claims; how
+                # far each site has to travel is in `detail`.
+                "action": "One update decision covers all %d site(s), which all want the same release. A pending update is a maintenance backlog, not an incident -- the sites BELOW the security floor are a separate finding and score CRIT."
+                % len(batch),
+            }
+        )
+
+    # Threshold read from severity, never redeclared. Same reason PHP_SECURITY_EOL
+    # is: two copies of a number that must agree is how the page came to report a
+    # site past PHP end-of-support while its severity row read fine.
+    backlog = sorted(
+        (s, r["plugin_updates"])
+        for s, r in curr_rows.items()
+        if isinstance(r.get("plugin_updates"), int)
+        and r["plugin_updates"] >= SEV.PLUGIN_WARN_COUNT
+    )
+    if backlog:
+        worst = max(backlog, key=lambda x: x[1])
+        groups.append(
+            {
+                "cause": "Plugin updates pending, %d or more" % SEV.PLUGIN_WARN_COUNT,
+                "axis": "DRIFT",
+                "sites": [s for s, _ in backlog],
+                "detail": dict((s, "%d pending" % n) for s, n in backlog),
+                "action": "%d update(s) across %d site(s); the largest single backlog is %s at %d. Not one decision -- these are per-site and need scheduling."
+                % (sum(n for _, n in backlog), len(backlog), worst[0], worst[1]),
+            }
+        )
+
     nobackup = sorted(
         (s, r["db_backup_age_days"])
         for s, r in curr_rows.items()

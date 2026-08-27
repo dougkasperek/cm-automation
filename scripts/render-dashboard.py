@@ -172,25 +172,66 @@ def build_model(history_dir, inventory_path, today):
     # no trend to draw. A trend computed across instruments would report new
     # visibility as a regression, which is the defect that rule exists for.
     standing_was = {}
+    # source -> {site_id: row}, accumulated across that source's cohorts and
+    # scored once. See the comment at the assert below.
+    standing_rows = {}
+    standing_prev = {}
     latest = {}
     for (source, kind), rs in by_cohort.items():
         prev, curr = L.previous_run_of_same_source(rs, obs=obs)
         latest_by_cohort[(source, kind)] = curr
+        # The BASELINE is accumulated per source for the same reason the current
+        # rows are. Assigning per cohort meant the second cohort's count
+        # overwrote the first under the same key, so a 24-site backlog whose
+        # baseline was 24 would show "was 7" and draw an arrow claiming the
+        # fleet had tripled. A trend is worse than no trend when it is wrong.
         if prev is not None:
-            for g in L.standing(L.rows_for(obs, prev["run_id"]), today):
-                standing_was[g["cause"]] = len(g["sites"])
+            for site_id, prow in L.rows_for(obs, prev["run_id"]).items():
+                standing_prev.setdefault(source, {})[site_id] = prow
         # `latest[source]` stays the most recent run of the source overall, for
         # the freshness line and the provenance block. Facts come from
         # latest_by_cohort below, never from this.
         if source not in latest or curr["run_id"] > latest[source]["run_id"]:
             latest[source] = curr
         rows = L.rows_for(obs, curr["run_id"])
-        standing.extend(L.standing(rows, today))
+        # STANDING IS COMPUTED PER SOURCE, NOT PER COHORT -- collected here,
+        # evaluated once below. Calling standing() per cohort emits one group
+        # per cohort, so a cause that BOTH health cohorts can raise appears
+        # twice on the page with the fleet split across the two rows. Found
+        # 2026-08-27 the moment a group existed that both could raise: the
+        # plugin backlog rendered as "17 sites" and "7 sites" instead of 24,
+        # each with its own action line quoting its own half as the total.
+        #
+        # The existing groups did not collide, but only by luck -- upstream,
+        # backup and PHP read facts only the Pantheon cohort carries. That is
+        # not a property to rely on; it is the same near-miss as the cohort
+        # split itself.
+        #
+        # UNION WITHIN A SOURCE ONLY. Rows are keyed on site, and across
+        # sources those keys collide hard -- 46 sites carry both a health row
+        # and an email row today -- so a flat union over every cohort would
+        # silently drop one of each pair. Within a source the cohorts are
+        # disjoint by construction, and the assert below refuses to guess if
+        # that ever stops being true.
+        for site_id, row in rows.items():
+            if site_id in standing_rows.setdefault(source, {}):
+                raise SystemExit(
+                    "two cohorts of source %r both carry %s.\n"
+                    "standing() would silently keep one row and drop the other.\n"
+                    "Decide which cohort owns the site before rendering."
+                    % (source, site_id))
+            standing_rows[source][site_id] = row
         if prev is not None:
             for c in L.diff_runs(L.rows_for(obs, prev["run_id"]), rows, today, inv):
                 c["source"] = source
                 c["against"] = prev["run_id"]
                 changes.append(c)
+
+    for source in sorted(standing_rows):
+        standing.extend(L.standing(standing_rows[source], today))
+    for source in sorted(standing_prev):
+        for g in L.standing(standing_prev[source], today):
+            standing_was[g["cause"]] = len(g["sites"])
 
     order = {c: i for i, c in enumerate(L.CLASS_ORDER + ["RULE_CHANGE"])}
     changes.sort(key=lambda c: (order.get(c["class"], 99), c["site"], c["fact"]))
