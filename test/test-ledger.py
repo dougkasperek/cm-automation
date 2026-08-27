@@ -2141,39 +2141,53 @@ check("no two catalogue entries collide on lowercase slug and type", len(_keys) 
 # all queried at the SENDING domain, and for 34 sites that is
 # smtp.clevermethod.net rather than their own.
 # ---------------------------------------------------------------------------
+# SINCE 2026-08-27 the page is built in the browser from a JSON model the
+# renderer embeds (docs/DASHBOARD-V3.md), so the cells are not in the file.
+# The property is asserted against the MODEL here, and against the rendered
+# DOM in test/test-page.mjs. The assertions below used to match the old
+# page's <th>/<td> markup; each is re-stated as the property it protected.
 import io as _io
 import re as _re
 with _io.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
                            "fleet.html"), encoding="utf-8") as _fh:
     _html = _fh.read()
+_pm = _re.search(r'<script type="application/json" id="fleet-data">(.*?)</script>',
+                 _html, _re.S)
+_pd = json.loads(_pm.group(1).replace("<\\/", "</")) if _pm else {}
+_pjs = _html.split('<script>', 1)[1] if '<script>' in _html else ""
 
-check("the fleet table names the domain each site sends from",
-      "<th>Sends from</th>" in _html)
-# TAG-AGNOSTIC. This matched "Sends from</strong>" and broke when the
-# sentence moved into a folded block that marks up with <b>. The guard is
-# that the card POINTS AT the column -- it once denied the column existed --
-# and that claim is about the text, not the element wrapping it.
-check("...and the email card points at that column instead of denying it exists",
-      "carries the per-site answer in its Sends from" in _text(_html)
-      or "Sends from</strong>" in _html)
-check("the card no longer claims email has no column in the fleet table",
-      "no column in the fleet table below" not in _html)
-check("the card says the sending domain is usually NOT the site's own",
-      "sends from" in _html.lower() and "smtp.clevermethod.net" in _html)
+check("the page embeds its model",
+      bool(_pd) and _pd.get("inventory_count") == len(_pd.get("sites", [])),
+      "no embedded model, or site count != inventory count")
+# The sending domain is on every site record and the page has a column for it.
+check("every site record carries the domain it sends from (the ruling)",
+      bool(_pd) and all("recorded_from_domain" in s["f"] for s in _pd["sites"]))
+check("...and the measured sending domain beside it",
+      bool(_pd) and all("smtp_from_domain" in s["f"] for s in _pd["sites"]))
+check("the page has a sending-domain column that reads BOTH",
+      "key: 'from'" in _pjs and "s.f.smtp_from_domain" in _pjs
+      and "s.f.recorded_from_domain" in _pjs)
+check("the sending domain is usually NOT the site's own",
+      bool(_pd) and sum(1 for s in _pd["sites"]
+                        if s["f"].get("recorded_from_domain") == "smtp.clevermethod.net") > 20)
 
 # The absence sentinel is the STRING "unknown", not None. A falsiness test
 # rendered `unknown` into the cell as though it were a domain, on six rows.
-check("no row renders the unknown sentinel as a sending domain",
-      "<code>unknown</code>" not in _html)
-check("a site with no recorded sending domain says so rather than blank",
-      "not recorded" in _html)
+# The page's value renderer must treat all three absence shapes as absences.
+check("the page renders the string 'unknown' as an absence, never a value",
+      "if (v === 'unknown') return 'unknown';" in _pjs
+      and "if (v === 'n/a') return 'na';" in _pjs
+      and "if (v === null || v === undefined) return 'none';" in _pjs)
+check("a site with no recorded sending domain says 'not recorded', not blank",
+      "'not recorded'" in _pjs)
+# THE ONE RULE THIS PAGE EXISTS FOR, stated as a string the page must never
+# contain as a headline. "all good" was true of nothing on the day the banner
+# was designed and will be false for months; the honest sentence is scoped.
+check("the page never says 'all good'",
+      "all good" not in _html.lower(), "found 'all good' in fleet.html")
 
-# Column alignment: every row must carry exactly as many cells as there are
-# headers. Adding a th without a td silently shifts every column after it.
-_hdrs = _html.split("<table id=fleet>")[1].split("</tr>")[0].count("<th")
-_rows = _re.findall(r"<tr data-site=.*?</tr>", _html, _re.S)
-check("every fleet row has one cell per column header",
-      _rows and all(r.count("<td") == _hdrs for r in _rows))
+# Column alignment moved to test/test-page.mjs, which renders the DOM and
+# counts cells per row against the header row.
 
 # ---------------------------------------------------------------------------
 # The Nexcess join key, 2026-08-25.

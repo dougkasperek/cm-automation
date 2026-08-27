@@ -476,6 +476,14 @@ def build_model(history_dir, inventory_path, today):
                          None))
             and len(by_cohort.get(("consent", "consent"), [])) > 1),
         "generated": today.isoformat(),
+        # The raw inventory records and the observation rows, for page_data().
+        # The page needs attestations, DNS host and decommission flags (from the
+        # inventory) and per-site history series (from the observations); both
+        # are already in memory here, and reading them again from disk in a
+        # second place is how two readers of one file come to disagree.
+        "inventory": inv,
+        "obs": obs,
+        "today": today,
     }
 
 
@@ -3026,12 +3034,259 @@ def render_components(m):
     return "\n".join(o)
 
 
+# ---------------------------------------------------------------------------
+# THE PAGE, since 2026-08-27: the evidence matrix with a schedule tab.
+# ---------------------------------------------------------------------------
+# Chosen from three rendered concepts (see _scratch/redesign/ and
+# docs/DASHBOARD-V3.md). The markup is built in the browser from a JSON model
+# this function embeds; the Python side decides WHAT is true, the page decides
+# only how to group and count it. Nothing in scripts/dashboard/page.js computes
+# a status: every status and reason is severity.py's, read from the JSON.
+#
+# Why the model is embedded rather than fetched: the page must open from
+# file:// and from behind Access with no second request, and a page whose data
+# arrives separately can disagree with the page around it. One file, one model.
+#
+# render() below it is the previous page, kept for ONE cycle behind
+# --legacy-out as the fallback if this one is wrong in production. Retire it,
+# and the tests that pin its markup, once the new page has been published and
+# read for a week.
+
+PAGE_DIR = os.path.join(HERE, "dashboard")
+
+# Facts the page carries per site. A superset of EMIT_FACTS: the feed is a
+# contract for other consumers; the page is the one consumer that wants every
+# family, email DNS included. Absence is preserved as-is -- None means the
+# source never wrote the site, "unknown" means it asked and got no answer,
+# "n/a" means the scan does not ask there -- and page.js renders each of the
+# three as an absence token, never as a value.
+PAGE_FACTS = EMIT_FACTS + (
+    "components_checked",
+    "smtp_plugin_seen", "smtp_from_domain", "smtp_relay_host", "smtp_transport",
+    "nexcess_app", "nexcess_env", "nexcess_package", "nexcess_temp_domain",
+    "spf_present", "spf_all_qualifier", "spf_checked_at", "dkim_present",
+    "dkim_selector", "dmarc_at_from_present", "dmarc_at_from_policy",
+    "dmarc_at_sending_present", "dmarc_at_sending_policy",
+    "dmarc_via_org_fallback", "relaxed_aligned", "recorded_from_domain",
+    "consent_rule", "consent_note")
+
+# Workbook attestations the component inventory can check, and the plugin
+# families that count as evidence. "Yes - Pantheon" / "Yes - CF WAF" name a
+# platform control, which no plugin list can confirm or deny, so those are
+# reported as not checkable rather than as absent.
+ATTESTATION_SLUGS = {
+    "hide_login": {"wps-hide-login"},
+    "wp_2fa": {"wp-2fa", "wp-defender", "wordfence", "two-factor"},
+    "activity_log": {"wp-security-audit-log"},
+    "xmlrpc_disabled": {"disable-xml-rpc", "disable-xml-rpc-api", "disable-xmlrpc"},
+}
+ATTESTATION_LABEL = {
+    "hide_login": "Login URL hidden", "wp_2fa": "2FA",
+    "activity_log": "Activity log", "xmlrpc_disabled": "XML-RPC disabled",
+    "single_cm_user": "Single CM user", "keeper_password": "Password in Keeper",
+    "wp2shell_remedied": "wp2shell remedied",
+}
+
+
+def _attestations(site_id, rec, inventoried, active_slugs):
+    out = []
+    for k, v in (rec.get("attestations") or {}).items():
+        val = v.get("value")
+        ev = "n/a"
+        if k in ATTESTATION_SLUGS:
+            if isinstance(val, str) and ("Pantheon" in val or "WAF" in val):
+                ev = "platform"
+            elif site_id not in inventoried:
+                ev = "not-inventoried"
+            else:
+                seen = bool(active_slugs.get(site_id, set()) & ATTESTATION_SLUGS[k])
+                yes = isinstance(val, str) and val.startswith("Yes")
+                # Yes + plugin -> evidence; Yes + none -> no-evidence;
+                # No/blank + plugin -> unclaimed-evidence; No/blank + none ->
+                # consistent-no. Four answers, kept four: a "No" with no plugin
+                # is not a contradiction and must not count as one.
+                ev = ("evidence" if (yes and seen) else "no-evidence" if yes
+                      else "unclaimed-evidence" if seen else "consistent-no")
+        out.append({"key": k, "label": ATTESTATION_LABEL.get(k, k), "value": val,
+                    "evidence": ev, "source": v.get("source"),
+                    "by": v.get("by"), "at": v.get("at")})
+    return out
+
+
+def _history_series(m):
+    """Per-site series over the FULL health runs: plugin backlog, WordPress
+    version, backup age. Full runs only, and only fleet-sized ones: api-only
+    runs store unknown for the deep facts and one- or three-site debugging runs
+    are not the fleet. Ten points is movement, not a trend, and the page
+    labels it that way."""
+    full = {r["run_id"] for r in m["runs"]
+            if r.get("source") == "health" and r.get("mode") == "full"
+            and (r.get("site_count") or 0) > 3}
+    hist = collections.defaultdict(lambda: {"plugins": [], "wp": [], "backup": []})
+    for o in sorted(m["obs"], key=lambda o: o.get("observed_at") or ""):
+        if o.get("source") != "health" or o.get("run_id") not in full:
+            continue
+        h = hist[o["site_id"]]
+        d = (o.get("observed_at") or "")[:10]
+        if isinstance(o.get("plugin_updates"), int):
+            h["plugins"].append([d, o["plugin_updates"]])
+        if o.get("wp_version") not in (None, L.UNKNOWN):
+            h["wp"].append([d, o["wp_version"]])
+        if isinstance(o.get("db_backup_age_days"), int):
+            h["backup"].append([d, o["db_backup_age_days"]])
+    return hist
+
+
+def page_data(m):
+    """The model the page renders from. Built from the same `m` as render(),
+    render_components() and emit_data(), so the four cannot disagree."""
+    inv = m.get("inventory") or {}
+    comp = m["components"]
+    inventoried = set(comp["sites_inventoried"])
+    # per site: active plugin slugs (for attestation evidence) and the pending list
+    active = collections.defaultdict(set)
+    pending = collections.defaultdict(list)
+    for c in comp["catalogue"]:
+        for i in c["installs"]:
+            if i["status"] == "active":
+                active[i["site_id"]].add(c["slug"].lower())
+            if i["update_available"]:
+                pending[i["site_id"]].append([c["slug"], c["type"], i["version"],
+                                              i["update_version"]])
+    hist = _history_series(m)
+    sites = []
+    for s in m["sites"]:
+        sev = s.get("severity") or {}
+        rec = inv.get(s["site_id"]) or {}
+        axes = sev.get("axes") or {}
+        sites.append({
+            "id": s["site_id"],
+            "host": s.get("host"),
+            "hsn": s.get("host_site_name"),
+            "production": s.get("production"),
+            "counts": bool(sev.get("production", True)),
+            "in_workbook": s.get("in_workbook"),
+            "in_inventory": s.get("in_inventory", True),
+            "reconciliation": s.get("reconciliation"),
+            "notes": s.get("notes"),
+            "sources": sorted(s.get("sources") or []),
+            "health": axes.get("health", {"status": sev.get("status"),
+                                          "reasons": sev.get("reasons", [])}),
+            "consent": axes.get("consent", {"status": "UNKNOWN", "reasons": []}),
+            "info": sev.get("info", []),
+            "f": {k: s.get(k) for k in PAGE_FACTS},
+            "claimed": s.get("claimed"),
+            "att": _attestations(s["site_id"], rec, inventoried, active),
+            "dns": rec.get("dns"),
+            "email_provider": (rec.get("email") or {}).get("provider"),
+            "decommission_candidate": bool(rec.get("decommission_candidate")),
+            "pending": sorted(pending.get(s["site_id"], [])),
+            "hist": hist.get(s["site_id"], {"plugins": [], "wp": [], "backup": []}),
+        })
+    runs_sorted = sorted(m["runs"], key=lambda r: r.get("observed_at") or "")
+    latest = {}
+    for r in runs_sorted:
+        latest[r.get("kind") or r.get("source")] = {
+            "run_id": r["run_id"], "observed_at": r.get("observed_at"),
+            "mode": r.get("mode"), "site_count": r.get("site_count"),
+            "deep_scanned": r.get("deep_scanned"), "method": r.get("method")}
+    today = m.get("today") or datetime.date.fromisoformat(m["generated"])
+    noon = datetime.datetime.combine(today, datetime.time(16, 0))  # ~noon Eastern, in UTC
+    _local, zone = eastern(noon)
+    feed = emit_data(m)
+    return {
+        "generated": m["generated"],
+        "tz_offset_minutes": -240 if zone == "EDT" else -300,
+        "tz_note": "UTC−4, EDT" if zone == "EDT" else "UTC−5, EST",
+        "inventory_count": m["inventory_count"],
+        "counts": m["health"]["counts"], "axes": m["health"]["axes"],
+        "excluded": m["health"]["excluded"],
+        "excluded_sites": m["health"]["excluded_sites"],
+        "unreviewed": m["health"]["unreviewed"],
+        "no_health_evidence": feed["no_health_evidence"],
+        "severity_rules": feed["severity_rules"],
+        "latest": latest,
+        "all_runs": [{"run_id": r["run_id"], "source": r.get("source"),
+                      "kind": r.get("kind") or r.get("source"), "mode": r.get("mode"),
+                      "observed_at": r.get("observed_at"),
+                      "site_count": r.get("site_count"),
+                      "deep_scanned": r.get("deep_scanned")} for r in runs_sorted],
+        "coverage": feed["coverage"],
+        "coverage_changes": m["coverage_changes"],
+        "coverage_regressions": m["coverage_regressions"],
+        "changes": m["changes"],
+        "standing": m["standing"],
+        "standing_was": m["standing_was"],
+        "unreconciled": [{"id": u["site_id"], "host": u.get("host"),
+                          "why": u.get("reconciliation") or u.get("notes") or ""}
+                         for u in m["unreconciled"]],
+        "sites": sites,
+        "components": {
+            "catalogue": [{"slug": c["slug"], "type": c["type"],
+                           "variants": c.get("variants", []), "sites": c["sites"],
+                           "installs_count": c["installs_count"],
+                           "versions": c["versions"], "pending": c["pending"],
+                           "inactive": c["inactive"],
+                           "target": [v for v, _n in collections.Counter(
+                               i["update_version"] for i in c["installs"]
+                               if i["update_available"]).most_common()],
+                           "installs": [[i["site_id"], i["version"],
+                                         i["status"] == "active",
+                                         bool(i["update_available"]),
+                                         i["update_version"]] for i in c["installs"]]}
+                          for c in comp["catalogue"]],
+            "rows": comp["rows"], "sites_inventoried": comp["sites_inventoried"],
+            "sites_missing": comp["sites_missing"], "expected": comp["expected"],
+            "pending_total": comp["pending_total"]},
+    }
+
+
+def render_page(m):
+    """One self-contained file: the page CSS and JS from scripts/dashboard/
+    inlined, the model embedded as JSON. No request leaves the page."""
+    with open(os.path.join(PAGE_DIR, "page.css"), encoding="utf-8") as fh:
+        css_text = fh.read()
+    with open(os.path.join(PAGE_DIR, "page.js"), encoding="utf-8") as fh:
+        js_text = fh.read()
+    # `</` inside a JSON string would end the <script> early; escaping the
+    # slash is a no-op for JSON and keeps the HTML parser out of the data.
+    data = json.dumps(page_data(m), separators=(",", ":"),
+                      ensure_ascii=False).replace("</", "<\\/")
+    for label, blob in (("page.css", css_text), ("page.js", js_text)):
+        if "</script" in blob.lower() or "</style" in blob.lower():
+            raise SystemExit("%s contains a closing tag that would end its block" % label)
+    return "\n".join([
+        "<!doctype html>",
+        '<html lang="en">',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        '<meta name="color-scheme" content="light dark">',
+        "<title>clevermethod fleet</title>",
+        "<style>", css_text, "</style>",
+        "</head>",
+        "<body>",
+        '<div id="app"></div>',
+        '<script type="application/json" id="fleet-data">' + data + "</script>",
+        "<script>", js_text, "</script>",
+        "</body>",
+        "</html>",
+        "",
+    ])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--history", default="./history")
     ap.add_argument("--inventory", default="./data/fleet-inventory.json")
-    ap.add_argument("--out", default="./fleet.html")
+    ap.add_argument("--out", default="./fleet.html",
+                    help="the page: evidence matrix plus schedule tab, one "
+                         "self-contained file (render_page).")
+    ap.add_argument("--legacy-out", metavar="PATH",
+                    help="also write the previous eleven-section page "
+                         "(render). Kept for one cycle as the fallback if the "
+                         "new page is wrong in production; see docs/DASHBOARD-V3.md.")
     ap.add_argument("--components-out", metavar="PATH",
                     help="also render the component catalogue to PATH. The "
                          "fleet table's plugin count links to it, so publishing "
@@ -3048,8 +3303,12 @@ def main():
     a = ap.parse_args()
     today = datetime.date.fromisoformat(a.today) if a.today else datetime.date.today()
     m = build_model(a.history, a.inventory, today)
-    with open(a.out, "w") as fh:
-        fh.write(render(m))
+    with open(a.out, "w", encoding="utf-8") as fh:
+        fh.write(render_page(m))
+    if a.legacy_out:
+        with open(a.legacy_out, "w", encoding="utf-8") as fh:
+            fh.write(render(m))
+        print("legacy page -> %s" % a.legacy_out)
     if a.components_out:
         with open(a.components_out, "w") as fh:
             fh.write(render_components(m))

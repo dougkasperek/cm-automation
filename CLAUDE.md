@@ -428,6 +428,34 @@ ledger holds *measurements*; the dashboard shows both and labels which is which.
 
 ---
 
+## The page, since 2026-08-27
+
+`render-dashboard.py --out` writes the **evidence matrix**: one row per site,
+one column per question, absence hatched, every column header carrying its own
+denominator, a Schedule tab that arranges the backlog by decision, and a banner
+whose green state is scoped and whose predicate is printed under it. Chosen by
+Doug from three rendered concepts (`_scratch/redesign/`, `docs/DASHBOARD-V3.md`).
+The previous page is `render()` behind `--legacy-out` for one cycle.
+
+- **The page never says "all good".** The dev team asked for it; on this fleet
+  it would be false for months. The banner says "Nothing needs a person" and
+  states the backlog and the unmeasured count in the same sentence. Two tests
+  assert the phrase is absent. Do not add it back under another wording.
+- **`scripts/dashboard/page.js` computes no status and holds no threshold.**
+  It groups and counts what `severity.py` decided, read from the JSON the
+  renderer embeds. The "what happens next" lane is a display grouping and must
+  never move into `severity.py`; `test/test-page.py` asserts both.
+- **An absence is a shape.** `null`, `"unknown"` and `"n/a"` each render as a
+  hatched or dotted token with the word in it, never a number, never green.
+  A Nexcess backup cell says `no API`: unmeasurable, which is not unmeasured.
+- **The page's model is the feed's.** `page_data()` and `emit_data()` are built
+  from one `m`; the test compares every status, reason code and fact.
+- **The DOM test is not in CI.** It needs Chromium on the publish runner, a
+  cost to decide on, not add silently. Run `node test/test-page.mjs` by hand
+  before a publish until then. `publish-dashboard.sh` runs the offline test.
+
+---
+
 ## Severity
 
 `scripts/lib/severity.py`, and **nowhere else**. **The Pantheon scanner was a
@@ -479,7 +507,7 @@ consent sweep ran and nothing about maintenance had changed.
 ./scripts/fleet-nexcess.py discover --stamp "$(date -u +%Y-%m-%d_%H%M)"
 node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs npm i
 ./scripts/fleet-ledger.py ingest --reports ./reports --history ./history
-./scripts/render-dashboard.py --out fleet.html \
+./scripts/render-dashboard.py --out fleet.html \                    # the evidence-matrix page (docs/DASHBOARD-V3.md)
     --components-out components.html                                  # both pages
 ./scripts/nexcess-ssh-targets.py --history ./history                   # who does the SSH scan connect to, and as whom?
 ./scripts/check-worker-exposure.py                                    # is any Worker reachable without Access?
@@ -503,8 +531,10 @@ python3 test/test-consent-rulings.py  # 17   offline, no network
 python3 test/test-nexcess-ssh.py      # 30   offline, no key
 python3 test/test-worker-exposure.py  # 40   offline, no network
 python3 test/test-access-policies.py  # 46   offline, no token
-python3 test/test-ledger.py       # 316
-python3 test/test-severity.py     # 141
+python3 test/test-ledger.py       # 314
+python3 test/test-severity.py     # 142
+python3 test/test-page.py         #  33   offline; the page's model is the feed's, never "all good"
+node test/test-page.mjs           #  39   headless Chromium; the rendered DOM. Needs `npm install`
 python3 test/test-email-dns.py    #  58   (needs dnspython)
 python3 test/test-nexcess.py      #  88   offline, no API call
 python3 test/test-consent.py      #  82   offline, no browser

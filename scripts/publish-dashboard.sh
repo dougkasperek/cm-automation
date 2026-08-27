@@ -231,6 +231,16 @@ python3 "$SCRIPT_DIR/render-dashboard.py" \
   --emit-data "$WORK/latest.json" \
   --strict || { err "render failed; nothing published"; exit 1; }
 
+# The page's own checks, on the code path that just rendered: one file with
+# no network, the page's model equal to the feed's, absence never a value,
+# never "all good". Added 2026-08-27 with the evidence-matrix page
+# (docs/DASHBOARD-V3.md). Offline and about two seconds. The DOM test
+# (test/test-page.mjs) needs Chromium and is run by hand until that cost is
+# accepted on the runner.
+python3 "$SCRIPT_DIR/../test/test-page.py" >"$WORK/test-page.log" 2>&1 \
+  || { err "test/test-page.py failed; nothing published:"; tail -n 20 "$WORK/test-page.log" >&2; exit 1; }
+log "test/test-page.py passed"
+
 if [ "$DRY_RUN" -eq 1 ]; then
   log ""
   log "Dry run. Nothing was published."

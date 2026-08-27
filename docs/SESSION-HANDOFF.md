@@ -8,7 +8,43 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-27, end of day
+## PICK UP HERE — 2026-08-27, evening: the new page is built, not pushed, not published
+
+**`render-dashboard.py --out` now writes the evidence-matrix page.** Doug chose
+it from three rendered concepts and said "ship it". Everything below the
+horizontal rule is the state at end of the working day, before that decision;
+the six UI changes it describes are in `render()`, which is now the LEGACY
+page behind `--legacy-out`.
+
+What was done, in `docs/DASHBOARD-V3.md` and CLAUDE.md "The page, since
+2026-08-27":
+
+- `scripts/dashboard/page.js` + `page.css`, inlined by the new `render_page()`;
+  `page_data()` embeds the model (a superset of the feed). No web fonts, no
+  network, one file.
+- `test/test-page.py` (33, offline) and `test/test-page.mjs` (39, headless
+  Chromium). Two old blocks in `test-ledger.py` and `test-severity.py` that
+  matched the old markup are re-stated as properties on the model.
+  Ledger 314 / severity 142 / page 33 / DOM 39, all green.
+- `publish-dashboard.sh` runs `test/test-page.py` after rendering and refuses
+  to publish on failure. Dry run passes.
+- `fleet.html` and `components.html` re-rendered and committed.
+
+**To do, in order:**
+
+1. `git push` (Doug; Claude does not push).
+2. `./scripts/publish-dashboard.sh --dry-run`, open
+   `reports/publish-preview/dashboard.html`, read it. Then
+   `./scripts/publish-dashboard.sh`.
+3. Read https://fleet.thudstaff.com on a phone and a laptop.
+4. Decide whether `test/test-page.mjs` goes in the publish job (Chromium
+   download on the runner) — see DASHBOARD-V3.md "Not done".
+5. After one published cycle, retire `render()`, `--legacy-out`, and the
+   `RD.render(...)` assertions in `test-ledger.py`.
+
+---
+
+## PICK UP HERE — 2026-08-27, end of day (superseded above)
 
 **Nothing is published.** Today's scan is ingested, rendered and committed;
 the last commit pushed is `09ff524`. Doug asked for six UI changes before

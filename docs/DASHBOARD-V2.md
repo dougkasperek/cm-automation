@@ -1,5 +1,11 @@
 # The fleet dashboard (ledger-backed)
 
+**Superseded 2026-08-27.** `--out` now writes the evidence-matrix page described
+in `docs/DASHBOARD-V3.md`. The page this file describes is `render()`, still
+reachable with `--legacy-out` for one cycle. The data-side decisions below
+(one model, severity at render time, the palette rules, the standing-group
+bugs) still hold; the layout decisions do not.
+
 `scripts/render-dashboard.py` reads the ledger and the inventory and writes one
 self-contained HTML file. No build step, no CDN, no fonts fetched, no framework.
 It opens from `file://` and deploys to a Worker unchanged.

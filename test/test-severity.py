@@ -771,22 +771,30 @@ check("the new code is mapped to an axis, since axis_of raises otherwise",
 # day the SSH scan landed, so they look well-measured while backup status is
 # invisible.
 # ---------------------------------------------------------------------------
+# SINCE 2026-08-27 the page carries the denominator in the backup COLUMN
+# HEADER, read from the coverage line the renderer embeds in the page model
+# (docs/DASHBOARD-V3.md). The old check matched the health card's prose; the
+# property is the same: the number the backup finding is counted over is
+# printed, and it is smaller than the fleet.
 import io as _io3
+import json as _js3
 import re as _re3
-_re_bk = _re3.compile(r'<b>(\d+) of (\d+)</b> whose backup age')
 with _io3.open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
                             "fleet.html"), encoding="utf-8") as _fh3:
     _pg = _fh3.read()
-
-if "database backup" in _pg:
-    check("the backup finding states how many sites the age can be read for",
-          "whose backup age can be read at all" in _pg,
-          "denominator missing from the health card")
-    check("...and that denominator is smaller than the fleet, or it would not "
-          "be worth printing",
-          _re_bk.search(_pg) is not None and
-          int(_re_bk.search(_pg).group(1)) < int(_re_bk.search(_pg).group(2)),
-          _re_bk.search(_pg).group(0) if _re_bk.search(_pg) else "no match")
+_pm3 = _re3.search(r'<script type="application/json" id="fleet-data">(.*?)</script>',
+                   _pg, _re3.S)
+_pd3 = _js3.loads(_pm3.group(1).replace("<\\/", "</")) if _pm3 else {}
+_pjs3 = _pg.split("<script>", 1)[1] if "<script>" in _pg else ""
+_bk_cov = next((c for c in _pd3.get("coverage", [])
+                if c["what"].startswith("Pantheon platform")), None)
+check("the page model carries the coverage line the backup column is counted over",
+      _bk_cov is not None and _bk_cov["known"] < _bk_cov["of"] <= len(_pd3.get("sites", [])),
+      repr(_bk_cov))
+check("...and the backup column header reads that line, not the fleet size",
+      "key: 'backup'" in _pjs3 and "cov: cov('Pantheon platform')" in _pjs3)
+check("...and a Nexcess site's backup cell is 'no API' (unmeasurable), never a value",
+      "if (nx(s)) return NA('no API');" in _pjs3)
 
 # ------------------------- the consent model: what the site is SUPPOSED to do
 print("\n-- an observation is only a finding if the model says so --")
