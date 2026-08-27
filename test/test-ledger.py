@@ -1460,6 +1460,46 @@ check("pending is counted from update_available, not from row count",
       {x["slug"]: x["pending"] for x in _c["catalogue"]}
       == {"pods": 0, "akismet": 1})
 
+# --------------------------------- 3c. the Kind key, and the hosts it names
+# Added 2026-08-27. Doug asked what DRIFT meant; the first fix put the answer
+# in a <details>, and he said "now I see it. its buried." Every <details> on
+# that page is closed by default, the CRIT/WARN/OK one included, so a folded
+# key is a key nobody knows exists.
+print("\n-- the Kind key is visible, not folded --")
+
+# getattr, not attribute access: a missing helper must report FAIL, not raise
+# and take every test below it with it.
+_gloss = getattr(RD, "AXIS_GLOSS", {})
+_leg = RD.axis_legend() if hasattr(RD, "axis_legend") else ""
+check("the renderer exposes a Kind key at all", bool(_leg))
+check("every axis used in the Kind column is glossed",
+      all(a in _gloss for a in ("RISK", "COVERAGE", "PLANNING", "DRIFT")),
+      str(sorted(_gloss)))
+check("the key names all four", bool(_gloss) and all(a in _leg for a in _gloss), _leg[:120])
+# THE POINT OF THE FIX. A <details> here would render closed.
+check("the key is not inside a <details>", bool(_leg) and "<details" not in _leg, _leg[:120])
+check("each gloss travels with its pill",
+      bool(_gloss) and _leg.count("kindkey") == len(_gloss), str(_leg.count("kindkey")))
+# Every axis standing() can emit must have a gloss, or a new one renders a
+# bare pill with nothing saying what it means -- the exact gap being closed.
+_axes_in_tone = set(RD.AXIS_TONE)
+check("no axis has a tone but no gloss",
+      bool(_gloss) and not (_axes_in_tone - set(_gloss)),
+      str(sorted(_axes_in_tone - set(_gloss))))
+
+print("\n-- the components page names the hosts it actually covers --")
+# "This page can see 68 of 75 Pantheon sites" over 53 Pantheon and 22 Nexcess.
+# COMPONENT_HOSTS was widened when Nexcess landed and the prose was not.
+check("Nexcess is a component host",
+      "CM Nexcess" in getattr(RD, "COMPONENT_HOSTS", ()))
+_phrase = RD.component_host_phrase() if hasattr(RD, "component_host_phrase") else ""
+check("the phrase names every component host, not just Pantheon",
+      bool(_phrase) and all(h.replace("CM ", "") in _phrase
+                            for h in getattr(RD, "COMPONENT_HOSTS", ())), _phrase)
+check("...and carries no 'CM ' prefix into the prose",
+      bool(_phrase) and "CM " not in _phrase, _phrase)
+
+
 # THE ABSENCE CASE. An empty catalogue must say so in words. Rendering an
 # empty table would state "this fleet runs no plugins", which is never true
 # and is the exact failure this project keeps making.

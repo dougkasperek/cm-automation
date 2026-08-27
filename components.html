@@ -90,6 +90,14 @@ details.md p:last-child{margin-bottom:0}
 .covof{color:var(--faint);font-weight:400}
 .covnone{color:var(--muted);font-weight:400}
 .covgap{color:var(--bad)}
+/* THE KIND KEY. Wraps to as many lines as it needs rather than scrolling: it
+   is four short items and it must be readable at any width, on the phone
+   included. Each item keeps its pill and gloss together, so a wrap never
+   orphans a definition from the word it defines. */
+.kindlegend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;
+ margin:8px 0 0;font-size:12px;line-height:1.5}
+.kindkey{display:inline-flex;align-items:baseline;gap:7px}
+.kindkey .chip{position:relative;top:1px}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;
  letter-spacing:.08em;text-transform:uppercase;
  white-space:nowrap;padding:3px 8px 3px 7px;border-radius:0;

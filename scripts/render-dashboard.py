@@ -803,6 +803,14 @@ details.md p:last-child{margin-bottom:0}
 .covof{color:var(--faint);font-weight:400}
 .covnone{color:var(--muted);font-weight:400}
 .covgap{color:var(--bad)}
+/* THE KIND KEY. Wraps to as many lines as it needs rather than scrolling: it
+   is four short items and it must be readable at any width, on the phone
+   included. Each item keeps its pill and gloss together, so a wrap never
+   orphans a definition from the word it defines. */
+.kindlegend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;
+ margin:8px 0 0;font-size:12px;line-height:1.5}
+.kindkey{display:inline-flex;align-items:baseline;gap:7px}
+.kindkey .chip{position:relative;top:1px}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;
  letter-spacing:.08em;text-transform:uppercase;
  white-space:nowrap;padding:3px 8px 3px 7px;border-radius:0;
@@ -916,8 +924,30 @@ button.wfjump:focus-visible{outline:2px solid var(--info);outline-offset:1px}
     return "".join(out)
 
 
-def chip(text, tone):
-    return '<span class="chip %s"><span class="dot"></span>%s</span>' % (tone, e(text))
+def chip(text, tone, title=None):
+    return '<span class="chip %s"%s><span class="dot"></span>%s</span>' % (
+        tone, ' title="%s"' % e(title) if title else "", e(text))
+
+
+# ONE SHORT SENTENCE PER KIND. These have to read on their own beside a
+# coloured pill; the folded block under the table carries the long form.
+AXIS_GLOSS = {
+    "RISK":     "a client is exposed now — act",
+    "COVERAGE": "a scan could not see it — an absence, not a verdict",
+    "PLANNING": "a fixed, fleet-wide deadline — the date is the finding",
+    "DRIFT":    "a maintenance backlog — no incident, but it grows on its own",
+}
+
+
+def axis_legend():
+    """The always-visible key for the Kind column. See the caller for why."""
+    bits = []
+    for axis in ("RISK", "COVERAGE", "PLANNING", "DRIFT"):
+        bits.append('<span class=kindkey>%s<span class=quiet>%s</span></span>'
+                    % (chip(axis, AXIS_TONE.get(axis, "info")),
+                       e(AXIS_GLOSS[axis])))
+    return ('<div class=kindlegend><span class=quiet><b>Kind</b></span>%s</div>'
+            % "".join(bits))
 
 
 # One line per source, for the provenance block. Keyed on the ledger's source
@@ -1313,36 +1343,6 @@ def render(m):
           '<b>Since the previous run</b> compares against the last run of the '
           'same tool taken with the same instrument &mdash; where there is no '
           'such run, no direction is drawn rather than one being guessed.</p>')
-        # THE KIND COLUMN HAD NO LEGEND UNTIL 2026-08-27, and the page's only
-        # legend explains CRIT/WARN/OK -- a different vocabulary entirely. A
-        # reader asked what DRIFT meant, which is the answer: nothing on the
-        # page said, for any of the four.
-        #
-        # It also names the COLLISION rather than hiding it. DRIFT and COVERAGE
-        # each mean one thing in this column and a different thing in the
-        # change feed below, on the same page. Renaming either is a vocabulary
-        # decision, not a rendering one; until it is made, saying so is better
-        # than letting a reader carry the wrong meaning down the page.
-        A('<details class=method style="margin:-4px 0 10px">'
-          "<summary>What the kinds mean</summary><div>")
-        A("<p><b>RISK</b> &mdash; a client is exposed now, and it is not "
-          "waiting on anything. This is the column to act on.</p>")
-        A("<p><b>COVERAGE</b> &mdash; a scan could not see the site. It says "
-          "nothing about the site itself, only about what this tool "
-          "established. An absence, reported as one.</p>")
-        A("<p><b>PLANNING</b> &mdash; a fixed, fleet-wide deadline. Nothing is "
-          "wrong today; the date is the finding.</p>")
-        A("<p><b>DRIFT</b> &mdash; a maintenance backlog. Real work, no "
-          "incident, and it gets worse on its own if nobody schedules it. "
-          "Pending updates and unmerged upstream commits live here.</p>")
-        A('<p class=quiet><b>Two of these words are reused further down the '
-          "page and do not mean the same thing there.</b> In the change feed, "
-          "DRIFT means a counter moved on a finding that was already open &mdash; "
-          "routine, not news &mdash; and COVERAGE means the scanner started or "
-          "stopped seeing a site between runs. Here they describe what KIND of "
-          "problem a finding is; there they describe what KIND of change "
-          "happened.</p>")
-        A("</div></details>")
         A('<div class="card tablewrap"><table id=topissues>'
           "<tr><th>Issue</th><th>Kind</th><th class=num>Sites</th>"
           "<th>Since the previous run</th></tr>")
@@ -1363,9 +1363,47 @@ def render(m):
                 trend = '<span class=quiet>unchanged at %d</span>' % was
             A("<tr><td>%s</td><td>%s</td><td class=num><b>%d</b></td>"
               "<td>%s</td></tr>"
-              % (e(g["cause"]), chip(g["axis"], AXIS_TONE.get(g["axis"], "info")),
+              % (e(g["cause"]),
+                 chip(g["axis"], AXIS_TONE.get(g["axis"], "info"),
+                      AXIS_GLOSS.get(g["axis"])),
                  n, trend))
         A("</table></div>")
+        # THE KEY, UNFOLDED, DIRECTLY UNDER THE WORDS IT DEFINES.
+        #
+        # The first cut of this was a <details> above the table, matching every
+        # other explanatory block on the page. Doug had asked what DRIFT meant;
+        # shown the folded version he said "now I see it. its buried." Every
+        # <details> here is closed by default -- including the one explaining
+        # CRIT, WARN and OK -- so the page has no visible key anywhere and a
+        # reader has no way to know a definition exists to be opened.
+        #
+        # A key you have to discover is not a key.
+        A(axis_legend())
+        # The long form stays folded, because it is depth rather than the
+        # definition: the four short glosses above are the definition. What
+        # earns the fold is the COLLISION -- DRIFT and COVERAGE mean something
+        # else in the change feed below, on this same page.
+        A('<details class=method style="margin:8px 0 0">'
+          "<summary>More on the kinds, and two words that mean something else "
+          "further down this page</summary><div>")
+        A("<p><b>RISK</b> &mdash; a client is exposed now, and it is not "
+          "waiting on anything. This is the column to act on.</p>")
+        A("<p><b>COVERAGE</b> &mdash; a scan could not see the site. It says "
+          "nothing about the site itself, only about what this tool "
+          "established. An absence, reported as one.</p>")
+        A("<p><b>PLANNING</b> &mdash; a fixed, fleet-wide deadline. Nothing is "
+          "wrong today; the date is the finding.</p>")
+        A("<p><b>DRIFT</b> &mdash; a maintenance backlog. Real work, no "
+          "incident, and it gets worse on its own if nobody schedules it. "
+          "Pending updates and unmerged upstream commits live here.</p>")
+        A('<p class=quiet><b>Two of these words are reused further down the '
+          "page and do not mean the same thing there.</b> In the change feed, "
+          "DRIFT means a counter moved on a finding that was already open "
+          "&mdash; routine, not news &mdash; and COVERAGE means the scanner "
+          "started or stopped seeing a site between runs. Here they describe "
+          "what KIND of problem a finding is; there they describe what KIND of "
+          "change happened.</p>")
+        A("</div></details>")
         A('<p class=quiet style="margin:6px 0 0">'
           '<a href="#stillopen">All %d open findings, with the sites in '
           'each</a>.</p>' % len(m["standing"]))
