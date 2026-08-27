@@ -698,9 +698,38 @@ for _lab in ("Ours, and a tag ignores the rejection", "Ours, and gated", "Not ou
 # COVERAGE BEFORE FINDINGS, and each with its own denominator: the two sweeps
 # ask different populations, so one number would be wrong for one of them.
 check("coverage is stated before the findings",
-      _cp.index("Homepage loaded") < _cp.index("Where it stands"))
+      _cp.index("homepage loaded") < _cp.index("Ours, and gated"))
 check("...for the cold sweep and the gating test separately",
-      "Consent tooling detected" in _cp and "Rejection tested" in _cp)
+      "tooling detected" in _cp and "rejection tested" in _cp)
+
+# THE PAGE IS THE SAME PRODUCT AS THE DASHBOARD. The first cut shipped with the
+# old css() and its own token set, so one click from the fleet page landed on
+# something that looked like a different tool. Two stylesheets is two answers
+# about what a warning looks like.
+_pagecss = open(os.path.join(ROOT, "scripts", "dashboard", "page.css")).read()
+check("the consent page inlines the dashboard's own stylesheet",
+      _pagecss.split("\n")[0][:40] in _cp and len(_pagecss) > 2000)
+check("...and uses its status chips rather than a second vocabulary",
+      'class="chip st-CRIT"' in _cp and 'class="chip st-OK"' in _cp)
+check("...including the hatched treatment for an untested site",
+      'class="chip st-UNKNOWN"' in _cp)
+check("no second design token set is introduced",
+      not any(t in _cp for t in ("var(--bad)", "var(--card)", "var(--info)")))
+
+# THE OURS TOGGLE. Consent work is done by whoever configures it, and the first
+# question they ask is which of these are theirs.
+check("the page offers an ours-only filter", 'id="oursonly"' in _cp)
+check("...every row carries what the filter reads",
+      _cp.count('data-ours="') == len([x for x in _m2["sites"]
+                                       if x.get("consent_scan_ok") is True]),
+      _cp.count('data-ours="'))
+# A BARE COUNT HERE WOULD BE A FACT ABOUT THE VIEW WEARING THE CLOTHES OF A FACT
+# ABOUT THE FLEET -- the mistake the components page made when a filter rewrote
+# "the 1 component installed on <site>".
+check("...and the row count states what is shown AGAINST the total",
+      "' of ' + rows.length + ' rows shown'" in _cp)
+check("...and the filter survives a reload, so the view can be shared",
+      "searchParams.set('ours'" in _cp and "get('ours')" in _cp)
 
 # UNTESTED IS NOT CLEAN. "Nothing still fires after rejection" is the best
 # possible result, so a site the test could not complete must never fall into

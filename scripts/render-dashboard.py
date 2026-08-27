@@ -2815,166 +2815,166 @@ def render_consent(m):
     that grain. The gating results are per TRACKER per PASS -- which tags
     survived a rejection, at what consent state -- and alongside them sit the
     model, the OneTrust rule, who manages the site, and the vendor. Three
-    columns in the site table is all that shape can carry, and it was already
-    at three.
+    columns in the matrix is all that shape can carry, and it was already at
+    three.
 
-    It is also a different job done at a different time, usually by different
-    people: whoever configures consent is not whoever works the backup and
-    plugin backlog. The fleet page keeps a summary and a link, exactly as it
-    does for components -- consent must not vanish from the main page, because
-    the axis split exists so a well-maintained site can still be flagged.
+    SAME CHROME AS THE FLEET PAGE, deliberately. It inlines `page.css` and uses
+    that stylesheet's tokens and classes -- `.wrap`, `.top`, `.tools`, `.chip`
+    with `st-*`, `.quiet`, `.foot`. The first cut shipped with the OLD css()
+    and its own token set (`--bad`, `--info`, `--card`), which rendered a page
+    that was recognisably a different product one click from the dashboard.
+    Two stylesheets is two answers about what a warning looks like.
     """
-    o = []
-    A = o.append
-    A("<!doctype html><html lang=en><meta charset=utf-8>")
-    A('<meta name=viewport content="width=device-width,initial-scale=1">')
-    A("<title>clevermethod fleet: consent</title><style>%s%s</style>"
-      % (css(), CONSENT_CSS))
-    A('<div class=wrap>')
-    A('<div class=masthead>')
-    A("<h1>Cookie consent</h1>")
-    A('<p class=sub>Does the homepage fire trackers before anyone consents, '
-      'and do the tags stop when someone rejects. '
-      '<a href="/">Back to the fleet page</a>.</p>')
-    A("</div>")
+    with open(os.path.join(PAGE_DIR, "page.css"), encoding="utf-8") as fh:
+        css_text = fh.read()
 
-    sites = {x["site_id"]: x for x in m["sites"]}
-    swept = [x for x in m["sites"] if "consent_scan_ok" in x]
+    sites = m["sites"]
+    swept = [x for x in sites if "consent_scan_ok" in x]
     seen = [x for x in swept if x.get("consent_scan_ok") is True]
     tooled = [x for x in seen if x.get("consent_banner_detected") is True]
-    gated = [x for x in m["sites"] if x.get("gating_tested") is True]
-    gate_untested = [x for x in m["sites"]
-                     if "gating_tested" in x and x.get("gating_tested") is not True]
+    gated = [x for x in sites if x.get("gating_tested") is True]
+    untested = [x for x in sites
+                if "gating_tested" in x and x.get("gating_tested") is not True]
 
-    # COVERAGE FIRST, and as three separate questions rather than one number.
-    # "23 sites tested" means nothing without how many were asked, and the two
-    # sweeps ask different populations: the cold sweep reaches every domain,
-    # the gating test only sites with a banner to click.
-    A('<div class="card" style="margin-bottom:14px"><div class=covgrid>')
-    for label, k, n, note in (
-        ("Homepage loaded for the browser", len(seen), len(swept),
-         "A 403 block page is not a measurement."),
-        ("Consent tooling detected", len(tooled), len(seen),
-         "Of the pages that loaded."),
-        ("Rejection tested", len(gated), len(tooled),
-         "Only askable where there is a Reject button."),
-    ):
-        pct = (100.0 * k / n) if n else 0
-        tone = "good" if n and k >= n else ("info" if pct >= 60 else "bad")
-        A('<div class="cov %s"><div style="color:var(--ink)">%s</div>'
-          '<div class=n>%d of %d</div>'
-          '<div class="m meter"><i style="width:%.1f%%"></i></div>'
-          '<div class=quiet style="margin-top:4px">%s</div></div>'
-          % (tone, e(label), k, n, pct, e(note)))
-    A("</div></div>")
-
-    # THE THREE STATES, which is the whole reason this page exists. Doug,
-    # 2026-08-27: be able to act on what we manage and still tell clients about
-    # what we do not, without the page implying we broke it.
     def _ours_broken(x):
         return (x.get("consent_managed") is True
                 and x.get("gating_tested") is True
                 and (x.get("gating_still_firing") or 0) > 0)
 
-    def _theirs(x):
-        return (x.get("consent_managed") is not True
-                and (isinstance(x.get("consent_pre_trackers"), int)
-                     and x["consent_pre_trackers"] > 0))
-
-    ours_broken = sorted((x for x in m["sites"] if _ours_broken(x)),
+    ours_broken = sorted((x for x in sites if _ours_broken(x)),
                          key=lambda x: x["site_id"])
-    theirs = sorted((x for x in m["sites"] if _theirs(x)),
-                    key=lambda x: x["site_id"])
-    ours_ok = sorted((x for x in m["sites"]
+    ours_ok = sorted((x for x in sites
                       if x.get("consent_managed") is True
                       and x.get("gating_tested") is True
                       and not (x.get("gating_still_firing") or 0)),
                      key=lambda x: x["site_id"])
+    theirs = sorted((x for x in sites
+                     if x.get("consent_managed") is not True
+                     and isinstance(x.get("consent_pre_trackers"), int)
+                     and x["consent_pre_trackers"] > 0),
+                    key=lambda x: x["site_id"])
 
-    A("<h2>Where it stands</h2>")
-    A('<div class=stategrid>')
+    o = []
+    A = o.append
+    A("<!doctype html>")
+    A('<html lang="en">')
+    A("<head>")
+    A('<meta charset="utf-8">')
+    A('<meta name="viewport" content="width=device-width,initial-scale=1">')
+    A('<meta name="color-scheme" content="light dark">')
+    A("<title>clevermethod fleet: consent</title>")
+    A("<style>%s%s</style>" % (css_text, CONSENT_CSS))
+    A("</head><body>")
+    A('<div class="wrap">')
+
+    A('<header class="top"><div><h1>Cookie consent'
+      '<small>%d domains &middot; %d with tooling &middot; read-only</small></h1>'
+      '<p class="thesis">Two questions, not one. What fires for a visitor who '
+      'has done nothing, and what still fires after that visitor clicks Reject '
+      'All. Only the second discriminates. '
+      '<a href="/">Back to the fleet page</a>.</p></div></header>'
+      % (len(swept), len(tooled)))
+
+    # COVERAGE FIRST, as three separate denominators. The two sweeps ask
+    # different populations -- the cold one reaches every domain, the gating
+    # test only sites with a button to click -- so one number would be wrong
+    # for one of them.
+    A('<ul class="lanes">')
+    for label, k, n in (("homepage loaded", len(seen), len(swept)),
+                        ("tooling detected", len(tooled), len(seen)),
+                        ("rejection tested", len(gated), len(tooled))):
+        A('<li><span class="n">%d</span><span class="quiet">of %d %s</span></li>'
+          % (k, n, e(label)))
+    A("</ul>")
+
+    # THE THREE STATES. Doug, 2026-08-27: act on what we manage, and still be
+    # able to tell clients about what we do not, without the page implying we
+    # broke theirs.
+    A('<div class="states">')
     for cls, title, rows_, why in (
-        ("bad", "Ours, and a tag ignores the rejection", ours_broken,
+        ("crit", "Ours, and a tag ignores the rejection", ours_broken,
          "We manage consent here and something still fires after Reject All. "
-         "This is the only group that is a defect in something we built."),
+         "The only group that is a defect in something we built."),
         ("good", "Ours, and gated", ours_ok,
          "Everything that fired on load stopped when consent was refused."),
-        ("info", "Not ours", theirs,
+        ("plan", "Not ours", theirs,
          "Trackers fire before consent and clevermethod does not manage this "
          "site. Worth telling the client; not our queue."),
     ):
-        A('<div class="statecard %s"><div class=stlab>%s</div>'
-          '<div class=stnum>%d<small>sites</small></div>'
-          '<div class=stwhy>%s</div>' % (cls, e(title), len(rows_), e(why)))
+        A('<section class="state state-%s"><h2>%s</h2>'
+          '<p class="n">%d<span>sites</span></p><p class="why">%s</p>'
+          % (cls, e(title), len(rows_), e(why)))
         # NAMED WHERE NAMING IS ACTIONABLE, COUNTED WHERE IT IS NOT. The two
-        # small groups are a work list and belong in full. "Not ours" is 39
-        # sites, and rendering all of them turned a summary card into a wall
-        # that buried the two cards next to it -- the ones somebody can act on.
-        # The full list is the table below; this says how to get there.
+        # small groups are a work list. "Not ours" is 39, and rendering all of
+        # them turned a summary into a wall that buried the two cards somebody
+        # can act on.
         if rows_ and len(rows_) <= 14:
-            A('<div class=stlist>%s</div>'
-              % ", ".join("<code>%s</code>" % e(x["site_id"]) for x in rows_))
+            A('<p class="mono sl">%s</p>'
+              % ", ".join(e(x["site_id"]) for x in rows_))
         elif rows_:
-            A('<div class=stlist>%s <span class=quiet>and %d more &mdash; '
-              'every one is in the table below</span></div>'
-              % (", ".join("<code>%s</code>" % e(x["site_id"]) for x in rows_[:6]),
-                 len(rows_) - 6))
-        A("</div>")
+            A('<p class="mono sl">%s <span class="quiet">and %d more &mdash; '
+              'all of them in the table below</span></p>'
+              % (", ".join(e(x["site_id"]) for x in rows_[:6]), len(rows_) - 6))
+        A("</section>")
     A("</div>")
 
     # UNTESTED IS ITS OWN ROW, never folded into "gated". "Nothing still fires
     # after rejection" is the best possible result, so a site the test could
     # not complete would otherwise read as the cleanest on the fleet.
-    if gate_untested:
-        A('<div class="card warnrow" style="margin-top:12px">'
-          '<b>%d site(s) could not be tested for gating.</b> Not clean &mdash; '
-          'unread. Two of these run a generic banner with no Reject control the '
-          'test knows how to find. %s</div>'
-          % (len(gate_untested),
-             ", ".join("<code>%s</code>" % e(x["site_id"]) for x in gate_untested)))
+    if untested:
+        A('<p class="notice"><b>%d site(s) could not be tested for gating.</b> '
+          'Not clean &mdash; unread. Two of these run a generic banner with no '
+          'Reject control the test knows how to find. <span class="mono">%s'
+          '</span></p>' % (len(untested), ", ".join(e(x["site_id"]) for x in untested)))
 
-    # THE EVIDENCE, one row per site, only for sites the sweep saw.
-    A("<h2>Every site the sweep reached</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">'
-      '<b>On load</b> is what fired for a visitor who has done nothing. On an '
-      'opt-out site that is the configured behaviour, not a finding. '
-      '<b>After reject</b> is the question that discriminates: a tag that '
-      'still fires there is not reading consent state, on either model.</p>')
-    A('<div class="card tablewrap"><table class=consenttbl>'
+    A('<h2 class="sec">Every site the sweep reached</h2>')
+    # THE OURS TOGGLE. Consent work is done by whoever configures it, and the
+    # first question they ask is "which of these are mine". Plain checkbox in
+    # the same .tools bar the fleet page uses, and it rewrites the count so the
+    # number always describes what is on screen -- the fleet page learned that
+    # one the hard way, printing a fact about the view as a fact about the site.
+    A('<div class="tools">')
+    A('<label><input type="checkbox" id="oursonly"> Only sites we manage</label>')
+    A('<span class="count" id="rowcount"></span>')
+    A("</div>")
+    A('<div class="mwrap"><table class="ctbl" id="ctbl"><thead>'
       "<tr><th>Site</th><th>Managed</th><th>Model</th><th>Tooling</th>"
-      "<th class=num>On load</th><th>After reject</th><th>Cookieless</th></tr>")
+      '<th class="num">On load</th><th>After reject</th><th>Cookieless</th>'
+      "</tr></thead><tbody>")
     for x in sorted(seen, key=lambda y: y["site_id"]):
-        managed = x.get("consent_managed")
-        mchip = (chip("ours", "info") if managed is True
-                 else '<span class=quiet>client</span>')
-        model = x.get("consent_model") or None
-        mo = e(model) if model else '<span class=quiet>not ruled</span>'
+        managed = x.get("consent_managed") is True
+        mchip = ('<span class="chip st-OK">ours</span>' if managed
+                 else '<span class="quiet">client</span>')
+        model = x.get("consent_model")
+        mo = e(model) if model else '<span class="quiet">not ruled</span>'
         vendor = x.get("consent_banner_vendor")
         ven = (e(vendor) if vendor not in (None, "none", L.UNKNOWN)
-               else '<span class=quiet>none</span>')
+               else '<span class="quiet">none</span>')
         pre = x.get("consent_pre_trackers")
-        pre_s = str(pre) if isinstance(pre, int) else '<span class=quiet>?</span>'
+        pre_s = str(pre) if isinstance(pre, int) else '<span class="quiet">?</span>'
         if x.get("gating_tested") is True:
             still = x.get("gating_still_firing") or 0
-            after = (chip("gated", "good") if not still
-                     else chip(e(x.get("gating_still_firing_names") or "?"), "bad"))
+            after = ('<span class="chip st-OK">gated</span>' if not still
+                     else '<span class="chip st-CRIT">%s</span>'
+                          % e(x.get("gating_still_firing_names") or "?"))
         elif "gating_tested" in x:
-            after = '<span class=quiet>not tested</span>'
+            # UNMEASURED GETS THE HATCH, the same treatment the fleet page uses
+            # for an absence. It must not read as a quiet pass.
+            after = '<span class="chip st-UNKNOWN">not tested</span>'
         else:
-            after = '<span class=quiet>&mdash;</span>'
+            after = '<span class="quiet">&mdash;</span>'
         ck = x.get("gating_cookieless_names")
         ck_s = (e(ck) if ck not in (None, "none", L.UNKNOWN)
-                else '<span class=quiet>&mdash;</span>')
-        A("<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td>%s</td>"
-          "<td class=num>%s</td><td>%s</td><td class=quiet>%s</td></tr>"
-          % (e(x["site_id"]), mchip, mo, ven, pre_s, after, ck_s))
-    A("</table></div>")
+                else '<span class="quiet">&mdash;</span>')
+        A('<tr data-ours="%s"><td class="mono">%s</td><td>%s</td><td>%s</td>'
+          '<td>%s</td><td class="num mono">%s</td><td>%s</td>'
+          '<td class="quiet">%s</td></tr>'
+          % ("1" if managed else "0", e(x["site_id"]), mchip, mo, ven,
+             pre_s, after, ck_s))
+    A("</tbody></table></div>")
 
-    # WHAT THIS PAGE CANNOT TELL YOU. Every number above is one browser, one
-    # location, one moment; and the sweep's tracker counts are a FLOOR because
-    # some vendors decline to fire under automation.
-    A("<h2>What this page does not establish</h2>")
-    A('<div class=card><ul class=caveats>')
+    A('<h2 class="sec">What this page does not establish</h2>')
+    A('<ul class="caveats">')
     A("<li><b>Location.</b> The sweep records what fired from wherever it ran, "
       "and does not record where that was. A site with a geolocation rule "
       "behaves differently elsewhere.</li>")
@@ -2984,42 +2984,75 @@ def render_consent(m):
       "automation, so a tracker count is the least that fired, never the "
       "most.</li>")
     A("<li><b>Not a compliance verdict.</b> These are observations about tag "
-      "behaviour. Whether a given configuration meets a given law is a "
-      "question for someone qualified to answer it.</li>")
-    A("<li><b>Cookieless Google pings are not counted as leaks.</b> A GA or "
-      "Ads request carrying <code>gcs=G100</code> after a rejection is what a "
-      "correctly configured site does; it is shown in its own column rather "
-      "than as a finding.</li>")
-    A("</ul></div>")
+      "behaviour. Whether a configuration meets a given law is a question for "
+      "someone qualified to answer it.</li>")
+    A("<li><b>Cookieless Google pings are not leaks.</b> A GA or Ads request "
+      "carrying <code>gcs=G100</code> after a rejection is what a correctly "
+      "configured site does; it has its own column rather than a finding.</li>")
+    A("</ul>")
 
-    A('<p class=foot>Generated %s from the ledger at <code>history/</code>. '
-      "Read-only: this page reports, it never changes a site.</p>"
-      % e(m["generated"]))
-    A("</div></html>")
+    A('<footer class="foot">Generated %s from the ledger at '
+      "<code>history/</code>. Read-only: this page reports, it never changes a "
+      "site.</footer>" % e(m["generated"]))
+    A("</div>")
+    A("""<script>
+(function () {
+  var box = document.getElementById('oursonly');
+  var rows = [].slice.call(document.querySelectorAll('#ctbl tbody tr'));
+  var out = document.getElementById('rowcount');
+  function draw() {
+    var only = box.checked, shown = 0;
+    rows.forEach(function (r) {
+      var keep = !only || r.getAttribute('data-ours') === '1';
+      r.hidden = !keep;
+      if (keep) shown++;
+    });
+    // THE COUNT DESCRIBES WHAT IS ON SCREEN, and says so against the total.
+    // A bare number here would be a fact about the view wearing the clothes of
+    // a fact about the fleet -- the exact mistake the components page made
+    // when a filter rewrote "the 1 component installed on <site>".
+    out.textContent = shown + ' of ' + rows.length + ' rows shown';
+  }
+  box.addEventListener('change', function () {
+    draw();
+    // Survives a reload and a shared link. Someone sending "look at ours"
+    // should be able to send the URL.
+    var u = new URL(location.href);
+    if (box.checked) u.searchParams.set('ours', '1');
+    else u.searchParams.delete('ours');
+    history.replaceState(null, '', u);
+  });
+  if (new URLSearchParams(location.search).get('ours') === '1') box.checked = true;
+  draw();
+})();
+</script>""")
+    A("</body></html>")
+    A("")
     return "\n".join(o)
 
 
 CONSENT_CSS = """
-.covgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
-.stategrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
- margin-bottom:6px}
-.statecard{border:1px solid var(--line);background:var(--card);padding:14px 16px}
-/* The tone is carried by a left bar rather than a fill: three filled cards in
-   three colours reads as a traffic light, and these are not three severities.
-   They are three OWNERS. */
-.statecard.bad{border-left:3px solid var(--bad)}
-.statecard.good{border-left:3px solid var(--good)}
-.statecard.info{border-left:3px solid var(--info)}
-.stlab{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
- color:var(--ink2)}
-.stnum{font-size:34px;font-weight:800;line-height:1.1;margin:2px 0 4px}
-.stnum small{font-size:12px;font-weight:600;color:var(--ink2);margin-left:6px}
-.stwhy{font-size:12.5px;color:var(--ink2);line-height:1.5}
-.stlist{margin-top:8px;font-size:12px;line-height:1.7}
-.warnrow{border-left:3px solid var(--info)}
-.consenttbl td,.consenttbl th{vertical-align:top}
-.caveats{margin:0;padding-left:20px;line-height:1.6}
-.caveats li{margin-bottom:7px}
+.states { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 0 0 12px; }
+.state { border: 1px solid var(--line); background: var(--surface); padding: 12px 14px; }
+/* Tone on a left bar, not a fill. Three filled cards in three colours reads as
+   a traffic light, and these are not three severities -- they are three
+   OWNERS. */
+.state-crit { border-left: 3px solid var(--crit); }
+.state-good { border-left: 3px solid var(--good); }
+.state-plan { border-left: 3px solid var(--plan); }
+.state h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
+.state .n { font-family: var(--font-mono); font-size: 30px; font-weight: 500; margin: 2px 0 4px; }
+.state .n span { font-family: var(--font-body); font-size: 12px; color: var(--ink2); margin-left: 6px; }
+.state .why { font-size: 12.5px; color: var(--ink2); margin: 0; line-height: 1.5; }
+.state .sl { font-size: 12px; margin: 8px 0 0; line-height: 1.7; }
+.notice { border: 1px solid var(--line); border-left: 3px solid var(--plan); background: var(--surface); padding: 10px 14px; font-size: 12.5px; margin: 0 0 14px; }
+h2.sec { font-size: 15px; margin: 22px 0 8px; }
+.ctbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+.ctbl th, .ctbl td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
+.ctbl thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink2); font-weight: 600; }
+.ctbl .num { text-align: right; }
+.caveats { margin: 0; padding-left: 20px; line-height: 1.6; font-size: 13px; max-width: 78ch; }
+.caveats li { margin-bottom: 7px; }
 """
 
 

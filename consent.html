@@ -1,385 +1,408 @@
-<!doctype html><html lang=en><meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1">
-<title>clevermethod fleet: consent</title><style>:root{--good:#1baf7a;--bad:#eb6834;--info:#2a78d6;--muted:#8d9199;--surface:#efefea;--card:#ffffff;--panel2:#f6f6f1;--ink:#241e31;--ink2:#6e6879;--faint:#9c98a5;--strong:#1c122d;--line:#d9d8d0;--line2:#e7e6df;}
-*{box-sizing:border-box}
-/* Type stack, sizes and the square-cornered, uppercase-label treatment are
-   [removed]'s, so the two apps read as one product. Radius is 0 throughout
-   there; the only thing kept round here is the state dot, which is a dot. */
-/* `background` here is load-bearing, not decoration: this page declares no
-   dark variant, so without an explicit ground it would inherit the host's and
-   render this ink on someone else's black. */
-body{margin:0;padding:28px 20px 64px;background:var(--surface);color:var(--ink);
- font:14px/1.5 "Helvetica Neue",Helvetica,Inter,-apple-system,BlinkMacSystemFont,
- "Segoe UI",Arial,sans-serif}
-.wrap{max-width:1180px;margin:0 auto}
-h1{font-size:25px;margin:0 0 2px;font-weight:800;letter-spacing:-.022em;
- line-height:1.08;color:var(--strong)}
-h2{font-size:12.5px;margin:34px 0 10px;font-weight:800;letter-spacing:.09em;
- text-transform:uppercase;color:var(--strong)}
-.sub{color:var(--ink2);font-size:13px;margin:0 0 26px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:0;padding:18px 20px;margin-bottom:14px}
-/* Hero: one per view, >=48px, same sans, proportional figures (never tabular). */
-.hero{font-size:52px;line-height:1.05;font-weight:800;letter-spacing:-.028em;margin:2px 0 4px;
- color:var(--strong)}
-.hero-sub{color:var(--ink2);font-size:14px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:0;padding:14px 16px}
-.kpi .lab{color:var(--ink2);font-size:10.5px;margin-bottom:6px;font-weight:700;
- letter-spacing:.07em;text-transform:uppercase}
-.kpi .val{font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--strong)}
-.kpi .note{color:var(--ink2);font-size:12px;margin-top:4px}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font-weight:800;color:var(--ink2);font-size:10.5px;text-transform:uppercase;
- letter-spacing:.06em;padding:0 10px 8px 0;border-bottom:1px solid var(--line)}
-td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
-tr:last-child td{border-bottom:none}
-td.num{font-variant-numeric:tabular-nums}
-code{font:11.5px/1.55 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:var(--ink)}
-/* Chip: colour is never the only signal. The label is always present. */
-/* THE INFO DISCLOSURE. Methodology folds; qualification never does.
-   A qualification says what a number is OF -- "of the 48 whose backup age can
-   be read at all" -- and without it the number is wrong. Methodology says how
-   the number was computed, and a reader can act on the page without it. */
-details.md{margin-top:9px;border-top:1px solid var(--line2);padding-top:8px}
-details.md summary{cursor:pointer;font-size:11px;font-weight:700;color:var(--ink2);
- list-style:none;display:inline-flex;align-items:center;gap:6px}
-details.md summary::-webkit-details-marker{display:none}
-details.md summary .ic{display:inline-flex;align-items:center;justify-content:center;
- width:15px;height:15px;border:1px solid var(--line);font-size:10px;font-weight:800;
- font-style:italic;color:var(--ink2)}
-details.md summary:hover{color:var(--strong)}
-details.md[open] summary{margin-bottom:7px}
-details.md p{margin:0 0 7px;font-size:12px;line-height:1.55;color:var(--ink2)}
-details.md p:last-child{margin-bottom:0}
-.sweepline{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;
- margin:6px 0 12px;font-size:13px;padding-bottom:10px;
- border-bottom:1px solid var(--line)}
-.sweeplink{color:var(--info);text-decoration:none;
- border-bottom:1px solid color-mix(in srgb,var(--info) 40%,transparent)}
-.sweepline b{color:var(--strong)}
-.srcdetail{margin-bottom:10px}
-.srcdetail summary{cursor:pointer;font-size:11px;font-weight:800;
- letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
- list-style:none;display:inline-block;padding:2px 0;
- border-bottom:1px solid var(--line)}
-.srcdetail summary::-webkit-details-marker{display:none}
-.srcdetail summary::before{content:"+ ";font-weight:800}
-.srcdetail[open] summary::before{content:"2 "}
-.srcdetail[open] summary{margin-bottom:8px}
-.chgsite{border-bottom:1px solid var(--line2);padding:10px 0}
-.chgsite:last-child{border-bottom:0}
-.chgsite.quietonly{opacity:.72}
-.chghead{font-size:13.5px;font-weight:600;color:var(--strong)}
-.chglist{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--ink2)}
-.chglist li{margin-bottom:3px}
-.trendup{color:color-mix(in srgb,var(--bad) 70%,var(--ink))}
-.trenddown{color:color-mix(in srgb,var(--good) 70%,var(--ink))}
-.rowcount{margin-left:auto;font-size:12px;color:var(--ink2)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.tile{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);
- padding:14px 16px;text-align:left;font:inherit;color:inherit;cursor:pointer}
-.tile:hover{border-color:var(--ink2);border-left-color:var(--strong)}
-.tile.bad{border-left-color:var(--bad)}
-.tile.info{border-left-color:var(--info)}
-.tile.on{background:var(--panel2);border-left-color:var(--strong)}
-.tlab{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
- color:var(--ink2);margin-bottom:6px}
-.tnum{font-size:30px;font-weight:700;color:var(--strong);letter-spacing:-.02em;line-height:1.1}
-.tnum small{font-size:13px;font-weight:600;color:var(--ink2);letter-spacing:0;margin-left:5px}
-.twhy{font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.45}
-.covof{color:var(--faint);font-weight:400}
-.covnone{color:var(--muted);font-weight:400}
-.covgap{color:var(--bad)}
-/* THE THREE LAYERS. A rule, a label and a sentence -- no boxes, no tint.
-   The page already uses cards for content, so a tinted band around cards
-   would read as a bigger card rather than as a boundary. A full-bleed rule
-   with a label sitting on it is the cheapest thing that unambiguously says
-   "a different kind of material starts here". */
-.layer{margin:34px 0 0;padding:0}
-.layer:first-of-type{margin-top:22px}
-.layerhead{border-top:2px solid var(--ink);padding:10px 0 0;margin:0 0 16px}
-.layerlab{font-size:11px;font-weight:800;letter-spacing:.14em;
- text-transform:uppercase;color:var(--ink)}
-.layerwhy{font-size:13px;color:var(--ink2);margin-top:3px;max-width:62ch}
-/* The reference layer is where a reader stops reading and starts looking
-   things up. Saying so with weight rather than colour keeps it legible on
-   paper and in both themes. */
-.layer-reference .layerhead{border-top-width:4px}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>clevermethod fleet: consent</title>
+<style>/* Fleet dashboard page styles. Inlined into fleet.html by render-dashboard.py.
+   Every colour is a token defined for both themes; no web fonts, no network. */
+/* Structural styles. Every colour is a token defined for both themes below. */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; }
+.mono, .v, code { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.quiet { color: var(--ink2); }
+small { color: var(--ink2); font-size: 0.86em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 
-/* JUMP LINKS. Inline under the masthead, wrapping, no sticky rail: the
-   tallest section here is a 102KB table and a bar pinned to every screen
-   costs more than it returns. */
-.jumpnav{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 0;
- font-size:12px}
-.jumpnav a{color:color-mix(in srgb,var(--info) 85%,var(--ink));text-decoration:none;
- border-bottom:1px solid color-mix(in srgb,currentColor 30%,transparent)}
-.jumpnav a:hover{border-bottom-color:currentColor}
-.backtop{margin:18px 0 0;font-size:12px}
-.backtop a{color:var(--ink2);text-decoration:none}
-.backtop a:hover{color:color-mix(in srgb,var(--info) 85%,var(--ink))}
-/* An anchor jump must not tuck the heading under anything, and must leave the
-   heading visibly ABOVE its own content rather than flush to the top edge. */
-[id]{scroll-margin-top:14px}
+/* absence tokens: hatched, never coloured like a state */
+.abs { display: inline-block; padding: 0 6px; border: 1px dashed var(--ink2); border-radius: 2px; color: var(--ink2); font-family: var(--font-mono); font-size: 0.82em; line-height: 1.6; letter-spacing: 0.02em;
+  background: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 4px); }
+.abs-na { border-style: dotted; background: none; }
+.abs-none { opacity: 0.8; }
 
-/* THE KEY, GROUPED. The label carries the distinction -- verdict versus no
-   verdict -- so the groups need separating but not boxing. */
-.keygroup + .keygroup{margin-top:16px;padding-top:14px;
- border-top:1px solid var(--line)}
-.keylab{font-size:12px;font-weight:700;margin:0 0 8px}
+/* status chips: glyph + word */
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px 1px 6px; border-radius: 3px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap; font-family: var(--font-body); }
+.chip .g { font-size: 10px; line-height: 1; }
+.st-CRIT { color: var(--crit); border-color: var(--crit); background: color-mix(in srgb, var(--crit) 10%, transparent); }
+.st-WARN { color: var(--warn-ink); border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.st-OK { color: var(--good-ink); border-color: color-mix(in srgb, var(--good) 55%, transparent); background: transparent; }
+.st-UNKNOWN { color: var(--ink2); border-color: var(--ink2); border-style: dashed; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 4px); }
+.st-SKIP, .st-FROZEN { color: var(--ink2); border-color: var(--line); border-style: dotted; }
+.kind { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink2); white-space: nowrap; }
+.kind-RISK { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 50%, transparent); }
+.kind-COVERAGE { border-style: dashed; }
+.lane { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; border: 1px solid var(--line); }
+.lane-person { color: var(--crit); border-color: var(--crit); }
+.lane-unestablished { color: var(--ink2); border-style: dashed; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 4px); }
+.lane-schedule { color: var(--warn-ink); border-color: var(--warn); }
+.lane-decide { color: var(--accent); border-color: var(--accent); }
+.lane-clear { color: var(--good-ink); }
+.lane-unmeasurable, .lane-excluded { color: var(--ink2); border-style: dotted; }
 
-/* ROUTINE CHANGES, FOLDED. Closed by default and it says what is inside it,
-   because a fold whose summary is a bare "22 sites" is the buried-key
-   mistake again. */
-.quietfold{margin-top:4px}
-.quietfold > summary{cursor:pointer;font-size:13px;color:var(--ink2);
- padding:8px 0}
-.quietfold > summary:hover{color:var(--ink)}
-.quietfold > div{padding-top:6px}
+/* sparkline */
+.sparkwrap { display: inline-flex; align-items: center; gap: 8px; color: var(--ink2); }
+.spark-up { color: var(--warn-ink); } .spark-down { color: var(--good-ink); }
+.sparklbl { font-family: var(--font-mono); font-size: 11px; color: var(--ink2); }
 
-/* THE KIND KEY. Wraps to as many lines as it needs rather than scrolling: it
-   is four short items and it must be readable at any width, on the phone
-   included. Each item keeps its pill and gloss together, so a wrap never
-   orphans a definition from the word it defines. */
-.kindlegend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;
- margin:8px 0 0;font-size:12px;line-height:1.5}
-.kindkey{display:inline-flex;align-items:baseline;gap:7px}
-.kindkey .chip{position:relative;top:1px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;
- letter-spacing:.08em;text-transform:uppercase;
- white-space:nowrap;padding:3px 8px 3px 7px;border-radius:0;
- border:1px solid color-mix(in srgb,currentColor 34%,transparent);
- background:color-mix(in srgb,currentColor 11%,transparent)}
-/* THE LABEL IS DARKENED, THE DOT IS NOT. The severity hues are validated for
-   colourblind SEPARATION, which is a different test from contrast against a
-   white card: as drawn they measure 2.8:1 (OK) and 3.2:1 (CRIT) as text, and
-   uppercasing them at 10px made that worse. Mixing the text toward --ink
-   lifts both above 4.5 while the dot keeps the exact validated colour -- a
-   swatch carries no text and has no ratio to meet. --ink flips in dark mode,
-   so the same rule darkens on paper and lightens on the dark ground. */
-/* Per-tone, not `.chip{...currentColor...}`. That first attempt lost to the
-   `.good{color:var(--good)}` rule below it: equal specificity, later wins, so
-   the ratios did not move at all. Measured before believing it. */
-.chip.good{color:color-mix(in srgb,var(--good) 62%,var(--ink))}
-.chip.bad{color:color-mix(in srgb,var(--bad) 62%,var(--ink))}
-.chip.info{color:color-mix(in srgb,var(--info) 62%,var(--ink))}
-.chip.muted{color:color-mix(in srgb,var(--muted) 62%,var(--ink))}
-.chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
-.chip.good .dot{background:var(--good)}
-.chip.bad .dot{background:var(--bad)}
-.chip.info .dot{background:var(--info)}
-.chip.muted .dot{background:var(--muted)}
-.good{color:var(--good)}.bad{color:var(--bad)}.info{color:var(--info)}.muted{color:var(--muted)}
-/* Meter: fill carries state, track is a lighter step of the SAME colour so the
-   whole bar reads, per the marks spec. */
-.meter{height:7px;border-radius:0;background:color-mix(in srgb,currentColor 18%,transparent);
- overflow:hidden;margin-top:7px}
-.meter>i{display:block;height:100%;background:currentColor;border-radius:0}
-.cov{display:grid;grid-template-columns:1fr auto;gap:2px 14px;align-items:baseline;margin-bottom:14px}
-.cov .n{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:12.5px}
-.cov .m{grid-column:1/-1}
-.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-input,select{font:inherit;font-size:12px;padding:8px 10px;border:1px solid var(--line);
- border-radius:0;background:var(--card);color:var(--ink);min-width:150px}
-/* EVERY table gets its own horizontal scroller, not just the site table.
-   Measured at 390px on 2026-08-23: five of the six tables sat in plain cards
-   with overflow-x:visible, so the whole document scrolled sideways on a
-   phone. "What changed" was 616px inside a 348px card -- and it is the
-   section GETTING-STARTED tells people to read if they read only one. */
-.tablewrap{overflow-x:auto}
-.quiet{color:var(--ink2)}
-/* input and select had no focus rule at all; only links and the state chips
-   did, so keyboard users lost the outline on the filters. */
-input:focus-visible,select:focus-visible{outline:2px solid var(--info);
- outline-offset:1px}
-/* There was no `a` rule at all until 2026-08-23, because until then the page
-   had no links. The component catalogue added 48 of them -- one per
-   inventoried site in the plugin column, plus the back link -- and they all
-   rendered as the browser default rgb(0,0,238) on the dark ground, about 2:1.
-   Mixed toward --ink rather than using --info raw: that darkens the link in
-   light mode and lightens it in dark, so both land above 4.5:1 instead of
-   light mode sitting at 4.1. */
-a{color:color-mix(in srgb,var(--info) 85%,var(--ink));
- text-decoration-color:color-mix(in srgb,currentColor 45%,transparent);
- text-underline-offset:2px}
-a:hover{text-decoration-color:currentColor}
-a:focus-visible{outline:2px solid var(--info);outline-offset:2px;border-radius:0}
-.big-quiet{padding:6px 0 2px;color:var(--ink2);font-size:14px}
-details{margin-top:8px}summary{cursor:pointer;color:var(--ink2);font-size:13px}
-.foot{color:var(--ink2);font-size:12px;margin-top:34px;border-top:1px solid var(--line);padding-top:14px}
-@media(max-width:700px){.hero{font-size:40px}td,th{font-size:12.5px}}
+/* drawer */
+.drawer { position: fixed; inset: 0 0 0 auto; width: min(760px, 100vw); background: var(--surface); border-left: 1px solid var(--line); box-shadow: -12px 0 40px rgba(0,0,0,0.25); transform: translateX(102%); transition: transform 0.18s ease; overflow-y: auto; z-index: 50; }
+.drawer.open { transform: none; }
+body.drawer-open::after { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 40; }
+.site-detail { padding: 22px 26px 40px; }
+.sd-head { position: relative; padding-right: 40px; margin-bottom: 14px; }
+.sd-name { font-family: var(--font-mono); font-size: 20px; font-weight: 600; word-break: break-all; }
+.sd-meta { color: var(--ink2); font-size: 12.5px; margin-top: 2px; }
+.close { position: absolute; top: -4px; right: 0; width: 32px; height: 32px; border: 1px solid var(--line); background: var(--surface2); border-radius: 4px; font-size: 18px; cursor: pointer; }
+.sd-axes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.ax { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; background: var(--surface2); }
+.axl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink2); margin-bottom: 6px; font-weight: 600; }
+.ax ul { margin: 8px 0 0; padding-left: 16px; font-size: 12.5px; } .ax li { margin: 2px 0; }
+.ax p { margin: 6px 0 0; font-size: 12px; }
+.sd-info, .sd-note { border-left: 3px solid var(--line); padding: 6px 12px; margin: 0 0 12px; font-size: 12.5px; }
+.sd-note.warn { border-left-color: var(--warn); }
+.sd-info ul { margin: 0; padding-left: 16px; } .sd-note p { margin: 0; }
+.sd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+.sd-grid section { min-width: 0; }
+.sd-grid .span2 { grid-column: 1 / -1; }
+.sd-grid h4 { margin: 8px 0 6px; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.sd-grid h4 small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.sd-grid dl { margin: 0; }
+.fr { display: grid; grid-template-columns: 150px 1fr; gap: 8px; padding: 3px 0; border-bottom: 1px dotted var(--line); font-size: 12.5px; }
+.fr dt { color: var(--ink2); } .fr dd { margin: 0; word-break: break-word; }
+.sd-spark { margin: 6px 0 2px; }
+table.mini { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.mini th { text-align: left; font-weight: 600; color: var(--ink2); padding: 4px 6px; border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+table.mini td { padding: 3px 6px; border-bottom: 1px dotted var(--line); vertical-align: top; }
+.ev { font-size: 11.5px; padding: 0 6px; border-radius: 3px; border: 1px solid var(--line); }
+.ev-yes { color: var(--good-ink); border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+.ev-no { color: var(--crit); border-color: var(--crit); }
+.ev-abs { color: var(--ink2); border-style: dashed; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--hatch) 3px 4px); }
+.ev-na { color: var(--ink2); border-style: dotted; }
+.claim { color: var(--ink2); font-style: italic; }
+.disagree { color: var(--warn-ink); font-weight: 600; }
+.sd-foot { margin-top: 18px; font-size: 12px; }
+@media (max-width: 640px) { .sd-grid { grid-template-columns: 1fr; } .fr { grid-template-columns: 120px 1fr; } .site-detail { padding: 16px 14px 40px; } }
 
-/* --- the suite scoreboard, 2026-08-20 -------------------------------- */
-.suite{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:26px}
-.wfcard{display:flex;flex-direction:column;gap:10px}
-.wfhead{font-size:17px;font-weight:650;letter-spacing:-.01em}
-.wfblurb{font-size:13px;line-height:1.45;color:var(--ink2)}
-.wfstates{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;margin-top:2px}
-.wfstate{display:flex;align-items:baseline;gap:6px}
-button.wfjump{background:none;border:0;padding:2px 4px;margin:-2px -4px;font:inherit;
-  cursor:pointer;border-radius:0}
-button.wfjump:hover{background:rgba(0,0,0,.05)}
-button.wfjump:focus-visible{outline:2px solid var(--info);outline-offset:1px}
-.wfn{font-size:22px;font-weight:640;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.wfcov{margin-top:auto;padding-top:4px}
-.wfbar{height:6px;border-radius:0;background:var(--line);overflow:hidden}
-.wfbar i{display:block;height:100%;border-radius:0}
-.wfbar i.good{background:var(--good)}
-.wfbar i.info{background:var(--info)}
-.wfbar i.bad{background:var(--bad)}
-.wfcovlab{font-size:12.5px;color:var(--ink2);margin-top:5px}
-.wfnote{font-size:12.5px;line-height:1.5;color:var(--ink2);border-top:1px solid var(--line);padding-top:9px}
-.wfdetail{display:flex;flex-direction:column;gap:5px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
-.wfrow b{color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums}
-.wfmini{display:flex;flex-direction:column;gap:9px;margin:2px 0 4px}
-.wfminirow{display:grid;grid-template-columns:46px 1fr 48px;align-items:center;gap:9px;font-size:12.5px;color:var(--ink2)}
-.wfminilab{font-weight:600;color:var(--ink)}
-.wfmininum{text-align:right;font-variant-numeric:tabular-nums}
-.cellnote{font-size:11px;line-height:1.35;color:var(--ink2);margin-top:3px;max-width:150px}
-/* --- compressed masthead, 2026-08-20 --------------------------------- */
-.masthead{margin-bottom:12px}
-.topband{display:grid;grid-template-columns:minmax(190px,0.8fr) minmax(300px,1.5fr);
- gap:26px;align-items:center;padding:16px 20px;margin-bottom:10px}
-.topband .hero{font-size:46px;margin:0}
-.topband .hero-sub{font-size:13px;line-height:1.45;margin-top:2px}
-.topside{display:grid;gap:0}
-.toprow{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:baseline;
- font-size:12.5px;line-height:1.45;color:var(--ink2);
- padding:7px 0;border-bottom:1px solid var(--line)}
-.toprow:last-child{border-bottom:0;padding-bottom:0}
-.toprow:first-child{padding-top:0}
-.toprow b{color:var(--ink);font-size:16px;font-weight:640;text-align:right;
- font-variant-numeric:tabular-nums}
-.runline{font-size:12.5px;color:var(--ink2);margin:0 0 26px}
-.runline b{color:var(--ink);font-weight:600}
-@media(max-width:720px){.topband{grid-template-columns:1fr;gap:16px}}
-.wfminirow .wfbar{height:6px;border-radius:0;background:var(--line);overflow:hidden;display:block}
+:root {
+  --bg: #f4f5f2; --surface: #ffffff; --surface2: #eef0ec; --ink: #1d2129; --ink2: #626873; --line: #d5d8d2;
+  --accent: #16697a; --crit: #c8352b; --warn: #c77d0a; --warn-ink: #8a5606; --good: #2f8a5b; --good-ink: #23704a; --plan: #4a6fa5;
+  --hatch: rgba(0,0,0,0.10); --font-body: system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161a1d; --surface: #1e2327; --surface2: #262c31; --ink: #e6e8e4; --ink2: #9aa1a8; --line: #333a41;
+  --accent: #5cc0d0; --crit: #ef5b4d; --warn: #e0a63a; --warn-ink: #e0a63a; --good: #4fb37e; --good-ink: #5fc08c; --plan: #7fa3d8; --hatch: rgba(255,255,255,0.10);
+} }
+:root[data-theme="dark"] {
+  --bg: #161a1d; --surface: #1e2327; --surface2: #262c31; --ink: #e6e8e4; --ink2: #9aa1a8; --line: #333a41;
+  --accent: #5cc0d0; --crit: #ef5b4d; --warn: #e0a63a; --warn-ink: #e0a63a; --good: #4fb37e; --good-ink: #5fc08c; --plan: #7fa3d8; --hatch: rgba(255,255,255,0.10);
+}
+body { font-size: 13.5px; }
+.wrap { max-width: 1560px; margin: 0 auto; padding: 16px 20px 60px; }
+.top { display: block; padding-bottom: 10px; border-bottom: 2px solid var(--ink); margin-bottom: 12px; }
+.top h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.top h1 small { font-size: 13px; font-weight: 400; color: var(--ink2); margin-left: 10px; }
+.top .thesis { font-size: 13px; color: var(--ink2); margin: 4px 0 0; }
+.sweep { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink2); line-height: 1.6; display: flex; flex-wrap: wrap; gap: 2px 18px; margin-top: 6px; }
+.sweep div { white-space: nowrap; }
+.sweep b { color: var(--ink); font-weight: 500; }
+.sweep .stale { color: var(--warn-ink); }
 
-.covgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
-.stategrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
- margin-bottom:6px}
-.statecard{border:1px solid var(--line);background:var(--card);padding:14px 16px}
-/* The tone is carried by a left bar rather than a fill: three filled cards in
-   three colours reads as a traffic light, and these are not three severities.
-   They are three OWNERS. */
-.statecard.bad{border-left:3px solid var(--bad)}
-.statecard.good{border-left:3px solid var(--good)}
-.statecard.info{border-left:3px solid var(--info)}
-.stlab{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
- color:var(--ink2)}
-.stnum{font-size:34px;font-weight:800;line-height:1.1;margin:2px 0 4px}
-.stnum small{font-size:12px;font-weight:600;color:var(--ink2);margin-left:6px}
-.stwhy{font-size:12.5px;color:var(--ink2);line-height:1.5}
-.stlist{margin-top:8px;font-size:12px;line-height:1.7}
-.warnrow{border-left:3px solid var(--info)}
-.consenttbl td,.consenttbl th{vertical-align:top}
-.caveats{margin:0;padding-left:20px;line-height:1.6}
-.caveats li{margin-bottom:7px}
+.lanes { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 12px; padding: 0; list-style: none; font-size: 12.5px; }
+.lanes li { display: inline-flex; align-items: baseline; gap: 6px; }
+.lanes .n { font-family: var(--font-mono); font-size: 18px; font-weight: 500; }
+.lanes button { border: 0; background: none; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; color: var(--ink); }
+.lanes button[aria-pressed="true"] { text-decoration-color: var(--accent); color: var(--accent); }
+
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.tools input, .tools select { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); }
+.tools label { font-size: 12.5px; display: inline-flex; gap: 5px; align-items: center; }
+.tools .count { font-family: var(--font-mono); font-size: 12px; color: var(--ink2); margin-left: auto; }
+
+.key { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--ink2); margin: 0 0 8px; padding: 0; list-style: none; }
+.key li { display: inline-flex; align-items: center; gap: 6px; }
+.key .cell { width: 26px; height: 18px; }
+
+.mwrap { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+table.matrix { border-collapse: separate; border-spacing: 0; font-size: 12px; min-width: 1240px; width: 100%; }
+table.matrix th, table.matrix td { padding: 0; border-bottom: 1px solid var(--line); border-right: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+table.matrix thead th { position: sticky; top: 0; z-index: 3; background: var(--surface2); font-weight: 400; text-align: left; vertical-align: bottom; }
+table.matrix thead tr.groups th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink2); padding: 6px 8px 2px; border-bottom: 0; border-right: 1px solid var(--line); }
+table.matrix thead tr.cols th { padding: 2px 6px 6px; font-size: 11.5px; line-height: 1.2; border-bottom: 2px solid var(--ink); }
+table.matrix thead tr.cols th .cov { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink2); margin-top: 2px; }
+table.matrix thead tr.cols th .cov.short { color: var(--warn-ink); }
+table.matrix thead tr.census th { padding: 0 6px 6px; border-bottom: 1px solid var(--line); }
+.census-bar { display: flex; height: 6px; gap: 1px; width: 100%; }
+.census-bar i { display: block; height: 100%; }
+.cb-crit { background: var(--crit); } .cb-warn { background: var(--warn); } .cb-good { background: color-mix(in srgb, var(--good) 45%, transparent); }
+.cb-abs { background: repeating-linear-gradient(135deg, transparent 0 2px, var(--ink2) 2px 3px); opacity: 0.6; } .cb-na { background: var(--line); }
+.cb-plan { background: var(--plan); }
+
+table.matrix th.site, table.matrix td.site { position: sticky; left: 0; z-index: 2; background: var(--surface); min-width: 210px; max-width: 250px; border-right: 2px solid var(--ink); }
+table.matrix thead th.site { z-index: 4; background: var(--surface2); }
+td.site { padding: 0 8px !important; }
+td.site .nm { font-family: var(--font-mono); font-size: 11.5px; cursor: pointer; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td.site .nm:hover { color: var(--accent); text-decoration: underline; }
+td.site .hs { font-size: 10.5px; color: var(--ink2); }
+td.ax { padding: 0 6px !important; white-space: nowrap; }
+td.ax .chip { font-size: 10px; padding: 0 5px 0 4px; }
+
+tr.grp th { text-align: left; padding: 10px 8px 4px; background: var(--bg); font-size: 12.5px; font-weight: 700; border-bottom: 1px solid var(--line); position: sticky; left: 0; }
+tr.grp th .n { font-family: var(--font-mono); font-weight: 500; margin-left: 6px; }
+tr.grp th small { font-weight: 400; margin-left: 8px; }
+tr.grp td { background: var(--bg); }
+
+td.c { height: 28px; min-width: 62px; text-align: center; vertical-align: middle; font-family: var(--font-mono); font-size: 11px; white-space: nowrap; padding: 0 5px !important; }
+td.c .g { display: inline-block; width: 9px; margin-right: 4px; font-size: 9px; vertical-align: 1px; }
+td.c.s-good { color: var(--ink2); } td.c.s-good .g { color: var(--good); }
+td.c.s-info { color: var(--ink); } td.c.s-info .g { color: var(--ink2); }
+td.c.s-warn { color: var(--warn-ink); background: color-mix(in srgb, var(--warn) 12%, transparent); font-weight: 500; }
+td.c.s-crit { color: var(--crit); background: color-mix(in srgb, var(--crit) 12%, transparent); font-weight: 500; }
+td.c.s-plan { color: var(--plan); }
+td.c.s-abs { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--hatch) 4px 5px); color: var(--ink2); }
+td.c.s-abs .g { color: var(--ink2); }
+td.c.s-na { color: var(--ink2); background: none; }
+td.c.s-na::after { content: ''; }
+td.c .t { font-size: 10px; }
+td.c.s-abs .t, td.c.s-na .t { font-style: italic; font-size: 10px; }
+tr.row:hover td { background-color: color-mix(in srgb, var(--accent) 7%, transparent); }
+tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+
+.below { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 22px; }
+.below h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; }
+.below p { margin: 6px 0; font-size: 12.5px; }
+.att-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.att-grid .a { border: 1px solid var(--line); padding: 8px 10px; background: var(--surface); font-size: 12px; }
+.att-grid .a b { display: block; font-size: 12.5px; }
+.att-grid .a .n { font-family: var(--font-mono); }
+.att-grid .a .bad { color: var(--crit); }
+.foot { margin-top: 26px; font-size: 12px; color: var(--ink2); border-top: 1px solid var(--line); padding-top: 12px; }
+.foot p { margin: 4px 0; }
+@media (max-width: 980px) { .below { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .wrap { padding: 12px 10px 50px; } table.matrix th.site, table.matrix td.site { min-width: 118px; max-width: 130px; } .lanes .n { font-size: 15px; } }
+
+/* --- schedule view --- */
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; margin-bottom: 8px; overflow: hidden; }
+.item > summary { list-style: none; cursor: pointer; padding: 9px 11px 8px; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; }
+.item > summary::-webkit-details-marker { display: none; }
+.item > summary:hover { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.it-title { font-size: 13px; font-weight: 600; grid-column: 1; line-height: 1.3; }
+.it-num { grid-column: 2; grid-row: 1 / span 2; text-align: right; font-family: var(--font-mono); font-size: 22px; font-weight: 600; line-height: 1; align-self: start; }
+.it-num small { display: block; font-family: var(--font-body); font-size: 10.5px; color: var(--ink2); font-weight: 400; margin-top: 3px; white-space: nowrap; }
+.it-meta { grid-column: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11.5px; color: var(--ink2); }
+.it-delta { font-family: var(--font-mono); font-size: 11px; }
+.it-delta.up { color: var(--warn-ink); } .it-delta.down { color: var(--good-ink); }
+.it-body { padding: 0 11px 10px; border-top: 1px dotted var(--line); font-size: 12.5px; }
+.it-body p { margin: 8px 0; }
+.it-body .quiet { font-size: 12px; }
+.sitelist { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; }
+.sitelist li button { font-family: var(--font-mono); font-size: 11px; background: var(--surface2); border: 1px solid var(--line); border-radius: 3px; padding: 2px 6px; cursor: pointer; text-align: left; }
+.sitelist li button:hover { border-color: var(--accent); }
+.sitelist li small { display: block; color: var(--ink2); font-family: var(--font-body); }
+.item.crit-item { border-left: 3px solid var(--crit); }
+.item.crit-item .it-num { color: var(--crit); }
+.item.abs-item { border-style: dashed; }
+.item.abs-item .it-num { color: var(--ink2); }
+
+.comp { margin: 6px 0 0; padding: 0; list-style: none; }
+.comp li { display: grid; grid-template-columns: minmax(0, 1fr) 46px 64px; gap: 8px; align-items: center; font-size: 12px; padding: 3px 0; border-bottom: 1px dotted var(--line); }
+.comp .bar { position: relative; height: 6px; background: color-mix(in srgb, var(--warn) 18%, transparent); border-radius: 2px; }
+.comp .bar i { position: absolute; inset: 0 auto 0 0; background: var(--warn); border-radius: 2px; }
+.comp .slug { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comp .slug small { font-family: var(--font-body); }
+.comp .n { font-family: var(--font-mono); text-align: right; }
+.cum { font-size: 11.5px; color: var(--ink2); margin-top: 6px; }
+
+
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--ink); margin: 4px 0 12px; }
+.tabs button { border: 1px solid transparent; border-bottom: 0; background: none; padding: 8px 16px 7px; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ink2); display: flex; flex-direction: column; align-items: flex-start; gap: 1px; margin-bottom: -2px; }
+.tabs button small { font-weight: 400; font-family: var(--font-mono); font-size: 11px; }
+.tabs button[aria-selected="true"] { color: var(--ink); background: var(--surface); border-color: var(--ink); border-bottom: 2px solid var(--surface); }
+.sched { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+.sched-main .item { background: var(--surface); }
+.sched-side { border-left: 1px solid var(--line); padding-left: 18px; font-size: 13px; color: var(--ink2); }
+.sched-side h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; color: var(--ink); }
+.sched-side p { margin: 0 0 10px; }
+.it-delta.up { color: var(--warn-ink); } .it-delta.down { color: var(--good-ink); }
+@media (max-width: 900px) { .sched { grid-template-columns: 1fr; } .sched-side { border-left: 0; padding-left: 0; } }
+
+.banner { border: 1px solid var(--line); border-left: 6px solid var(--line); background: var(--surface); padding: 10px 14px 8px; margin: 0 0 12px; }
+.banner-green { border-left-color: var(--good); } .banner-red { border-left-color: var(--crit); }
+.banner-cant { border-left-color: var(--ink2); border-style: dashed; background: repeating-linear-gradient(135deg, var(--surface) 0 6px, color-mix(in srgb, var(--hatch) 60%, var(--surface)) 6px 7px); }
+.bn-head { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.bn-glyph { font-size: 14px; }
+.banner-green .bn-glyph { color: var(--good); } .banner-red .bn-glyph { color: var(--crit); } .banner-cant .bn-glyph { color: var(--ink2); }
+.bn-sub { margin: 4px 0 0; font-size: 13px; }
+.bn-rule { margin: 4px 0 0; font-size: 11.5px; color: var(--ink2); font-family: var(--font-mono); }
+.rc { font-size: 10.5px; color: var(--ink2); }
+
+.mwrap.flash th[colspan]:last-child { background: color-mix(in srgb, var(--accent) 18%, var(--surface2)); transition: background 0.6s; }
+.key li b { color: var(--ink); }
+
+.key li.def { display: block; } .key li.def b { margin-right: 0; }
+
+.states { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 0 0 12px; }
+.state { border: 1px solid var(--line); background: var(--surface); padding: 12px 14px; }
+/* Tone on a left bar, not a fill. Three filled cards in three colours reads as
+   a traffic light, and these are not three severities -- they are three
+   OWNERS. */
+.state-crit { border-left: 3px solid var(--crit); }
+.state-good { border-left: 3px solid var(--good); }
+.state-plan { border-left: 3px solid var(--plan); }
+.state h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
+.state .n { font-family: var(--font-mono); font-size: 30px; font-weight: 500; margin: 2px 0 4px; }
+.state .n span { font-family: var(--font-body); font-size: 12px; color: var(--ink2); margin-left: 6px; }
+.state .why { font-size: 12.5px; color: var(--ink2); margin: 0; line-height: 1.5; }
+.state .sl { font-size: 12px; margin: 8px 0 0; line-height: 1.7; }
+.notice { border: 1px solid var(--line); border-left: 3px solid var(--plan); background: var(--surface); padding: 10px 14px; font-size: 12.5px; margin: 0 0 14px; }
+h2.sec { font-size: 15px; margin: 22px 0 8px; }
+.ctbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+.ctbl th, .ctbl td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
+.ctbl thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink2); font-weight: 600; }
+.ctbl .num { text-align: right; }
+.caveats { margin: 0; padding-left: 20px; line-height: 1.6; font-size: 13px; max-width: 78ch; }
+.caveats li { margin-bottom: 7px; }
 </style>
-<div class=wrap>
-<div class=masthead>
-<h1>Cookie consent</h1>
-<p class=sub>Does the homepage fire trackers before anyone consents, and do the tags stop when someone rejects. <a href="/">Back to the fleet page</a>.</p>
+</head><body>
+<div class="wrap">
+<header class="top"><div><h1>Cookie consent<small>79 domains &middot; 26 with tooling &middot; read-only</small></h1><p class="thesis">Two questions, not one. What fires for a visitor who has done nothing, and what still fires after that visitor clicks Reject All. Only the second discriminates. <a href="/">Back to the fleet page</a>.</p></div></header>
+<ul class="lanes">
+<li><span class="n">71</span><span class="quiet">of 79 homepage loaded</span></li>
+<li><span class="n">26</span><span class="quiet">of 71 tooling detected</span></li>
+<li><span class="n">23</span><span class="quiet">of 26 rejection tested</span></li>
+</ul>
+<div class="states">
+<section class="state state-crit"><h2>Ours, and a tag ignores the rejection</h2><p class="n">2<span>sites</span></p><p class="why">We manage consent here and something still fires after Reject All. The only group that is a defect in something we built.</p>
+<p class="mono sl">actioncarting.com, interstatewaste.com</p>
+</section>
+<section class="state state-good"><h2>Ours, and gated</h2><p class="n">10<span>sites</span></p><p class="why">Everything that fired on load stopped when consent was refused.</p>
+<p class="mono sl">choosechq.com, ciminelli.com, cottrillspharmacy.com, gmroot.com, icegame.com, lifebreath.com, newmarkciminelli.com, runtalnorthamerica.com, zehnder-rittling.com, zehnderamerica.com</p>
+</section>
+<section class="state state-plan"><h2>Not ours</h2><p class="n">39<span>sites</span></p><p class="why">Trackers fire before consent and clevermethod does not manage this site. Worth telling the client; not our queue.</p>
+<p class="mono sl">1-800-dumpster.com, 11daypowerplay.com, acibg.com, alliedcircuits.com, blockclub.co, buffalobeds.com <span class="quiet">and 33 more &mdash; all of them in the table below</span></p>
+</section>
 </div>
-<div class="card" style="margin-bottom:14px"><div class=covgrid>
-<div class="cov info"><div style="color:var(--ink)">Homepage loaded for the browser</div><div class=n>71 of 79</div><div class="m meter"><i style="width:89.9%"></i></div><div class=quiet style="margin-top:4px">A 403 block page is not a measurement.</div></div>
-<div class="cov bad"><div style="color:var(--ink)">Consent tooling detected</div><div class=n>26 of 71</div><div class="m meter"><i style="width:36.6%"></i></div><div class=quiet style="margin-top:4px">Of the pages that loaded.</div></div>
-<div class="cov info"><div style="color:var(--ink)">Rejection tested</div><div class=n>23 of 26</div><div class="m meter"><i style="width:88.5%"></i></div><div class=quiet style="margin-top:4px">Only askable where there is a Reject button.</div></div>
-</div></div>
-<h2>Where it stands</h2>
-<div class=stategrid>
-<div class="statecard bad"><div class=stlab>Ours, and a tag ignores the rejection</div><div class=stnum>2<small>sites</small></div><div class=stwhy>We manage consent here and something still fires after Reject All. This is the only group that is a defect in something we built.</div>
-<div class=stlist><code>actioncarting.com</code>, <code>interstatewaste.com</code></div>
+<p class="notice"><b>3 site(s) could not be tested for gating.</b> Not clean &mdash; unread. Two of these run a generic banner with no Reject control the test knows how to find. <span class="mono">animatics.com, blockclub.co, summerstreetcapital.com</span></p>
+<h2 class="sec">Every site the sweep reached</h2>
+<div class="tools">
+<label><input type="checkbox" id="oursonly"> Only sites we manage</label>
+<span class="count" id="rowcount"></span>
 </div>
-<div class="statecard good"><div class=stlab>Ours, and gated</div><div class=stnum>10<small>sites</small></div><div class=stwhy>Everything that fired on load stopped when consent was refused.</div>
-<div class=stlist><code>choosechq.com</code>, <code>ciminelli.com</code>, <code>cottrillspharmacy.com</code>, <code>gmroot.com</code>, <code>icegame.com</code>, <code>lifebreath.com</code>, <code>newmarkciminelli.com</code>, <code>runtalnorthamerica.com</code>, <code>zehnder-rittling.com</code>, <code>zehnderamerica.com</code></div>
-</div>
-<div class="statecard info"><div class=stlab>Not ours</div><div class=stnum>39<small>sites</small></div><div class=stwhy>Trackers fire before consent and clevermethod does not manage this site. Worth telling the client; not our queue.</div>
-<div class=stlist><code>1-800-dumpster.com</code>, <code>11daypowerplay.com</code>, <code>acibg.com</code>, <code>alliedcircuits.com</code>, <code>blockclub.co</code>, <code>buffalobeds.com</code> <span class=quiet>and 33 more &mdash; every one is in the table below</span></div>
-</div>
-</div>
-<div class="card warnrow" style="margin-top:12px"><b>3 site(s) could not be tested for gating.</b> Not clean &mdash; unread. Two of these run a generic banner with no Reject control the test knows how to find. <code>animatics.com</code>, <code>blockclub.co</code>, <code>summerstreetcapital.com</code></div>
-<h2>Every site the sweep reached</h2>
-<p class=sub style="margin:-4px 0 10px"><b>On load</b> is what fired for a visitor who has done nothing. On an opt-out site that is the configured behaviour, not a finding. <b>After reject</b> is the question that discriminates: a tag that still fires there is not reading consent state, on either model.</p>
-<div class="card tablewrap"><table class=consenttbl><tr><th>Site</th><th>Managed</th><th>Model</th><th>Tooling</th><th class=num>On load</th><th>After reject</th><th>Cookieless</th></tr>
-<tr><td><code>1-800-dumpster.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>11daypowerplay.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>3</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>acibg.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>actioncarting.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-out</td><td>OneTrust</td><td class=num>5</td><td><span class="chip bad"><span class="dot"></span>MS Clarity</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>alliedcircuits.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>3</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>animatics.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class=quiet>not tested</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>app.eastauroracc.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>bhargavalaw.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>blockclub.co</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>generic</td><td class=num>6</td><td><span class=quiet>not tested</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>breakstones.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>buffalobeds.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>buffalorecycles.org</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>celticindustrialservices.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>choosechq.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>ciminelli.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet>GA4 collect</td></tr>
-<tr><td><code>ciminelliflorida.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>3</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>cottrillspharmacy.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet>GA4 collect</td></tr>
-<tr><td><code>crackerbarrelcheese.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>drspietrantone.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>dslawfirm.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>dynapurge.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>eamusicfest.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>eastauroracc.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>4</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>eastauroraef.org</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>elderwoodipa.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>fairchildcapitalpartners.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>firstaurorafinancial.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>galbanicheese.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>gmroot.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>heartofmusicfestival.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>icegame.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet>GA4 collect</td></tr>
-<tr><td><code>interstatewaste.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-out</td><td>OneTrust</td><td class=num>4</td><td><span class="chip bad"><span class="dot"></span>MS Clarity</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>iroquoisfence.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>3</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>kingsdumpstersny.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>knudsen.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>kraftnaturalcheese.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>lactalisamericangroup.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>lactalisheritagedairy.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>lactalisyogurtusa.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>lancastervillageny.gov</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>lasershows.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>3</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>lifebreath.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>live-frontline-construction.pantheonsite.io</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>local92afm.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>midwestyogurt.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>morrison-chs.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>newmarkciminelli.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet>GA4 collect</td></tr>
-<tr><td><code>ntlibrary.org</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>ontracksitedevelopment.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>packagedesignsupply.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>palmettoresidentialelectric.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>paramaxcorp.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>pediatricspecialty.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>pediatricspecialtymedicalday.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>pfannenbergusa.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>runtalnorthamerica.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>scottishcheddarcheese.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet>GA4 collect</td></tr>
-<tr><td><code>senecafinancialadvisors.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>sgroilawley.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>3</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>shuman-plastics.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>statlerfoundation.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>summerstreetcapital.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>generic</td><td class=num>2</td><td><span class=quiet>not tested</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>thehambycollection.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>thenorthstarcompanies.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>thermalfoams.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>2</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>twostuds.net</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>valbresocheese.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet>GA4 collect</td></tr>
-<tr><td><code>websterszanyi.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>0</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>woodmarkpharmacy.com</code></td><td><span class=quiet>client</span></td><td><span class=quiet>not ruled</span></td><td><span class=quiet>none</span></td><td class=num>1</td><td><span class=quiet>&mdash;</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-<tr><td><code>zehnder-rittling.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet>GA4 collect</td></tr>
-<tr><td><code>zehnderamerica.com</code></td><td><span class="chip info"><span class="dot"></span>ours</span></td><td>opt-in</td><td>OneTrust</td><td class=num>0</td><td><span class="chip good"><span class="dot"></span>gated</span></td><td class=quiet><span class=quiet>&mdash;</span></td></tr>
-</table></div>
-<h2>What this page does not establish</h2>
-<div class=card><ul class=caveats>
+<div class="mwrap"><table class="ctbl" id="ctbl"><thead><tr><th>Site</th><th>Managed</th><th>Model</th><th>Tooling</th><th class="num">On load</th><th>After reject</th><th>Cookieless</th></tr></thead><tbody>
+<tr data-ours="0"><td class="mono">1-800-dumpster.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">11daypowerplay.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">3</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">acibg.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">actioncarting.com</td><td><span class="chip st-OK">ours</span></td><td>opt-out</td><td>OneTrust</td><td class="num mono">5</td><td><span class="chip st-CRIT">MS Clarity</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">alliedcircuits.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">3</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">animatics.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-UNKNOWN">not tested</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">app.eastauroracc.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">bhargavalaw.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">blockclub.co</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>generic</td><td class="num mono">6</td><td><span class="chip st-UNKNOWN">not tested</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">breakstones.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">buffalobeds.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">buffalorecycles.org</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">celticindustrialservices.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">choosechq.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">ciminelli.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet">GA4 collect</td></tr>
+<tr data-ours="0"><td class="mono">ciminelliflorida.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">3</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">cottrillspharmacy.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet">GA4 collect</td></tr>
+<tr data-ours="0"><td class="mono">crackerbarrelcheese.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">drspietrantone.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">dslawfirm.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">dynapurge.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">eamusicfest.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">eastauroracc.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">4</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">eastauroraef.org</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">elderwoodipa.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">fairchildcapitalpartners.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">firstaurorafinancial.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">galbanicheese.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">gmroot.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">heartofmusicfestival.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">icegame.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet">GA4 collect</td></tr>
+<tr data-ours="1"><td class="mono">interstatewaste.com</td><td><span class="chip st-OK">ours</span></td><td>opt-out</td><td>OneTrust</td><td class="num mono">4</td><td><span class="chip st-CRIT">MS Clarity</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">iroquoisfence.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">3</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">kingsdumpstersny.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">knudsen.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">kraftnaturalcheese.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">lactalisamericangroup.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">lactalisheritagedairy.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">lactalisyogurtusa.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">lancastervillageny.gov</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">lasershows.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">3</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">lifebreath.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">live-frontline-construction.pantheonsite.io</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">local92afm.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">midwestyogurt.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">morrison-chs.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">newmarkciminelli.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet">GA4 collect</td></tr>
+<tr data-ours="0"><td class="mono">ntlibrary.org</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">ontracksitedevelopment.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">packagedesignsupply.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">palmettoresidentialelectric.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">paramaxcorp.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">pediatricspecialty.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">pediatricspecialtymedicalday.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">pfannenbergusa.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">runtalnorthamerica.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">scottishcheddarcheese.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet">GA4 collect</td></tr>
+<tr data-ours="0"><td class="mono">senecafinancialadvisors.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">sgroilawley.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">3</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">shuman-plastics.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">statlerfoundation.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">summerstreetcapital.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>generic</td><td class="num mono">2</td><td><span class="chip st-UNKNOWN">not tested</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">thehambycollection.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">thenorthstarcompanies.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">thermalfoams.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">2</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">twostuds.net</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">valbresocheese.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet">GA4 collect</td></tr>
+<tr data-ours="0"><td class="mono">websterszanyi.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">0</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="0"><td class="mono">woodmarkpharmacy.com</td><td><span class="quiet">client</span></td><td><span class="quiet">not ruled</span></td><td><span class="quiet">none</span></td><td class="num mono">1</td><td><span class="quiet">&mdash;</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+<tr data-ours="1"><td class="mono">zehnder-rittling.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet">GA4 collect</td></tr>
+<tr data-ours="1"><td class="mono">zehnderamerica.com</td><td><span class="chip st-OK">ours</span></td><td>opt-in</td><td>OneTrust</td><td class="num mono">0</td><td><span class="chip st-OK">gated</span></td><td class="quiet"><span class="quiet">&mdash;</span></td></tr>
+</tbody></table></div>
+<h2 class="sec">What this page does not establish</h2>
+<ul class="caveats">
 <li><b>Location.</b> The sweep records what fired from wherever it ran, and does not record where that was. A site with a geolocation rule behaves differently elsewhere.</li>
 <li><b>One page.</b> The homepage only. A tag that fires on a form page and not the homepage is invisible here.</li>
 <li><b>A floor, not a total.</b> Some vendors decline to fire under automation, so a tracker count is the least that fired, never the most.</li>
-<li><b>Not a compliance verdict.</b> These are observations about tag behaviour. Whether a given configuration meets a given law is a question for someone qualified to answer it.</li>
-<li><b>Cookieless Google pings are not counted as leaks.</b> A GA or Ads request carrying <code>gcs=G100</code> after a rejection is what a correctly configured site does; it is shown in its own column rather than as a finding.</li>
-</ul></div>
-<p class=foot>Generated 2026-08-27 from the ledger at <code>history/</code>. Read-only: this page reports, it never changes a site.</p>
-</div></html>
+<li><b>Not a compliance verdict.</b> These are observations about tag behaviour. Whether a configuration meets a given law is a question for someone qualified to answer it.</li>
+<li><b>Cookieless Google pings are not leaks.</b> A GA or Ads request carrying <code>gcs=G100</code> after a rejection is what a correctly configured site does; it has its own column rather than a finding.</li>
+</ul>
+<footer class="foot">Generated 2026-08-27 from the ledger at <code>history/</code>. Read-only: this page reports, it never changes a site.</footer>
+</div>
+<script>
+(function () {
+  var box = document.getElementById('oursonly');
+  var rows = [].slice.call(document.querySelectorAll('#ctbl tbody tr'));
+  var out = document.getElementById('rowcount');
+  function draw() {
+    var only = box.checked, shown = 0;
+    rows.forEach(function (r) {
+      var keep = !only || r.getAttribute('data-ours') === '1';
+      r.hidden = !keep;
+      if (keep) shown++;
+    });
+    // THE COUNT DESCRIBES WHAT IS ON SCREEN, and says so against the total.
+    // A bare number here would be a fact about the view wearing the clothes of
+    // a fact about the fleet -- the exact mistake the components page made
+    // when a filter rewrote "the 1 component installed on <site>".
+    out.textContent = shown + ' of ' + rows.length + ' rows shown';
+  }
+  box.addEventListener('change', function () {
+    draw();
+    // Survives a reload and a shared link. Someone sending "look at ours"
+    // should be able to send the URL.
+    var u = new URL(location.href);
+    if (box.checked) u.searchParams.set('ours', '1');
+    else u.searchParams.delete('ours');
+    history.replaceState(null, '', u);
+  });
+  if (new URLSearchParams(location.search).get('ours') === '1') box.checked = true;
+  draw();
+})();
+</script>
+</body></html>
