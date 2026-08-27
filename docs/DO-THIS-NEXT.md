@@ -577,3 +577,132 @@ entire argument for the scanner.
 
 **Not yet raised with Nick.** Worth confirming on a second site before it is,
 since one measurement on one page is one measurement on one page.
+
+---
+
+# Backlog from the team, 2026-08-27
+
+From a Teams thread between Doug and **Victoria Brake (Sr Dev)** after the new
+UI went live, reading `runtalnorthamerica.com`. Recorded because every item is
+a decision about what the tool is FOR, not a defect in what it does.
+
+The thread's own summary, in Doug's words: *"we will need some kind of admin
+json to connect the raw data feed to the reality of our business."*
+
+**That file already exists.** It is `data/fleet-inventory.json`, and it is
+already the human-owned layer: `production`, `client`, `owner`, and since
+2026-08-27 `consent_managed`, `consent_model`, `consent_rule`. Nothing new
+needs inventing. What is missing is the CONTENT, and a way for a person to
+reach it.
+
+---
+
+## B1. `maintenance_contract` — is a backlog our job or their decision?
+
+**Victoria:** *"all of this security/version stuff does lead into the question
+of how to handle this for clients who aren't paying for maintenance. does it
+become their responsibility to update/manage this stuff then? we may need a way
+to indicate that in this tool."*
+
+One field per site, and then the same three-way split the consent axis got on
+2026-08-27:
+
+| | |
+|---|---|
+| we maintain it, and it is behind | our queue |
+| we maintain it, and it is current | nothing to say |
+| we do NOT maintain it, and it is behind | shown, flagged as theirs |
+
+Doug: *"it could show good stewardship/value and could lead to upsells for
+those we are not contracted with."* The third row is the one that does that, and
+it is the row the page cannot draw today.
+
+**The plumbing is an hour or two. The CONTENT is the blocker, and it is not a
+small one.** Measured 2026-08-27:
+
+| field | recorded on |
+|---|---|
+| `client` | **0 of 85** |
+| `owner` | **0 of 85** |
+| `production` | 2 of 85 |
+| `consent_managed` | 85 of 85 |
+
+`client` and `owner` have existed since the inventory was created and **nobody
+has ever filled either in**. `consent_managed` reached 85 only because Nick's
+`onetrust-audit.xlsx` existed and was imported. So: **do not add this field
+until there is a source for the answer.** Two more permanently-empty columns
+beside the two that are already empty would make the page worse, and by this
+project's own rules an unrecorded ruling scores nothing, so the split would
+render and do nothing.
+
+**Blocked on:** a list of which clients pay for maintenance. Books, Harvest, or
+somebody typing it once.
+
+## B2. `pci` — a per-site PHP floor
+
+**Victoria:** *"if we have a site that has PCI as a factor (like
+woodmarkpharmacy) then that might force the PHP version requirement to 'as new
+as possible for stable releases'."*
+
+A boolean per site that raises the PHP threshold for that site alone. Small,
+and unlike B1 the content is a short list somebody already knows.
+
+## B3. PHP: the floor, and where it ranks
+
+**Victoria:** *"php versions not receiving security fixes anymore... should be
+on at least 8.3 based on the php docs. 8.4/8.5 (green) is ideal, but orange is
+ok. outside of orange should be updated."*
+
+**Check this against the fleet before implementing it.** Measured 2026-08-27:
+
+| version | sites | security support ends |
+|---|---|---|
+| 8.1 | 1 | 2025-12-31 (past) |
+| **8.2** | **46** | 2026-12-31 |
+| 8.3 | 1 | 2027-12-31 |
+
+A floor at 8.3 flags **47 of 48 measurable sites**. CLAUDE.md: a fact true of
+every site ranks nothing, and that is the exact rule `upstream_pending` broke.
+Victoria is not wrong -- she is describing a fleet-wide upgrade wave with a
+date on it, which the page already carries as a PLANNING item. The per-site
+version of her point is B2: PCI sites should not sit in that wave.
+
+**She also ranks it differently from the model.** Her order is *WP core, then
+plugins, then PHP*. Severity today puts `php_eol` at CRIT, above both. That is
+defensible for PHP PAST end of support and it is worth putting to her
+explicitly rather than assuming she meant something else.
+
+## B4. Editing the rulings in the browser
+
+**Doug:** *"what i meant by write is simply editing of the json in the browser."*
+Later, or not at all -- his call, recorded so the reasoning is not lost.
+
+The argument for it is B1's table. `client` and `owner` are empty after months
+not because nobody cares but because filling them means editing JSON in a git
+repo. **A field nobody can reach is a field nobody fills.**
+
+The argument against is that this tool is read-only in both directions today:
+it never writes to a client site, and nothing writes to the inventory except a
+person with git. An edit form means auth, an audit trail, and a way to tell a
+scan-derived fact from a typed one. Worth doing deliberately; not worth
+sliding into.
+
+## B5. Who else is on OneTrust that we do not manage?
+
+Not from the thread -- found while building the consent page, and it belongs
+with B1 because it is the same question.
+
+14 sites run OneTrust and are marked `consent_managed: false`. Some are
+genuinely the client's own. Some may have been onboarded and never recorded,
+and **nothing in the system would tell you which**. The reconciliation is: sites
+where tooling was DETECTED but no management ruling exists. Every previous time
+a roster was reconciled against the inventory it found something.
+
+## B6. The consent page does not say where "ours" comes from
+
+The page prints `OURS` with the same confidence as a measured tracker count.
+It is a ruling, seeded from a spreadsheet on one day, and Doug has said the
+list grows as clients onboard -- so it is guaranteed to drift. The page should
+carry the provenance and the date. Small, and it is this project's signature
+bug otherwise.
+
