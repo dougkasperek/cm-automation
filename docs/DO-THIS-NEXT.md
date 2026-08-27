@@ -534,3 +534,46 @@ report what changed. The fix is not to relax the rule -- it exists for a
 measured reason. It is probably to diff over the INTERSECTION of the two
 site sets, which compares like with like on the sites both runs measured and
 says how many were excluded. Not built. Decide before building.
+
+---
+
+## TABLED 2026-08-27: three managed sites on hosting this fleet does not cover
+
+Nick's OneTrust audit workbook lists **15** sites clevermethod manages consent
+for. Twelve are in `data/fleet-inventory.json`. Three are not:
+
+- `buffalowebsitedevelopment.com`
+- `homearcadegames.com`
+- `mightytaco.com`
+
+They are not missing by mistake. They sit on hosting none of this suite's
+scanners reach, which is **a new hosting scenario, not a gap in the roster**.
+Doug tabled it the day it was found.
+
+**Do not add inventory rows for them until the hosting question is answered.**
+An inventory row for a site no scanner reaches produces a permanent UNKNOWN
+that looks like a coverage failure, and the inventory is the one file in this
+repo that a person maintains by hand. `test-consent-rulings.py` asserts they
+stay out, so this decision cannot be quietly reversed.
+
+When it is picked up, the questions are: what hosting are they on, does any
+existing adapter reach it, and are there other clevermethod sites there that
+this fleet has never counted.
+
+## OPEN 2026-08-27: the audit workbook and the scanner disagree on one site
+
+`onetrust-audit.xlsx` records `interstatewaste.com` as
+**"Scripts Fire w/ Respect to Consent: Yes"**.
+
+Measured 2026-08-27 with `scripts/consent/test-gating.mjs`: after a real click
+on Reject All and a reload, DoubleClick, GA4 and Meta Pixel all stopped, and
+**MS Clarity kept firing**. The workbook's own Cookies sheet categorises
+Clarity's `_clck` and `_clsk` as **C0002 Performance**, and the consent state
+after the rejection read `C0002:0` -- denied.
+
+So the categorisation is right and the tag is not honouring it. This is the
+first thing the scanner has caught that the manual audit missed, which is the
+entire argument for the scanner.
+
+**Not yet raised with Nick.** Worth confirming on a second site before it is,
+since one measurement on one page is one measurement on one page.

@@ -1,0 +1,7121 @@
+{
+ "schema": "fleet-dashboard/2",
+ "no_health_evidence": [
+  "animatics.com",
+  "blockclub.co",
+  "buffalorecycles.org",
+  "dynapurge.com",
+  "elderwoodipa.com",
+  "hoosierfeeder.com",
+  "paramaxcorp.com",
+  "pediatricspecialty.com",
+  "pediatricspecialtymedicalday.com",
+  "shuman-plastics.com",
+  "woodmarkpharmacy.com"
+ ],
+ "generated": "2026-08-27",
+ "severity_rules": {
+  "wp_security_floor": "7.0.2",
+  "backup_crit_days": 30,
+  "backup_warn_days": 7,
+  "plugin_warn_count": 10,
+  "php_security_eol": {
+   "7.4": "2022-11-28",
+   "8.0": "2023-11-26",
+   "8.1": "2025-12-31",
+   "8.2": "2026-12-31",
+   "8.3": "2027-12-31",
+   "8.4": "2028-12-31",
+   "8.5": "2029-12-31"
+  }
+ },
+ "runs": {
+  "health": {
+   "run_id": "health-nexcess-2026-08-26_1941",
+   "observed_at": "2026-08-26T19:41:00",
+   "site_count": 22,
+   "mode": "full",
+   "deep_scanned": 21
+  },
+  "email-dns": {
+   "run_id": "email-dns-2026-08-25_2002",
+   "observed_at": "2026-08-25T20:02:00",
+   "site_count": 78,
+   "mode": "dns",
+   "deep_scanned": 70
+  },
+  "consent": {
+   "run_id": "consent-2026-08-25_2204",
+   "observed_at": "2026-08-25T22:04:00",
+   "site_count": 79,
+   "mode": "browser",
+   "deep_scanned": 71
+  },
+  "nexcess": {
+   "run_id": "nexcess-2026-08-25_1749",
+   "observed_at": "2026-08-25T17:49:00",
+   "site_count": 22,
+   "mode": "api-estate",
+   "deep_scanned": 22
+  }
+ },
+ "health": {
+  "counts": {
+   "CRIT": 2,
+   "WARN": 53,
+   "OK": 25,
+   "UNKNOWN": 0,
+   "SKIP": 3,
+   "FROZEN": 1
+  },
+  "excluded": {
+   "CRIT": 1,
+   "WARN": 0,
+   "OK": 0,
+   "UNKNOWN": 0,
+   "SKIP": 0,
+   "FROZEN": 0
+  },
+  "axes": {
+   "health": {
+    "CRIT": 2,
+    "WARN": 53,
+    "OK": 25,
+    "UNKNOWN": 0,
+    "SKIP": 3,
+    "FROZEN": 1
+   },
+   "consent": {
+    "CRIT": 0,
+    "WARN": 49,
+    "OK": 22,
+    "UNKNOWN": 9,
+    "SKIP": 3,
+    "FROZEN": 1
+   }
+  },
+  "excluded_sites": [
+   "cm-whitelabel"
+  ],
+  "unreviewed": [
+   "clevermethod-forward",
+   "hoffmanscheese",
+   "moorseville-nc",
+   "nc-moorseville",
+   "pfannenbergsales"
+  ]
+ },
+ "sites": [
+  {
+   "site_id": "1-800-dumpster.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "19 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "19 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 19,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 5295297,
+   "nexcess_unix_username": "ae0f1195",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://1-800-dumpster.com/"
+  },
+  {
+   "site_id": "11daypowerplay.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "3 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "4 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 4,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 3,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.11daypowerplay.com/"
+  },
+  {
+   "site_id": "42northbrewing.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep got HTTP 403, so it saw an error page rather than the site. Its consent posture is unmeasured, not clean.",
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "5 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 5,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 3330254,
+   "nexcess_unix_username": "a16f2325",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": 403,
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "acibg.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 3,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.acibg.com/"
+  },
+  {
+   "site_id": "actioncarting.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "20 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "20 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "5 tracker(s) fired on the homepage before any consent interaction: Bing UET, DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 20,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 5,
+   "consent_pre_tracker_names": "Bing UET, DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://actioncarting.com/"
+  },
+  {
+   "site_id": "alliedcircuits.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "20 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "20 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "3 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 20,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 293871,
+   "nexcess_unix_username": "ab2a870f",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.3",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 3,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://alliedcircuits.com/"
+  },
+  {
+   "site_id": "animatics.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "WP Engine",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.animatics.com/"
+  },
+  {
+   "site_id": "app.eastauroracc.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "framework_not_wordpress",
+     "text": "The Nexcess control plane calls this WordPress 6.2.2. A scan of the site found no WordPress installation (framework: not-wordpress)",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "framework_not_wordpress",
+       "text": "The Nexcess control plane calls this WordPress 6.2.2. A scan of the site found no WordPress installation (framework: not-wordpress)",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "not-wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "unknown",
+   "wp_core_update": "unknown",
+   "wp_checked": false,
+   "plugin_updates": "unknown",
+   "theme_updates": "unknown",
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": false,
+   "production": true,
+   "nexcess_site_id": 9451513,
+   "nexcess_unix_username": "a305f789",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "6.2.2",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://app.eastauroracc.com/app/index.php"
+  },
+  {
+   "site_id": "bhargavalaw.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 3,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 15196650,
+   "nexcess_unix_username": "a6a745ab",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://bhargavalaw.com/"
+  },
+  {
+   "site_id": "blockclub.co",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "6 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, Hotjar, LinkedIn Insight, MS Clarity, Meta Pixel",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Pressable",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "generic",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 6,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, Hotjar, LinkedIn Insight, MS Clarity, Meta Pixel",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://blockclub.co/"
+  },
+  {
+   "site_id": "breakstones.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "13 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "13 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 13,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://breakstones.com/"
+  },
+  {
+   "site_id": "buffalobeds.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: Meta Pixel",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 2,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 8112329,
+   "nexcess_unix_username": "aa61fcb1",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "Meta Pixel",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://buffalobeds.com/"
+  },
+  {
+   "site_id": "buffalorecycles.org",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Pressable",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://buffalorecycles.org/"
+  },
+  {
+   "site_id": "celticindustrialservices.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "4 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 4,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://celticindustrialservices.com/"
+  },
+  {
+   "site_id": "choosechq.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "16 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "16 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 16,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.choosechq.com/"
+  },
+  {
+   "site_id": "ciminelli.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "10 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "10 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Small",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 10,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.ciminelli.com/"
+  },
+  {
+   "site_id": "ciminelliflorida.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "3 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "8 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 8,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 3,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://ciminelliflorida.com/"
+  },
+  {
+   "site_id": "clevermethod-forward",
+   "status": "SKIP",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "SKIP",
+     "reasons": []
+    },
+    "consent": {
+     "status": "SKIP",
+     "reasons": []
+    }
+   },
+   "info": [],
+   "sources": [
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Sandbox",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "unknown",
+   "wp_version": "unknown",
+   "wp_core_update": "unknown",
+   "wp_checked": "unknown",
+   "plugin_updates": "unknown",
+   "theme_updates": "unknown",
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": false,
+   "in_workbook": false,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": null,
+   "consent_banner_vendor": null,
+   "consent_banner_detected": null,
+   "consent_pre_trackers": null,
+   "consent_pre_tracker_names": null,
+   "consent_mode_denied": null,
+   "consent_http_status": null,
+   "consent_final_url": null
+  },
+  {
+   "site_id": "clevermethod.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep got HTTP 403, so it saw an error page rather than the site. Its consent posture is unmeasured, not clean.",
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "6 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 6,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": 403,
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "cm-whitelabel",
+   "status": "CRIT",
+   "counts_toward_fleet": false,
+   "reasons": [
+    {
+     "code": "wp_below_floor",
+     "text": "WordPress 6.9.4 is below the 7.0.2 security floor (wp2shell)",
+     "level": "CRIT",
+     "axis": "health"
+    },
+    {
+     "code": "backup_stale",
+     "text": "No database backup in 2155 days",
+     "level": "CRIT",
+     "axis": "health"
+    },
+    {
+     "code": "wp_update_status_unknown",
+     "text": "The deep scan read the WordPress version but could not establish the core update status or the plugin backlog",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "CRIT",
+     "reasons": [
+      {
+       "code": "wp_below_floor",
+       "text": "WordPress 6.9.4 is below the 7.0.2 security floor (wp2shell)",
+       "level": "CRIT",
+       "axis": "health"
+      },
+      {
+       "code": "backup_stale",
+       "text": "No database backup in 2155 days",
+       "level": "CRIT",
+       "axis": "health"
+      },
+      {
+       "code": "wp_update_status_unknown",
+       "text": "The deep scan read the WordPress version but could not establish the core update status or the plugin backlog",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Sandbox",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "6.9.4",
+   "wp_core_update": "unknown",
+   "wp_checked": true,
+   "plugin_updates": "unknown",
+   "theme_updates": "unknown",
+   "upstream_pending": 0,
+   "db_backup_age_days": 2155,
+   "frozen": false,
+   "in_workbook": false,
+   "production": false,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": null,
+   "consent_banner_vendor": null,
+   "consent_banner_detected": null,
+   "consent_pre_trackers": null,
+   "consent_pre_tracker_names": null,
+   "consent_mode_denied": null,
+   "consent_http_status": null,
+   "consent_final_url": null
+  },
+  {
+   "site_id": "cottrillspharmacy.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "4 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 4,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://cottrillspharmacy.com/"
+  },
+  {
+   "site_id": "crackerbarrelcheese.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "15 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "15 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "2 theme update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Large",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 15,
+   "theme_updates": 2,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://crackerbarrelcheese.com/"
+  },
+  {
+   "site_id": "drspietrantone.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://drspietrantone.com/"
+  },
+  {
+   "site_id": "dslawfirm.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "1 theme update(s) pending",
+    "6 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 6,
+   "theme_updates": 1,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 15217687,
+   "nexcess_unix_username": "a4eea30b",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://dslawfirm.com/"
+  },
+  {
+   "site_id": "dynapurge.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Flywheel",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://dynapurge.com/"
+  },
+  {
+   "site_id": "eamusicfest.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "13 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "13 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "8 theme update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 13,
+   "theme_updates": 8,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 173076,
+   "nexcess_unix_username": "a8ca7a6b",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.3",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.eamusicfest.com/"
+  },
+  {
+   "site_id": "eastauroracc.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "4 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "2 Pantheon upstream commit(s) pending",
+    "5 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Small",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.3",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 5,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 4,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://eastauroracc.com/"
+  },
+  {
+   "site_id": "eastauroraef.org",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "9 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 9,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 6177333,
+   "nexcess_unix_username": "a8907bab",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://eastauroraef.org/"
+  },
+  {
+   "site_id": "ecmea.org",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "18 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "18 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep got HTTP 403, so it saw an error page rather than the site. Its consent posture is unmeasured, not clean."
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 18,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 173074,
+   "nexcess_unix_username": "a6fed7b6",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.3",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": 403,
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "elderwoodipa.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Azure",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://elderwoodipa.com/"
+  },
+  {
+   "site_id": "elmanyhistory.org",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "11 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "11 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep got HTTP 403, so it saw an error page rather than the site. Its consent posture is unmeasured, not clean.",
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 11,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 11464014,
+   "nexcess_unix_username": "aaa77e76",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": 403,
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "fairchildcapitalpartners.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 8029734,
+   "nexcess_unix_username": "ac13801c",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://fairchildcapitalpartners.com/"
+  },
+  {
+   "site_id": "firstaurorafinancial.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "10 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "10 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 10,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://firstaurorafinancial.com/"
+  },
+  {
+   "site_id": "galbanicheese.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 theme update(s) pending",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Large",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 3,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://galbanicheese.com/"
+  },
+  {
+   "site_id": "gmroot.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "23 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "23 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 23,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://gmroot.com/"
+  },
+  {
+   "site_id": "heartofmusicfestival.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "4 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 4,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 14238573,
+   "nexcess_unix_username": "a40e8fcc",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://heartofmusicfestival.com/"
+  },
+  {
+   "site_id": "hitsfoundation.org",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "12 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "12 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep could not load this site; its consent posture is unmeasured, not clean",
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 12,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 15224733,
+   "nexcess_unix_username": "adf561a9",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": "unknown",
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "hoffmanscheese",
+   "status": "CRIT",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "backup_stale",
+     "text": "No database backup in 730 days",
+     "level": "CRIT",
+     "axis": "health"
+    },
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "27 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "CRIT",
+     "reasons": [
+      {
+       "code": "backup_stale",
+       "text": "No database backup in 730 days",
+       "level": "CRIT",
+       "axis": "health"
+      },
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "27 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "2 theme update(s) pending"
+   ],
+   "sources": [
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Sandbox",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 27,
+   "theme_updates": 2,
+   "upstream_pending": 3,
+   "db_backup_age_days": 730,
+   "frozen": false,
+   "in_workbook": false,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": null,
+   "consent_banner_vendor": null,
+   "consent_banner_detected": null,
+   "consent_pre_trackers": null,
+   "consent_pre_tracker_names": null,
+   "consent_mode_denied": null,
+   "consent_http_status": null,
+   "consent_final_url": null
+  },
+  {
+   "site_id": "hoosierfeeder.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep got HTTP 403, so it saw an error page rather than the site. Its consent posture is unmeasured, not clean."
+   ],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "CM Pantheon",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": 403,
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "icegame.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "17 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "17 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Medium",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 17,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.icegame.com/"
+  },
+  {
+   "site_id": "internationaljuniormasters.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep got HTTP 403, so it saw an error page rather than the site. Its consent posture is unmeasured, not clean.",
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "1 theme update(s) pending",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 1,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 151584,
+   "nexcess_unix_username": "a1a5b774",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": 403,
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "interstatewaste.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "4 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "8 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Large",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 8,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 4,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://interstatewaste.com/"
+  },
+  {
+   "site_id": "iroquoisfence.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "3 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 3,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://iroquoisfence.com/"
+  },
+  {
+   "site_id": "kingsdumpstersny.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "9 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 9,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 14440838,
+   "nexcess_unix_username": "ac0dd7d6",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://kingsdumpstersny.com/"
+  },
+  {
+   "site_id": "knudsen.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "11 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "11 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 11,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://knudsen.com/"
+  },
+  {
+   "site_id": "kraftnaturalcheese.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance 2XL",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://kraftnaturalcheese.com/"
+  },
+  {
+   "site_id": "kulinskigolf.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "UNKNOWN",
+     "reasons": []
+    }
+   },
+   "info": [
+    "The consent sweep got HTTP 403, so it saw an error page rather than the site. Its consent posture is unmeasured, not clean.",
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "4 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 4,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 3330253,
+   "nexcess_unix_username": "a23a8bb9",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": false,
+   "consent_banner_vendor": "unknown",
+   "consent_banner_detected": "unknown",
+   "consent_pre_trackers": "unknown",
+   "consent_pre_tracker_names": "unknown",
+   "consent_mode_denied": "unknown",
+   "consent_http_status": 403,
+   "consent_final_url": "unknown"
+  },
+  {
+   "site_id": "lactalisamericangroup.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.lactalisusa.com/?utm_medium=vdomain&utm_source=lactalisamericangroup.com&utm_id=legacy-domains"
+  },
+  {
+   "site_id": "lactalisheritagedairy.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.lactalisusa.com/?utm_medium=vdomain&utm_source=lactalisheritagedairy.com&utm_id=legacy-domains"
+  },
+  {
+   "site_id": "lactalisyogurtusa.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "6 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 6,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.lactalisusa.com/?utm_medium=vdomain&utm_source=lactalisyogurtusa.com&utm_id=legacy-domains"
+  },
+  {
+   "site_id": "lancastervillageny.gov",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending",
+    "8 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 8,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://lancastervillageny.gov/"
+  },
+  {
+   "site_id": "lasershows.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "13 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "13 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "3 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 13,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 3,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://lasershows.com/"
+  },
+  {
+   "site_id": "lifebreath.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "11 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "11 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Medium",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 11,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.lifebreath.com/"
+  },
+  {
+   "site_id": "live-frontline-construction.pantheonsite.io",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending",
+    "9 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 9,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://live-frontline-construction.pantheonsite.io/"
+  },
+  {
+   "site_id": "local92afm.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "15 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "15 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 15,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://local92afm.com/"
+  },
+  {
+   "site_id": "midwestyogurt.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "6 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 6,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.lactalisusa.com/?utm_medium=vdomain&utm_source=midwestyogurt.com&utm_id=legacy-domains"
+  },
+  {
+   "site_id": "moorseville-nc",
+   "status": "SKIP",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "SKIP",
+     "reasons": []
+    },
+    "consent": {
+     "status": "SKIP",
+     "reasons": []
+    }
+   },
+   "info": [],
+   "sources": [
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Sandbox",
+   "framework": "wordpress_network",
+   "env": "live",
+   "php_version": "unknown",
+   "wp_version": "unknown",
+   "wp_core_update": "unknown",
+   "wp_checked": "unknown",
+   "plugin_updates": "unknown",
+   "theme_updates": "unknown",
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": false,
+   "in_workbook": false,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": null,
+   "consent_banner_vendor": null,
+   "consent_banner_detected": null,
+   "consent_pre_trackers": null,
+   "consent_pre_tracker_names": null,
+   "consent_mode_denied": null,
+   "consent_http_status": null,
+   "consent_final_url": null
+  },
+  {
+   "site_id": "morrison-chs.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending",
+    "1 theme update(s) pending",
+    "8 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 8,
+   "theme_updates": 1,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://morrison-chs.com/"
+  },
+  {
+   "site_id": "nc-moorseville",
+   "status": "FROZEN",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "FROZEN",
+     "reasons": []
+    },
+    "consent": {
+     "status": "FROZEN",
+     "reasons": []
+    }
+   },
+   "info": [],
+   "sources": [
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Sandbox",
+   "framework": "wordpress_network",
+   "env": "live",
+   "php_version": "unknown",
+   "wp_version": "unknown",
+   "wp_core_update": "unknown",
+   "wp_checked": "unknown",
+   "plugin_updates": "unknown",
+   "theme_updates": "unknown",
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": true,
+   "in_workbook": false,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": null,
+   "consent_banner_vendor": null,
+   "consent_banner_detected": null,
+   "consent_pre_trackers": null,
+   "consent_pre_tracker_names": null,
+   "consent_mode_denied": null,
+   "consent_http_status": null,
+   "consent_final_url": null
+  },
+  {
+   "site_id": "newmarkciminelli.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "14 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "14 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 14,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.newmarkciminelli.com/"
+  },
+  {
+   "site_id": "ntlibrary.org",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "12 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "12 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 12,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://ntlibrary.org/"
+  },
+  {
+   "site_id": "ontracksitedevelopment.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: GA4 collect, MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "5 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 5,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "GA4 collect, MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.ontracksitedevelopment.com/"
+  },
+  {
+   "site_id": "packagedesignsupply.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "12 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "12 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: MS Clarity",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 12,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "MS Clarity",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://packagedesignsupply.com/"
+  },
+  {
+   "site_id": "palmettoresidentialelectric.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://palmettoresidentialelectric.com/"
+  },
+  {
+   "site_id": "paramaxcorp.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Pressable",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://paramaxcorp.com/"
+  },
+  {
+   "site_id": "pediatricspecialty.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Azure",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://pediatricspecialty.com/"
+  },
+  {
+   "site_id": "pediatricspecialtymedicalday.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Azure",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://pediatricspecialtymedicalday.com/"
+  },
+  {
+   "site_id": "pfannenbergsales",
+   "status": "SKIP",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "SKIP",
+     "reasons": []
+    },
+    "consent": {
+     "status": "SKIP",
+     "reasons": []
+    }
+   },
+   "info": [],
+   "sources": [
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Sandbox",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "unknown",
+   "wp_version": "unknown",
+   "wp_core_update": "unknown",
+   "wp_checked": "unknown",
+   "plugin_updates": "unknown",
+   "theme_updates": "unknown",
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": false,
+   "in_workbook": false,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": null,
+   "consent_banner_vendor": null,
+   "consent_banner_detected": null,
+   "consent_pre_trackers": null,
+   "consent_pre_tracker_names": null,
+   "consent_mode_denied": null,
+   "consent_http_status": null,
+   "consent_final_url": null
+  },
+  {
+   "site_id": "pfannenbergusa.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "10 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "10 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Medium",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 10,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.pfannenbergusa.com/"
+  },
+  {
+   "site_id": "runtalnorthamerica.com",
+   "status": "CRIT",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "php_eol",
+     "text": "PHP 8.1 stopped receiving security patches on 2025-12-31",
+     "level": "CRIT",
+     "axis": "health"
+    },
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "23 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "CRIT",
+     "reasons": [
+      {
+       "code": "php_eol",
+       "text": "PHP 8.1 stopped receiving security patches on 2025-12-31",
+       "level": "CRIT",
+       "axis": "health"
+      },
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "23 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "2 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Medium",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.1",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 23,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://runtalnorthamerica.com/"
+  },
+  {
+   "site_id": "scottishcheddarcheese.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "9 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 9,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://scottishcheddarcheese.com/"
+  },
+  {
+   "site_id": "senecafinancialadvisors.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending",
+    "7 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 7,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://senecafinancialadvisors.com/"
+  },
+  {
+   "site_id": "sgroilawley.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "3 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect, Meta Pixel",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "8 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 8,
+   "theme_updates": 0,
+   "upstream_pending": 0,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 3,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect, Meta Pixel",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://sgroilawley.com/"
+  },
+  {
+   "site_id": "shuman-plastics.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Flywheel",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://shuman-plastics.com/"
+  },
+  {
+   "site_id": "statlerfoundation.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "1 theme update(s) pending",
+    "5 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 5,
+   "theme_updates": 1,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 4280226,
+   "nexcess_unix_username": "a3bf27e6",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://statlerfoundation.com/"
+  },
+  {
+   "site_id": "summerstreetcapital.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "plugin_backlog",
+     "text": "17 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "plugin_backlog",
+       "text": "17 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 17,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 3308234,
+   "nexcess_unix_username": "aec2ba5a",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "generic",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://summerstreetcapital.com/"
+  },
+  {
+   "site_id": "thehambycollection.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "6 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 6,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 15217688,
+   "nexcess_unix_username": "aa42ca9a",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://thehambycollection.com/"
+  },
+  {
+   "site_id": "thenorthstarcompanies.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending",
+    "5 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 5,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.thenorthstarcompanies.com/"
+  },
+  {
+   "site_id": "thermalfoams.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "2 tracker(s) fired on the homepage before any consent interaction: DoubleClick, GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending",
+    "9 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 9,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 2,
+   "consent_pre_tracker_names": "DoubleClick, GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.thermalfoams.com/"
+  },
+  {
+   "site_id": "twostuds.net",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "5 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 5,
+   "theme_updates": 0,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 15296695,
+   "nexcess_unix_username": "acb5180b",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://twostuds.net/"
+  },
+  {
+   "site_id": "valbresocheese.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending",
+    "8 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Basic",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.2",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 8,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://valbresocheese.com/"
+  },
+  {
+   "site_id": "websterszanyi.com",
+   "status": "OK",
+   "counts_toward_fleet": true,
+   "reasons": [],
+   "axes": {
+    "health": {
+     "status": "OK",
+     "reasons": []
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "1 theme update(s) pending",
+    "6 plugin update(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health",
+    "nexcess"
+   ],
+   "host": "CM Nexcess",
+   "plan": "unknown",
+   "framework": "wordpress",
+   "env": "unknown",
+   "php_version": "unknown",
+   "wp_version": "7.1",
+   "wp_core_update": "up-to-date",
+   "wp_checked": true,
+   "plugin_updates": 6,
+   "theme_updates": 1,
+   "upstream_pending": "unknown",
+   "db_backup_age_days": "unknown",
+   "frozen": "unknown",
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": 3308279,
+   "nexcess_unix_username": "a5ab7a08",
+   "nexcess_state": "stable",
+   "nexcess_php_version": "8.2",
+   "nexcess_app_version": "7.1",
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.websterszanyi.com/"
+  },
+  {
+   "site_id": "woodmarkpharmacy.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "coverage_partial",
+     "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "coverage_partial",
+       "text": "Seen only by the consent sweep: no backup age, plugin or theme evidence exists for this site",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "consent_pre_consent_trackers",
+       "text": "1 tracker(s) fired on the homepage before any consent interaction: GA4 collect",
+       "level": "WARN",
+       "axis": "consent"
+      },
+      {
+       "code": "consent_no_tooling",
+       "text": "No consent tooling was detected on the homepage",
+       "level": "WARN",
+       "axis": "consent"
+      }
+     ]
+    }
+   },
+   "info": [],
+   "sources": [
+    "consent",
+    "email-dns"
+   ],
+   "host": "Azure",
+   "plan": null,
+   "framework": null,
+   "env": null,
+   "php_version": null,
+   "wp_version": null,
+   "wp_core_update": null,
+   "wp_checked": null,
+   "plugin_updates": null,
+   "theme_updates": null,
+   "upstream_pending": null,
+   "db_backup_age_days": null,
+   "frozen": null,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "none",
+   "consent_banner_detected": false,
+   "consent_pre_trackers": 1,
+   "consent_pre_tracker_names": "GA4 collect",
+   "consent_mode_denied": false,
+   "consent_http_status": 200,
+   "consent_final_url": "https://www.woodmarkpharmacy.com/"
+  },
+  {
+   "site_id": "zehnder-rittling.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.1",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "10 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.1",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "10 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "2 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Small",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.4",
+   "wp_core_update": "7.1",
+   "wp_checked": true,
+   "plugin_updates": 10,
+   "theme_updates": 0,
+   "upstream_pending": 2,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://zehnder-rittling.com/"
+  },
+  {
+   "site_id": "zehnderamerica.com",
+   "status": "WARN",
+   "counts_toward_fleet": true,
+   "reasons": [
+    {
+     "code": "core_update",
+     "text": "WordPress core update available: 7.0.4",
+     "level": "WARN",
+     "axis": "health"
+    },
+    {
+     "code": "plugin_backlog",
+     "text": "24 plugin updates pending",
+     "level": "WARN",
+     "axis": "health"
+    }
+   ],
+   "axes": {
+    "health": {
+     "status": "WARN",
+     "reasons": [
+      {
+       "code": "core_update",
+       "text": "WordPress core update available: 7.0.4",
+       "level": "WARN",
+       "axis": "health"
+      },
+      {
+       "code": "plugin_backlog",
+       "text": "24 plugin updates pending",
+       "level": "WARN",
+       "axis": "health"
+      }
+     ]
+    },
+    "consent": {
+     "status": "OK",
+     "reasons": []
+    }
+   },
+   "info": [
+    "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+    "3 Pantheon upstream commit(s) pending"
+   ],
+   "sources": [
+    "consent",
+    "email-dns",
+    "health"
+   ],
+   "host": "CM Pantheon",
+   "plan": "Performance Medium",
+   "framework": "wordpress",
+   "env": "live",
+   "php_version": "8.2",
+   "wp_version": "7.0.3",
+   "wp_core_update": "7.0.4",
+   "wp_checked": true,
+   "plugin_updates": 24,
+   "theme_updates": 0,
+   "upstream_pending": 3,
+   "db_backup_age_days": 0,
+   "frozen": false,
+   "in_workbook": true,
+   "production": null,
+   "nexcess_site_id": null,
+   "nexcess_unix_username": null,
+   "nexcess_state": null,
+   "nexcess_php_version": null,
+   "nexcess_app_version": null,
+   "consent_scan_ok": true,
+   "consent_banner_vendor": "OneTrust",
+   "consent_banner_detected": true,
+   "consent_pre_trackers": 0,
+   "consent_pre_tracker_names": "none",
+   "consent_mode_denied": true,
+   "consent_http_status": 200,
+   "consent_final_url": "https://zehnderamerica.com/"
+  }
+ ],
+ "standing": [
+  {
+   "cause": "Consent tooling present, but trackers fire before consent",
+   "axis": "RISK",
+   "priority": 10,
+   "sites": [
+    "actioncarting.com",
+    "blockclub.co",
+    "interstatewaste.com",
+    "summerstreetcapital.com"
+   ],
+   "detail": {
+    "actioncarting.com": "Bing UET, DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+    "blockclub.co": "DoubleClick, GA4 collect, Hotjar, LinkedIn Insight, MS Clarity, Meta Pixel",
+    "interstatewaste.com": "DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+    "summerstreetcapital.com": "DoubleClick, GA4 collect"
+   },
+   "action": "The highest-value rows here: the banner implies consent is being collected and the tags are not waiting for it. This is a correctness defect in a build, not a posture question."
+  },
+  {
+   "cause": "No consent tooling detected on the homepage",
+   "axis": "RISK",
+   "sites": [
+    "1-800-dumpster.com",
+    "11daypowerplay.com",
+    "acibg.com",
+    "alliedcircuits.com",
+    "app.eastauroracc.com",
+    "bhargavalaw.com",
+    "buffalobeds.com",
+    "buffalorecycles.org",
+    "celticindustrialservices.com",
+    "ciminelliflorida.com",
+    "drspietrantone.com",
+    "dslawfirm.com",
+    "dynapurge.com",
+    "eamusicfest.com",
+    "eastauroracc.com",
+    "eastauroraef.org",
+    "elderwoodipa.com",
+    "fairchildcapitalpartners.com",
+    "firstaurorafinancial.com",
+    "heartofmusicfestival.com",
+    "iroquoisfence.com",
+    "kingsdumpstersny.com",
+    "lancastervillageny.gov",
+    "lasershows.com",
+    "live-frontline-construction.pantheonsite.io",
+    "local92afm.com",
+    "morrison-chs.com",
+    "ntlibrary.org",
+    "ontracksitedevelopment.com",
+    "packagedesignsupply.com",
+    "palmettoresidentialelectric.com",
+    "paramaxcorp.com",
+    "pediatricspecialty.com",
+    "pediatricspecialtymedicalday.com",
+    "pfannenbergusa.com",
+    "senecafinancialadvisors.com",
+    "sgroilawley.com",
+    "shuman-plastics.com",
+    "statlerfoundation.com",
+    "thehambycollection.com",
+    "thenorthstarcompanies.com",
+    "thermalfoams.com",
+    "twostuds.net",
+    "websterszanyi.com",
+    "woodmarkpharmacy.com"
+   ],
+   "action": "One decision covers all 45, not 45 separate findings: which of these need consent tooling. Sites in this group that also fire trackers are listed separately above."
+  },
+  {
+   "cause": "Trackers fire before consent, and no consent tooling is present",
+   "axis": "RISK",
+   "sites": [
+    "1-800-dumpster.com",
+    "11daypowerplay.com",
+    "acibg.com",
+    "alliedcircuits.com",
+    "buffalobeds.com",
+    "buffalorecycles.org",
+    "celticindustrialservices.com",
+    "ciminelliflorida.com",
+    "drspietrantone.com",
+    "dynapurge.com",
+    "eamusicfest.com",
+    "eastauroracc.com",
+    "eastauroraef.org",
+    "elderwoodipa.com",
+    "fairchildcapitalpartners.com",
+    "firstaurorafinancial.com",
+    "heartofmusicfestival.com",
+    "iroquoisfence.com",
+    "kingsdumpstersny.com",
+    "lancastervillageny.gov",
+    "lasershows.com",
+    "live-frontline-construction.pantheonsite.io",
+    "local92afm.com",
+    "morrison-chs.com",
+    "ntlibrary.org",
+    "ontracksitedevelopment.com",
+    "packagedesignsupply.com",
+    "palmettoresidentialelectric.com",
+    "paramaxcorp.com",
+    "pediatricspecialty.com",
+    "pediatricspecialtymedicalday.com",
+    "pfannenbergusa.com",
+    "senecafinancialadvisors.com",
+    "sgroilawley.com",
+    "shuman-plastics.com",
+    "thermalfoams.com",
+    "woodmarkpharmacy.com"
+   ],
+   "detail": {
+    "1-800-dumpster.com": "GA4 collect",
+    "11daypowerplay.com": "DoubleClick, GA4 collect, MS Clarity",
+    "acibg.com": "GA4 collect",
+    "alliedcircuits.com": "DoubleClick, GA4 collect, MS Clarity",
+    "buffalobeds.com": "Meta Pixel",
+    "buffalorecycles.org": "GA4 collect",
+    "celticindustrialservices.com": "GA4 collect",
+    "ciminelliflorida.com": "DoubleClick, GA4 collect, MS Clarity",
+    "drspietrantone.com": "GA4 collect, MS Clarity",
+    "dynapurge.com": "DoubleClick, GA4 collect",
+    "eamusicfest.com": "GA4 collect",
+    "eastauroracc.com": "DoubleClick, GA4 collect, MS Clarity, Meta Pixel",
+    "eastauroraef.org": "DoubleClick, GA4 collect",
+    "elderwoodipa.com": "DoubleClick, GA4 collect",
+    "fairchildcapitalpartners.com": "GA4 collect",
+    "firstaurorafinancial.com": "GA4 collect",
+    "heartofmusicfestival.com": "GA4 collect, MS Clarity",
+    "iroquoisfence.com": "DoubleClick, GA4 collect, MS Clarity",
+    "kingsdumpstersny.com": "GA4 collect",
+    "lancastervillageny.gov": "GA4 collect",
+    "lasershows.com": "DoubleClick, GA4 collect, MS Clarity",
+    "live-frontline-construction.pantheonsite.io": "GA4 collect, MS Clarity",
+    "local92afm.com": "GA4 collect",
+    "morrison-chs.com": "DoubleClick, GA4 collect",
+    "ntlibrary.org": "GA4 collect",
+    "ontracksitedevelopment.com": "GA4 collect, MS Clarity",
+    "packagedesignsupply.com": "MS Clarity",
+    "palmettoresidentialelectric.com": "GA4 collect",
+    "paramaxcorp.com": "GA4 collect",
+    "pediatricspecialty.com": "DoubleClick, GA4 collect",
+    "pediatricspecialtymedicalday.com": "DoubleClick, GA4 collect",
+    "pfannenbergusa.com": "GA4 collect",
+    "senecafinancialadvisors.com": "GA4 collect",
+    "sgroilawley.com": "DoubleClick, GA4 collect, Meta Pixel",
+    "shuman-plastics.com": "DoubleClick, GA4 collect",
+    "thermalfoams.com": "DoubleClick, GA4 collect",
+    "woodmarkpharmacy.com": "GA4 collect"
+   },
+   "action": "One scope decision covers all 37: whether these sites are in scope for consent tooling at all. Technical observation, not a legal conclusion."
+  },
+  {
+   "axis": "RISK",
+   "cause": "No DMARC on the domain recipients actually see",
+   "sites": [
+    "celticindustrialservices.com",
+    "ciminelliflorida.com",
+    "eamusicfest.com",
+    "elderwoodipa.com",
+    "firstaurorafinancial.com",
+    "hitsfoundation.org",
+    "hoosierfeeder.com",
+    "lactalisyogurtusa.com",
+    "lasershows.com",
+    "local92afm.com",
+    "midwestyogurt.com",
+    "palmettoresidentialelectric.com",
+    "pediatricspecialtymedicalday.com",
+    "thehambycollection.com"
+   ],
+   "action": "Nothing protects the brand domain from spoofing. Note this is a different question from whether the provider setup is complete."
+  },
+  {
+   "axis": "RISK",
+   "cause": "From domain not aligned with sending domain",
+   "sites": [
+    "eamusicfest.com",
+    "firstaurorafinancial.com",
+    "galbanicheese.com",
+    "hitsfoundation.org",
+    "lactalisamericangroup.com",
+    "lactalisheritagedairy.com",
+    "lactalisyogurtusa.com",
+    "lancastervillageny.gov",
+    "midwestyogurt.com"
+   ],
+   "action": "DMARC fails on unaligned mail even when SPF and DKIM pass."
+  },
+  {
+   "axis": "RISK",
+   "cause": "No SPF record on the sending domain",
+   "sites": [
+    "elderwoodipa.com",
+    "iroquoisfence.com"
+   ],
+   "action": "Authoritative answer, genuinely absent. Mail from these domains cannot pass SPF."
+  },
+  {
+   "cause": "No recent DB backup",
+   "axis": "RISK",
+   "sites": [
+    "cm-whitelabel",
+    "hoffmanscheese"
+   ],
+   "detail": {
+    "cm-whitelabel": "2155d, Sandbox",
+    "hoffmanscheese": "730d, Sandbox"
+   },
+   "action": "All on plan(s) Sandbox. Sandbox plans get no automatic nightly backup, so decide whether these are production before treating as an incident."
+  },
+  {
+   "cause": "PHP version past end of security support",
+   "axis": "RISK",
+   "sites": [
+    "runtalnorthamerica.com"
+   ],
+   "detail": {
+    "runtalnorthamerica.com": "PHP 8.1, Performance Medium"
+   },
+   "action": "Receiving no security patches. Upgrade path is a Pantheon setting plus a compatibility check."
+  },
+  {
+   "cause": "The consent sweep could not see the site",
+   "axis": "COVERAGE",
+   "sites": [
+    "42northbrewing.com",
+    "clevermethod.com",
+    "ecmea.org",
+    "elmanyhistory.org",
+    "hitsfoundation.org",
+    "hoosierfeeder.com",
+    "internationaljuniormasters.com",
+    "kulinskigolf.com"
+   ],
+   "detail": {
+    "42northbrewing.com": "HTTP 403",
+    "clevermethod.com": "HTTP 403",
+    "ecmea.org": "HTTP 403",
+    "elmanyhistory.org": "HTTP 403",
+    "hitsfoundation.org": "HTTP unknown",
+    "hoosierfeeder.com": "HTTP 403",
+    "internationaljuniormasters.com": "HTTP 403",
+    "kulinskigolf.com": "HTTP 403"
+   },
+   "action": "NOT one decision. The 20 CM Pantheon sites here were measured on 2026-08-22: every one is a Cloudflare bot challenge on the client's own zone, reaching Pantheon not at all, across at least four DNS providers. The remaining 0 have NOT been attributed. All of them are UNMEASURED, not clean, and no consent rule scores on them."
+  },
+  {
+   "axis": "COVERAGE",
+   "cause": "SPF could not be determined",
+   "sites": [
+    "eamusicfest.com",
+    "hitsfoundation.org",
+    "lactalisamericangroup.com",
+    "lactalisheritagedairy.com",
+    "lactalisyogurtusa.com",
+    "midwestyogurt.com"
+   ],
+   "action": "A finding about the lookup, not the domain. Mostly self-inflicted resolver saturation; the next run usually resolves it."
+  },
+  {
+   "cause": "WordPress core, plugin and theme status not observed",
+   "axis": "COVERAGE",
+   "sites": [
+    "app.eastauroracc.com"
+   ],
+   "action": "API-only mode cannot see these. Any OK on these sites means clean-on-what-we-looked-at, not clean."
+  },
+  {
+   "cause": "PHP 8.2 leaves security support in 126 days (2026-12-31)",
+   "axis": "PLANNING",
+   "sites": [
+    "11daypowerplay.com",
+    "acibg.com",
+    "actioncarting.com",
+    "breakstones.com",
+    "celticindustrialservices.com",
+    "choosechq.com",
+    "ciminelli.com",
+    "ciminelliflorida.com",
+    "clevermethod.com",
+    "cm-whitelabel",
+    "cottrillspharmacy.com",
+    "crackerbarrelcheese.com",
+    "drspietrantone.com",
+    "firstaurorafinancial.com",
+    "galbanicheese.com",
+    "gmroot.com",
+    "hoffmanscheese",
+    "icegame.com",
+    "interstatewaste.com",
+    "iroquoisfence.com",
+    "knudsen.com",
+    "kraftnaturalcheese.com",
+    "lactalisamericangroup.com",
+    "lactalisheritagedairy.com",
+    "lactalisyogurtusa.com",
+    "lancastervillageny.gov",
+    "lasershows.com",
+    "lifebreath.com",
+    "live-frontline-construction.pantheonsite.io",
+    "local92afm.com",
+    "midwestyogurt.com",
+    "morrison-chs.com",
+    "newmarkciminelli.com",
+    "ntlibrary.org",
+    "ontracksitedevelopment.com",
+    "packagedesignsupply.com",
+    "palmettoresidentialelectric.com",
+    "pfannenbergusa.com",
+    "scottishcheddarcheese.com",
+    "senecafinancialadvisors.com",
+    "sgroilawley.com",
+    "thenorthstarcompanies.com",
+    "thermalfoams.com",
+    "valbresocheese.com",
+    "zehnder-rittling.com",
+    "zehnderamerica.com"
+   ],
+   "action": "Fleet-wide deadline, not a per-site alert. Schedule the upgrade wave now; it is the only finding here with a fixed date."
+  },
+  {
+   "axis": "DRIFT",
+   "cause": "DMARC published but p=none",
+   "sites": [
+    "1-800-dumpster.com",
+    "11daypowerplay.com",
+    "42northbrewing.com",
+    "acibg.com",
+    "actioncarting.com",
+    "alliedcircuits.com",
+    "bhargavalaw.com",
+    "breakstones.com",
+    "buffalobeds.com",
+    "buffalorecycles.org",
+    "clevermethod.com",
+    "cottrillspharmacy.com",
+    "crackerbarrelcheese.com",
+    "drspietrantone.com",
+    "dslawfirm.com",
+    "dynapurge.com",
+    "eastauroracc.com",
+    "eastauroraef.org",
+    "elmanyhistory.org",
+    "fairchildcapitalpartners.com",
+    "galbanicheese.com",
+    "gmroot.com",
+    "heartofmusicfestival.com",
+    "internationaljuniormasters.com",
+    "interstatewaste.com",
+    "iroquoisfence.com",
+    "kingsdumpstersny.com",
+    "knudsen.com",
+    "kraftnaturalcheese.com",
+    "kulinskigolf.com",
+    "lactalisamericangroup.com",
+    "live-frontline-construction.pantheonsite.io",
+    "ntlibrary.org",
+    "ontracksitedevelopment.com",
+    "packagedesignsupply.com",
+    "paramaxcorp.com",
+    "pfannenbergusa.com",
+    "scottishcheddarcheese.com",
+    "senecafinancialadvisors.com",
+    "sgroilawley.com",
+    "shuman-plastics.com",
+    "statlerfoundation.com",
+    "summerstreetcapital.com",
+    "thenorthstarcompanies.com",
+    "thermalfoams.com",
+    "valbresocheese.com",
+    "websterszanyi.com",
+    "zehnder-rittling.com",
+    "zehnderamerica.com"
+   ],
+   "action": "Monitoring only. One policy decision covers all 49."
+  },
+  {
+   "cause": "One pending Pantheon upstream commit, unmerged",
+   "axis": "DRIFT",
+   "sites": [
+    "actioncarting.com",
+    "breakstones.com",
+    "choosechq.com",
+    "crackerbarrelcheese.com",
+    "eastauroracc.com",
+    "firstaurorafinancial.com",
+    "gmroot.com",
+    "hoffmanscheese",
+    "icegame.com",
+    "iroquoisfence.com",
+    "knudsen.com",
+    "lactalisamericangroup.com",
+    "lactalisheritagedairy.com",
+    "lactalisyogurtusa.com",
+    "lancastervillageny.gov",
+    "lasershows.com",
+    "live-frontline-construction.pantheonsite.io",
+    "local92afm.com",
+    "midwestyogurt.com",
+    "morrison-chs.com",
+    "newmarkciminelli.com",
+    "ontracksitedevelopment.com",
+    "packagedesignsupply.com",
+    "palmettoresidentialelectric.com",
+    "runtalnorthamerica.com",
+    "scottishcheddarcheese.com",
+    "senecafinancialadvisors.com",
+    "thenorthstarcompanies.com",
+    "thermalfoams.com",
+    "valbresocheese.com",
+    "zehnder-rittling.com",
+    "zehnderamerica.com"
+   ],
+   "action": "One merge decision covers all 32 sites."
+  },
+  {
+   "cause": "Plugin updates pending, 10 or more",
+   "axis": "DRIFT",
+   "sites": [
+    "1-800-dumpster.com",
+    "actioncarting.com",
+    "alliedcircuits.com",
+    "breakstones.com",
+    "choosechq.com",
+    "ciminelli.com",
+    "crackerbarrelcheese.com",
+    "eamusicfest.com",
+    "ecmea.org",
+    "elmanyhistory.org",
+    "firstaurorafinancial.com",
+    "gmroot.com",
+    "hitsfoundation.org",
+    "hoffmanscheese",
+    "icegame.com",
+    "knudsen.com",
+    "lasershows.com",
+    "lifebreath.com",
+    "local92afm.com",
+    "newmarkciminelli.com",
+    "ntlibrary.org",
+    "packagedesignsupply.com",
+    "pfannenbergusa.com",
+    "runtalnorthamerica.com",
+    "summerstreetcapital.com",
+    "zehnder-rittling.com",
+    "zehnderamerica.com"
+   ],
+   "detail": {
+    "1-800-dumpster.com": "19 pending",
+    "actioncarting.com": "20 pending",
+    "alliedcircuits.com": "20 pending",
+    "breakstones.com": "13 pending",
+    "choosechq.com": "16 pending",
+    "ciminelli.com": "10 pending",
+    "crackerbarrelcheese.com": "15 pending",
+    "eamusicfest.com": "13 pending",
+    "ecmea.org": "18 pending",
+    "elmanyhistory.org": "11 pending",
+    "firstaurorafinancial.com": "10 pending",
+    "gmroot.com": "23 pending",
+    "hitsfoundation.org": "12 pending",
+    "hoffmanscheese": "27 pending",
+    "icegame.com": "17 pending",
+    "knudsen.com": "11 pending",
+    "lasershows.com": "13 pending",
+    "lifebreath.com": "11 pending",
+    "local92afm.com": "15 pending",
+    "newmarkciminelli.com": "14 pending",
+    "ntlibrary.org": "12 pending",
+    "packagedesignsupply.com": "12 pending",
+    "pfannenbergusa.com": "10 pending",
+    "runtalnorthamerica.com": "23 pending",
+    "summerstreetcapital.com": "17 pending",
+    "zehnder-rittling.com": "10 pending",
+    "zehnderamerica.com": "24 pending"
+   },
+   "action": "416 update(s) across 27 site(s); the largest single backlog is hoffmanscheese at 27. Not one decision -- these are per-site and need scheduling."
+  },
+  {
+   "cause": "WordPress 7.0.4 available, not applied",
+   "axis": "DRIFT",
+   "sites": [
+    "breakstones.com",
+    "choosechq.com",
+    "crackerbarrelcheese.com",
+    "firstaurorafinancial.com",
+    "gmroot.com",
+    "hoffmanscheese",
+    "icegame.com",
+    "iroquoisfence.com",
+    "knudsen.com",
+    "lactalisamericangroup.com",
+    "lactalisheritagedairy.com",
+    "lactalisyogurtusa.com",
+    "lasershows.com",
+    "local92afm.com",
+    "midwestyogurt.com",
+    "newmarkciminelli.com",
+    "ontracksitedevelopment.com",
+    "packagedesignsupply.com",
+    "scottishcheddarcheese.com",
+    "valbresocheese.com",
+    "zehnderamerica.com"
+   ],
+   "detail": {
+    "breakstones.com": "on 7.0.3",
+    "choosechq.com": "on 7.0.3",
+    "crackerbarrelcheese.com": "on 7.0.3",
+    "firstaurorafinancial.com": "on 7.0.3",
+    "gmroot.com": "on 7.0.3",
+    "hoffmanscheese": "on 7.0.3",
+    "icegame.com": "on 7.0.3",
+    "iroquoisfence.com": "on 7.0.3",
+    "knudsen.com": "on 7.0.3",
+    "lactalisamericangroup.com": "on 7.0.3",
+    "lactalisheritagedairy.com": "on 7.0.3",
+    "lactalisyogurtusa.com": "on 7.0.3",
+    "lasershows.com": "on 7.0.3",
+    "local92afm.com": "on 7.0.3",
+    "midwestyogurt.com": "on 7.0.3",
+    "newmarkciminelli.com": "on 7.0.3",
+    "ontracksitedevelopment.com": "on 7.0.3",
+    "packagedesignsupply.com": "on 7.0.3",
+    "scottishcheddarcheese.com": "on 7.0.3",
+    "valbresocheese.com": "on 7.0.2",
+    "zehnderamerica.com": "on 7.0.3"
+   },
+   "action": "One update decision covers all 21 site(s), which all want the same release. A pending update is a maintenance backlog, not an incident -- the sites BELOW the security floor are a separate finding and score CRIT."
+  },
+  {
+   "cause": "WordPress 7.1 available, not applied",
+   "axis": "DRIFT",
+   "sites": [
+    "actioncarting.com",
+    "eastauroracc.com",
+    "lancastervillageny.gov",
+    "live-frontline-construction.pantheonsite.io",
+    "morrison-chs.com",
+    "palmettoresidentialelectric.com",
+    "runtalnorthamerica.com",
+    "senecafinancialadvisors.com",
+    "thenorthstarcompanies.com",
+    "thermalfoams.com",
+    "zehnder-rittling.com"
+   ],
+   "detail": {
+    "actioncarting.com": "on 7.0.4",
+    "eastauroracc.com": "on 7.0.4",
+    "lancastervillageny.gov": "on 7.0.4",
+    "live-frontline-construction.pantheonsite.io": "on 7.0.4",
+    "morrison-chs.com": "on 7.0.4",
+    "palmettoresidentialelectric.com": "on 7.0.4",
+    "runtalnorthamerica.com": "on 7.0.4",
+    "senecafinancialadvisors.com": "on 7.0.4",
+    "thenorthstarcompanies.com": "on 7.0.4",
+    "thermalfoams.com": "on 7.0.4",
+    "zehnder-rittling.com": "on 7.0.4"
+   },
+   "action": "One update decision covers all 11 site(s), which all want the same release. A pending update is a maintenance backlog, not an incident -- the sites BELOW the security floor are a separate finding and score CRIT."
+  }
+ ],
+ "changes": [
+  {
+   "class": "TRANSITION",
+   "site": "ciminelli.com",
+   "fact": "status",
+   "before": "OK",
+   "after": "WARN",
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "breakstones.com",
+   "fact": "plugin_updates",
+   "before": 12,
+   "after": 13,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "choosechq.com",
+   "fact": "plugin_updates",
+   "before": 15,
+   "after": 16,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "ciminelli.com",
+   "fact": "plugin_updates",
+   "before": 8,
+   "after": 10,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "ciminelliflorida.com",
+   "fact": "plugin_updates",
+   "before": 6,
+   "after": 8,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "clevermethod.com",
+   "fact": "plugin_updates",
+   "before": 4,
+   "after": 6,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "cm-whitelabel",
+   "fact": "db_backup_age_days",
+   "before": 2154,
+   "after": 2155,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "drspietrantone.com",
+   "fact": "plugin_updates",
+   "before": 5,
+   "after": 7,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "elmanyhistory.org",
+   "fact": "plugin_updates",
+   "before": 10,
+   "after": 11,
+   "source": "health",
+   "against": "health-nexcess-2026-08-25_1615"
+  },
+  {
+   "class": "DRIFT",
+   "site": "firstaurorafinancial.com",
+   "fact": "plugin_updates",
+   "before": 9,
+   "after": 10,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "galbanicheese.com",
+   "fact": "plugin_updates",
+   "before": 6,
+   "after": 7,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "hoffmanscheese",
+   "fact": "db_backup_age_days",
+   "before": 729,
+   "after": 730,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "icegame.com",
+   "fact": "plugin_updates",
+   "before": 16,
+   "after": 17,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "interstatewaste.com",
+   "fact": "plugin_updates",
+   "before": 6,
+   "after": 8,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "knudsen.com",
+   "fact": "plugin_updates",
+   "before": 10,
+   "after": 11,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "lasershows.com",
+   "fact": "plugin_updates",
+   "before": 12,
+   "after": 13,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "lifebreath.com",
+   "fact": "plugin_updates",
+   "before": 10,
+   "after": 11,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "live-frontline-construction.pantheonsite.io",
+   "fact": "plugin_updates",
+   "before": 7,
+   "after": 9,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "local92afm.com",
+   "fact": "plugin_updates",
+   "before": 14,
+   "after": 15,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "morrison-chs.com",
+   "fact": "plugin_updates",
+   "before": 7,
+   "after": 8,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "palmettoresidentialelectric.com",
+   "fact": "plugin_updates",
+   "before": 6,
+   "after": 7,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "senecafinancialadvisors.com",
+   "fact": "plugin_updates",
+   "before": 6,
+   "after": 7,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "zehnder-rittling.com",
+   "fact": "plugin_updates",
+   "before": 9,
+   "after": 10,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  },
+  {
+   "class": "DRIFT",
+   "site": "zehnderamerica.com",
+   "fact": "plugin_updates",
+   "before": 23,
+   "after": 24,
+   "source": "health",
+   "against": "health-2026-08-26_1351"
+  }
+ ],
+ "coverage_changes": [
+  {
+   "fact": "smtp_from_domain",
+   "sites": [
+    "1-800-dumpster.com",
+    "42northbrewing.com",
+    "alliedcircuits.com",
+    "bhargavalaw.com",
+    "buffalobeds.com",
+    "dslawfirm.com",
+    "eamusicfest.com",
+    "eastauroraef.org",
+    "ecmea.org",
+    "elmanyhistory.org",
+    "fairchildcapitalpartners.com",
+    "heartofmusicfestival.com",
+    "hitsfoundation.org",
+    "internationaljuniormasters.com",
+    "kingsdumpstersny.com",
+    "kulinskigolf.com",
+    "statlerfoundation.com",
+    "summerstreetcapital.com",
+    "thehambycollection.com",
+    "twostuds.net",
+    "websterszanyi.com"
+   ],
+   "gained": 21,
+   "lost": 0
+  },
+  {
+   "fact": "smtp_plugin_seen",
+   "sites": [
+    "1-800-dumpster.com",
+    "42northbrewing.com",
+    "alliedcircuits.com",
+    "bhargavalaw.com",
+    "buffalobeds.com",
+    "dslawfirm.com",
+    "eamusicfest.com",
+    "eastauroraef.org",
+    "ecmea.org",
+    "elmanyhistory.org",
+    "fairchildcapitalpartners.com",
+    "heartofmusicfestival.com",
+    "hitsfoundation.org",
+    "internationaljuniormasters.com",
+    "kingsdumpstersny.com",
+    "kulinskigolf.com",
+    "statlerfoundation.com",
+    "summerstreetcapital.com",
+    "thehambycollection.com",
+    "twostuds.net",
+    "websterszanyi.com"
+   ],
+   "gained": 21,
+   "lost": 0
+  },
+  {
+   "fact": "smtp_relay_host",
+   "sites": [
+    "1-800-dumpster.com",
+    "42northbrewing.com",
+    "alliedcircuits.com",
+    "bhargavalaw.com",
+    "buffalobeds.com",
+    "dslawfirm.com",
+    "eamusicfest.com",
+    "eastauroraef.org",
+    "ecmea.org",
+    "elmanyhistory.org",
+    "fairchildcapitalpartners.com",
+    "heartofmusicfestival.com",
+    "hitsfoundation.org",
+    "internationaljuniormasters.com",
+    "kingsdumpstersny.com",
+    "kulinskigolf.com",
+    "statlerfoundation.com",
+    "summerstreetcapital.com",
+    "thehambycollection.com",
+    "twostuds.net",
+    "websterszanyi.com"
+   ],
+   "gained": 21,
+   "lost": 0
+  },
+  {
+   "fact": "smtp_transport",
+   "sites": [
+    "1-800-dumpster.com",
+    "42northbrewing.com",
+    "alliedcircuits.com",
+    "bhargavalaw.com",
+    "buffalobeds.com",
+    "dslawfirm.com",
+    "eamusicfest.com",
+    "eastauroraef.org",
+    "ecmea.org",
+    "elmanyhistory.org",
+    "fairchildcapitalpartners.com",
+    "heartofmusicfestival.com",
+    "hitsfoundation.org",
+    "internationaljuniormasters.com",
+    "kingsdumpstersny.com",
+    "kulinskigolf.com",
+    "statlerfoundation.com",
+    "summerstreetcapital.com",
+    "thehambycollection.com",
+    "twostuds.net",
+    "websterszanyi.com"
+   ],
+   "gained": 21,
+   "lost": 0
+  }
+ ],
+ "coverage": [
+  {
+   "what": "Pantheon platform facts (plan, PHP, backups, upstream)",
+   "known": 48,
+   "of": 52
+  },
+  {
+   "what": "WordPress core, plugins, themes on Pantheon (SSH)",
+   "known": 47,
+   "of": 52
+  },
+  {
+   "what": "WordPress core, plugins, themes on Nexcess (SSH)",
+   "known": 21,
+   "of": 22
+  },
+  {
+   "what": "SPF",
+   "known": 72,
+   "of": 78
+  },
+  {
+   "what": "DKIM (selector must be known to verify)",
+   "known": 70,
+   "of": 78
+  },
+  {
+   "what": "DMARC",
+   "known": 78,
+   "of": 78
+  },
+  {
+   "what": "Cookie consent (public homepage, needs a browser)",
+   "known": 71,
+   "of": 79
+  },
+  {
+   "what": "Component inventory (plugins, mu-plugins, themes)",
+   "known": 68,
+   "of": 75
+  },
+  {
+   "what": "Sending domain, measured on the site (post-smtp only)",
+   "known": 59,
+   "of": 75
+  },
+  {
+   "what": "Nexcess estate (PHP, WordPress version, via the portal API)",
+   "known": 22,
+   "of": 22
+  }
+ ],
+ "inventory_count": 85
+}
