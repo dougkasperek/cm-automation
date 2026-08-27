@@ -560,32 +560,40 @@ When it is picked up, the questions are: what hosting are they on, does any
 existing adapter reach it, and are there other clevermethod sites there that
 this fleet has never counted.
 
-## OPEN 2026-08-27: the audit workbook and the scanner disagree on one site
+## WITHDRAWN 2026-08-27: the workbook was right and the scanner was wrong
 
-`onetrust-audit.xlsx` records `interstatewaste.com` as
-**"Scripts Fire w/ Respect to Consent: Yes"**.
+This item claimed `onetrust-audit.xlsx` and the gating scan disagreed about
+`interstatewaste.com` — the workbook recording "Scripts Fire w/ Respect to
+Consent: Yes" while the scan reported MS Clarity still firing after Reject All.
+The fleet-wide run then found the same on `actioncarting.com`, which shares the
+Interstate Waste rule, and it was raised with Nick Federico on Teams.
 
-Measured 2026-08-27 with `scripts/consent/test-gating.mjs`: after a real click
-on Reject All and a reload, DoubleClick, GA4 and Meta Pixel all stopped, and
-**MS Clarity kept firing**. The workbook's own Cookies sheet categorises
-Clarity's `_clck` and `_clsk` as **C0002 Performance**, and the consent state
-after the rejection read `C0002:0` -- denied.
+**Nick validated it by hand and said the trigger is correct. He is right.**
 
-So the categorisation is right and the tag is not honouring it. This is the
-first thing the scanner has caught that the manual audit missed, which is the
-entire argument for the scanner.
+`test-gating.mjs` cleared its request counters BEFORE the post-rejection
+reload, merging two windows that mean different things:
 
-**Raised with Nick on Teams, 2026-08-27, and confirmed on a second site first.**
-The fleet-wide gating sweep found the same tag on `actioncarting.com`, which
-shares the Interstate Waste geolocation rule — so it is not a one-site fluke.
-Awaiting his answer.
+    after the click     the page the visitor is ALREADY on, finishing its work
+    after the reload    a fresh page load with consent denied
 
-The question put to him: does the Clarity tag's firing trigger in the Interstate
-Waste GTM container read the OneTrust categories? Two outcomes, and they point
-opposite ways — if the trigger is not gated, it is a fix on their side and a
-re-run verifies it; if Clarity is categorised deliberately such that it may
-fire, then this scan is wrong about what a denied C0002 implies and the rule
-needs revisiting rather than the site.
+Clarity is a session recorder; it flushes on consent change. Those beacons were
+recorded as "still firing after Reject All". Measured with the two windows
+separated, the post-reload window has **zero requests** — nothing fires at all.
+
+Re-run fleet-wide after the fix: **0 of 23 tested sites still fire.** The
+finding does not exist.
+
+**What should have caught it before it reached Nick.** The test's own two
+passes disagreed about the same site: the synthetic-cookie pass showed Google
+correct at `gcs=G100` and Clarity stopped; the click pass showed Google absent
+entirely and Clarity firing. Two passes of one instrument contradicting each
+other is a defect in the instrument. Nick's second objection — that Google
+should still send cookieless pings when you reject, and our report showed none
+— was that same bug seen from the outside, and it was the more informative half
+of his reply.
+
+**Doug owes Nick a correction.** The wrong finding was sent under our name.
+
 
 ---
 

@@ -46,19 +46,32 @@ Four things fixed that, in order:
 4. **Its own page**, `/consent`, on the dashboard's chrome, with an ours-only
    toggle.
 
-### The finding worth acting on
+### The finding that was not one — read this before trusting the gating sweep
 
-**MS Clarity still fires on `actioncarting.com` and `interstatewaste.com` after
-a real Reject All.** Both ours, both Interstate Waste. The workbook categorises
-`_clck`/`_clsk` as **C0002 Performance**; the rejection sets `C0002:0`; Clarity
-fires anyway. The workbook records both sites as respecting consent.
+The sweep reported **MS Clarity still firing after Reject All** on
+`actioncarting.com` and `interstatewaste.com`. It was raised with Nick Federico
+on Teams. **He validated it by hand, said the trigger is correct, and he was
+right.**
 
-**Raised with Nick on Teams, 2026-08-27.** Awaiting his answer. This is the
-first thing the scanner has caught that the manual audit missed.
+`test-gating.mjs` cleared its request counters BEFORE the post-rejection
+reload, merging the window where the ALREADY-OPEN page finishes its work with
+the window that actually answers the question — a fresh consent-denied load.
+Clarity flushes its session buffer on consent change, and those beacons were
+attributed to a tag ignoring consent.
 
-What he was asked: whether the Clarity tag's firing trigger on the Interstate
-Waste GTM container reads the OneTrust categories. The message also carried the
-Bing UET caveat below, flagged as unconfirmed.
+Fixed, and re-run fleet-wide: **0 of 23 tested sites still fire after Reject
+All.** Every managed site is gated.
+
+**The lesson, because it is more useful than the fix.** The instrument's own
+two passes disagreed about the same site — the synthetic-cookie pass had Google
+correct at `gcs=G100` and Clarity stopped, the click pass had Google absent and
+Clarity firing. That contradiction was in the output before the message was
+sent. Two passes of one test disagreeing about one site is a defect in the
+test. And Nick's second objection, that Google should still send cookieless
+pings on rejection when our report showed none, was the same bug from the
+outside and was the more informative half of his reply.
+
+**Doug owes Nick a correction**, and it has not been sent as of this writing.
 
 ### Settled today, so nobody re-opens it
 
@@ -72,11 +85,8 @@ Bing UET caveat below, flagged as unconfirmed.
 
 ### Next, in the order I would take it
 
-1. **Nick's answer on Clarity**, asked 2026-08-27. If he confirms the trigger
-   is not reading consent state, that is a fix on their side and a re-run of
-   `run-gating-sweep.mjs` to verify — which is the whole point of having built
-   it. If he says it is categorised deliberately, the scan is wrong about what
-   C0002 means and the rule needs revisiting.
+1. **Send Nick the correction.** We told him two of his sites were leaking and
+   they are not. Human task, and the first one.
 2. **B1 in `docs/DO-THIS-NEXT.md` is blocked on CONTENT, not code.** Victoria
    Brake asked how to handle clients not paying for maintenance. The field is
    an hour's work; the answer is a list nobody has. `client` and `owner` have

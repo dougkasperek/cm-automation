@@ -709,8 +709,22 @@ check("...for the cold sweep and the gating test separately",
 _pagecss = open(os.path.join(ROOT, "scripts", "dashboard", "page.css")).read()
 check("the consent page inlines the dashboard's own stylesheet",
       _pagecss.split("\n")[0][:40] in _cp and len(_pagecss) > 2000)
+# ASSERT THE VOCABULARY, NOT WHICH CHIPS TODAY'S DATA HAPPENS TO PRODUCE.
+# This pinned st-CRIT and went red the day the gating bug was fixed and no site
+# was failing any more -- a legitimate change breaking a test that described
+# the fleet instead of the contract. Same mistake CLAUDE.md records three other
+# tests making.
 check("...and uses its status chips rather than a second vocabulary",
-      'class="chip st-CRIT"' in _cp and 'class="chip st-OK"' in _cp)
+      'class="chip st-' in _cp and 'class="chip st-OK"' in _cp)
+# The CRIT chip is the right one WHEN there is something to show it for.
+_broken = [x for x in _m2["sites"]
+           if x.get("consent_managed") is True
+           and x.get("gating_tested") is True
+           and (x.get("gating_still_firing") or 0) > 0]
+check("a site still firing after rejection gets the CRIT chip, when one exists",
+      ('class="chip st-CRIT"' in _cp) == bool(_broken),
+      "%d broken site(s), CRIT chip present=%s"
+      % (len(_broken), 'class="chip st-CRIT"' in _cp))
 check("...including the hatched treatment for an untested site",
       'class="chip st-UNKNOWN"' in _cp)
 check("no second design token set is introduced",
