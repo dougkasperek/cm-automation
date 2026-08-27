@@ -15,6 +15,7 @@
  * Routes
  *   GET /                  -> R2 fleet/dashboard.html
  *   GET /components        -> R2 fleet/components.html   (added 2026-08-23)
+ *   GET /consent           -> R2 fleet/consent.html      (added 2026-08-27)
  *   GET /api/fleet-scan    -> R2 fleet/latest.json
  *                             {"schema":"fleet-dashboard/2", ...} since
  *                             2026-08-19. The old {stamp, kind, rows} shape is
@@ -83,6 +84,19 @@ export default {
     // deployed Worker a full day behind this file.
     if (path === "/components" || path === "/components.html") {
       return serve(env, PREFIX + "components.html", "text/html; charset=utf-8");
+    }
+
+    // The consent page. Added 2026-08-27, and the day it shipped it was
+    // UPLOADED AND UNREACHABLE: publish-dashboard.sh put fleet/consent.html in
+    // R2, the fleet page linked to /consent from the Consent column header,
+    // and this Worker 404'd it. The test written that day asserted the upload
+    // and not the route, which is exactly half the contract.
+    //
+    // A page in R2 that no route serves is invisible, and it looks identical
+    // to a page that was never rendered. test-worker-exposure.py now asserts
+    // every HTML file publish-dashboard.sh uploads has a route here.
+    if (path === "/consent" || path === "/consent.html") {
+      return serve(env, PREFIX + "consent.html", "text/html; charset=utf-8");
     }
 
     return new Response("Not found", { status: 404, headers: SEC });

@@ -179,6 +179,47 @@ ok("--allow-shared-access-app" in src,
 ok("access_app" in src and "shared_access_apps" in src,
    "the collision check is wired into the run, not just defined")
 
+
+# ---------------------------------------------------------------------------
+# EVERY PAGE THE PUBLISHER UPLOADS MUST HAVE A ROUTE THAT SERVES IT.
+#
+# Added 2026-08-27, the day the consent page shipped uploaded and unreachable.
+# publish-dashboard.sh put fleet/consent.html into R2, the fleet page linked to
+# /consent, and the Worker 404'd it. The test written that day asserted the
+# UPLOAD and not the ROUTE, which is half a contract.
+#
+# A page in R2 that no route serves is invisible, and it looks exactly like a
+# page that was never rendered -- so nothing complains and nobody can tell the
+# difference from the outside.
+# ---------------------------------------------------------------------------
+print()
+print("-- every published page is reachable --")
+import re as _re_route
+_pub_src = open(os.path.join(HERE, "..", "scripts", "publish-dashboard.sh")).read()
+_wrk_src = open(os.path.join(HERE, "..", "ci", "cloudflare", "cm-fleet-worker.js")).read()
+
+# The upload loop names each object as "<name>:<content-type>".
+_uploaded = _re_route.findall(r'"([a-z0-9-]+\.html):text/html"', _pub_src)
+ok(len(_uploaded) >= 2,
+   "the publisher uploads more than one page (found %s)" % (_uploaded or "none"))
+for _name in _uploaded:
+    _key = 'PREFIX + "%s"' % _name
+    ok(_key in _wrk_src,
+       "the Worker serves %s, which the publisher uploads" % _name)
+
+# And the reverse: a route pointing at an object nobody uploads is a 404 with
+# extra steps, and it reads as a page that exists.
+_served = _re_route.findall(r'PREFIX \+ "([a-z0-9-]+\.html)"', _wrk_src)
+for _name in set(_served):
+    ok(_name in _uploaded,
+       "the publisher uploads %s, which the Worker serves" % _name)
+
+# THE ROUTE FILE IS NOT THE DEPLOYED WORKER. This asserts the source is
+# correct; it cannot assert what is running. CLAUDE.md, and an audit on
+# 2026-08-20 that found the deployed Worker a full day behind this file.
+ok("wrangler deploy" in _wrk_src,
+   "the source says out loud that editing it changes nothing until deploy")
+
 print()
 print("-" * 67)
 print("%d passed, %d failed" % (passed, failed))
