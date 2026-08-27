@@ -10,6 +10,87 @@ written down.
 
 ## PICK UP HERE — 2026-08-27, end of day
 
+**Nothing is published.** Today's scan is ingested, rendered and committed;
+the last commit pushed is `09ff524`. Doug asked for six UI changes before
+publishing, and they are built. **Push and publish are both still to do.**
+
+### The six UI changes
+
+Five were built. **One was already done and I said so rather than rebuilding
+it.**
+
+1. **Three marked layers.** Summary / Detail / Complete inventory, as bands
+   with a rule, a label and a sentence. Nothing moved — the eleven sections are
+   in the order they already were. The reference band carries a heavier rule
+   because that is where reading stops and lookup starts: `Every site` alone is
+   102KB of a 174KB page.
+2. **What changed, compressed.** 22 of 23 sites moved only a plugin counter.
+   Those are folded behind a summary that names them; the one real transition
+   renders outside the fold. Folded, not dropped — DRIFT rows are real records
+   and a bare "22 sites" would be a summary standing in for the evidence.
+3. **Rulings state the decision.** Three columns: what is unresolved, why no
+   scan can settle it, what a person must decide. The decision text is read
+   from the inventory's `reconciliation`, not hardcoded. No action controls.
+4. **One key, three groups.** The two scattered keys are merged. The grouping
+   is load-bearing: `CRIT/WARN/OK` is a verdict, `SKIP/FROZEN` is the absence
+   of one, and flattening them is what lets a reader treat SKIP as a mild WARN.
+5. **Jump links**, plus a route back to the summary at the foot of each layer.
+   A test asserts no link points at an id that does not exist.
+6. **Coverage vs website changes — ALREADY DONE, not rebuilt.** Coverage
+   changes already have their own section saying "our visibility changing, not
+   the fleet", and no COVERAGE chip appears in `What changed`. Verified by
+   counting the chips rendered in that section: 23 DRIFT, 1 TRANSITION, 0
+   COVERAGE.
+
+### Two defects found doing it
+
+**The rulings column answered a different question on one row.** It read
+`reasons or "<ruling text>"`, so `hoffmanscheese` showed its backup age and
+plugin count where the other four showed why their ruling is missing. The
+decision required is identical for all five.
+
+**Three CSS variables I invented did not exist.** `--quiet`, `--rule`,
+`--link`. An undefined custom property does not error, it inherits, so the page
+still looked deliberate. Now checked by diffing variables used against
+variables `:root` defines.
+
+Suites: ledger **316**, severity 127, score-scan 24, nexcess 96, consent 76,
+nexcess-ssh 43, wp-calls 48, email-dns 58, worker-exposure 40,
+access-policies 46. Page read at 1100px and at 375px; no horizontal overflow.
+
+### State, measured today
+
+| | |
+|---|---|
+| health | 2 CRIT / 53 WARN / 25 OK / 3 SKIP / 1 FROZEN, one excluded |
+| health-coverage scoreboard | 11 |
+| standing findings | 17 |
+| latest health run | `health-2026-08-27_1246`, 48 of 52 measured |
+
+### What is still open
+
+1. **DRIFT and COVERAGE still mean two things on one page.** The key now says
+   so explicitly. Renaming either vocabulary is a product decision and was not
+   guessed at.
+2. **The consent baseline.** No baseline since 2026-08-22. Probable fix is to
+   diff over the INTERSECTION of the two site sets. Not built.
+3. **`lancastervillageny.gov` records the relay as its from address.** A
+   workbook correction.
+4. **The Top issues table is capped at six by size**, so the two core-update
+   groups (21 and 11) sit below it.
+
+### Still a human task, unchanged
+
+- **Send the Nexcess question-1 reply**, thread
+  `thread::sJecUJQ2cS6EeEacWJKo2D0::`, drafted at the bottom of
+  `docs/NEXCESS-SUPPORT.md`.
+- **Check the `github-deploy-[removed]` token scope** in the Cloudflare
+  dashboard. Re-scope, do not delete.
+
+---
+
+## Previously — 2026-08-27, after the scan
+
 **Today's scan is ingested, rendered, pushed and published**, and both the push
 and the publish were verified by reading them back rather than trusting a
 success message. The live page was downloaded out of R2 and is byte-identical

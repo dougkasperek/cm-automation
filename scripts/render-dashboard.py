@@ -803,6 +803,52 @@ details.md p:last-child{margin-bottom:0}
 .covof{color:var(--faint);font-weight:400}
 .covnone{color:var(--muted);font-weight:400}
 .covgap{color:var(--bad)}
+/* THE THREE LAYERS. A rule, a label and a sentence -- no boxes, no tint.
+   The page already uses cards for content, so a tinted band around cards
+   would read as a bigger card rather than as a boundary. A full-bleed rule
+   with a label sitting on it is the cheapest thing that unambiguously says
+   "a different kind of material starts here". */
+.layer{margin:34px 0 0;padding:0}
+.layer:first-of-type{margin-top:22px}
+.layerhead{border-top:2px solid var(--ink);padding:10px 0 0;margin:0 0 16px}
+.layerlab{font-size:11px;font-weight:800;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink)}
+.layerwhy{font-size:13px;color:var(--ink2);margin-top:3px;max-width:62ch}
+/* The reference layer is where a reader stops reading and starts looking
+   things up. Saying so with weight rather than colour keeps it legible on
+   paper and in both themes. */
+.layer-reference .layerhead{border-top-width:4px}
+
+/* JUMP LINKS. Inline under the masthead, wrapping, no sticky rail: the
+   tallest section here is a 102KB table and a bar pinned to every screen
+   costs more than it returns. */
+.jumpnav{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 0;
+ font-size:12px}
+.jumpnav a{color:color-mix(in srgb,var(--info) 85%,var(--ink));text-decoration:none;
+ border-bottom:1px solid color-mix(in srgb,currentColor 30%,transparent)}
+.jumpnav a:hover{border-bottom-color:currentColor}
+.backtop{margin:18px 0 0;font-size:12px}
+.backtop a{color:var(--ink2);text-decoration:none}
+.backtop a:hover{color:color-mix(in srgb,var(--info) 85%,var(--ink))}
+/* An anchor jump must not tuck the heading under anything, and must leave the
+   heading visibly ABOVE its own content rather than flush to the top edge. */
+[id]{scroll-margin-top:14px}
+
+/* THE KEY, GROUPED. The label carries the distinction -- verdict versus no
+   verdict -- so the groups need separating but not boxing. */
+.keygroup + .keygroup{margin-top:16px;padding-top:14px;
+ border-top:1px solid var(--line)}
+.keylab{font-size:12px;font-weight:700;margin:0 0 8px}
+
+/* ROUTINE CHANGES, FOLDED. Closed by default and it says what is inside it,
+   because a fold whose summary is a bare "22 sites" is the buried-key
+   mistake again. */
+.quietfold{margin-top:4px}
+.quietfold > summary{cursor:pointer;font-size:13px;color:var(--ink2);
+ padding:8px 0}
+.quietfold > summary:hover{color:var(--ink)}
+.quietfold > div{padding-top:6px}
+
 /* THE KIND KEY. Wraps to as many lines as it needs rather than scrolling: it
    is four short items and it must be readable at any width, on the phone
    included. Each item keeps its pill and gloss together, so a wrap never
@@ -924,6 +970,69 @@ button.wfjump:focus-visible{outline:2px solid var(--info);outline-offset:1px}
     return "".join(out)
 
 
+# THREE LAYERS, MARKED. Added 2026-08-27.
+#
+# The page is eleven sections and 168KB, of which "Every site" alone is 102KB.
+# It reads as one undifferentiated scroll, so a reader has no way to tell when
+# they have left the executive summary and entered supporting evidence, or when
+# the evidence has given way to reference data they were never meant to read
+# top to bottom.
+#
+# The layers are not new sections. They are boundaries around sections that
+# already existed, in the order they already appeared. Nothing moved.
+LAYERS = [
+    ("summary", "Summary",
+     "What needs a decision, and which way the fleet is moving."),
+    ("detail", "Detail",
+     "The evidence behind the summary: what is unresolved, what moved, and "
+     "what is still open."),
+    ("reference", "Complete inventory",
+     "Every site and every recorded fact. Reference data, not a reading "
+     "order."),
+]
+
+
+def layer_open(key):
+    """Open a layer band. Emits the rule, the label and the anchor."""
+    title = dict((k, (t, d)) for k, t, d in LAYERS)[key]
+    return ('<section class="layer layer-%s" id="layer-%s">'
+            '<div class=layerhead>'
+            '<div class=layerlab>%s</div>'
+            '<div class=layerwhy>%s</div>'
+            '</div>' % (key, key, e(title[0]), e(title[1])))
+
+
+def layer_close():
+    return "</section>"
+
+
+def jumpnav():
+    """Jump links for a page nobody can scroll usefully.
+
+    Anchors only -- no scroll-spy, no sticky rail. A sticky bar on a page whose
+    tallest section is a 102KB table costs vertical space on every screen to
+    solve a problem that occurs a handful of times per read.
+    """
+    items = [
+        ("layer-summary", "Summary"),
+        ("topissues-h", "Top issues"),
+        ("suite", "The suite"),
+        ("thekey", "The key"),
+        ("rulings", "Rulings"),
+        ("changed", "What changed"),
+        ("stillopen", "Still open"),
+        ("everysite", "Every site"),
+    ]
+    return ('<nav class=jumpnav aria-label="Jump to a section">%s</nav>'
+            % "".join('<a href="#%s">%s</a>' % (i, e(t)) for i, t in items))
+
+
+def backtotop():
+    """One per layer, at its foot. The reader is 40 screens down by then."""
+    return ('<p class=backtop><a href="#layer-summary">'
+            '&uarr; Back to the summary</a></p>')
+
+
 def chip(text, tone, title=None):
     return '<span class="chip %s"%s><span class="dot"></span>%s</span>' % (
         tone, ' title="%s"' % e(title) if title else "", e(text))
@@ -939,15 +1048,22 @@ AXIS_GLOSS = {
 }
 
 
-def axis_legend():
-    """The always-visible key for the Kind column. See the caller for why."""
+def axis_legend(counts=True):
+    """The always-visible key for the Kind column. See the caller for why.
+
+    `counts=True` renders the inline strip under Top issues, prefixed "Kind" so
+    it reads as a key rather than as more findings. `counts=False` renders the
+    same four items inside the consolidated key, where the surrounding group
+    label already says what they are.
+    """
     bits = []
     for axis in ("RISK", "COVERAGE", "PLANNING", "DRIFT"):
         bits.append('<span class=kindkey>%s<span class=quiet>%s</span></span>'
                     % (chip(axis, AXIS_TONE.get(axis, "info")),
                        e(AXIS_GLOSS[axis])))
-    return ('<div class=kindlegend><span class=quiet><b>Kind</b></span>%s</div>'
-            % "".join(bits))
+    return ('<div class=kindlegend>%s%s</div>'
+            % ('<span class=quiet><b>Kind</b></span>' if counts else "",
+               "".join(bits)))
 
 
 # One line per source, for the provenance block. Keyed on the ledger's source
@@ -1228,7 +1344,9 @@ def render(m):
     # provenance block below names them and says when each last ran.
     A('<p class=sub style="margin:2px 0 0">%d sites across %d hosts &middot; '
       'one ledger &middot; read-only</p>' % (m["inventory_count"], nhosts))
+    A(jumpnav())
     A('</div>')
+    A(layer_open("summary"))
 
     # HOW FRESH IS THIS PAGE is the first question a reader has, so the answer
     # sits directly under the masthead. It was first written inside the
@@ -1337,7 +1455,7 @@ def render(m):
     # to the largest few. The full list stays where it is; this is the way in.
     _top = sorted(m["standing"], key=lambda g: -len(g["sites"]))[:6]
     if _top:
-        A("<h2>Top issues</h2>")
+        A('<h2 id=topissues-h>Top issues</h2>')
         A('<p class=sub style="margin:-4px 0 10px">Grouped by cause rather '
           'than by site, because one decision usually covers the whole group. '
           '<b>Since the previous run</b> compares against the last run of the '
@@ -1408,7 +1526,7 @@ def render(m):
           '<a href="#stillopen">All %d open findings, with the sites in '
           'each</a>.</p>' % len(m["standing"]))
 
-    A("<h2>The suite</h2>")
+    A('<h2 id=suite>The suite</h2>')
     A('<p class=sub style="margin:-4px 0 10px">One card per question. A site has '
       'a status on <em>each</em> axis independently: a site can be well '
       'maintained and still leak trackers. Scored from the ledger at render '
@@ -1805,21 +1923,60 @@ def render(m):
     counts, excl = h["counts"], h["excluded"]
     coverage_section(A, m, e)
 
-    A("<h2>What the states mean</h2>")
-    A('<p class=sub style="margin:-4px 0 10px">Scored from the ledger at render '
-      'time, not at scan time. Thresholds are named constants in '
-      '<code>scripts/lib/severity.py</code>; changing one rescores every run in '
-      'history and does not report as a fleet change.</p>')
-    A("<div class=card><div class=kpis>")
-    for st in SEV.ORDER:
-        n = counts.get(st, 0)
-        if not n and st in ("UNKNOWN", "FROZEN", "SKIP"):
-            continue
+    # ONE KEY, THREE GROUPS. Consolidated 2026-08-27.
+    #
+    # There were two keys on this page and they were nowhere near each other:
+    # the site states here, and the finding kinds under Top issues 18KB up. A
+    # reader hitting a DRIFT pill in the Still-open table had one key above and
+    # one below, and no reason to think either existed.
+    #
+    # THE GROUPING IS THE POINT, and it is not cosmetic. CRIT/WARN/OK are a
+    # VERDICT ON THE SITE. SKIP/FROZEN/UNKNOWN are the absence of one -- we
+    # could not measure, so we are not saying. Flattening those into one row of
+    # six pills is what makes a reader treat SKIP as a mild WARN, and that
+    # reading is the exact failure this project keeps writing down: an absence
+    # displayed as though it were a value.
+    A(backtotop())
+    A(layer_close())
+    A(layer_open("detail"))
+    A('<h2 id=thekey>The key</h2>')
+    A('<p class=sub style="margin:-4px 0 10px">Every state and kind used on '
+      'this page. Scored from the ledger at render time, not at scan time. '
+      'Thresholds are named constants in <code>scripts/lib/severity.py</code>; '
+      'changing one rescores every run in history and does not report as a '
+      'fleet change.</p>')
+    A("<div class=card>")
+
+    _verdict = [st for st in SEV.ORDER if st in ("CRIT", "WARN", "OK")]
+    _nomeasure = [st for st in SEV.ORDER
+                  if st in ("SKIP", "FROZEN", "UNKNOWN") and counts.get(st, 0)]
+
+    A('<div class=keygroup><div class=keylab>Site health'
+      '<span class=quiet> &mdash; a verdict on the site</span></div>'
+      '<div class=kpis>')
+    for st in _verdict:
         A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
           '<div class=note>%s</div></div>'
-          % (chip(st, STATE_TONE.get(st, "muted")), e(n),
+          % (chip(st, STATE_TONE.get(st, "muted")), e(counts.get(st, 0)),
              e(STATE_MEANING.get(st, ""))))
-    A("</div>")
+    A("</div></div>")
+
+    if _nomeasure:
+        A('<div class=keygroup><div class=keylab>Not measurable'
+          '<span class=quiet> &mdash; no verdict was reached, and that is not '
+          'a mild one</span></div><div class=kpis>')
+        for st in _nomeasure:
+            A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
+              '<div class=note>%s</div></div>'
+              % (chip(st, STATE_TONE.get(st, "muted")), e(counts.get(st, 0)),
+                 e(STATE_MEANING.get(st, ""))))
+        A("</div></div>")
+
+    A('<div class=keygroup><div class=keylab>Finding kind'
+      '<span class=quiet> &mdash; what sort of problem, in the tables above'
+      '</span></div>')
+    A(axis_legend(counts=False))
+    A("</div></div>")
 
     # HEALTH COVERAGE, stated separately from the status counts.
     #
@@ -1884,28 +2041,73 @@ def render(m):
         # "Needs a decision" collided with the headline number, which counts
         # facts that moved. This one is a RULING waiting on a person, and no
         # scan can ever clear it. Renamed 2026-08-26.
-        A("<h2>Rulings waiting on a person</h2>")
-        A('<p class=sub style="margin:-4px 0 10px"><b>%d site(s)</b> with no '
-          'ownership record and no production ruling. Nobody has decided '
-          'whether these matter, so they are counted as production until '
-          'someone does. On this fleet that set has included the two '
-          'worst-maintained sites, so it is worth clearing once.</p>'
+        A('<h2 id=rulings>Rulings waiting on a person</h2>')
+        A('<p class=sub style="margin:-4px 0 10px"><b>%d site(s)</b> that no '
+          'scan can resolve. Each needs a person to decide something this tool '
+          'cannot read off a server. Until someone does, they are counted as '
+          'production, because failing safe is the point: on this fleet that '
+          'set has included the two worst-maintained sites.</p>'
           % len(h["unreviewed"]))
+        # THREE COLUMNS, THREE QUESTIONS, added 2026-08-27: what is unresolved,
+        # why no scan can settle it, and what a person has to decide.
+        #
+        # THE OLD "Why it is here" COLUMN ANSWERED A DIFFERENT QUESTION on any
+        # row that had health findings. It read
+        # `reasons or "<the ruling text>"` -- severity reasons FIRST -- so
+        # hoffmanscheese, whose ruling is missing for exactly the same reason
+        # as the other four, displayed "No database backup in 730 days; 27
+        # plugin updates pending" instead. Those are true, they are on the
+        # site's own row two sections down, and they are not why a ruling is
+        # outstanding. A reader comparing the rows would conclude the four
+        # blanks were bureaucratic and this one was urgent, when the decision
+        # required is identical.
+        #
+        # AND THE REASON IS READ FROM THE INVENTORY, not hardcoded here. The
+        # fallback string was a second copy of `reconciliation` that could not
+        # be corrected by editing the record it described.
+        #
+        # NO ACTION CONTROLS. Nothing on this page changes a site or a record,
+        # and a button implying otherwise would be the first thing here that
+        # lied about what the tool does.
         A("<div class=card><div class=tablewrap><table>"
-          "<tr><th>Site</th><th>State</th><th>Plan</th>"
-          "<th>Why it is here</th></tr>")
+          "<tr><th>Site</th><th>Unresolved</th>"
+          "<th>Why no scan can settle it</th>"
+          "<th>The decision</th></tr>")
         by_id = {x["site_id"]: x for x in m["sites"]}
         for sid in h["unreviewed"]:
             s_ = by_id.get(sid, {})
             st = s_.get("status")
-            reasons = "; ".join(r["text"] for r in
-                                (s_.get("severity") or {}).get("reasons", []))
-            A("<tr><td><code>%s</code></td><td>%s</td><td class=quiet>%s</td>"
-              "<td>%s</td></tr>"
-              % (e(sid), chip(st, STATE_TONE.get(st, "muted")) if st else "—",
-                 e(s_.get("plan") or "—"),
-                 e(reasons or "In the Pantheon account, with no client, owner "
-                              "or production ruling in the inventory.")))
+            missing = [lab for lab, key in
+                       (("owner", "owner"), ("client", "client"))
+                       if not s_.get(key)]
+            if s_.get("production") is None:
+                missing.append("production ruling")
+            # An empty list would render as a blank cell asserting nothing is
+            # missing, on a row that is in this table BECAUSE something is.
+            unresolved = ", ".join(missing) or "ownership record"
+            # `reconciliation` is the inventory's own sentence about this site.
+            # It is split on the last "Decide" because the record states the
+            # situation and the decision in one string; if it does not, the
+            # whole sentence is the situation and the decision column says so
+            # rather than inventing one.
+            rec = (s_.get("reconciliation") or "").strip()
+            if "Decide" in rec:
+                why, _, decision = rec.partition("Decide")
+                decision = "Decide" + decision
+            else:
+                why, decision = rec, ""
+            why = why.strip().rstrip(".") or (
+                "The host account returns this site; the inventory carries no "
+                "record of who owns it")
+            A("<tr><td><code>%s</code> %s<div class=quiet>%s</div></td>"
+              "<td>%s</td><td class=quiet>%s</td><td><b>%s</b></td></tr>"
+              % (e(sid),
+                 chip(st, STATE_TONE.get(st, "muted")) if st else "",
+                 e(s_.get("plan") or ""),
+                 e(unresolved), e(why + "."),
+                 e(decision or "A person has to rule on this site; the "
+                               "inventory does not record what the question "
+                               "is.")))
         A("</table></div></div>")
 
     # --- what changed -----------------------------------------------------
@@ -1921,7 +2123,7 @@ def render(m):
     # ledger already separates the fleet changing from the instrument
     # changing, and that classification is what drives this list. A second
     # vocabulary on top of it would be a second answer.
-    A("<h2>What changed</h2>")
+    A('<h2 id=changed>What changed</h2>')
     if not m["changes"]:
         A('<div class=card><p class=big-quiet>Nothing, in either source.</p></div>')
     else:
@@ -1934,13 +2136,25 @@ def render(m):
           'across <b>%d site(s)</b> since the previous run of each tool. '
           '%d site(s) moved only on a routine counter.</p>'
           % (len(m["changes"]), len(_grouped), len(_grouped) - _loud))
-        A("<div class=card>")
-        for site in sorted(_grouped,
-                           key=lambda k: (-len([x for x in _grouped[k]
-                                                if x["class"] not in L.QUIET_CLASSES]),
-                                          -len(_grouped[k]), k)):
+        # THE ROUTINE ONES ARE FOLDED, added 2026-08-27. Today 22 of 23
+        # changed sites moved only a plugin counter by one or two, and each
+        # got a heading, a bullet and a pill -- 7KB of page in which the ONE
+        # real transition was the first of twenty-three identical-looking
+        # blocks. Sorting it to the top was not enough; it still read as one
+        # item in a long list of items.
+        #
+        # Folded, NOT dropped. "22 sites moved only on a routine counter" with
+        # no way to see which 22 is a summary standing in for the evidence,
+        # and the whole point of DRIFT is that it is real and recorded. The
+        # fold is open-able and names every site inside it.
+        _loud_sites = [k for k in _grouped
+                       if any(x["class"] not in L.QUIET_CLASSES
+                              for x in _grouped[k])]
+        _quiet_sites = [k for k in _grouped if k not in _loud_sites]
+
+        def _render_site(site):
             cs = _grouped[site]
-            quiet_only = all(x["class"] in L.QUIET_CLASSES for x in cs)
+            quiet_only = site in _quiet_sites
             A('<div class="chgsite%s">' % (" quietonly" if quiet_only else ""))
             A('<div class=chghead><code>%s</code> <span class=quiet>&mdash; '
               '%d fact(s)%s</span></div>'
@@ -1952,6 +2166,26 @@ def render(m):
                   % (e(c["fact"]), e(c["before"]), e(c["after"]),
                      chip(c["class"], CLASS_TONE.get(c["class"], "info"))))
             A("</ul></div>")
+
+        A("<div class=card>")
+        if _loud_sites:
+            for site in sorted(_loud_sites,
+                               key=lambda k: (-len([x for x in _grouped[k]
+                                                    if x["class"]
+                                                    not in L.QUIET_CLASSES]),
+                                              -len(_grouped[k]), k)):
+                _render_site(site)
+        else:
+            A('<p class=big-quiet>No site crossed a threshold or gained a '
+              'finding. Everything below is counter movement.</p>')
+        if _quiet_sites:
+            _qf = sum(len(_grouped[k]) for k in _quiet_sites)
+            A('<details class=quietfold><summary>%d site(s), %d fact(s) '
+              '&mdash; routine counter movement only, no threshold crossed'
+              '</summary><div>' % (len(_quiet_sites), _qf))
+            for site in sorted(_quiet_sites):
+                _render_site(site)
+            A("</div></details>")
         A("</div>")
 
     if m["coverage_changes"]:
@@ -2024,7 +2258,10 @@ def render(m):
         A("</table></div></div>")
 
     # --- the fleet --------------------------------------------------------
-    A("<h2>Every site</h2>")
+    A(backtotop())
+    A(layer_close())
+    A(layer_open("reference"))
+    A('<h2 id=everysite>Every site</h2>')
     A('<p class=sub style="margin:-4px 0 10px"><strong>Health and Consent are '
       'independent</strong>. A site can be well maintained and still leak '
       'trackers, and the two filters combine, so "OK health, WARN consent" is a '
@@ -2319,6 +2556,8 @@ def render(m):
       "starts one, and a line through them would show when the scanner was "
       "run rather than how the fleet moved.</p>"
       % (e(m["generated"]), len(m["runs"])))
+    A(backtotop())
+    A(layer_close())
     A("</div>")
 
     A("""<script>

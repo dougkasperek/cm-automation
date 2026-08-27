@@ -90,6 +90,52 @@ details.md p:last-child{margin-bottom:0}
 .covof{color:var(--faint);font-weight:400}
 .covnone{color:var(--muted);font-weight:400}
 .covgap{color:var(--bad)}
+/* THE THREE LAYERS. A rule, a label and a sentence -- no boxes, no tint.
+   The page already uses cards for content, so a tinted band around cards
+   would read as a bigger card rather than as a boundary. A full-bleed rule
+   with a label sitting on it is the cheapest thing that unambiguously says
+   "a different kind of material starts here". */
+.layer{margin:34px 0 0;padding:0}
+.layer:first-of-type{margin-top:22px}
+.layerhead{border-top:2px solid var(--ink);padding:10px 0 0;margin:0 0 16px}
+.layerlab{font-size:11px;font-weight:800;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink)}
+.layerwhy{font-size:13px;color:var(--ink2);margin-top:3px;max-width:62ch}
+/* The reference layer is where a reader stops reading and starts looking
+   things up. Saying so with weight rather than colour keeps it legible on
+   paper and in both themes. */
+.layer-reference .layerhead{border-top-width:4px}
+
+/* JUMP LINKS. Inline under the masthead, wrapping, no sticky rail: the
+   tallest section here is a 102KB table and a bar pinned to every screen
+   costs more than it returns. */
+.jumpnav{display:flex;flex-wrap:wrap;gap:4px 14px;margin:10px 0 0;
+ font-size:12px}
+.jumpnav a{color:color-mix(in srgb,var(--info) 85%,var(--ink));text-decoration:none;
+ border-bottom:1px solid color-mix(in srgb,currentColor 30%,transparent)}
+.jumpnav a:hover{border-bottom-color:currentColor}
+.backtop{margin:18px 0 0;font-size:12px}
+.backtop a{color:var(--ink2);text-decoration:none}
+.backtop a:hover{color:color-mix(in srgb,var(--info) 85%,var(--ink))}
+/* An anchor jump must not tuck the heading under anything, and must leave the
+   heading visibly ABOVE its own content rather than flush to the top edge. */
+[id]{scroll-margin-top:14px}
+
+/* THE KEY, GROUPED. The label carries the distinction -- verdict versus no
+   verdict -- so the groups need separating but not boxing. */
+.keygroup + .keygroup{margin-top:16px;padding-top:14px;
+ border-top:1px solid var(--line)}
+.keylab{font-size:12px;font-weight:700;margin:0 0 8px}
+
+/* ROUTINE CHANGES, FOLDED. Closed by default and it says what is inside it,
+   because a fold whose summary is a bare "22 sites" is the buried-key
+   mistake again. */
+.quietfold{margin-top:4px}
+.quietfold > summary{cursor:pointer;font-size:13px;color:var(--ink2);
+ padding:8px 0}
+.quietfold > summary:hover{color:var(--ink)}
+.quietfold > div{padding-top:6px}
+
 /* THE KIND KEY. Wraps to as many lines as it needs rather than scrolling: it
    is four short items and it must be readable at any width, on the phone
    included. Each item keeps its pill and gloss together, so a wrap never

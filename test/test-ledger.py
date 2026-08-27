@@ -1577,6 +1577,94 @@ _above = _page[:_page.find("<table id=fleet")]
 check("the fleet page links to the catalogue ABOVE the site table",
       _above.count('href="/components"') >= 2,
       "%d link(s) above the table" % _above.count('href="/components"'))
+
+# ------------------------- 3d. three layers, one key, and navigation that works
+# Added 2026-08-27. Eleven sections and 174KB in one scroll, of which "Every
+# site" alone is 102KB: a reader had no way to tell the executive summary from
+# the supporting evidence from the reference data.
+print("\n-- the report has three marked layers --")
+import re as _re4
+_layers = _re4.findall(r'<section class="layer layer-(\w+)"', _page)
+check("the page is banded into summary, detail and reference",
+      _layers == ["summary", "detail", "reference"], str(_layers))
+check("every opened layer is closed",
+      _page.count("<section class=\"layer") == len(_layers)
+      and _page.count("</section>") >= len(_layers),
+      "%d open, %d close" % (_page.count('<section class="layer'),
+                             _page.count("</section>")))
+# ORDER, not just presence: the reference layer is where reading stops and
+# lookup starts, so the 102KB table must be inside it and not above it.
+# .find(), not .index(): a missing marker must report FAIL, not raise and take
+# the 200 tests below it with it. Same lesson as the Kind-key tests.
+def _at(hay, needle):
+    return hay.find(needle)
+
+_i_ref = max(_at(_page, 'id="layer-reference"'), _at(_page, "id=layer-reference"))
+_i_tbl = _at(_page, "<table id=fleet")
+check("the big site table sits in the reference layer, not the summary",
+      _i_ref >= 0 and _i_tbl >= 0 and _i_ref < _i_tbl,
+      "ref band at %d, table at %d" % (_i_ref, _i_tbl))
+_i_top, _i_det = _at(_page, "Top issues"), _at(_page, "layer-detail")
+check("Top issues sits in the summary layer",
+      _i_top >= 0 and _i_det >= 0 and _i_top < _i_det,
+      "top at %d, detail at %d" % (_i_top, _i_det))
+
+print("\n-- every jump link resolves --")
+_nav = _re4.search(r'<nav class=jumpnav.*?</nav>', _page, _re4.S)
+check("the page carries a jump nav", bool(_nav))
+_hrefs = _re4.findall(r'href="#([^"]+)"', _nav.group(0) if _nav else "")
+check("the nav offers more than a couple of targets", len(_hrefs) >= 6,
+      str(len(_hrefs)))
+# A dead anchor is worse than no link: it scrolls nowhere and looks broken.
+_dead = [h for h in _hrefs
+         if ('id=%s' % h) not in _page and ('id="%s"' % h) not in _page]
+check("no jump link points at an id that does not exist", not _dead, str(_dead))
+check("there is a route back to the summary", "Back to the summary" in _page)
+
+print("\n-- one key, with the verdict distinction kept --")
+check("there is exactly one key heading", _page.count("<h2 id=thekey>") == 1,
+      str(_page.count("<h2 id=thekey>")))
+check("the old second states heading is gone",
+      "What the states mean" not in _page)
+# THE GROUPING IS THE POINT. Flattening CRIT/WARN/OK together with SKIP/FROZEN
+# is what lets a reader treat SKIP as a mild WARN -- an absence read as a value.
+check("the key separates a verdict from the absence of one",
+      "Site health" in _page and "Not measurable" in _page)
+check("...and still names the finding kinds", "Finding kind" in _page)
+
+print("\n-- routine changes are folded, real ones are not --")
+_i_chg, _i_so = _at(_page, "id=changed"), _at(_page, "Still open, as of")
+_chg = _page[_i_chg:_i_so] if 0 <= _i_chg < _i_so else ""
+check("routine counter movement is folded away",
+      "quietfold" in _chg, "no fold in the change section")
+# NAMED, not just counted. A fold whose summary is a bare count is a summary
+# standing in for the evidence, and DRIFT rows are real records.
+check("the fold says what is inside it rather than a bare count",
+      "routine counter movement only" in _chg)
+check("the fold is closed by default",
+      not _re4.search(r'<details class=quietfold[^>]*\sopen', _chg))
+# The one real transition must NOT be inside the fold.
+_before_fold = _chg[:_chg.find("quietfold")] if "quietfold" in _chg else _chg
+check("a site that crossed a threshold renders outside the fold",
+      "TRANSITION" in _before_fold,
+      "the only real change was folded with the routine ones")
+
+print("\n-- rulings state the decision, not the site's health --")
+_i_rul = _at(_page, "id=rulings")
+_rul = _page[_i_rul:_i_chg] if 0 <= _i_rul < _i_chg else ""
+check("the rulings table asks the three questions",
+      all(x in _rul for x in ("Unresolved", "Why no scan can settle it",
+                              "The decision")), _rul[:200])
+# THE BUG. It read `reasons or "<ruling text>"`, so a site with health findings
+# showed those instead of why its ruling is missing -- a different question,
+# answered in the same column, on one row out of five.
+check("no ruling row shows a backup age or a plugin count",
+      not _re4.search(r"No database backup in \d+ days", _rul)
+      and "plugin updates pending" not in _rul,
+      "a health finding leaked into the rulings table")
+# NO ACTION CONTROLS: nothing on this page changes a site or a record.
+check("the rulings table offers no action control",
+      "<button" not in _rul and "<form" not in _rul)
 # QA before sharing with the team, 2026-08-23.
 #
 # EVERY table needs its own horizontal scroller, not just the site table.
