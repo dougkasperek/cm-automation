@@ -107,14 +107,31 @@ async function pass(browser, url, cookies, label, clickSel) {
     // Tags fire on triggers that can lag load; the cold sweep waits too.
     await page.waitForTimeout(6000);
     if (clickSel) {
-      // Clear what fired BEFORE the click. On an opt-out site everything fires
-      // on load by design; the question is what fires AFTER a rejection.
+      // CLEAR AFTER THE RELOAD, NOT BEFORE IT. This ordering is the whole
+      // measurement and the first version got it wrong.
+      //
+      // It used to clear the counters, wait 2s, then reload -- which merged
+      // two completely different windows into one bucket. Scripts already
+      // running on the open page keep working until navigation, so a
+      // session-recorder flushing its buffer after the click landed in the
+      // same list as a tag firing on a fresh consent-denied load. On
+      // interstatewaste.com that reported "MS Clarity still fires after Reject
+      // All" for five beacons that were Clarity finishing its work on the page
+      // the visitor was already looking at.
+      //
+      // Nick Federico checked it by hand and said the trigger was correct; the
+      // instrumented re-run agreed with him -- after the reload, ZERO requests
+      // fire. The question this test asks is "what does a consent-denied page
+      // load do", and only the window after the reload answers it.
       try {
         await page.click(clickSel, { timeout: 8000 });
-        hits.length = 0; gcs.length = 0;
-        await page.waitForTimeout(2000);
+        // Let the rejection persist and the old page settle. Anything that
+        // fires here is the PREVIOUS page finishing, and is deliberately not
+        // measured.
+        await page.waitForTimeout(3000);
         await page.reload({ waitUntil: 'load', timeout: 45000 });
-        await page.waitForTimeout(6000);
+        hits.length = 0; gcs.length = 0;
+        await page.waitForTimeout(9000);
       } catch (e) {
         error = `could not click ${clickSel}: ${e.message.split('\n')[0]}`;
       }
