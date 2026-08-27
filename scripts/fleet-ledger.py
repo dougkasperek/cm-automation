@@ -227,6 +227,29 @@ CONSENT_OBSERVED = (
     "consent_final_url",
 )
 
+# The GATING sweep, added 2026-08-27. A DIFFERENT QUESTION from the cold sweep,
+# which is why it is its own source rather than another kind of `consent`:
+#
+#   consent        what fires when a visitor arrives and does nothing
+#   consent-gating what STILL fires after that visitor clicks Reject All
+#
+# The first cannot answer the second. An opt-out site firing on load and a site
+# with no gating at all produce an identical cold observation -- the ambiguity
+# that had `interstatewaste.com` reported as leaking while compliant.
+#
+# The names are prefixed `gating_` so they can never merge onto the cold
+# sweep's timeline. The two disagree by design: a site can fire four trackers
+# on load and gate all four on rejection, and both facts are true.
+GATING_OBSERVED = (
+    "gating_tested",
+    "gating_still_firing",
+    "gating_still_firing_names",
+    "gating_stopped_names",
+    "gating_cookieless_names",
+    "gating_cold_count",
+)
+
+
 # `cmpScripts` from the scan file is deliberately NOT a ledger fact. It is
 # evidence for interpreting `consent_banner_vendor` -- it tells "no CMP" apart
 # from "a CMP we do not recognise" -- and it lives in reports/ where a person
@@ -519,6 +542,49 @@ def _consent_rows(payload, by_domain):
     return out
 
 
+def _gating_rows(payload, by_domain):
+    """The consent GATING sweep: did rejecting actually stop the tags?
+
+    A site that could not be tested is written with `gating_tested: false` and
+    UNKNOWN for everything else. It is NOT omitted and it is NOT zero:
+    "nothing still fires after rejection" is the best possible result, so a
+    crashed run recorded as zero would read as the cleanest site on the fleet.
+    Three sites came back inconclusive on the first run for exactly this
+    reason -- two have generic banners with no Reject selector.
+    """
+    if not isinstance(payload, dict) or payload.get("schema") != "fleet-consent-gating/1":
+        return None
+    out = []
+    for s_ in payload.get("sites", []):
+        d = (s_.get("domain") or "").lower()
+        if not d:
+            continue
+        rec = {"site_id": by_domain.get(d, d), "host_site_name": None,
+               "source": "consent-gating",
+               "gating_tested": bool(s_.get("usable"))}
+        if rec["gating_tested"]:
+            still = s_.get("still_firing_after_reject_all") or []
+            rec.update({
+                "gating_still_firing": len(still),
+                "gating_still_firing_names": ", ".join(sorted(still)) or "none",
+                "gating_stopped_names": ", ".join(
+                    sorted(s_.get("stopped_by_reject_all") or [])) or "none",
+                # Google tags that kept firing COOKIELESSLY. Recorded separately
+                # because firing was correct: gcs=G100 is what a properly
+                # configured site does when consent is denied, and counting it
+                # as a leak would flag every site that got it right.
+                "gating_cookieless_names": ", ".join(
+                    sorted(s_.get("cookieless_after_reject") or [])) or "none",
+                "gating_cold_count": len(s_.get("fires_on_cold_load") or []),
+            })
+        else:
+            for k_ in GATING_OBSERVED:
+                rec.setdefault(k_, UNKNOWN)
+            rec["gating_tested"] = False
+        out.append(rec)
+    return out
+
+
 # Fact-name collision guard. If two sources ever claim the same fact name, the
 # ledger would silently merge unrelated measurements onto one timeline.
 #
@@ -527,6 +593,7 @@ def _consent_rows(payload, by_domain):
 # it by nobody remembering to extend the assert.
 FACT_FAMILIES = {
     "health": OBSERVED,
+    "consent-gating": GATING_OBSERVED,
     "email-dns": EMAIL_OBSERVED,
     "nexcess": NEXCESS_OBSERVED,
     "consent": CONSENT_OBSERVED,
@@ -570,6 +637,11 @@ MEASURED = {
     # The page actually loaded. An HTTP 403 block page is NOT a measurement.
     # That exact bug shipped once and made 23 sites look clean.
     "consent":   lambda r: r.get("consent_scan_ok") is True,
+    # The Reject All click landed and both passes loaded. A site whose banner
+    # has no Reject selector, or whose page would not load, is NOT measured --
+    # and must not be, because "nothing still fires" is the best possible
+    # result and an untested site would otherwise read as the cleanest one.
+    "consent-gating": lambda r: r.get("gating_tested") is True,
     # The control plane described the site, rather than merely listing it.
     "nexcess":   lambda r: r.get("nexcess_app_version") not in (None, UNKNOWN),
     # DKIM needs a selector to be known, so it is the email fact that
@@ -605,7 +677,7 @@ MEASURED = {
 # that single event lands as ~46 TRANSITION rows of fleet news, which is
 # precisely what `wp_checked` did on the first full-mode run.
 COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok", "consent_http_status",
-                  "components_checked")
+                  "components_checked", "gating_tested")
 
 # Which DIRECTION a move in one of those flags went. True means coverage was
 # gained; False means it went dark.
@@ -624,6 +696,7 @@ COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok", "consent_http_status",
 # direction.
 COVERAGE_DIRECTION = {
     "wp_checked":          lambda before, after: after is True,
+    "gating_tested":       lambda before, after: after is True,
     "consent_scan_ok":     lambda before, after: after is True,
     "components_checked":  lambda before, after: after is True,
     # The sweep saw the site only on a 2xx. Anything else is an error page,
@@ -659,7 +732,13 @@ def measured_sites(obs, run_id, source):
 # How a run of each source describes itself. `health` is the exception: it has
 # two real modes and which one it was is a property of the coverage, not of the
 # tool, so it is derived rather than looked up.
-RUN_MODE = {"consent": "browser", "nexcess": "api-estate", "email-dns": "dns"}
+RUN_MODE = {"consent": "browser", "nexcess": "api-estate", "email-dns": "dns",
+            # Also a browser, and deliberately the SAME instrument word as
+            # the cold sweep: the baseline rule refuses a comparison across
+            # instruments, and these two are the same browser asking
+            # different questions. They are separate sources, so they never
+            # get compared to each other anyway.
+            "consent-gating": "browser"}
 
 
 def ingest(reports_dir, history_dir, inventory=None):
@@ -749,6 +828,8 @@ def ingest(reports_dir, history_dir, inventory=None):
                 rows = _nexcess_rows(payload, by_domain)
             if rows is None:
                 rows = _consent_rows(payload, by_domain)
+            if rows is None:
+                rows = _gating_rows(payload, by_domain)
             if rows is None:
                 print("  skip (unrecognised shape): %s" % os.path.basename(path),
                       file=sys.stderr)
