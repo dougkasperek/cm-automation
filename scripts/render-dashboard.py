@@ -104,6 +104,31 @@ STATE_MEANING = {
     "FROZEN": "site frozen by Pantheon",
 }
 AXIS_TONE = {"RISK": "bad", "COVERAGE": "info", "PLANNING": "info", "DRIFT": "muted"}
+
+# EVERY host a component-inventorying transport reaches. MODULE-LEVEL since
+# 2026-08-27, because it was a local and the components page could not see it.
+#
+# The Nexcess SSH scan landed 2026-08-25 and this tuple was widened to include
+# it, which fixed the DENOMINATOR -- the coverage line went from "of 53" to
+# "of 75". The components page's own sentence was not touched and went on
+# reading "This page can see 68 of 75 Pantheon sites", over a fleet holding 53
+# Pantheon sites and 22 Nexcess. The number was right and the noun was wrong.
+#
+# The same sentence then said "nothing here is a statement about the 32 sites
+# on other hosts", computed as everything != "CM Pantheon" -- which includes
+# the 22 Nexcess sites the page DOES speak for. It disclaimed its own data.
+#
+# Both halves now read this tuple, so widening the transports again cannot
+# leave the prose describing the previous set.
+COMPONENT_HOSTS = ("CM Pantheon", "CM Nexcess")
+
+
+def component_host_phrase():
+    """'Pantheon and Nexcess' -- the hosts named, never a hardcoded noun."""
+    names = [h.replace("CM ", "") for h in COMPONENT_HOSTS]
+    if len(names) == 1:
+        return names[0]
+    return "%s and %s" % (", ".join(names[:-1]), names[-1])
 CLASS_TONE = {"INVENTORY": "bad", "TRANSITION": "info", "ONSET": "bad",
               "RESOLVED": "good", "COVERAGE": "info", "DRIFT": "muted",
               "RULE_CHANGE": "info"}
@@ -364,7 +389,6 @@ def build_model(history_dir, inventory_path, today):
     # cover "47 of 53" -- the Pantheon denominator -- and offered no Nexcess
     # site in its picker. A page that holds data it says it does not have is
     # the same failure as one that lacks data it claims to have.
-    COMPONENT_HOSTS = ("CM Pantheon", "CM Nexcess")
     component_sites = [s for s in sites if s.get("host") in COMPONENT_HOSTS]
     inventoried = set(r["site_id"] for r in comp_rows)
     if component_sites:
@@ -1289,6 +1313,36 @@ def render(m):
           '<b>Since the previous run</b> compares against the last run of the '
           'same tool taken with the same instrument &mdash; where there is no '
           'such run, no direction is drawn rather than one being guessed.</p>')
+        # THE KIND COLUMN HAD NO LEGEND UNTIL 2026-08-27, and the page's only
+        # legend explains CRIT/WARN/OK -- a different vocabulary entirely. A
+        # reader asked what DRIFT meant, which is the answer: nothing on the
+        # page said, for any of the four.
+        #
+        # It also names the COLLISION rather than hiding it. DRIFT and COVERAGE
+        # each mean one thing in this column and a different thing in the
+        # change feed below, on the same page. Renaming either is a vocabulary
+        # decision, not a rendering one; until it is made, saying so is better
+        # than letting a reader carry the wrong meaning down the page.
+        A('<details class=method style="margin:-4px 0 10px">'
+          "<summary>What the kinds mean</summary><div>")
+        A("<p><b>RISK</b> &mdash; a client is exposed now, and it is not "
+          "waiting on anything. This is the column to act on.</p>")
+        A("<p><b>COVERAGE</b> &mdash; a scan could not see the site. It says "
+          "nothing about the site itself, only about what this tool "
+          "established. An absence, reported as one.</p>")
+        A("<p><b>PLANNING</b> &mdash; a fixed, fleet-wide deadline. Nothing is "
+          "wrong today; the date is the finding.</p>")
+        A("<p><b>DRIFT</b> &mdash; a maintenance backlog. Real work, no "
+          "incident, and it gets worse on its own if nobody schedules it. "
+          "Pending updates and unmerged upstream commits live here.</p>")
+        A('<p class=quiet><b>Two of these words are reused further down the '
+          "page and do not mean the same thing there.</b> In the change feed, "
+          "DRIFT means a counter moved on a finding that was already open &mdash; "
+          "routine, not news &mdash; and COVERAGE means the scanner started or "
+          "stopped seeing a site between runs. Here they describe what KIND of "
+          "problem a finding is; there they describe what KIND of change "
+          "happened.</p>")
+        A("</div></details>")
         A('<div class="card tablewrap"><table id=topissues>'
           "<tr><th>Issue</th><th>Kind</th><th class=num>Sites</th>"
           "<th>Since the previous run</th></tr>")
@@ -2471,11 +2525,17 @@ def render_components(m):
     inv_n, exp_n = len(c["sites_inventoried"]), len(c["expected"])
     tone = "good" if inv_n >= exp_n else "info"
     A('<div class="card" style="margin-bottom:14px">')
-    A('<div><b>This page can see %d of %d Pantheon sites.</b> '
-      'Nothing here is a statement about the other %d, or about the %d sites '
-      'on other hosts. No component has ever been listed for them.</div>'
-      % (inv_n, exp_n, exp_n - inv_n,
-         len([x for x in m["sites"] if (x.get("host") or "") != "CM Pantheon"])))
+    # The out-of-scope count is every host NO component transport reaches, not
+    # every host that is not Pantheon. Computed the second way it came to 32,
+    # which silently included the 22 Nexcess sites this page inventories -- the
+    # page disclaiming data it was displaying two screens below.
+    out_of_scope = len([x for x in m["sites"]
+                        if (x.get("host") or "") not in COMPONENT_HOSTS])
+    A('<div><b>This page can see %d of %d sites on %s.</b> '
+      'Nothing here is a statement about the other %d, or about the %d site(s) '
+      'on hosts no component scan reaches. No component has ever been listed '
+      'for those.</div>'
+      % (inv_n, exp_n, component_host_phrase(), exp_n - inv_n, out_of_scope))
     if c["sites_missing"]:
         A('<div class=quiet style="margin-top:6px">Not inventoried: %s</div>'
           % ", ".join("<code>%s</code>" % e(x) for x in c["sites_missing"]))

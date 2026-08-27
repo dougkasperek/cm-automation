@@ -9,7 +9,16 @@
 # WHAT IT REPORTS PER SITE
 #   PHP version, newest DB backup age, pending upstream (platform) commits,
 #   and - unless running API-only - WP core/plugin/theme updates available.
-#   Severity: CRIT / WARN / OK / FROZEN / SKIP / ERROR.
+#
+# SEVERITY IS NOT COMPUTED HERE. Every row is scored by scripts/score-scan.py,
+#   which calls scripts/lib/severity.py -- the same module the dashboard uses.
+#   This script used to carry its own rules in bash, and they were the model
+#   severity.py replaced on 2026-08-19. On 2026-08-27, on the same 52 rows,
+#   this script said 33 CRIT / 0 OK and severity.py said 3 CRIT / 11 OK. The
+#   dashboard was unaffected -- it rescores at render time -- but the summary,
+#   the CSV, the markdown report and the EXIT CODE below were all three weeks
+#   out of date. Do not add severity rules to this file. CRIT / WARN / OK /
+#   FROZEN / SKIP / ERROR all mean what docs/SEVERITY.md says they mean.
 #
 # TWO MODES, AND WHY
 #   --api-only   Uses ONLY the Pantheon API (site:list, env:list, env:info,
@@ -25,10 +34,13 @@
 # EXIT CODES
 #   0  completed; no CRIT findings (or --no-fail-on-crit was set)
 #   1  hard failure (bad auth, no tools, no sites returned)
-#   2  completed; at least one CRIT finding
-#   Exit 2 is the signal a scheduler or CI job should alert on. During the
-#   testing phase, pass --no-fail-on-crit so runs stay green and you read the
-#   artifact instead of chasing red builds.
+#   2  completed; at least one CRIT finding, as severity.py scores it
+#   Exit 2 is the signal a scheduler or CI job should alert on, and since
+#   2026-08-27 it means what the dashboard means. Before that it fired on any
+#   pending core update, so it would have alerted on 33 of 52 sites every run;
+#   CI passes --no-fail-on-crit, which is the only reason nobody saw it.
+#   During the testing phase, pass --no-fail-on-crit so runs stay green and you
+#   read the artifact instead of chasing red builds.
 #
 # ENVIRONMENT
 #   PANTHEON_MACHINE_TOKEN   required unless already `terminus auth:login`-ed
@@ -582,6 +594,44 @@ while IFS= read -r site <&3; do
 done 3<<EOF
 $SITE_NAMES
 EOF
+
+# ---------- score, once, with the ONE scorer ----------
+# Until 2026-08-27 the per-site `status` above was the last word, and it was
+# computed by rules this project replaced on 2026-08-19: core update -> CRIT,
+# any pending plugin -> WARN, any upstream commit -> WARN. Measured on the
+# 52-site run that morning, the two models disagreed completely:
+#
+#     this script said  33 CRIT / 15 WARN /  0 OK
+#     severity.py said   3 CRIT / 34 WARN / 11 OK
+#
+# The dashboard was never wrong, because severity is recomputed at render time
+# and this field is deliberately ignored there. Everything a PERSON reads was:
+# the summary line below, the markdown report, the CSV, and the exit code --
+# and the header of this file calls exit 2 "the signal a scheduler or CI job
+# should alert on". CI only escaped it by always passing --no-fail-on-crit.
+#
+# Rewriting the bash rules to match would have created a THIRD copy of the
+# thresholds. This calls the same module the renderer calls. If the scorer is
+# unavailable or fails, the run keeps the bash status rather than losing the
+# scan -- and says so, because a silent fallback to the wrong model is how
+# this got three weeks old without anyone noticing.
+if command -v python3 >/dev/null 2>&1; then
+  _scored_out="$(mktemp)"; _scored_err="$(mktemp)"
+  if printf '%s' "$results" \
+       | python3 "$SCRIPT_DIR/score-scan.py" >"$_scored_out" 2>"$_scored_err" \
+     && [ -s "$_scored_out" ]; then
+    results="$(cat "$_scored_out")"
+    log "Scored with severity.py: $(sed 's/^score-scan: //' "$_scored_err" | tr -d '\n')"
+  else
+    warn "score-scan.py did not score this run; keeping the scanner's own status."
+    awk 'NR<=4 {print "        " $0}' "$_scored_err" >&2 2>/dev/null || true
+    warn "  The summary below is NOT the model the dashboard uses."
+  fi
+  rm -f "$_scored_out" "$_scored_err"
+else
+  warn "python3 not found; keeping the scanner's own status."
+  warn "  The summary below is NOT the model the dashboard uses."
+fi
 
 # ---------- outputs ----------
 printf '%s' "$results" | jq '.' > "$JSON_OUT"

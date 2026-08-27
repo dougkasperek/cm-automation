@@ -8,7 +8,92 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-27
+## PICK UP HERE — 2026-08-27, end of day
+
+**Today's scan is ingested, rendered, pushed and published**, and both the push
+and the publish were verified by reading them back rather than trusting a
+success message. The live page was downloaded out of R2 and is byte-identical
+to the committed `fleet.html`.
+
+### Three fixes after the scan, all reported by Doug reading the page
+
+1. **The scanner was a second severity scorer, three weeks out of date.** On
+   the same 52 rows it said `33 CRIT / 15 WARN / 0 OK` where severity.py says
+   `3 CRIT / 34 WARN / 11 OK`. Its bash rules were the pre-2026-08-19 model,
+   including `upstream_pending > 0 -> WARN`, the rule that makes OK
+   unreachable. The dashboard was never affected; the summary, the CSV, the
+   markdown and the **exit code** all were. Fixed by adding
+   `scripts/score-scan.py`, which calls severity.py — not by porting the
+   thresholds, which would be a third copy. 24 new tests.
+2. **The components page said "68 of 75 Pantheon sites".** It is 53 Pantheon
+   and 22 Nexcess. `COMPONENT_HOSTS` was widened when the Nexcess scan landed,
+   which fixed the denominator and left the noun. The same sentence also
+   disclaimed "the 32 sites on other hosts" — a count that included the 22
+   Nexcess sites the page inventories. Both now read one module-level tuple.
+   The real out-of-scope count is 10.
+3. **The Kind column had no legend.** RISK, COVERAGE, PLANNING and DRIFT were
+   undocumented on a page whose only legend explains CRIT/WARN/OK. Added, and
+   it names the collision: DRIFT and COVERAGE each mean one thing in that
+   column and a different thing in the change feed below.
+
+Suites: score-scan **24**, ledger 288, severity 127, nexcess 96, consent 76,
+nexcess-ssh 43, wp-calls 48, email-dns 58, worker-exposure 40,
+access-policies 46.
+
+### One decision waiting on Doug
+
+**DRIFT and COVERAGE mean two different things on one page.** The legend now
+says so, which is honest but not a fix. Renaming either vocabulary — the
+standing-finding axes or the change classes — is a product decision about words
+Doug's team may already use, so it was not guessed at. Nothing is broken; a
+reader who skips the legend carries the wrong meaning down the page.
+
+### State, measured today by scoring the ledger
+
+| | |
+|---|---|
+| health | 2 CRIT / 53 WARN / 25 OK / 3 SKIP / 1 FROZEN, one excluded |
+| health-coverage scoreboard | 11 |
+| standing findings | 17 |
+| core update pending | 32 sites — 21 want 7.0.4, 11 want 7.1 |
+| plugin backlog (>= 10) | 27 sites, up 3 |
+| latest health run | `health-2026-08-27_1246`, 48 of 52 measured |
+
+### What is still open
+
+1. **The consent baseline, unchanged.** No baseline since 2026-08-22, so the
+   source produces no change rows and no trend. Probable fix is to diff over
+   the INTERSECTION of the two site sets and say how many were excluded.
+   Written up at the end of `docs/DO-THIS-NEXT.md`. Not built.
+2. **`lancastervillageny.gov` records the relay as its from address.** A
+   workbook correction, not a code change.
+3. **The Top issues table is capped at six by size**, so the two core-update
+   groups (21 and 11) sit below it while the 32 sites they cover are the
+   largest single driver of WARN.
+
+### A note on the scan itself
+
+The first run of the day measured 47 of 52 and ingest refused to let it drive
+the page. `choosechq.com` timed out on the 20s `env:list` preflight. Every full
+run since 2026-08-19 had measured exactly 48, so this was the first deviation
+in eight runs; the site answered normally on its own in 82s and the re-run
+measured 48 with no failures. **The 20s ceiling is not too tight.** Both runs
+are in the ledger, and the renderer correctly diffs against 2026-08-26 rather
+than the degraded run, because `previous_run_of_same_source` refuses a baseline
+whose measured set is a strict subset.
+
+### Still a human task, unchanged
+
+- **Send the Nexcess question-1 reply**, thread
+  `thread::sJecUJQ2cS6EeEacWJKo2D0::`, drafted at the bottom of
+  `docs/NEXCESS-SUPPORT.md`. Do not send the request/response headers they
+  asked for; the challenge was our own missing `post_handshake_auth`.
+- **Check the `github-deploy-[removed]` token scope** in the Cloudflare
+  dashboard. Re-scope, do not delete.
+
+---
+
+## Previously — 2026-08-27, midday
 
 **Open question 1 from yesterday is answered, and the answer was not the one
 the question assumed.** The premise was that 52 of 85 WARN is a severity

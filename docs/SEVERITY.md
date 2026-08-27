@@ -4,6 +4,20 @@
 `pantheon-fleet-healthcheck.sh`. Read this before changing a threshold, adding
 a rule, or explaining a number on the dashboard to anyone.
 
+**That first sentence was not true until 2026-08-27.** This module replaced the
+scanner's rules *for the dashboard* on 2026-08-19, and the scanner went on
+carrying its own copy in bash for another three weeks -- scoring its JSON, its
+CSV, its markdown report, its console summary and its **exit code** with the
+model this one had superseded. Measured on the same 52 rows the day it was
+found: the scanner said `33 CRIT / 15 WARN / 0 OK`, this module said
+`3 CRIT / 34 WARN / 11 OK`. Nobody noticed because the page was always right.
+
+The scanner now pipes its rows through `scripts/score-scan.py`, which imports
+this module. **Do not port a threshold into a scanner.** A second copy that
+agrees today is a second answer tomorrow, and this one took three weeks to
+surface because the only consumers who saw it were humans reading a terminal.
+`test/test-score-scan.py` asserts the two agree row for row.
+
 ---
 
 ## Axes, added 2026-08-20
