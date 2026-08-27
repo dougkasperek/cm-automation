@@ -575,8 +575,17 @@ So the categorisation is right and the tag is not honouring it. This is the
 first thing the scanner has caught that the manual audit missed, which is the
 entire argument for the scanner.
 
-**Not yet raised with Nick.** Worth confirming on a second site before it is,
-since one measurement on one page is one measurement on one page.
+**Raised with Nick on Teams, 2026-08-27, and confirmed on a second site first.**
+The fleet-wide gating sweep found the same tag on `actioncarting.com`, which
+shares the Interstate Waste geolocation rule — so it is not a one-site fluke.
+Awaiting his answer.
+
+The question put to him: does the Clarity tag's firing trigger in the Interstate
+Waste GTM container read the OneTrust categories? Two outcomes, and they point
+opposite ways — if the trigger is not gated, it is a fix on their side and a
+re-run verifies it; if Clarity is categorised deliberately such that it may
+fire, then this scan is wrong about what a denied C0002 implies and the rule
+needs revisiting rather than the site.
 
 ---
 

@@ -53,9 +53,12 @@ a real Reject All.** Both ours, both Interstate Waste. The workbook categorises
 `_clck`/`_clsk` as **C0002 Performance**; the rejection sets `C0002:0`; Clarity
 fires anyway. The workbook records both sites as respecting consent.
 
-**The Teams message to Nick is drafted and NOT sent.** It is in the transcript,
-not the repo — rewrite it from this paragraph if it is lost. This is the first
-thing the scanner has caught that the manual audit missed.
+**Raised with Nick on Teams, 2026-08-27.** Awaiting his answer. This is the
+first thing the scanner has caught that the manual audit missed.
+
+What he was asked: whether the Clarity tag's firing trigger on the Interstate
+Waste GTM container reads the OneTrust categories. The message also carried the
+Bing UET caveat below, flagged as unconfirmed.
 
 ### Settled today, so nobody re-opens it
 
@@ -69,7 +72,11 @@ thing the scanner has caught that the manual audit missed.
 
 ### Next, in the order I would take it
 
-1. **Send Nick the Clarity message.** Human task.
+1. **Nick's answer on Clarity**, asked 2026-08-27. If he confirms the trigger
+   is not reading consent state, that is a fix on their side and a re-run of
+   `run-gating-sweep.mjs` to verify — which is the whole point of having built
+   it. If he says it is categorised deliberately, the scan is wrong about what
+   C0002 means and the rule needs revisiting.
 2. **B1 in `docs/DO-THIS-NEXT.md` is blocked on CONTENT, not code.** Victoria
    Brake asked how to handle clients not paying for maintenance. The field is
    an hour's work; the answer is a list nobody has. `client` and `owner` have
