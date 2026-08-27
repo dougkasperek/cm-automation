@@ -687,16 +687,61 @@ person with git. An edit form means auth, an audit trail, and a way to tell a
 scan-derived fact from a typed one. Worth doing deliberately; not worth
 sliding into.
 
-## B5. Who else is on OneTrust that we do not manage?
+## B5. Are the eleven Lactalis sites ours? — ASK BEFORE BUILDING ANYTHING
 
-Not from the thread -- found while building the consent page, and it belongs
-with B1 because it is the same question.
+**Held 2026-08-27 pending an answer from Nick. Do not act on it until then.**
 
-14 sites run OneTrust and are marked `consent_managed: false`. Some are
-genuinely the client's own. Some may have been onboarded and never recorded,
-and **nothing in the system would tell you which**. The reconciliation is: sites
-where tooling was DETECTED but no management ruling exists. Every previous time
-a roster was reconciled against the inventory it found something.
+The consent page marks 14 sites as running consent tooling that clevermethod
+does not manage. Three are settled: `blockclub.co` and `summerstreetcapital.com`
+run generic banners and Nick said plainly we do not manage their consent, and
+`animatics.com` does not fit the pattern below.
+
+The other **eleven are all Lactalis brands**, all OneTrust, all with **zero
+trackers before consent** -- which is what a correctly configured OneTrust
+looks like:
+
+```
+breakstones.com            crackerbarrelcheese.com    galbanicheese.com
+knudsen.com                kraftnaturalcheese.com     lactalisamericangroup.com
+lactalisheritagedairy.com  lactalisyogurtusa.com      midwestyogurt.com
+scottishcheddarcheese.com  valbresocheese.com
+```
+
+None is in Nick's `onetrust-audit.xlsx` Sites sheet, which has 15 rows. And
+SharePoint holds a signed **`lag-ambrosi-onetrust-integration-sow.docx`** --
+*"OneTrust Cookie Banner Integration, Client: Lactalis American Group, Inc."*
+
+**"We built it" and "we manage it" are different things**, and
+`consent_managed` means the second. An integration SOW is a project and it
+ends; it is entirely coherent for clevermethod to have stood these up and for
+Lactalis to have run them since.
+
+### The question for Nick
+
+> The eleven Lactalis brand sites run OneTrust and are not in your audit sheet.
+> We have a signed OneTrust integration SOW for LAG. Are those in our tenant
+> and just not audited, or did we hand them over? Same question for
+> `animatics.com`.
+
+### Why this is held rather than built
+
+**Doug expects the answer to be "ours, and the sheet is 15 not 26"** and wants
+it confirmed first. He is probably right, and that is exactly why nothing is
+built on the current numbers: if it is 26, then
+
+- `consent_managed` is wrong on eleven sites in `data/fleet-inventory.json`
+- the consent page's "Not ours" count of 39 is wrong by eleven
+- "Ours, and gated" is 10 and should be 21
+- and the gating sweep already tested most of them, so the evidence is
+  sitting in the ledger under the wrong owner
+
+Building B1's maintenance split on top of an ownership map that is wrong by
+eleven sites would put the error in two places instead of one.
+
+**If the answer is "ours":** re-run `scripts/seed-consent-rulings.py` with the
+extended list. It REFUSES to overwrite a differing value without `--force`,
+which is the correct behaviour here -- the change should be deliberate and
+visible in a diff.
 
 ## B6. The consent page does not say where "ours" comes from
 
