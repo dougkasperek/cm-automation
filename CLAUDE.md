@@ -544,7 +544,7 @@ python3 test/test-email-dns.py    #  65   (needs dnspython)
 python3 test/test-build-inventory.py #  6  offline; the seed generator REFUSES an existing inventory
 python3 test/test-nexcess.py      #  96   offline, no API call
 python3 test/test-consent.py      # 126   offline, no browser
-node test/test-gating-window.mjs  #  10   headless Chromium + a local fixture
+node test/test-gating-window.mjs  #  20   headless Chromium + a local fixture
                                   #       server; the gating window's two
                                   #       boundaries. Verified to FAIL against
                                   #       the v2 window before v3 existed

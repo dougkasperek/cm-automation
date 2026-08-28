@@ -57,17 +57,53 @@ count disagreeing with the commit message.
 
 ### Open, and NOT blocked on anyone
 
-**`interstatewaste.com`'s two passes disagree.** The synthetic all-denied pass
-records `gcs=G111` — consent GRANTED — with DoubleClick and GA4 firing, while
-the real click pass on the same site in the same run records the correct
-`G100`. The verdict is taken from the click pass, so the site reads GATED and
-that is right. But this file already contains the rule: **two passes of one
-test disagreeing about one site is a defect in the test**, and that rule is
-what caught the Clarity finding. It is the only site of 27 that does it, and
-nothing has looked at why. Most likely the synthetic OptanonConsent cookie this
-pass writes does not match the group IDs an opt-out configuration uses, in
-which case the synthetic pass is not measuring what it claims on opt-out sites
-generally — not just here.
+**`interstatewaste.com`'s two passes disagree, and the disagreement is
+EXPLAINED — it is not a defect.** I wrote it up as a test defect first and that
+was wrong; the correction is here rather than removed because the reasoning is
+the useful part.
+
+In run 1322 the synthetic all-denied pass records `gcs=G111` — consent GRANTED
+— with DoubleClick and GA4 firing, while the real click pass on the same site
+in the same run records the correct `G100`. The rule in this file says two
+passes disagreeing about one site is a defect in the test. It is the right
+rule and it is what caught the Clarity finding. It does not apply here:
+
+- **The denial survived.** Measured on all 27 sites: every non-necessary group
+  came back `:0` in `optanon_groups_after_load` on the denied pass. Zero sites
+  had a group overwritten to granted. So OneTrust STORED the denial on
+  `interstatewaste` and Google was still told granted.
+- That is the mechanism `test-gating.mjs` already documents fifteen lines
+  above the pass it runs: **a cookie present at load never UPDATES**, so a
+  consent signal pushed on OneTrust's update event never fires. On an opt-out
+  site the Google default is granted, so Google stays at G111. A real click
+  produces the update, and G100 appears — which is exactly what the click pass
+  measures.
+- The click pass is definitive, the verdict is taken from it, the site reads
+  GATED, and **that is correct**.
+
+Worth knowing when reading the JSON by hand: the first pass at this by eye got
+it wrong, because `C0001` (or group `1`) is Strictly Necessary and is ALWAYS
+`:1`. A predicate that asks "did any group come back granted" flags all 27
+sites unless it excludes the necessary group.
+
+**The real gap is smaller and is mine to fix.** `optanon_groups_after_load` is
+captured on all three passes and read on ONE — the cold pass, as
+`consent_groups_default`. Nothing reads it on the DENIED pass, which is the
+pass it was captured to guard. The code comment says the test "must say so
+rather than reporting 'not gated'"; nothing says so. If OneTrust ever did
+overwrite our denial, the pass would show tags firing and no field would
+record that the pass had proved nothing. A captured fact with an unkept
+promise, which is this repo's signature bug pointed at its own instrument.
+
+**And a second unknown, found measuring the first.** Six sites answer with a
+NUMERIC group schema (`1:1,2:0,4:0` — breakstones, crackerbarrel, knudsen,
+kraftnaturalcheese, scottishcheddarcheese, valbresocheese) while the cookie we
+write uses `C0001..C0005`. OneTrust replaced our cookie with its own. Whether
+it honoured our denial or fell back to a denied DEFAULT cannot be told from
+what is recorded, so on those six the synthetic pass may be measuring the
+site's default rather than our denial. It does not affect any verdict — the
+click pass does that — but it should be recorded as unknown rather than read
+as a successful denial.
 
 ### Next, in order
 

@@ -59,6 +59,67 @@ if (TRACKERS.length < 5) {
 // visitor who refuses everything looks like.
 const DENIED_GROUPS = 'C0001:1,C0002:0,C0003:0,C0004:0,C0005:0';
 
+// STRICTLY NECESSARY IS ALWAYS GRANTED. `C0001` -- or bare `1` on sites using
+// OneTrust's numeric group IDs -- cannot be switched off, so it comes back
+// `:1` on every site including a fully denied one. A predicate that asks "did
+// any group come back granted" therefore flags all 27 sites and means nothing.
+// Written down because that is exactly the mistake made reading run 1322 by
+// hand on 2026-08-28.
+const NECESSARY_GROUPS = new Set(['C0001', '1']);
+
+// WAS THE PAGE ACTUALLY LOADED UNDER A DENIAL?
+//
+// The synthetic pass writes an all-denied OptanonConsent and OneTrust's own
+// script then recomputes consent from its geolocation rules during load. Under
+// an opt-out rule outside a restricted region it may legitimately OVERWRITE
+// our denial with a granted one -- in which case the pass has proved NOTHING
+// about gating and must say so, rather than letting the tags it then records
+// read as a leak.
+//
+// That was already the stated contract in a comment above the pass, and
+// `optanon_groups_after_load` was captured for it on 2026-08-27. Nothing read
+// it: it is consumed only for the COLD pass, as `consent_groups_default`. A
+// captured fact with an unkept promise, which is this repo's signature bug
+// aimed at its own instrument. Measured 2026-08-28: the denial survived on all
+// 27 sites, so nothing was being hidden -- but nothing was checking either.
+//
+// Returns null when no cookies were written, because the question does not
+// apply to the cold or click passes and `false` there would be a value
+// standing in for "not asked".
+export function denialOutcome(writtenGroups, observedGroups) {
+  if (!writtenGroups) return null;              // cold and click passes
+  if (!observedGroups) {
+    // No OptanonConsent after load at all. Not denied, not granted: unread.
+    return { denied: null, schema_matched: null, granted: [],
+             note: 'no OptanonConsent cookie after load' };
+  }
+  const parse = g => g.split(',').map(p => p.split(':')).filter(p => p.length === 2);
+  const written = parse(writtenGroups), observed = parse(observedGroups);
+  const granted = observed
+    .filter(([id, v]) => v === '1' && !NECESSARY_GROUPS.has(id))
+    .map(([id]) => id);
+
+  // DID OUR COOKIE EVEN APPLY? Six of the 27 sites answer with numeric group
+  // IDs (`1:1,2:0,4:0`) while we write `C0001..C0005`. OneTrust replaced our
+  // cookie wholesale. The end-of-load state may then be the SITE'S default
+  // rather than our denial, and on an opt-out site those differ. Recorded as
+  // its own fact rather than folded into `denied`, because the two answer
+  // different questions and merging them is how an absence becomes a value.
+  const ours = new Set(written.map(([id]) => id).filter(id => !NECESSARY_GROUPS.has(id)));
+  const theirs = observed.map(([id]) => id).filter(id => !NECESSARY_GROUPS.has(id));
+  const schema_matched = theirs.length === 0 ? null : theirs.some(id => ours.has(id));
+
+  return {
+    denied: granted.length === 0,
+    schema_matched,
+    granted,
+    note: granted.length ? 'OneTrust overwrote the denial; this pass proves nothing about gating'
+        : schema_matched === false ? 'denied at end of load, but OneTrust replaced our cookie: '
+                                   + 'this may be the site default, not our denial'
+        : null,
+  };
+}
+
 function optanonCookies(host) {
   const stamp = new Date(0).toISOString(); // fixed: no Date.now() in this repo
   const shared = { domain: `.${host}`, path: '/', expires: -1 };
@@ -168,10 +229,21 @@ export async function pass(browser, url, cookies, label, clickSel,
   const optanon = allCookies.find(c => c.name === 'OptanonConsent');
   const groups = optanon ? decodeURIComponent(optanon.value).match(/groups=([^&]*)/) : null;
   await ctx.close();
+  const observed = groups ? groups[1] : null;
+  // The cookies we wrote, if any, so denialOutcome can compare schemas rather
+  // than assume the site uses the group IDs we sent.
+  const writtenOptanon = (cookies || []).find(c => c.name === 'OptanonConsent');
+  const written = writtenOptanon
+    ? (decodeURIComponent(writtenOptanon.value).match(/groups=([^&]*)/) || [])[1] || null
+    : null;
   return { label, status, error, fired: [...new Set(hits)].sort(),
            // G100 = both storage types denied. G111 = both granted.
            gcs: [...new Set(gcs)].sort(),
-           optanon_groups_after_load: groups ? groups[1] : null, cookieNames };
+           optanon_groups_after_load: observed,
+           // Null on the cold and click passes: they write no cookie, so the
+           // question does not apply. See denialOutcome.
+           denial: denialOutcome(written, observed),
+           cookieNames };
 }
 
 // The CLI half. Guarded so importing pass() from a test does not launch a

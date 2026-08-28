@@ -30,13 +30,58 @@
 // automation, and the fixture is not a real vendor.
 import { createServer } from 'node:http';
 import { chromium } from 'playwright';
-import { pass } from '../scripts/consent/test-gating.mjs';
+import { pass, denialOutcome } from '../scripts/consent/test-gating.mjs';
 
 let ok = 0, bad = 0;
 const check = (name, cond, detail = '') => {
   if (cond) { ok++; console.log('ok    ' + name); }
   else { bad++; console.log('FAIL  ' + name + (detail ? '  <- ' + String(detail).slice(0, 200) : '')); }
 };
+
+// ---------------------------------------------------------------------------
+// denialOutcome: did the synthetic pass actually load under a denial?
+//
+// Pure, so it needs no browser and runs first. These exist because the fact it
+// reads -- `optanon_groups_after_load` on the DENIED pass -- was captured on
+// 2026-08-27 to guard exactly this and then read by nothing for two days.
+// ---------------------------------------------------------------------------
+const WRITTEN = 'C0001:1,C0002:0,C0003:0,C0004:0,C0005:0';
+
+// THE MISTAKE THIS GUARDS. C0001 is Strictly Necessary and comes back `:1` on
+// every site, denied or not. Reading run 1322 by hand without excluding it
+// flagged all 27 sites as "denial overwritten". If this check ever fails, the
+// helper has started counting the mandatory group.
+check('the mandatory group coming back granted is not an overwrite',
+      denialOutcome(WRITTEN, 'C0001:1,C0002:0,C0003:0,C0004:0,OSSTA_BG:0').denied === true);
+check('...and the same holds on the numeric group schema',
+      denialOutcome(WRITTEN, '1:1,2:0,4:0').denied === true);
+
+// The case the guard exists for: OneTrust recomputing consent to GRANTED.
+const overwritten = denialOutcome(WRITTEN, 'C0001:1,C0002:1,C0003:0,C0004:1');
+check('a real overwrite is reported as not denied', overwritten.denied === false);
+check('...and names which groups came back granted',
+      JSON.stringify(overwritten.granted) === JSON.stringify(['C0002', 'C0004']),
+      JSON.stringify(overwritten.granted));
+check('...and says the pass proved nothing, rather than leaving it to be inferred',
+      /proves nothing/.test(overwritten.note || ''), overwritten.note);
+
+// UNKNOWN IS A VALUE. The cold and click passes write no cookie, so the
+// question does not apply to them -- `false` there would be a value standing
+// in for "not asked", which is this repo's one bug.
+check('a pass that wrote no cookie reports null, not false',
+      denialOutcome(null, 'C0001:1,C0002:0') === null);
+check('no OptanonConsent after load is unknown, not denied',
+      denialOutcome(WRITTEN, null).denied === null);
+
+// The second unknown: our C000x cookie replaced by a numeric-schema one. The
+// end state is denied, but it may be the site's default rather than ours.
+const replaced = denialOutcome(WRITTEN, '1:1,2:0,4:0');
+check('a replaced cookie schema is flagged', replaced.schema_matched === false);
+check('...and says the denial may be the site default, not ours',
+      /site default/.test(replaced.note || ''), replaced.note);
+check('a matching schema is not flagged',
+      denialOutcome(WRITTEN, 'C0001:1,C0002:0,C0003:0,C0004:0,OSSTA_BG:0')
+        .schema_matched === true);
 
 // The fixture. Tracker URLs are local paths containing the real patterns:
 //   /t/clarity.ms/collect            -> "MS Clarity"   (fires during every load)
