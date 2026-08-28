@@ -533,8 +533,8 @@ reads the ledger and is what gets published. Do not delete either.
 ```bash
 python3 test/test-score-scan.py       # 27   offline, no scan
 python3 test/test-consent-rulings.py  # 17   offline, no network
-python3 test/test-nexcess-ssh.py      # 30   offline, no key
-python3 test/test-worker-exposure.py  # 40   offline, no network
+python3 test/test-nexcess-ssh.py      # 43   offline, no key
+python3 test/test-worker-exposure.py  # 48   offline, no network
 python3 test/test-access-policies.py  # 46   offline, no token
 python3 test/test-ledger.py       # 317
 python3 test/test-severity.py     # 142
@@ -542,18 +542,22 @@ python3 test/test-page.py         #  35   offline; the page's model is the feed'
 node test/test-page.mjs           #  42   headless Chromium; the rendered DOM. Needs `npm install`
 python3 test/test-email-dns.py    #  65   (needs dnspython)
 python3 test/test-build-inventory.py #  6  offline; the seed generator REFUSES an existing inventory
-python3 test/test-nexcess.py      #  88   offline, no API call
-python3 test/test-consent.py      # 124   offline, no browser
+python3 test/test-nexcess.py      #  96   offline, no API call
+python3 test/test-consent.py      # 126   offline, no browser
 node test/test-gating-window.mjs  #  10   headless Chromium + a local fixture
                                   #       server; the gating window's two
                                   #       boundaries. Verified to FAIL against
                                   #       the v2 window before v3 existed
-python3 test/test-wp-calls.py     #  45   offline, drives the mock
+python3 test/test-wp-calls.py     #  48   offline, drives the mock
 ./test/run-local-test.sh          #  62   1-3 min, silent, two mock sites hang
                                   #       on purpose. Never run it through the
                                   #       device bridge: 45s timeout.
 ```
 
+- **The counts above are as of 2026-08-28 and drift every session.** Five of
+  them were wrong the day after they were last refreshed. They are a smoke
+  signal, not a contract; CI asserts the suites PASS, never that they hold a
+  particular number. Correct them when you notice, do not trust them.
 - **Every offline suite runs in CI on every push** since 2026-08-28,
   `.github/workflows/offline-tests.yml` — including the two Chromium suites,
   whose install step is the one fleet-consent.yml already ran. Before that,

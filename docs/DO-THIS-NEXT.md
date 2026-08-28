@@ -1,13 +1,22 @@
 # What to do next, step by step
 
-Written to be followed in order in the Terminal on your Mac. Each step says what
-you should see, so you can tell whether it worked before moving on.
+**Parts 1 to 4 below are DONE and are kept as a record, not as instructions.**
+Marked 2026-08-28. The repo has lived at `~/dev/cm-automation` since
+2026-08-23, it is on GitHub with `origin/main` tracking, and eight workflows
+run in `.github/workflows/`. **Do not follow steps 1 to 14.** Step 2 in
+particular would copy an iCloud folder over the live repo.
 
-Total time is about 20 minutes.
+They are kept rather than deleted for the same reason the lifted git-index rule
+is kept in CLAUDE.md: a written-down instruction that outlived its reason is
+worth being able to see, so the next person can tell it was retired on purpose
+rather than lost.
+
+**The live backlog starts at "What is left after this"**, and the open items
+are B1, B2, B3, B4 and B6. B5 is closed.
 
 ---
 
-## Part 1. Move the folder out of iCloud
+## ~~Part 1. Move the folder out of iCloud~~ DONE 2026-08-23
 
 **Why:** the project currently lives in iCloud Drive. iCloud tries to sync the
 hidden `.git` folder that git creates, and that corrupts repositories. It does
@@ -46,7 +55,7 @@ Stop and check the path before continuing.
 
 ---
 
-## Part 2. Get it running from the new location
+## ~~Part 2. Get it running from the new location~~ DONE 2026-08-23
 
 ### Step 4. Install the one dependency
 
@@ -70,6 +79,9 @@ python3 test/test-email-dns.py
 ```
 
 **You should see:** `43 passed, 0 failed` and then `45 passed, 0 failed`.
+(Those were the counts on 2026-08-23. They are 317 and 65 as of 2026-08-28 —
+another reason not to follow this part as written. The current list of suites
+is in CLAUDE.md under "Testing".)
 
 These are the proof that the move did not break anything. Neither test touches
 the network, so they work offline and give the same answer every time.
@@ -103,7 +115,7 @@ clevermethod Mailgun setup is incomplete.
 
 ---
 
-## Part 3. Put it on GitHub
+## ~~Part 3. Put it on GitHub~~ DONE
 
 ### ~~Step 8. Move the workflow files where GitHub expects them~~ DONE
 
@@ -191,7 +203,7 @@ Refresh the repository page in your browser. Your files should be there.
 
 ---
 
-## Part 4. First run in GitHub Actions
+## ~~Part 4. First run in GitHub Actions~~ DONE
 
 ### Step 13. Run the email check in the cloud
 

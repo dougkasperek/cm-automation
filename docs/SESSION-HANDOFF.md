@@ -8,7 +8,86 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-28: the gating window was wrong AGAIN, fixed as v3. Re-run before Nick
+## PICK UP HERE — 2026-08-28, afternoon: the v3 re-run is DONE, ingested and published. Nick is next, and he is a human task
+
+**Nothing in this repo is waiting on code right now.** State verified this
+afternoon rather than read off this file, which is the point of the paragraph
+below:
+
+- Gating v3 ran twice this morning — `2026-08-28_1212` (concurrency 3) and
+  `2026-08-28_1322` (concurrency 1, after an hour's cooldown). Identical
+  results. Both are in the ledger.
+- The four artifacts in R2 (`fleet/dashboard.html`, `components.html`,
+  `consent.html`, `latest.json`) are **byte-identical** to the local
+  `reports/publish-preview/` render of 09:46. Checked by pulling each object
+  back with `wrangler r2 object get --remote` and comparing sha256, not by
+  trusting a success line.
+- All 15 offline suites green: 13 Python plus `test-page.mjs` (42) and
+  `test-gating-window.mjs` (10).
+- `HEAD` == `origin/main` == `a8d92df`, confirmed against the remote with
+  `git ls-remote`, not inferred.
+
+**This block replaces one that told the next session to do the re-run.** It was
+already done and published when it was written. Same shape as every other doc
+in the bug table: correct the morning it stops being true.
+
+### The v3 fleet numbers, measured from run 1322 this afternoon
+
+**18 of 27 tested. 0 still firing. 14 sending cookieless `gcs=G100` pings.**
+
+The only thing that fires on any tested site after a real Reject All is a GA4
+`collect` at `gcs=G100` — the cookieless consent-mode ping, which is the
+correct denied behaviour and is exactly what Nick said should be there.
+
+Nine inconclusive, two causes, both diagnosed:
+- **4 have no clickable Reject control** (3 known, plus `hoosierfeeder.com`,
+  new to the roster — it loaded for the first time in the 08-28 cold sweep
+  after HTTP 403 in every earlier run).
+- **5 draw a Cloudflare "Just a moment" challenge on the SECOND navigation.**
+  Measured on `breakstones.com` with headers and body read. v2's reload drew
+  the identical 403, so it is not the new window, and cooldown at concurrency 1
+  changed nothing.
+
+**Read the numbers off the CLICK pass, not the synthetic one.** The three pass
+labels are `cold load, no consent state`, `real click on Reject All`, and
+`OneTrust set to all-denied`. Only the middle one is the v3 measurement. A
+substring match on "denied" silently selects the synthetic pass and gives 19
+G100 sites instead of 14 — done accidentally this afternoon, caught by the
+count disagreeing with the commit message.
+
+### Open, and NOT blocked on anyone
+
+**`interstatewaste.com`'s two passes disagree.** The synthetic all-denied pass
+records `gcs=G111` — consent GRANTED — with DoubleClick and GA4 firing, while
+the real click pass on the same site in the same run records the correct
+`G100`. The verdict is taken from the click pass, so the site reads GATED and
+that is right. But this file already contains the rule: **two passes of one
+test disagreeing about one site is a defect in the test**, and that rule is
+what caught the Clarity finding. It is the only site of 27 that does it, and
+nothing has looked at why. Most likely the synthetic OptanonConsent cookie this
+pass writes does not match the group IDs an opt-out configuration uses, in
+which case the synthetic pass is not measuring what it claims on opt-out sites
+generally — not just here.
+
+### Next, in order
+
+1. **Send Nick the correction.** Human task, and now unblocked: the v3 numbers
+   above are the ones to quote. His second objection — that a compliant site
+   should still send cookieless pings while our report showed none — is
+   answered: 14 of the 18 tested sites send them.
+2. **The `interstatewaste` pass disagreement**, above. Code, and mine to do.
+3. **The 5 Cloudflare-challenged sites.** The WAF skip rule is Matt's existing
+   item for the 8 CI-blocked sites; these 5 are the same problem seen from the
+   gating sweep. Until it lands they are unreadable from this instrument, and
+   saying so is better than a number that excludes them silently.
+4. B1 is still blocked on CONTENT (`client`/`owner`, Victoria's question), B6
+   is still open, and there are still **no severity codes for gating** until
+   Nick answers what counts as a pass. The measurements are true whatever he
+   says.
+
+---
+
+## Previously — 2026-08-28, morning: the gating window was wrong AGAIN, fixed as v3
 
 **The correction to Nick has NOT been sent, and that is now correct twice
 over.** An outside review of the whole repo ran today (delivered to Doug as a
@@ -154,8 +233,12 @@ the window that actually answers the question — a fresh consent-denied load.
 Clarity flushes its session buffer on consent change, and those beacons were
 attributed to a tag ignoring consent.
 
-Fixed, and re-run fleet-wide: **0 of 23 tested sites still fire after Reject
-All.** Every managed site is gated.
+~~Fixed, and re-run fleet-wide: **0 of 23 tested sites still fire after Reject
+All.**~~ **That number is a v2 measurement and is unmeasured.** The window it
+was taken through erased the load it existed to measure — see the 08-28 block
+at the top. The v3 answer is **0 of 18**, and the difference is not 5 sites
+getting worse: 5 of yesterday's 23 now draw a Cloudflare challenge on the
+second navigation and are honestly inconclusive rather than dishonestly clean.
 
 **The lesson, because it is more useful than the fix.** The instrument's own
 two passes disagreed about the same site — the synthetic-cookie pass had Google
