@@ -105,6 +105,65 @@ site's default rather than our denial. It does not affect any verdict — the
 click pass does that — but it should be recorded as unknown rather than read
 as a successful denial.
 
+### DECIDED 2026-08-28: the page renders the last GOOD run per source
+
+**Agreed by Doug. Not built.** This is the next substantial piece of work and
+it wants its own session.
+
+**The problem it solves, measured today rather than imagined.** A consent
+coverage drop — 71 of 79 from a runner against 78 from a laptop, because 7
+sites refuse GitHub IPs — blocked every publish from every workflow. Fresh
+Pantheon, Nexcess and email data could not reach the page because ONE source
+saw less from a different vantage point. There are only two answers today:
+publish the worse data, or publish nothing.
+
+**The third answer: render the last good run for that source, and say so.**
+Coverage stops being a publish gate and becomes a per-source fact the page
+states, which is what this repo already does with every other absence.
+
+What it buys, in order of value:
+
+1. **A failed scan stops being an emergency.** Today a degraded run blocks the
+   whole page, so every failure is urgent and the only remedy is a full
+   re-run — which cost two Nexcess SSH runs and two consent sweeps on
+   2026-08-28 alone. A contained failure is fixed when someone gets to it.
+2. **A stable reference for debugging.** The page's state currently depends on
+   whether the newest run happened to be good. With a fallback, "what the page
+   shows" versus "what the newest run said" is itself the diagnostic.
+3. **`--allow-coverage-drop` can be retired.** It was added 2026-08-28 because
+   there was no way to say "expected" from Actions. A bypass that gets used
+   routinely stops being a decision.
+4. **Consent decouples from the fleet scans** without splitting the ledger.
+   It already has its own page at `/consent`; what does not exist is a page
+   that can be current about five sources while one is degraded.
+
+**TWO CONDITIONS, or it becomes the bug it is fixing.**
+
+- **The fallback must be LOUD on the page**, not merely correct. A page
+  rendering last-good data silently is precisely "behind the ledger and looks
+  current", which is the worst shape in this repo and the thing
+  `_publish-dashboard.yml` was created to stop.
+- **It needs an age bound.** A source failing for a week must degrade to
+  UNMEASURED, not keep showing week-old numbers as though they were today's.
+
+**SCOPE BOUNDARY, agreed and worth holding.** This fixes the publish coupling
+and the common case, including `app.eastauroracc.com` — that scan measured 1
+of 22, so it IS a coverage drop and the fallback catches it.
+
+It does **not** fix the general `unknown`-overwrite question. A scan that
+reaches all 22 sites and records `unknown` for one fact is not a coverage drop,
+so per-run fallback misses it. **Do not answer that by carrying individual
+FACTS forward.** The ledger holds observations; carrying a fact forward because
+the newest run did not measure it means inventing data and calling it a
+measurement. A RUN either happened well or it did not, which is why per-run
+fallback is honest and per-fact is not. Leave the per-fact question alone
+unless it bites in practice.
+
+**Every place that groups runs will need this**, and CLAUDE.md records that the
+last cohort change had to be fixed in four places before the warning stopped
+firing — `previous_run_of_same_source`, `coverage_regressions`, ingest's
+`last_by_source`, and the renderer. Grep for all of them first.
+
 ### Next, in order
 
 1. ~~**Send Nick the correction.**~~ **DONE. Doug told Nick he was right**, in
