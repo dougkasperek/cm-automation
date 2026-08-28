@@ -637,7 +637,15 @@ $('#app').append(h('div', { class: 'wrap' },
     h('section', {}, h('h2', {}, 'Since the previous run'),
       h('p', {}, D.changes.filter(c => c.class === 'TRANSITION').length + ' threshold crossing: ' + (D.changes.filter(c => c.class === 'TRANSITION').map(c => c.site + ' ' + c.before + ' → ' + c.after).join('; ') || 'none') + '. ' + D.changes.filter(c => c.class === 'DRIFT').length + ' counters moved on findings already open.'),
       h('p', {}, 'Over the ledger (' + fmtDay(AGG.histFrom.slice(0, 10)) + '–' + fmtDay(AGG.histTo.slice(0, 10)) + '): ' + AGG.wpMoved.length + ' sites moved WordPress version; plugin backlogs grew on ' + AGG.grew + ', held on ' + AGG.same + ', shrank on ' + AGG.shrank + ' of ' + AGG.withHist + '. Movement, not a trend.'),
-      h('p', {}, D.coverage_changes.length + ' facts became visible this run (' + D.coverage_changes.map(c => c.fact).join(', ') + ', on ' + D.coverage_changes[0]?.sites.length + ' sites): the instrument changed, not the fleet.'))),
+      // Only when something DID become visible: rendered unconditionally this
+      // said "0 facts became visible this run (, on undefined sites): the
+      // instrument changed, not the fleet" on every quiet run -- a confident
+      // wrong sentence queued for the steady state. And each fact carries its
+      // OWN site count; the [0] shorthand claimed the first fact's count for
+      // every fact, unnoticed only because the four smtp facts shared 21.
+      D.coverage_changes.length ? h('p', {}, D.coverage_changes.length + ' fact(s) became visible this run (' +
+        D.coverage_changes.map(c => c.fact + ' on ' + c.sites.length + ' site' + (c.sites.length === 1 ? '' : 's')).join(', ') +
+        '): the instrument changed, not the fleet.') : null)),
   h('footer', { class: 'foot' },
     h('p', {}, 'Health counts: ' + D.counts.CRIT + ' critical · ' + D.counts.WARN + ' warning · ' + D.counts.OK + ' OK · ' + D.counts.SKIP + ' skip · ' + D.counts.FROZEN + ' frozen, ' + D.excluded_sites.length + ' excluded by ruling (' + D.excluded_sites.join(', ') + '). Consent: ' + D.axes.consent.WARN + ' warning · ' + D.axes.consent.OK + ' OK · ' + D.axes.consent.UNKNOWN + ' unknown. Column headers carry each question\'s own denominator; a census bar under each shows how the whole fleet answers it, hatched where nobody could.'),
     h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. ', h('a', { href: '/api/fleet-scan' }, 'JSON feed'), ' · ', h('a', { href: '/components' }, 'component catalogue'), ' · ', h('a', { href: '/consent' }, 'consent'), '. Read-only: nothing on this page changes a site.'))));

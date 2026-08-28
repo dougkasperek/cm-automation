@@ -121,6 +121,38 @@ check("a coverage regression makes the banner can't-say even with nobody needing
 check('...and names the drop', cant.text.includes('38 of 78'), cant.text.slice(0, 160));
 check('...and still names who needs a person on what was measured', personN === 0 || cant.text.includes(personN + ' site'), cant.text.slice(0, 300));
 
+console.log('\n-- the coverage-change sentence, in both its states --');
+// The paragraph rendered unconditionally, so the first run with no coverage
+// change would print "0 facts became visible this run (, on undefined sites):
+// the instrument changed, not the fleet" -- a confident wrong sentence queued
+// for the steady state. And it claimed the FIRST fact's site count for every
+// fact listed; the four smtp facts all sharing 21 sites is exactly why nobody
+// would notice when they stopped sharing it.
+async function sinceText(mutate) {
+  const m2 = JSON.parse(JSON.stringify(model));
+  mutate(m2);
+  const tmp = file + '.variant.html';
+  writeFileSync(tmp, html.replace(/<script type="application\/json" id="fleet-data">.*?<\/script>/s,
+    '<script type="application/json" id="fleet-data">' + JSON.stringify(m2).replace(/<\//g, '<\\/') + '</script>'));
+  const p2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await p2.goto('file://' + tmp);
+  await p2.waitForSelector('.banner');
+  const t = await p2.evaluate(() => document.body.innerText);
+  await p2.close(); unlinkSync(tmp);
+  return t;
+}
+const quiet = await sinceText(m2 => { m2.coverage_changes = []; });
+check('a run with no coverage change renders no instrument-changed sentence',
+  !quiet.includes('became visible this run'),
+  (quiet.match(/.{0,90}became visible.{0,60}/s) || [''])[0]);
+check('...and "undefined" appears nowhere in the rendered text', !quiet.includes('undefined'));
+const mixed = await sinceText(m2 => {
+  m2.coverage_changes = [{ fact: 'fact_a', sites: ['s1', 's2', 's3'] },
+                         { fact: 'fact_b', sites: ['s4'] }]; });
+check('each fact carries its own site count, never the first fact\'s',
+  mixed.includes('fact_a on 3 sites') && mixed.includes('fact_b on 1 site'),
+  (mixed.match(/.{0,140}became visible.{0,140}/s) || [''])[0]);
+
 console.log('\n-- the drawer and the schedule tab --');
 await page.click('tr.row .nm');
 await page.waitForSelector('.drawer.open .site-detail');
