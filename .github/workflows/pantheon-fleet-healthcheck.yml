@@ -335,6 +335,23 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    # ONE PUBLISH AT A TIME, ACROSS ALL WORKFLOWS.
+    #
+    # Added 2026-08-28, before running four scans in one afternoon to bring
+    # every source current. Each publish checks out main FRESH, so the last one
+    # to start reads the newest ledger -- but only if they do not overlap.
+    # Concurrent publishes race on the R2 uploads, and the loser is whichever
+    # finishes last, which is not necessarily the one holding the newest data.
+    # The failure it produces is this repo's worst shape: a page that is behind
+    # the ledger and looks current. `fleet-ledger-write` already serialises the
+    # INGEST side; nothing serialised the PUBLISH side.
+    #
+    # cancel-in-progress is false on purpose: cancelling a running publish
+    # mid-upload leaves R2 holding a new dashboard.html beside an old
+    # consent.html, which is worse than waiting.
+    concurrency:
+      group: fleet-publish
+      cancel-in-progress: false
     steps:
       # persist-ledger pushed the ingested run to main a moment ago, so check
       # main out FRESH rather than reusing the workspace. Without ref: main
