@@ -185,6 +185,16 @@ check("no sending domain -> SPF unknown, not False", s["spf"]["present"] == E.UN
 check("no sending domain -> DMARC unknown, not False",
       s["dmarc"]["at_sending_domain"]["present"] == E.UNKNOWN)
 check("no sending domain -> DKIM unknown, not False", s["dkim"]["present"] == E.UNKNOWN)
+# THE ALIGNMENT BOOLEANS ARE THREE-STATE TOO. `bool(fo and so and fo == so)`
+# folded "no sending domain recorded" into False -- the same value as
+# "measured and unaligned" -- so six committed ledger rows rendered a red
+# 'no' in the Aligned column for sites nothing measured, on the same page
+# whose email card says those sites read UNKNOWN in every column.
+check("no sending domain -> alignment unknown, never a confident 'no'",
+      s["alignment"]["relaxed_aligned"] == E.UNKNOWN,
+      json.dumps(s["alignment"]))
+check("  strict alignment the same", s["alignment"]["strict_aligned"] == E.UNKNOWN)
+check("  envelope match the same", s["alignment"]["envelope_matches_from"] == E.UNKNOWN)
 
 # the woodmarkpharmacy.com case: CI and local disagreed because one resolver
 # timed out and the code called that "no SPF record".
@@ -203,6 +213,21 @@ check("DKIM records how many probes failed to resolve",
       s["dkim"].get("unresolved_probes", 0) > 0, json.dumps(s["dkim"])[:160])
 check("DMARC on an unreachable zone is unknown, not absent",
       s["dmarc"]["at_sending_domain"]["present"] == E.UNKNOWN)
+# AND THE CANDIDATE RULES MUST CARRY THAT UNKNOWN THROUGH. `_pf` was
+# two-state over three-state data, so the ADOPTED rule printed a confident
+# Fail for this exact site -- a lookup that never finished -- and `compare`
+# listed it as "sheet Pass, computed Fail" in a summary a person reads.
+check("a timed-out lookup scores Unknown in the candidate table, never Fail",
+      R6(s) == "Unknown", R6(s))
+check("  presence rules the same",
+      E.CANDIDATES["dmarc"]["R2_present_at_SENDING_domain"](s) == "Unknown",
+      E.CANDIDATES["dmarc"]["R2_present_at_SENDING_domain"](s))
+check("  the enforcement rule does not read an unanswered lookup as p=none",
+      E.CANDIDATES["dmarc"]["R3_enforcing_at_from_domain"](s) == "Unknown",
+      E.CANDIDATES["dmarc"]["R3_enforcing_at_from_domain"](s))
+check("  the alignment rule does not read unknown alignment as Fail",
+      E.CANDIDATES["dmarc"]["R4_from_domain_and_aligned"](s) == "Unknown",
+      E.CANDIDATES["dmarc"]["R4_from_domain_and_aligned"](s))
 TIMEOUT_ZONES.clear()
 
 # and the contrast: a zone that answers authoritatively with nothing

@@ -371,7 +371,13 @@ def check_site(site):
         # script disagree with the workbook in both directions at once.
         dm["at_sending_domain"] = p
         org = org_domain(spf_target)
-        if p.get("present"):
+        # `is not False` is deliberate: the spec's org fallback applies only
+        # when the subdomain record is measurably ABSENT. On UNKNOWN (the
+        # lookup never finished) whether the fallback governs is unknowable,
+        # so the unknown answer carries through rather than an org record
+        # being presented as governing. The candidate rules print Unknown for
+        # it, never Fail.
+        if p.get("present") is not False:
             dm["at_sending_org_domain"] = p
         elif org and org != spf_target:
             p2 = parse_dmarc(txt("_dmarc." + org))
@@ -400,11 +406,19 @@ def check_site(site):
     out["dmarc"] = dm
 
     fo, so = org_domain(from_dom), org_domain(spf_target)
+    # THREE STATES, NOT TWO. `bool(fo and so and fo == so)` folded "no sending
+    # domain recorded" into False -- the same value as "measured and
+    # unaligned" -- and six committed ledger rows painted a red 'no' in the
+    # Aligned column for sites nothing had measured, on the same page whose
+    # email card said those sites read UNKNOWN in every column. A comparison
+    # whose inputs were never recorded has no answer.
     out["alignment"] = {
         "from_org": fo, "sending_org": so,
-        "relaxed_aligned": bool(fo and so and fo == so),
-        "strict_aligned": bool(from_dom and spf_target and from_dom == spf_target),
-        "envelope_matches_from": bool(env_dom and from_dom and env_dom == from_dom),
+        "relaxed_aligned": (fo == so) if (fo and so) else UNKNOWN,
+        "strict_aligned": (from_dom == spf_target)
+                          if (from_dom and spf_target) else UNKNOWN,
+        "envelope_matches_from": (env_dom == from_dom)
+                                 if (env_dom and from_dom) else UNKNOWN,
     }
     return out
 
@@ -414,6 +428,12 @@ def check_site(site):
 # ---------------------------------------------------------------------------
 
 def _pf(b):
+    # Three verdicts over three-state data. Collapsing UNKNOWN into Fail put
+    # "sheet Pass, computed Fail" rows into the CI comparison for lookups that
+    # never finished; `compare` counts Unknown as neither agreement nor
+    # disagreement, because a rule cannot be scored on an unanswered question.
+    if b == UNKNOWN:
+        return "Unknown"
     return "Pass" if b else "Fail"
 
 
@@ -421,23 +441,29 @@ CANDIDATES = {
     "spf": {
         # ADOPTED. Note the qualifier variant loses on `v=spf1
         # redirect=_spf.google.com`, which is valid and has no `all` token.
-        "R1_record_present": lambda s: _pf(s["spf"].get("present") is True),
+        # Raw `present` values pass through _pf so True/False/UNKNOWN map to
+        # Pass/Fail/Unknown; `is True` here would collapse an unfinished
+        # lookup into a confident Fail. Compound rules guard on UNKNOWN first
+        # for the same reason.
+        "R1_record_present": lambda s: _pf(s["spf"].get("present")),
         "R2_present_and_has_include": lambda s: _pf(
-            s["spf"].get("present") is True and bool(s["spf"].get("includes"))),
+            UNKNOWN if s["spf"].get("present") == UNKNOWN
+            else (s["spf"].get("present") is True and bool(s["spf"].get("includes")))),
         "R3_present_and_all_qualifier": lambda s: _pf(
-            s["spf"].get("present") is True
-            and (s["spf"].get("all_qualifier") or "").lower() in ("~all", "-all")),
+            UNKNOWN if s["spf"].get("present") == UNKNOWN
+            else (s["spf"].get("present") is True
+                  and (s["spf"].get("all_qualifier") or "").lower() in ("~all", "-all"))),
     },
     "dkim": {
-        "R1_key_found_anywhere": lambda s: _pf(s["dkim"].get("present") is True),
+        "R1_key_found_anywhere": lambda s: _pf(s["dkim"].get("present")),
     },
     "dmarc": {
         "R1_present_at_from_domain": lambda s: _pf(
-            s["dmarc"]["at_from_domain"].get("present") is True),
+            s["dmarc"]["at_from_domain"].get("present")),
         "R2_present_at_SENDING_domain": lambda s: _pf(
-            s["dmarc"]["at_sending_domain"].get("present") is True),
+            s["dmarc"]["at_sending_domain"].get("present")),
         "R5_sending_org_fallback_allowed": lambda s: _pf(
-            s["dmarc"]["at_sending_org_domain"].get("present") is True),
+            s["dmarc"]["at_sending_org_domain"].get("present")),
         # ADOPTED, recovered from the workbook 2026-08-17 at 66/68.
         # clevermethod holds ITS OWN Mailgun account to a strict standard: the
         # DMARC record must exist at the exact sending subdomain it configured.
@@ -446,15 +472,20 @@ CANDIDATES = {
         # The two rows this still misses are the two where a human recorded an
         # observed SMTP send failure; no DNS check can reach those.
         "R6_strict_for_own_mailgun_else_fallback": lambda s: _pf(
-            (s["dmarc"]["at_sending_domain"].get("present") is True)
+            s["dmarc"]["at_sending_domain"].get("present")
             if (s.get("provider") or "").strip().lower() == "cm mailgun"
-            else (s["dmarc"]["at_sending_org_domain"].get("present") is True)),
+            else s["dmarc"]["at_sending_org_domain"].get("present")),
+        # An unanswered lookup has no policy; reading the missing key as
+        # "none" scored a timeout as measured non-enforcement.
         "R3_enforcing_at_from_domain": lambda s: _pf(
-            (s["dmarc"]["at_from_domain"].get("policy") or "none").lower()
-            in ("quarantine", "reject")),
+            UNKNOWN if s["dmarc"]["at_from_domain"].get("present") == UNKNOWN
+            else ((s["dmarc"]["at_from_domain"].get("policy") or "none").lower()
+                  in ("quarantine", "reject"))),
         "R4_from_domain_and_aligned": lambda s: _pf(
-            s["dmarc"]["at_from_domain"].get("present") is True
-            and s["alignment"]["relaxed_aligned"]),
+            UNKNOWN if (s["dmarc"]["at_from_domain"].get("present") == UNKNOWN
+                        or s["alignment"]["relaxed_aligned"] == UNKNOWN)
+            else (s["dmarc"]["at_from_domain"].get("present") is True
+                  and s["alignment"]["relaxed_aligned"] is True)),
     },
 }
 
@@ -554,19 +585,28 @@ def cmd_compare(a):
               % (field.upper(), len(rows), len(scored), len(rows) - len(scored)))
         table = []
         for name, fn in rules.items():
-            agree, misses = 0, []
+            agree, misses, unknowns = 0, [], 0
             for d, recorded in scored:
                 got = fn(scan[d])
-                if got == recorded:
+                if got == "Unknown":
+                    # A lookup that never finished scores the ROW as
+                    # unscorable, never the RULE as wrong: an Unknown counted
+                    # as disagreement would penalise rules for the resolver's
+                    # timeouts, and counted as agreement would reward them.
+                    unknowns += 1
+                elif got == recorded:
                     agree += 1
                 else:
                     misses.append("%s (sheet %s, computed %s)" % (d, recorded, got))
-            acc = agree / float(len(scored)) if scored else 0.0
-            table.append((acc, name, agree, misses))
+            denom = len(scored) - unknowns
+            acc = agree / float(denom) if denom else 0.0
+            table.append((acc, name, agree, denom, unknowns, misses))
         table.sort(reverse=True)
-        for acc, name, agree, misses in table:
-            print("  %-34s %3d/%-3d  %5.1f%%" % (name, agree, len(scored), acc * 100))
-        acc, name, agree, misses = table[0]
+        for acc, name, agree, denom, unknowns, misses in table:
+            print("  %-34s %3d/%-3d  %5.1f%%%s"
+                  % (name, agree, denom, acc * 100,
+                     ("   (%d unknown, unscored)" % unknowns) if unknowns else ""))
+        acc, name, agree, denom, unknowns, misses = table[0]
         print("\n  BEST: %s at %.1f%%" % (name, acc * 100))
         if misses:
             print("  unexplained rows:")
@@ -617,7 +657,9 @@ def cmd_report(a):
          and (s["dmarc"]["at_from_domain"].get("policy") or "").lower() == "none"],
         "Monitoring only. Instructs receivers to take no action.")
     grp("From domain not aligned with sending domain",
-        [s["domain"] for s in sites if not s["alignment"]["relaxed_aligned"]],
+        # `is False`, never falsiness: UNKNOWN is truthy so the old test
+        # happened to exclude it, but only by accident of the sentinel.
+        [s["domain"] for s in sites if s["alignment"]["relaxed_aligned"] is False],
         "DMARC fails on unaligned mail even when SPF and DKIM both pass.")
     grp("DMARC inherited from the organizational domain",
         [s["domain"] for s in sites if s["dmarc"]["at_from_domain"].get("via_org_fallback")],
