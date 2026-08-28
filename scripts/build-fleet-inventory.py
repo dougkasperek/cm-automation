@@ -34,6 +34,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import re
 import sys
 
@@ -102,6 +103,25 @@ def main():
     ap.add_argument("--pantheon-scan", required=True)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
+
+    # REFUSE an existing output file, before reading anything. This generator
+    # seeds the inventory ONCE; the live file is human-owned and carries
+    # rulings this script knows nothing about -- consent_managed on every
+    # site, consent_model, nexcess_site_id (the join key ingest refuses rows
+    # without), production and decommission rulings. A rerun per this file's
+    # own Usage block would silently erase all of them and exit 0: the
+    # newer seed-consent-rulings.py learned refuse-to-overwrite; the older
+    # generator writing the same file had not. test/test-build-inventory.py
+    # asserts the refusal, because a control tested only in the permitting
+    # direction is the --known-hosts bug.
+    if os.path.exists(a.out):
+        print("REFUSED: %s already exists." % a.out, file=sys.stderr)
+        print("The inventory is human-owned; regenerating it would erase every"
+              " ruling recorded since the seed (consent_managed, consent_model,"
+              " nexcess_site_id, production, decommission_candidate).",
+              file=sys.stderr)
+        print("Write to a different --out and diff by hand.", file=sys.stderr)
+        return 2
 
     wb = json.load(open(a.email_inventory))
     scan_rows = json.load(open(a.pantheon_scan))
