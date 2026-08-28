@@ -340,6 +340,35 @@ a rule, state what it shows when the answer is unknown, and whether a reader
 could take that to mean the opposite. When verifying a change, prefer a
 measurement over an inference, and re-check that your measurement is live.
 
+### And the same rule, pointed at the explanation rather than the number
+
+**Never state a cause without first checking the data already in hand that
+would disprove it.** Measuring what happened and explaining why it happened are
+different acts. Say which one is being done. An untested explanation is a
+guess, and it must be labelled one and paired with the check that would settle
+it — BEFORE proposing any work that depends on it being true.
+
+Added 2026-08-28, after four occurrences in a single session. Every measurement
+in them was correct; every cause attached to it was wrong, and each was
+delivered in the same voice as the measurement:
+
+| the cause asserted | what the data already said |
+|---|---|
+| `interstatewaste.com`'s two passes disagree, so the test is defective | the denial survived on all 27 sites, and `test-gating.mjs` documents the mechanism fifteen lines above the pass it runs. The site is fine |
+| two questions that need Nick's answer | both were settled. `docs/CONSENT.md` line 120 has ruled the `gcs=G100` case since the first sweep, `check-site.mjs` implements it, and Nick had asserted it himself |
+| a Pantheon publish would push the bad Nexcess data over the page | it would not. `publish-dashboard.sh` runs its OWN coverage check over the whole ledger's standing state. One guard had been read; the second was never opened |
+| OneTrust behaves differently for a datacenter IP, so gating cannot see 8 sites from CI | the CI COLD sweep detected OneTrust on all 8, from the same runner, minutes apart. The two instruments differ — `domcontentloaded`+9s and one shared browser, against `load`+6s and a fresh browser per site — so the cause is ours, not theirs |
+
+**In three of the four, the disproving evidence was already in hand.** The
+failure was not insufficient work; it was explaining before looking. More
+effort would not have caught any of them, and neither would a general
+instruction to check twice — the rule above is narrow on purpose.
+
+**Doug caught all four with a short flat question** — "is this a new error?",
+"did the fable run undo something?", "I thought this was asked and answered".
+That works because it sends the reader back to the data instead of inviting
+elaboration. It should not be his job.
+
 ---
 
 ## Adding a workflow to the suite
