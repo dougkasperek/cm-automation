@@ -218,5 +218,56 @@ check("the push capture is the if-condition, so `set -e` cannot kill the loop",
       'if PUSH_ERR="$(git push' in persist,
       "a bare assignment under set -e would abort on the first failure")
 
+# --- the consent gating job, added 2026-08-28 -----------------------------
+# It had NO CI path at all: fleet-consent.yml ran only the cold sweep, so every
+# gating measurement on the live page came from a laptop. Step 4 of the
+# "adding a workflow" checklist in CLAUDE.md, never done for this source.
+_c = loaded.get("fleet-consent.yml") or {}
+_jobs = (_c.get("jobs") or {})
+check("the consent workflow has a gating job at all", "gating" in _jobs,
+      str(sorted(_jobs)))
+if "gating" in _jobs:
+    _g = _jobs["gating"]
+    _steps = " ".join(str(st.get("run", "")) for st in (_g.get("steps") or []))
+    # HEADED OR NOTHING. A headless gating run sees fewer tags, and fewer tags
+    # reads as "nothing fires after rejection" -- a pass. The instrument would
+    # be manufacturing the best possible answer, which is how the v1 and v2
+    # measured windows went wrong.
+    # MATCHED ON THE INVOCATION, not the word. The first cut checked for
+    # "xvfb-run" anywhere in the job and passed after the sweep was un-wrapped,
+    # because the INSTALL step also runs `xvfb-run --help` to prove it exists.
+    # A guard that a correct-looking break slips past is the third one of these
+    # today; match what has to be true, not a word that happens to be nearby.
+    check("the gating sweep itself runs under a virtual display",
+          "xvfb-run -a node scripts/consent/run-gating-sweep.mjs" in
+          " ".join(_steps.split()),
+          "run-gating-sweep.mjs is not wrapped in xvfb-run")
+    check("...and takes its roster from THIS run's cold scan, not the repo",
+          "--from-scan" in _steps, "gating does not use --from-scan")
+
+    _p = _jobs.get("persist-ledger") or {}
+    _needs = _p.get("needs") or []
+    check("persist waits for gating, so both reports land in one ingest",
+          "gating" in _needs, repr(_needs))
+    # A GATING FAILURE MUST NOT COST THE COLD SWEEP. 79 cold rows are worth
+    # persisting whether or not the Reject All pass worked, and gating is the
+    # more fragile of the two.
+    check("...but is NOT gated on gating succeeding",
+          "needs.gating.result == 'success'" not in str(_p.get("if")),
+          str(_p.get("if")))
+
+# The tester must refuse a headless browser rather than report floors. Asserted
+# on the source because no CI job can prove it without breaking the display.
+_tg = io.open(os.path.join(ROOT, "scripts", "consent", "test-gating.mjs"),
+              encoding="utf-8").read()
+check("the gating tester checks it actually GOT a headed browser",
+      "browserActual" in _tg and "process.exit(3)" in _tg,
+      "test-gating.mjs does not verify the browser it was given")
+_gs = io.open(os.path.join(ROOT, "scripts", "consent", "run-gating-sweep.mjs"),
+              encoding="utf-8").read()
+check("...and the sweep aborts on it, rather than one INCONCLUSIVE row per site",
+      "err.code === 3" in _gs,
+      "run-gating-sweep.mjs does not act on the tester's headed abort")
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

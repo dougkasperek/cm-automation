@@ -61,6 +61,19 @@ on:
         description: "Ingest this run into history/ and push it back to main"
         type: boolean
         default: true
+      run_gating:
+        # THE SECOND QUESTION. The cold sweep records what fires before anyone
+        # chose; this clicks Reject All and records what survives. They are
+        # different sources in the ledger because they answer different
+        # questions -- see the `consent-gating` block in fleet-ledger.py.
+        #
+        # On by default: a cold sweep with no gating pass leaves every "N
+        # trackers fired on load" row without the answer to "do they stop when
+        # a visitor says no", which is the question a reader actually has.
+        # Turn it off for a quick coverage-only run.
+        description: "Also click Reject All on every site with consent tooling, and record what still fires"
+        type: boolean
+        default: true
       allow_coverage_drop:
         description: "Publish even though a source measured fewer sites than last run. Only when you have read the drop and it is expected."
         type: boolean
@@ -205,12 +218,139 @@ jobs:
           retention-days: 90
 
   # -------------------------------------------------------------------------
+  # The gating sweep. Does rejecting actually stop the tags?
+  #
+  # A SECOND JOB, NOT A SECOND WORKFLOW, because its roster IS the cold scan
+  # this run just produced: run-gating-sweep.mjs takes --from-scan and keeps
+  # the sites where a banner was actually DETECTED. A separate workflow would
+  # have to guess which scan to read, and the honest options are "the newest in
+  # the repo" (there is none -- reports/ is gitignored) or "re-run the cold
+  # sweep first", which is this job with extra steps. Running it here is also
+  # how it is run by hand.
+  #
+  # It writes a DIFFERENT SOURCE (`consent-gating`), so persist-ledger below
+  # ingests both reports in one pass -- one directory, one ingest, one lock.
+  # -------------------------------------------------------------------------
+  gating:
+    name: Reject All, and see what still fires
+    needs: consent
+    if: >-
+      always()
+      && inputs.run_gating
+      && needs.consent.result == 'success'
+    runs-on: ubuntu-latest
+    # Three passes per site with real waits, and the tester is one browser per
+    # site rather than one for the sweep. 27 sites took ~13 minutes by hand.
+    timeout-minutes: 45
+    outputs:
+      stamp: ${{ steps.gstamp.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright, Chromium and a virtual display
+        # Same as the cold sweep, and for the same reason: test-gating.mjs
+        # launches a HEADED browser and a runner has no screen.
+        run: |
+          set -eo pipefail
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends xvfb
+          xvfb-run --help >/dev/null 2>&1 || { echo "::error::xvfb-run is not available; the gating sweep cannot run headed"; exit 1; }
+
+      - name: Download the cold scan this run just produced
+        # The roster comes from THIS run's scan, not from the repo. reports/ is
+        # gitignored, so on a fresh checkout there is nothing to read.
+        uses: actions/download-artifact@v4
+        with:
+          name: fleet-consent-${{ needs.consent.outputs.stamp }}
+          path: reports
+
+      - name: Stamp
+        id: gstamp
+        run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Gating sweep
+        # HEADED, and it CHECKS that it got headed. test-gating.mjs reads the
+        # browser's own User-Agent and exits 3 on a mismatch; run-gating-sweep
+        # turns that into an abort for the whole sweep rather than one
+        # INCONCLUSIVE row per site.
+        #
+        # That guard matters more here than in the cold sweep: "nothing fires
+        # after rejection" is the BEST POSSIBLE RESULT of this test, so a
+        # silently headless run -- which sees fewer tags, and cannot load a
+        # site behind a bot challenge at all -- reads as a clean pass on every
+        # site. The instrument manufacturing the best answer is exactly how the
+        # v1 and v2 measured windows went wrong.
+        #
+        # `set -eo pipefail` for the same reason as the cold sweep: without it
+        # the pipeline's exit code is tee's and the abort above would pass.
+        run: |
+          set -eo pipefail
+          SCAN="$(ls -t reports/fleet-consent-*.json | head -1)"
+          test -n "$SCAN" || { echo "::error::no cold scan to take a roster from"; exit 1; }
+          echo "roster from $SCAN"
+          xvfb-run -a node scripts/consent/run-gating-sweep.mjs \
+            --from-scan "$SCAN" \
+            --out reports \
+            --stamp "${{ steps.gstamp.outputs.value }}" \
+            --concurrency 3 \
+            | tee /tmp/gating.txt
+
+      - name: Findings
+        # UNTESTED IS NOT A PASS, and this is where a person reads it. A site
+        # with no clickable reject control and a site behind a Cloudflare
+        # challenge are both INCONCLUSIVE, and neither is "nothing fires".
+        run: |
+          f="$(ls -t reports/fleet-consent-gating-*.json | head -1)"
+          python3 - "$f" <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          sites = d["sites"]
+          leak = [s for s in sites if (s.get("still_firing_after_reject_all") or [])]
+          incon = [s for s in sites if s["verdict"].startswith("INCONCLUSIVE")]
+          print("## Consent gating\n")
+          print("| | |\n|---|---|")
+          print("| sites with consent tooling | %d |" % len(sites))
+          print("| tested | %d |" % (len(sites) - len(incon)))
+          print("| still firing after Reject All | %d |" % len(leak))
+          if leak:
+              print("\n**Still firing, named rather than counted:**\n")
+              for s in leak:
+                  print("- `%s` %s" % (s["domain"],
+                                       ", ".join(s["still_firing_after_reject_all"])))
+          if incon:
+              print("\n**Not tested, so not clean either:**\n")
+              for s in incon:
+                  print("- `%s` %s" % (s["domain"], s["verdict"].split(":", 1)[-1].strip()))
+          print("\nA Google tag still sending a cookieless `gcs=G100` ping after a "
+                "rejection is NOT counted here: that is what a correctly configured "
+                "site does. See docs/CONSENT.md.")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fleet-consent-gating-${{ steps.gstamp.outputs.value }}
+          path: reports/fleet-consent-gating-*.json
+          retention-days: 90
+
+  # -------------------------------------------------------------------------
   # Same persist script and the same fleet-ledger-write lock as the other
   # workflows, so none of them can race each other.
   # -------------------------------------------------------------------------
   persist-ledger:
     name: Ingest into the ledger
-    needs: consent
+    # WAITS FOR GATING, BUT IS NOT GATED ON IT. The cold sweep's 79 rows are
+    # worth persisting whether or not the Reject All pass succeeded, and a
+    # gating failure that threw away a good cold sweep would be the worse
+    # outcome. `always()` plus an explicit test on consent alone gives that:
+    # gating skipped or failed simply means no consent-gating rows this run.
+    needs: [consent, gating]
     if: >-
       always()
       && inputs.persist_ledger
@@ -238,6 +378,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: fleet-consent-${{ needs.consent.outputs.stamp }}
+          path: /tmp/ci-reports
+
+      - name: Download this run's gating report, if there is one
+        # SAME DIRECTORY, so one ingest pass handles both sources under one
+        # ledger-write lock. `if` on the job result rather than
+        # continue-on-error alone: a missing artifact when gating SUCCEEDED
+        # would be a real problem worth failing on, and this way that case is
+        # still an error while a skipped or failed gating job is simply absent.
+        if: needs.gating.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: fleet-consent-gating-${{ needs.gating.outputs.stamp }}
           path: /tmp/ci-reports
 
       - name: Ingest, render and push

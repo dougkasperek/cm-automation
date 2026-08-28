@@ -264,6 +264,37 @@ const url = `https://${domain}/`;
 // a headless run reports a floor as a total -- already a row in the bug table.
 const browser = await chromium.launch({ headless: false });
 
+// ASKED FOR IS NOT GOT -- and here it matters MORE than in the cold sweep.
+//
+// The browser is the witness: a headless Chromium says `HeadlessChrome/...` in
+// its User-Agent and a headed one says `Chrome/...`. check-site.mjs has
+// recorded this since the first sweep and run-sweep.mjs aborts on a mismatch;
+// this file did neither until 2026-08-28, when it was about to be put in CI --
+// which is precisely where DISPLAY goes missing.
+//
+// Why it is worse here: "nothing fires after rejection" is the BEST POSSIBLE
+// RESULT of this test. A headless browser cannot load a site behind a bot
+// challenge and cannot see Hotjar or Meta Pixel on any site, so a silently
+// headless run sees fewer tags and reads as a clean pass. That is the same
+// shape as v1 and v2 of the measured window: the instrument manufacturing the
+// best answer. This file already refuses that shape once, three hundred lines
+// down -- "A CRASH IS NOT A CLEAN SITE" -- and this is the same rule applied
+// to the browser instead of the subprocess.
+const _probe = await browser.newPage();
+const _ua = await _probe.evaluate(() => navigator.userAgent);
+await _probe.close();
+const browserActual = /headless/i.test(_ua) ? 'headless' : 'headed';
+if (browserActual !== 'headed') {
+  await browser.close();
+  console.error('');
+  console.error('ABORTING: asked for a headed browser and got headless.');
+  console.error('Every count from this run would be a floor, and a floor reads');
+  console.error('as "nothing fires after rejection", which is a pass.');
+  console.error('On a server this means no display: install xvfb and run under');
+  console.error('`xvfb-run -a`.');
+  process.exit(3);
+}
+
 const cold = await pass(browser, url, null, 'cold load, no consent state');
 const denied = await pass(browser, url, optanonCookies(domain.replace(/^www\./, '')),
                           'OneTrust set to all-denied');
@@ -306,6 +337,9 @@ const stoppedByReject = cold.fired.filter(t => !rejected.fired.includes(t));
 
 const out = {
   domain, url,
+  // Recorded, not just asserted: a reader of the JSON can tell what the
+  // numbers were taken with, the same way the cold sweep's rows can.
+  browserActual,
   passes: [cold, denied, rejected],
   // What the site does to a visitor who has done nothing. On an opt-out model
   // this is expected behaviour, not a finding, which is why it is reported as

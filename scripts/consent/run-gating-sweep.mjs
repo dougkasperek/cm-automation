@@ -105,6 +105,22 @@ function testOnce(domain) {
         // A CRASH IS NOT A CLEAN SITE. Without this the catch-all would return
         // an object with no trackers in it, and "nothing fired after rejection"
         // is the best possible result -- so a failure would read as a pass.
+        // EXIT 3 IS THE HEADED CHECK, NOT A SITE PROBLEM. test-gating.mjs
+        // aborts with 3 when it asked for a headed browser and got headless,
+        // which on a runner means xvfb is missing or DISPLAY is unset. That is
+        // a fact about the RUN, not about this site, and recording it as one
+        // INCONCLUSIVE row per site would bury it 27 times over while the
+        // sweep carried on producing floors. Same reasoning as the ssh-agent
+        // warning in diagnose-wp-calls.sh, which is reported before any
+        // verdict because it explains all of them.
+        if (err && err.code === 3) {
+          console.error('');
+          console.error('ABORTING THE SWEEP: the tester could not get a headed browser.');
+          console.error('Every remaining site would report a floor, and a floor');
+          console.error('reads as "nothing fires after rejection" -- a pass.');
+          console.error('On a server: install xvfb and run under `xvfb-run -a`.');
+          process.exit(3);
+        }
         res({
           domain, usable: false,
           verdict: 'INCONCLUSIVE: the gating test did not complete',
