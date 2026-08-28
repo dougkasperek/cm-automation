@@ -251,9 +251,20 @@ scans = sorted(f for f in os.listdir(reports_dir)
                if f.startswith("fleet-email-dns-") or f.startswith("email-dns-")
                ) if os.path.isdir(reports_dir) else []
 if scans:
-    scan = json.load(open(os.path.join(ROOT, "reports", scans[-1])))
+    # Newest by mtime, not by sorted filename: the two prefixes sort 'e' < 'f',
+    # so a stale fleet-email-dns-*.json would beat a fresher email-dns-*.json
+    # on name alone -- the same string-ordering trap as the run_id compare.
+    newest = max(scans, key=lambda f: os.path.getmtime(os.path.join(reports_dir, f)))
+    scan = json.load(open(os.path.join(reports_dir, newest)))
     sites = scan["sites"]
-    check("78 sites in the scan", len(sites) == 78, str(len(sites)))
+    # THE PROPERTY, not the number that was true the day it was written. This
+    # suite re-runs in CI right after every scan, so `== 78` turns a CORRECT
+    # scan red the day the roster grows to 79 -- CLAUDE.md: do not assert a
+    # fleet COUNT in a test. The scan must cover the roster it ran from.
+    _roster = json.load(open(os.path.join(ROOT, "data", "fleet-email-inventory.json")))
+    check("the scan covers the email inventory's roster",
+          len(sites) == len(_roster["sites"]),
+          "%d scanned vs %d in the roster" % (len(sites), len(_roster["sites"])))
     check("no site errored", not [s for s in sites if "error" in s])
     check("every site records both DMARC readings",
           all("at_sending_domain" in s["dmarc"] and "at_sending_org_domain" in s["dmarc"]

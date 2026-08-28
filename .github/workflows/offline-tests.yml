@@ -1,0 +1,61 @@
+# Every offline suite, on every push.
+#
+# CLAUDE.md's own rule is "credential-free checks run on every push" -- and
+# until 2026-08-28 the only push-triggered workflow was the worker-exposure
+# check, scoped to three paths. 597 of the repo's ~1,000 assertions, the
+# entire severity and ledger suites among them, had no CI path at all: a
+# breaking edit to the scorer or the ledger merged green, and the first thing
+# that executed it was a real ingest or the production publish.
+#
+# Everything here is offline by construction: no secrets, no scanner runs,
+# no client site touched. The two Chromium suites reuse the exact playwright
+# install step fleet-consent.yml already runs on this runner class -- the
+# "Chromium cost" that kept test-page.mjs out of CI was already being paid,
+# it was just a decision nobody had made.
+#
+# Thin wrapper on purpose: every check here runs identically on a laptop.
+
+name: Offline test suites
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  python-suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Every offline Python suite
+        # No || true, no tail. A diagnostic whose exit code is discarded is
+        # not a diagnostic -- the Nexcess probe step taught that one.
+        run: |
+          set -e
+          for t in test/test-*.py; do
+            echo "== $t"
+            python3 "$t"
+          done
+      - name: End-to-end mock scan
+        # 1-3 minutes; two mock sites hang on purpose and the suite times
+        # them out itself. Offline: the mock terminus is first on PATH.
+        run: ./test/run-local-test.sh
+
+  rendered-dom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: The rendered page, read the way a person does
+        run: node test/test-page.mjs
+      - name: The gating window's two boundaries, against a local fixture
+        run: node test/test-gating-window.mjs
