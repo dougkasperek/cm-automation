@@ -82,6 +82,37 @@ check('consent chips equal the model', ['WARN', 'OK', 'UNKNOWN'].every(st => con
 const chipText = await page.$$eval('.chip', els => els.map(e => e.textContent.trim()));
 check('every chip carries a word, never colour alone', chipText.every(t => /[A-Za-z]/.test(t)));
 
+console.log('\n-- the lane vocabulary is defined where it is used --');
+// "Not established", "Needs a ruling", "Needs scheduling" are this page's own
+// invented terms. Until 2026-08-28 the strip at the top rendered the word and
+// the count alone; the definitions existed in LANE[].sub and were shown only
+// inside the matrix group headers and the site drawer. Doug, who designed the
+// lanes, said he could not remember them.
+//
+// The bug table already carries this row once: a key put one click away on a
+// page where every <details> renders closed. So this asserts the definition is
+// VISIBLE -- rendered, non-empty, and not inside a fold -- rather than merely
+// present somewhere in the file. A title= tooltip would also fail this, and
+// should: it needs a mouse.
+const laneDefs = await page.$$eval('.lanes li', els => els.map(e => ({
+  word: (e.querySelector('button') || {}).textContent || '',
+  sub: (e.querySelector('.lane-sub') || {}).textContent || '',
+  folded: !!e.closest('details'),
+  // offsetParent is null for display:none and for an unrendered subtree.
+  shown: !!(e.querySelector('.lane-sub') || {}).offsetParent,
+})));
+check('every lane is listed', laneDefs.length === 7, String(laneDefs.length));
+check('every lane carries a definition, not just a word',
+      laneDefs.every(l => l.sub.trim().length > 10),
+      JSON.stringify(laneDefs.map(l => [l.word, l.sub.length])));
+check('...and none of them is inside a fold',
+      laneDefs.every(l => !l.folded));
+check('...and each one is actually rendered, not display:none',
+      laneDefs.every(l => l.shown),
+      JSON.stringify(laneDefs.map(l => [l.word, l.shown])));
+check('...and the definition is distinct from the word',
+      laneDefs.every(l => l.sub.trim() !== l.word.trim()));
+
 console.log('\n-- the banner --');
 const banner = await page.$eval('.banner', e => ({ cls: e.className, text: e.textContent }));
 check('exactly one banner state', ['banner-green', 'banner-red', 'banner-cant'].filter(c => banner.cls.includes(c)).length === 1, banner.cls);

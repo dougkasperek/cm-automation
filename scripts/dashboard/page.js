@@ -640,7 +640,22 @@ $('#app').append(h('div', { class: 'wrap' },
       h('p', { class: 'thesis' }, 'One row per site, one column per question. Hatched is unmeasured. Schedule tab: the same evidence arranged by decision.')),
     h('div', { class: 'sweep' }, ...sweep.map(([name, r]) => h('div', { class: ageDays(r.observed_at) > 1 ? 'stale' : '' }, name + ' ', h('b', {}, fmtEastern(r.observed_at)), ' ' + (r.deep_scanned ?? '?') + '/' + r.site_count)))),
   banner(),
-  h('ul', { class: 'lanes' }, ...LANE_ORDER.map(L => h('li', {}, h('span', { class: 'n' }, laneCounts[L]), h('button', { 'data-lane': L, onclick: () => { laneFilter = laneFilter === L ? '' : L; draw(); syncUrl(); } }, LANE[L].word)))),
+  /* THE GLOSS IS PART OF THE TILE, not a tooltip and not a fold.
+     These seven words are the page's own vocabulary -- "Not established" and
+     "Needs a ruling" mean nothing until someone tells you -- and until
+     2026-08-28 the strip rendered the word and the count alone. The
+     definitions existed the whole time in LANE[].sub, shown only inside the
+     matrix group headers and the site drawer, so from the top of the page
+     there was nothing to read. Doug, who designed the lanes, said he could not
+     remember them.
+     The bug table already carries this exact row: a key put one click away on
+     a page where every <details> renders closed. A KEY YOU HAVE TO DISCOVER IS
+     NOT A KEY -- and a title= tooltip is worse, because it needs a mouse. */
+  h('ul', { class: 'lanes' }, ...LANE_ORDER.map(L => h('li', {},
+    h('span', { class: 'lane-hd' },
+      h('span', { class: 'n' }, laneCounts[L]),
+      h('button', { 'data-lane': L, onclick: () => { laneFilter = laneFilter === L ? '' : L; draw(); syncUrl(); } }, LANE[L].word)),
+    h('span', { class: 'lane-sub' }, LANE[L].sub)))),
   tabs,
   h('div', { class: 'view view-matrix', id: 'view-matrix' },
   h('div', { class: 'tools' }, q, hostSel, h('label', { title: 'Adds four columns at the right of the matrix: what the audit workbook claims about 2FA, hidden login, activity log and XML-RPC, beside whether a matching plugin is actually installed.' }, attBox, 'Show audit-workbook claims beside installed plugins'), h('label', {}, absBox, 'Only rows with an unmeasured cell'), count),
