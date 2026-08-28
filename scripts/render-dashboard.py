@@ -216,7 +216,16 @@ def build_model(history_dir, inventory_path, today):
         # `latest[source]` stays the most recent run of the source overall, for
         # the freshness line and the provenance block. Facts come from
         # latest_by_cohort below, never from this.
-        if source not in latest or curr["run_id"] > latest[source]["run_id"]:
+        #
+        # MOST RECENT BY observed_at, NEVER BY run_id. run_ids embed the cohort
+        # name, and 'health-nexcess-<any date>' sorts after 'health-<any date>'
+        # as a string ('n' > '2'), so an id compare pinned this to the Nexcess
+        # cohort on every date both cohorts exist: the published feed reported
+        # a day-old 22-site run as THE health run while the page, which keys
+        # per kind by observed_at, showed the newer 52-site one. run_id is only
+        # the tiebreak. test/test-page.py asserts this against runs.jsonl.
+        _recency = lambda r: (r.get("observed_at") or "", r["run_id"])
+        if source not in latest or _recency(curr) > _recency(latest[source]):
             latest[source] = curr
         rows = L.rows_for(obs, curr["run_id"])
         # STANDING IS COMPUTED PER SOURCE, NOT PER COHORT -- collected here,

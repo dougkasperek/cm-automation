@@ -58,6 +58,31 @@ print("\n-- the model the page renders from is the model the feed publishes --")
 _pm = re.search(r'<script type="application/json" id="fleet-data">(.*?)</script>', html, re.S)
 emb = json.loads(_pm.group(1).replace("<\\/", "</"))
 check("the embedded model round-trips", emb == json.loads(json.dumps(pd)))
+
+print("\n-- latest run selection --")
+# `health` has TWO cohorts and their run_ids embed the cohort name, so
+# 'health-nexcess-<any date>' sorts after 'health-<any date>' as a STRING on
+# every date. Selecting a source's latest run by run_id therefore pins it to
+# the Nexcess cohort forever: the published feed reported a day-old 22-site
+# run as THE health run while the page, keyed per kind by observed_at, showed
+# the newer 52-site one -- the exact disagreement emit_data's own docstring
+# says the shared model prevents. Assert against the ledger's run records,
+# never a pinned id.
+_health_runs = [json.loads(l) for l in open("history/runs.jsonl")]
+_health_runs = [r for r in _health_runs if r.get("source") == "health"]
+_newest = max(_health_runs, key=lambda r: (r.get("observed_at") or "", r["run_id"]))
+check("latest['health'] is the newest health run by observed_at, not by run_id string",
+      m["latest"]["health"]["run_id"] == _newest["run_id"],
+      "%s vs %s" % (m["latest"]["health"]["run_id"], _newest["run_id"]))
+# The feed keys runs by SOURCE, the page keys latest by KIND, so the coherence
+# property is: the feed's health run is the newer of the page's two health
+# kinds -- whichever cohort genuinely ran last.
+_page_health = max(
+    (pd["latest"][k] for k in ("health", "health-nexcess") if k in pd["latest"]),
+    key=lambda r: (r.get("observed_at") or "", r["run_id"]))
+check("the feed's runs.health agrees with the page's newest health kind",
+      feed["runs"]["health"]["run_id"] == _page_health["run_id"],
+      "%s vs %s" % (feed["runs"]["health"]["run_id"], _page_health["run_id"]))
 check("site count equals the inventory", len(emb["sites"]) == m["inventory_count"] == len(feed["sites"]))
 _by = {s["id"]: s for s in emb["sites"]}
 check("every site's health status on the page is the feed's",
