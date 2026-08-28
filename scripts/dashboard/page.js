@@ -92,6 +92,13 @@ function lane(s) {
   if (hs === 'SKIP' || hs === 'FROZEN') return 'unmeasurable';
   if (hs === 'CRIT') return 'person';
   if (has(s, 'consent', 'consent_pre_consent_trackers') && !has(s, 'consent', 'consent_no_tooling')) return 'person';
+  /* A tag still firing after a REAL Reject All click. Stronger than the rule
+     above it: that one is about a site that fires before anyone chose, which
+     an opt-out model can justify; this is a visitor who explicitly refused and
+     is tracked anyway, which nothing justifies. No tooling exemption for the
+     same reason -- a site with no banner cannot produce this row at all, since
+     the sweep has nothing to click. Grouping only; severity.py decided it. */
+  if (has(s, 'consent', 'consent_gating_leak')) return 'person';
   if (s.f.spf_present === false) return 'person';
   if (hs === 'UNKNOWN') return 'unestablished';
   if (codes(s, 'health').some(c => UNESTABLISHED.has(c))) return 'unestablished';

@@ -529,7 +529,16 @@ EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               # cold load are a defect on an opt-in site and the configured
               # behaviour on an opt-out one, so a consumer reading a consent
               # finding cannot interpret it without this.
-              "consent_model", "consent_managed")
+              "consent_model", "consent_managed",
+              # THE GATING SWEEP, added 2026-08-28 when it was finally scored.
+              # `consent_gating_leak` reads `gating_still_firing`, so by the
+              # rule stated above these cannot be omitted: a fact that changes
+              # a site's status must not be invisible to a consumer asking why.
+              # The names matter as much as the count -- the remedy for a leak
+              # is per-tag, and "2 tags" tells nobody which two.
+              "gating_tested", "gating_still_firing",
+              "gating_still_firing_names", "gating_stopped_names",
+              "gating_cookieless_names", "gating_cold_count")
 
 
 def build_components(rows, sites, inventoried, expected_sites):

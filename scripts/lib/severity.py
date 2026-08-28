@@ -125,7 +125,16 @@ SCORING_FACTS = ("frozen", "wp_checked", "wp_version", "php_version",
                  # the feed like every other scoring input. `consent_managed`
                  # routes rather than ranks, and is published for the same
                  # reason: a reader asking "is this ours" needs the answer.
-                 "consent_model", "consent_managed")
+                 "consent_model", "consent_managed",
+                 # THE GATING SWEEP. `gating_still_firing` already excludes the
+                 # compliant cookieless Google case -- test-gating.mjs filters
+                 # it before the ledger sees it and records it separately in
+                 # `gating_cookieless_names`. Severity reads a count that
+                 # already respects that ruling rather than re-deciding it; a
+                 # second opinion about what counts as a leak is two answers.
+                 "gating_tested", "gating_still_firing",
+                 "gating_still_firing_names", "gating_stopped_names",
+                 "gating_cookieless_names", "gating_cold_count")
 
 # The fact names a Pantheon health observation always carries, whatever their
 # values. Presence of ANY of these means the health scanner saw this site.
@@ -222,6 +231,10 @@ AXIS_OF_CODE = {
     "consent_pre_consent_trackers": "consent",
     "consent_trackers_unruled":     "consent",
     "consent_no_tooling":           "consent",
+    # The gating sweep asks a DIFFERENT question from the cold sweep -- not
+    # "what fires before consent" but "does it stop when a visitor refuses" --
+    # and both are the consent axis, because both answer "does this site leak".
+    "consent_gating_leak":          "consent",
 }
 
 
@@ -602,11 +615,22 @@ def evaluate(site, today=None):
             # tags honour a REJECTION, which is the only question that
             # discriminates on an opt-out site. See scripts/consent/
             # test-gating.mjs, which asks it properly.
+            # THE LAST CLAUSE IS CONDITIONAL, since 2026-08-28. It read "is
+            # NOT tested by this scan" unconditionally, which was accurate --
+            # the COLD sweep does not test it -- and read as a contradiction
+            # the moment the gating sweep landed, because the answer sits in
+            # the very next info line. Two true sentences that look like they
+            # disagree are a reader's problem even when the model is right;
+            # the bug table already carries one row of exactly this shape.
+            untested = site.get("gating_tested") is not True
             info.append(
                 "%d tracker(s) fired on load (%s). This site is opt-out outside "
                 "its restricted region, so that is the configured behaviour, not "
-                "a finding. Whether the tags stop when a visitor rejects is NOT "
-                "tested by this scan." % (pre, names))
+                "a finding. %s" % (pre, names,
+                 "Whether the tags stop when a visitor rejects is NOT tested by "
+                 "this scan." if untested else
+                 "Whether the tags stop when a visitor rejects is answered "
+                 "separately, by the gating sweep, below."))
         elif model == "opt-in":
             add(warn, "consent_pre_consent_trackers",
                 "%d tracker(s) fired on the homepage before any consent "
@@ -628,6 +652,58 @@ def evaluate(site, today=None):
     if site.get("consent_banner_detected") is False:
         add(warn, "consent_no_tooling",
             "No consent tooling was detected on the homepage")
+
+    # --- the gating sweep: does it STOP when a visitor refuses? ------------
+    #
+    # A different question from everything above. The cold sweep records what
+    # fires before any interaction; this records what survives a real Reject
+    # All click. On an opt-out site the first is configured behaviour and the
+    # second is never acceptable, which is why they are separate codes on the
+    # same axis rather than one rule with a caveat.
+    #
+    # THE G100 RULING IS NOT RE-DECIDED HERE. `gating_still_firing` counts only
+    # tags that kept firing and were NOT the compliant cookieless Google ping;
+    # test-gating.mjs excludes those before the ledger sees them and records
+    # them in `gating_cookieless_names`. docs/CONSENT.md has ruled since the
+    # first sweep that a `gcs=G100` ping after a rejection is what a correctly
+    # configured site does. Counting it here would flag every site that got it
+    # right -- and would be a second opinion about what a leak is.
+    gating_tested = site.get("gating_tested")
+    if gating_tested is True:
+        still = _num(site.get("gating_still_firing"))
+        if still:
+            names = site.get("gating_still_firing_names")
+            add(warn, "consent_gating_leak",
+                "%d tag(s) still fired after a real Reject All click%s. A "
+                "visitor who refused is being tracked anyway."
+                % (still,
+                   ": " + names if names and names not in (None, UNKNOWN, "none")
+                   else ""))
+        else:
+            # POSITIVE EVIDENCE, deliberately. The cold-load count sits in the
+            # same cell and reads as the last word without this: "4 tags fired
+            # on load" is a different sentence once you know all four stop when
+            # the visitor says no. The bug table already has one row about a
+            # status reading as a contradiction beside its own evidence.
+            stopped = site.get("gating_stopped_names")
+            cookieless = site.get("gating_cookieless_names")
+            bits = []
+            if stopped and stopped not in (None, UNKNOWN, "none"):
+                bits.append("%s stopped" % stopped)
+            if cookieless and cookieless not in (None, UNKNOWN, "none"):
+                bits.append("%s switched to cookieless pings" % cookieless)
+            info.append(
+                "Tested with a real Reject All click: nothing tracks a visitor "
+                "who refuses%s." % (" (" + "; ".join(bits) + ")" if bits else ""))
+    elif gating_tested is False:
+        # UNTESTED IS NOT CLEAN, AND NOT A WARN EITHER. 9 of 27 sites could not
+        # be tested on 2026-08-28 -- 4 with no clickable reject control, 5
+        # behind a Cloudflare challenge on the second navigation. A rule firing
+        # on all of them says the same thing everywhere and ranks nothing,
+        # which is the mistake `upstream_pending` was making. Same shape as the
+        # unreachable-consent-sweep info line below.
+        info.append("The gating sweep could not test this site, so whether "
+                    "tags stop after a rejection is untested, not clean.")
 
     # A page that would not load for the browser scores NOTHING. Plenty of
     # sites refuse headless clients, and a rule that fires on all of them would

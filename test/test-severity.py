@@ -347,6 +347,114 @@ check("a Nexcess site with no app version still reports "
       str([r["code"] for r in _nx["axes"]["health"]["reasons"]]))
 
 # --------------------------------------------------------------------------
+# The gating sweep, scored 2026-08-28.
+#
+# WHAT TOOK SO LONG, since the delay is the interesting part. The sweep has
+# been measuring since 2026-08-27 and CLAUDE.md said "no severity codes yet --
+# what counts as a pass is a question for Nick". That question was ALREADY
+# ANSWERED when the line was written: docs/CONSENT.md has ruled since the first
+# sweep that a cookieless `gcs=G100` ping after a rejection is correct
+# behaviour, not a leak, and Nick asserted the same thing independently. The
+# blocker was stale, not real, and it sat there for a day.
+#
+# It is already baked into the DATA, which is why these rules are short.
+# `gating_still_firing` counts only trackers that kept firing and were NOT the
+# compliant cookieless Google case -- test-gating.mjs excludes those before the
+# ledger ever sees them, and `gating_cookieless_names` records them separately.
+# So severity does not re-litigate the G100 question; it reads a count that
+# already respects it. A second opinion about what counts as a leak would be
+# two answers.
+# --------------------------------------------------------------------------
+def gated(**kw):
+    """A site the gating sweep tested, with nothing firing after Reject All."""
+    base = dict(site(), consent_scan_ok=True, consent_banner_detected=True,
+                consent_pre_trackers=4, consent_model="opt-in",
+                consent_managed=True,
+                gating_tested=True, gating_still_firing=0,
+                gating_still_firing_names="none",
+                gating_stopped_names="Bing UET, Meta Pixel",
+                gating_cookieless_names="GA4 collect", gating_cold_count=4)
+    base.update(kw)
+    return base
+
+
+_ok = S.evaluate(gated())
+check("a site where everything stopped after Reject All raises no gating finding",
+      "consent_gating_leak" not in [r["code"] for r in _ok["all_reasons"]],
+      str([r["code"] for r in _ok["all_reasons"]]))
+# The positive evidence matters: the cold sweep says trackers fired on load,
+# and without this the reader has no way to know they stop on rejection.
+check("...and it says so, so the cold-load count is not read as the last word",
+      any("Reject All" in i for i in _ok["info"]), str(_ok["info"]))
+
+_leak = S.evaluate(gated(gating_still_firing=2,
+                         gating_still_firing_names="Hotjar, MS Clarity"))
+_lc = [r["code"] for r in _leak["all_reasons"]]
+check("a tag still firing after a real Reject All is a finding",
+      "consent_gating_leak" in _lc, str(_lc))
+check("...and it names which tags, because the remedy is per-tag",
+      any("Hotjar" in r["text"] and "MS Clarity" in r["text"]
+          for r in _leak["all_reasons"] if r["code"] == "consent_gating_leak"))
+check("...and it lands on the CONSENT axis, not health",
+      S.axis_of("consent_gating_leak") == "consent")
+check("...and the health axis is untouched by it",
+      "consent_gating_leak" not in
+      [r["code"] for r in _leak["axes"]["health"]["reasons"]])
+
+# UNTESTED IS NOT CLEAN, and it is not a WARN floor either. 9 of 27 sites were
+# untestable on 2026-08-28 -- 4 with no reject control, 5 behind a Cloudflare
+# challenge. A rule firing on all of them would be the `upstream_pending`
+# mistake: identical everywhere, ranking nothing. It is an info line, the same
+# shape the unreachable consent sweep already uses.
+_untested = S.evaluate(gated(gating_tested=False, gating_still_firing=None,
+                             gating_still_firing_names=None))
+_uc = [r["code"] for r in _untested["all_reasons"]]
+check("a site the gating sweep could not test raises no finding",
+      "consent_gating_leak" not in _uc, str(_uc))
+check("...but says the question is untested rather than staying silent",
+      any("untested" in i or "could not" in i for i in _untested["info"]),
+      str(_untested["info"]))
+
+# A site the sweep never reached at all must not gain an info line claiming
+# anything either way.
+_nogating = S.evaluate(dict(site(), consent_scan_ok=True))
+check("a site with no gating row at all says nothing about gating",
+      not any("Reject All" in i for i in _nogating["info"]),
+      str(_nogating["info"]))
+
+# THE OPT-OUT CAVEAT MUST NOT CONTRADICT THE LINE UNDER IT. The cold-sweep
+# info line said "Whether the tags stop when a visitor rejects is NOT tested by
+# this scan" unconditionally. True of the COLD sweep, and it sat directly above
+# the gating line answering that exact question. Two true sentences that look
+# like they disagree are still a reader's problem.
+def optout(**kw):
+    base = dict(site(), consent_scan_ok=True, consent_banner_detected=True,
+                consent_pre_trackers=4, consent_pre_tracker_names="GA4 collect",
+                consent_model="opt-out", consent_managed=True)
+    base.update(kw)
+    return base
+
+
+_untested_optout = S.evaluate(optout())
+check("with no gating result, the opt-out line still says it is untested",
+      any("NOT tested by this scan" in i for i in _untested_optout["info"]),
+      str(_untested_optout["info"]))
+_tested_optout = S.evaluate(optout(gating_tested=True, gating_still_firing=0,
+                                   gating_stopped_names="Meta Pixel",
+                                   gating_cookieless_names="GA4 collect"))
+check("...and once gating HAS tested it, the line stops claiming otherwise",
+      not any("NOT tested by this scan" in i for i in _tested_optout["info"]),
+      str(_tested_optout["info"]))
+check("...and points at the answer instead of going silent",
+      any("gating sweep" in i for i in _tested_optout["info"]),
+      str(_tested_optout["info"]))
+
+# The facts have to reach the feed, or the page cannot show what was scored.
+for _f in ("gating_tested", "gating_still_firing", "gating_still_firing_names",
+           "gating_cookieless_names"):
+    check("%s is published as a scoring input" % _f, _f in S.SCORING_FACTS)
+
+# --------------------------------------------------------------------------
 # The production flag. Tri-state on purpose, and null must fail SAFE.
 # --------------------------------------------------------------------------
 check("production null counts as production",

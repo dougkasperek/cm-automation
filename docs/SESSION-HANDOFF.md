@@ -129,12 +129,22 @@ as a successful denial.
    item for the 8 CI-blocked sites; these 5 are the same problem seen from the
    gating sweep. Until it lands they are unreadable from this instrument, and
    saying so is better than a number that excludes them silently.
-4. B1 is still blocked on CONTENT (`client`/`owner`, Victoria's question), B6
-   is still open, and there are still **no severity codes for gating**. That
-   waits on the STANDARD — is "Reject All, then nothing but cookieless pings"
-   a pass? — which is a judgement about what compliance means, not a
-   measurement. Whether it has been put to Nick is unknown here; see item 1.
-   The measurements are true whatever the answer.
+4. ~~no severity codes for gating~~ **WRITTEN 2026-08-28.**
+   `consent_gating_leak`, consent axis, WARN, routed to "needs a person"
+   because a visitor who explicitly refused and is tracked anyway is the
+   strongest consent finding available. **0 sites leak**, measured. Untested
+   is an info line on 9 sites, never a WARN — a rule firing on all of them
+   ranks nothing, which is the `upstream_pending` mistake.
+
+   **Nothing was waiting on Nick, and this file said it was for a day.** The
+   standard was settled in `docs/CONSENT.md` from the first sweep and
+   implemented in two scripts. Doug spotted it: "I thought this was all asked
+   and answered previously." It was. Checked before writing this time —
+   `git log -S` confirms no gating severity code has ever existed, so nothing
+   was lost or reverted either.
+
+   Still genuinely open: B1 blocked on CONTENT (`client`/`owner`, Victoria's
+   question) and B6.
 
 ---
 
