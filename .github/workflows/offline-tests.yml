@@ -59,3 +59,11 @@ jobs:
         run: node test/test-page.mjs
       - name: The gating window's two boundaries, against a local fixture
         run: node test/test-gating-window.mjs
+
+      - name: Can the gating sweep catch a planted leak?
+        # The window test asks whether the BOUNDARIES are right. This asks
+        # whether a site that ignores a rejection is actually reported as one.
+        # Every fleet run has said 0 leaking, and nothing proved the sweep
+        # could say otherwise -- the same direction both previous defects
+        # failed in.
+        run: node test/test-gating-leak.mjs

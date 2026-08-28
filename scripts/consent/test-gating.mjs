@@ -120,6 +120,73 @@ export function denialOutcome(writtenGroups, observedGroups) {
   };
 }
 
+// THE VERDICT, AS A PURE FUNCTION. Extracted 2026-08-28 so it can be driven
+// end to end against a fixture that DOES leak.
+  //
+// Why that matters more than tidiness: this instrument has reported ZERO leaks
+// on every fleet run it has ever done, and it has been wrong twice before in
+// exactly that direction -- v1 counted the old page's tail, v2 erased the load
+// it was measuring, and BOTH produced "nothing fires after rejection", which is
+// the best possible answer. Nothing anywhere proved the sweep could catch a
+// site that ignores a rejection, so "0 leaking" was unfalsified rather than
+// verified. test/test-gating-leak.mjs plants a leak and requires it to be
+// found. Doug declined to send the fleet numbers to Nick Federico over exactly
+// this, and he was right to.
+  //
+// Takes the three pass() results and returns everything the JSON reports.
+// No browser, no network, no domain -- so a test can supply real passes taken
+// against a local fixture, or synthetic ones.
+export function gatingVerdict(cold, denied, rejected) {
+// THE CLICK PASS IS THE ANSWER. The synthetic-cookie pass is kept because it
+  // is diagnostic -- it shows which tags read consent STATE versus which need the
+// update EVENT -- but it must not drive the verdict. On interstatewaste.com,
+  // 2026-08-27, the two disagreed: the cookie pass said GA4 and DoubleClick were
+  // ungated, and a real Reject All stopped both. Reporting the cookie pass as the
+  // finding would have sent someone after a defect that does not exist.
+  const usable = !cold.error && !rejected.error
+    && cold.status && cold.status < 400 && rejected.status && rejected.status < 400;
+
+  // A GOOGLE TAG THAT KEEPS FIRING AT gcs=G100 IS NOT A LEAK. Under Consent
+  // Mode a denied visitor still gets a GA/Ads request; it is COOKIELESS, and it
+  // is what a correctly configured site does. docs/CONSENT.md has said so since
+// the first sweep, and check-site.mjs already declines to count it.
+  //
+  // The first fleet-wide run, 2026-08-27, is why this is here: the verdict below
+  // was rewritten to be driven by the click pass and the G100 case was dropped in
+  // the rewrite. It reported NOT FULLY GATED on 9 sites when 7 of them had
+// Google switching to cookieless exactly as designed. The real answer was 2.
+  const googleDenied = rejected.gcs.length > 0 && rejected.gcs.every(g => g === 'G100');
+  const stillFiring = rejected.fired.filter(
+    t => !(googleDenied && /GA4|DoubleClick/.test(t)));
+  const compliantGoogle = rejected.fired.filter(t => !stillFiring.includes(t));
+  const stoppedByReject = cold.fired.filter(t => !rejected.fired.includes(t));
+
+  return {
+    fires_on_cold_load: cold.fired,
+    consent_groups_default: cold.optanon_groups_after_load,
+    stopped_by_reject_all: stoppedByReject,
+    // The finding. Google tags that switched to cookieless are NOT in here.
+    still_firing_after_reject_all: stillFiring,
+    cookieless_after_reject: compliantGoogle,
+    google_stopped_after_reject: !rejected.gcs.length
+      || rejected.gcs.every(g => g === 'G100'),
+    diagnostic_preset_cookie_pass: {
+      fired: denied.fired,
+      note: 'A pre-set cookie fires no update event, so a trigger bound to that '
+          + 'event will not re-evaluate. Disagreement with the click pass is '
+          + 'expected and is NOT a defect.',
+    },
+    usable,
+    verdict: !usable
+      ? 'INCONCLUSIVE: a pass did not load cleanly, or Reject All could not be clicked'
+      : !cold.fired.length
+        ? 'NOTHING FIRED on a cold load; there was nothing to gate'
+        : !stillFiring.length
+          ? 'GATED: everything that fired on load stopped after Reject All'
+          : `NOT FULLY GATED: ${stillFiring.join(', ')} still fired after Reject All`,
+  };
+}
+
 function optanonCookies(host) {
   const stamp = new Date(0).toISOString(); // fixed: no Date.now() in this repo
   const shared = { domain: `.${host}`, path: '/', expires: -1 };
@@ -311,29 +378,7 @@ const rejected = await pass(browser, url, null, 'real click on Reject All',
                             '#onetrust-reject-all-handler');
 await browser.close();
 
-// THE CLICK PASS IS THE ANSWER. The synthetic-cookie pass is kept because it
-// is diagnostic -- it shows which tags read consent STATE versus which need the
-// update EVENT -- but it must not drive the verdict. On interstatewaste.com,
-// 2026-08-27, the two disagreed: the cookie pass said GA4 and DoubleClick were
-// ungated, and a real Reject All stopped both. Reporting the cookie pass as the
-// finding would have sent someone after a defect that does not exist.
-const usable = !cold.error && !rejected.error
-  && cold.status && cold.status < 400 && rejected.status && rejected.status < 400;
-
-// A GOOGLE TAG THAT KEEPS FIRING AT gcs=G100 IS NOT A LEAK. Under Consent
-// Mode a denied visitor still gets a GA/Ads request; it is COOKIELESS, and it
-// is what a correctly configured site does. docs/CONSENT.md has said so since
-// the first sweep, and check-site.mjs already declines to count it.
-//
-// The first fleet-wide run, 2026-08-27, is why this is here: the verdict below
-// was rewritten to be driven by the click pass and the G100 case was dropped in
-// the rewrite. It reported NOT FULLY GATED on 9 sites when 7 of them had
-// Google switching to cookieless exactly as designed. The real answer was 2.
-const googleDenied = rejected.gcs.length > 0 && rejected.gcs.every(g => g === 'G100');
-const stillFiring = rejected.fired.filter(
-  t => !(googleDenied && /GA4|DoubleClick/.test(t)));
-const compliantGoogle = rejected.fired.filter(t => !stillFiring.includes(t));
-const stoppedByReject = cold.fired.filter(t => !rejected.fired.includes(t));
+const V = gatingVerdict(cold, denied, rejected);
 
 const out = {
   domain, url,
@@ -341,36 +386,11 @@ const out = {
   // numbers were taken with, the same way the cold sweep's rows can.
   browserActual,
   passes: [cold, denied, rejected],
-  // What the site does to a visitor who has done nothing. On an opt-out model
-  // this is expected behaviour, not a finding, which is why it is reported as
-  // an observation and never scored here.
-  fires_on_cold_load: cold.fired,
-  consent_groups_default: cold.optanon_groups_after_load,
-  // The finding, if there is one.
-  stopped_by_reject_all: stoppedByReject,
-  // The finding. Google tags that switched to cookieless are NOT in here.
-  still_firing_after_reject_all: stillFiring,
-  // Reported separately so the distinction is visible rather than implied:
-  // these fired, and firing was correct.
-  cookieless_after_reject: compliantGoogle,
-  google_stopped_after_reject: !rejected.gcs.length
-    || rejected.gcs.every(g => g === 'G100'),
-  // Diagnostic only. A tag that ignores a pre-set cookie but honours a click
-  // is reading the update event, which is how OneTrust + GTM is normally wired.
-  diagnostic_preset_cookie_pass: {
-    fired: denied.fired,
-    note: 'A pre-set cookie fires no update event, so a trigger bound to that '
-        + 'event will not re-evaluate. Disagreement with the click pass is '
-        + 'expected and is NOT a defect.',
-  },
-  usable,
-  verdict: !usable
-    ? 'INCONCLUSIVE: a pass did not load cleanly, or Reject All could not be clicked'
-    : !cold.fired.length
-      ? 'NOTHING FIRED on a cold load; there was nothing to gate'
-      : !stillFiring.length
-        ? 'GATED: everything that fired on load stopped after Reject All'
-        : `NOT FULLY GATED: ${stillFiring.join(', ')} still fired after Reject All`,
+  // EVERY FIELD BELOW COMES FROM gatingVerdict(), not from a second copy of
+  // the logic here. The verdict was inline until 2026-08-28, which is why
+  // nothing could drive it against a fixture that leaks -- and why "0 leaking"
+  // on every fleet run had never been falsified. See test/test-gating-leak.mjs.
+  ...V,
 };
 console.log(JSON.stringify(out, null, 2));
 
