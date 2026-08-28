@@ -57,6 +57,7 @@ concurrency:
   # One at a time. Two concurrent runs would open 44 SSH sessions against an
   # account whose concurrency limits Nexcess has never told us.
   group: nexcess-ssh
+  queue: max
   cancel-in-progress: false
 
 jobs:
@@ -180,6 +181,7 @@ jobs:
       contents: write
     concurrency:
       group: fleet-ledger-write
+      queue: max
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4

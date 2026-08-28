@@ -217,6 +217,7 @@ jobs:
       contents: write
     concurrency:
       group: fleet-ledger-write
+      queue: max
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4

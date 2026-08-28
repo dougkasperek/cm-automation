@@ -283,6 +283,7 @@ jobs:
     # appending to one JSONL and pushing is the one race this design has.
     concurrency:
       group: fleet-ledger-write
+      queue: max
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
@@ -351,6 +352,7 @@ jobs:
     # consent.html, which is worse than waiting.
     concurrency:
       group: fleet-publish
+      queue: max
       cancel-in-progress: false
     steps:
       # persist-ledger pushed the ingested run to main a moment ago, so check
