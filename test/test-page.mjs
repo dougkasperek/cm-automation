@@ -89,7 +89,16 @@ check('the predicate is printed under it', banner.text.includes('Green requires'
 const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
 check("the page never says 'all good'", !bodyText.includes('all good'));
 const personN = await page.$eval('.lanes li:first-child .n', e => +e.textContent);
-check('a red banner names exactly the needs-a-person sites', banner.cls.includes('banner-red') ? banner.text.includes(personN + ' site') : personN === 0, personN + ' in lane');
+// THREE STATES, NOT TWO. This read `banner-red ? names them : personN === 0`
+// until 2026-08-28, which quietly assumed the live ledger never carries a
+// coverage regression. The moment one did -- a CI consent sweep reaching 71 of
+// 79 where a laptop reaches 78 -- the banner correctly went can't-say with 4
+// sites in the lane and a CORRECT page failed. The can't-say branch names them
+// too, in its own clause, and the check below already covers that case.
+check('a red banner names exactly the needs-a-person sites',
+      banner.cls.includes('banner-red') ? banner.text.includes(personN + ' site')
+      : banner.cls.includes('banner-cant') ? true
+      : personN === 0, personN + ' in lane');
 check('the banner is red or can\'t-say whenever anyone needs a person', personN === 0 || !banner.cls.includes('banner-green'));
 check('a coverage regression forces can\'t-say', model.coverage_regressions.length === 0 || banner.cls.includes('banner-cant'));
 
@@ -113,10 +122,26 @@ async function variant(mutate) {
 const green = await variant(m2 => { for (const s of m2.sites) {
   if (s.health.status === 'CRIT') { s.health.status = 'OK'; s.health.reasons = []; }
   s.consent.reasons = s.consent.reasons.filter(r => r.code !== 'consent_pre_consent_trackers');
-  if (s.f.spf_present === false) s.f.spf_present = true; } });
+  if (s.f.spf_present === false) s.f.spf_present = true; }
+  // GREEN NEEDS BOTH HALVES OF THE PREDICATE. Clearing the sites but not the
+  // regressions tests nothing: a coverage drop forces can't-say by design, so
+  // this variant could never reach green once the ledger carried one, and the
+  // failure looked like a banner defect rather than an unstated precondition.
+  m2.coverage_regressions = []; });
 check('with nobody needing a person the banner is green', green.cls.includes('banner-green'), green.cls);
 check('...and says it is NOT "all good" in the same breath: backlog and unmeasured counts are in the sentence', /\d+ sites carry a maintenance backlog and \d+ have never had health measured/.test(green.text) && !green.text.toLowerCase().includes('all good'), green.text.slice(0, 160));
-const cant = await variant(m2 => { m2.coverage_regressions = [{ source: 'consent', what: 'consent 38 of 78, was 54' }]; });
+// THE REAL RECORD SHAPE, not an invented one. This fixture carried a `what`
+// key, which `coverage_regressions()` has never emitted -- its keys are
+// source, run_id, deep_scanned, site_count, previous_run_id,
+// previous_deep_scanned and lost. page.js read `r.what || JSON.stringify(r)`,
+// so the fixture passed while the LIVE page printed a raw JSON object into the
+// banner for every real regression. A mock is evidence about the parser, never
+// about the world -- and here the mock was built to match the parser's mistake.
+const cant = await variant(m2 => { m2.coverage_regressions = [{
+  source: 'consent', run_id: 'consent-2026-08-22_0900',
+  deep_scanned: 38, site_count: 78,
+  previous_run_id: 'consent-2026-08-21_0900', previous_deep_scanned: 54,
+  lost: 16 }]; });
 check("a coverage regression makes the banner can't-say even with nobody needing a person", cant.cls.includes('banner-cant') && !cant.cls.includes('banner-green'), cant.cls);
 check('...and names the drop', cant.text.includes('38 of 78'), cant.text.slice(0, 160));
 check('...and still names who needs a person on what was measured', personN === 0 || cant.text.includes(personN + ' site'), cant.text.slice(0, 300));

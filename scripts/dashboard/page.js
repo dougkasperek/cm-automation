@@ -562,6 +562,19 @@ function setView(v) {
    regression; a coverage drop or a source that did not run reads "can't say",
    never green, never amber. The scanner losing sight of a site must not look
    like the fleet getting better. */
+/* One regression, as a sentence a person can read. Deliberately names the
+   source and both numbers: "fewer" without the pair is the same sentence
+   whether one site or forty went missing. */
+function coverageDropPhrase(r) {
+  const src = r.source || r.run_id || 'a source';
+  const now = r.deep_scanned, was = r.previous_deep_scanned, of = r.site_count;
+  if (typeof now !== 'number' || typeof was !== 'number') {
+    return src + ' measured fewer sites than last run';
+  }
+  return src + ' measured ' + now + (typeof of === 'number' ? ' of ' + of : '')
+       + ', down from ' + was;
+}
+
 function banner() {
   const person = SITES.filter(s => lane(s) === 'person');
   const regress = D.coverage_regressions || [];
@@ -573,7 +586,22 @@ function banner() {
   let state, head, sub;
   if (regress.length) {
     state = 'cant'; head = "Can't say";
-    sub = 'Coverage fell since the previous run (' + regress.map(r => r.what || JSON.stringify(r)).join('; ') + '). A scan that saw fewer sites is not a fleet that got better; nothing here is green until it is explained.'
+    /* SAY WHAT DROPPED, IN WORDS. This read `r.what || JSON.stringify(r)`
+       until 2026-08-28. `what` is a key on D.coverage -- the coverage box --
+       and NOT on a regression record, whose keys are source, deep_scanned,
+       site_count, previous_deep_scanned and previous_run_id. So the fallback
+       fired every time and the fleet banner printed a raw JSON object into
+       user-facing copy:
+
+         Can't say - Coverage fell since the previous run ({"source":"consent",
+         "run_id":"consent-2026-08-28_1613","deep_scanned":71,...
+
+       Latent since the banner was written: no coverage regression had ever
+       reached a rendered page, because the guard blocks the publish. It took
+       running four scans in one afternoon to see it. A `||` fallback that
+       hides a wrong key is the same shape as `${pj:-[]}` turning four failed
+       WP-CLI calls into "runs nothing". */
+    sub = 'Coverage fell since the previous run (' + regress.map(coverageDropPhrase).join('; ') + '). A scan that saw fewer sites is not a fleet that got better; nothing here is green until it is explained.'
       + (person.length ? ' On what WAS measured, ' + person.length + ' site' + (person.length === 1 ? '' : 's') + ' need' + (person.length === 1 ? 's' : '') + ' a person: ' + person.map(s => s.id).join(', ') + '.' : '');
   } else if (person.length) {
     state = 'red'; head = person.length + ' site' + (person.length === 1 ? '' : 's') + ' need' + (person.length === 1 ? 's' : '') + ' a person';
