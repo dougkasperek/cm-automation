@@ -51,6 +51,10 @@ on:
         description: "Ingest this run into history/ and push it back to main"
         type: boolean
         default: true
+      allow_coverage_drop:
+        description: "Publish even though a source measured fewer sites than last run. Only when you have read the drop and it is expected."
+        type: boolean
+        default: false
       publish_dashboard:
         # DEFAULT FLIPPED TO TRUE, 2026-08-19. It was false, which meant the
         # one workflow that could publish only did so when somebody remembered
@@ -306,6 +310,8 @@ jobs:
           path: /tmp/ci-reports
 
       - name: Ingest, render and push
+        env:
+          FLEET_ALLOW_COVERAGE_DROP: ${{ inputs.allow_coverage_drop && '1' || '0' }}
         run: ./scripts/persist-ledger.sh /tmp/ci-reports "Pantheon health check, ${{ inputs.run_mode }}"
 
   # -------------------------------------------------------------------------
@@ -395,7 +401,9 @@ jobs:
           FLEET_PUBLIC_URL: ${{ vars.FLEET_PUBLISH_URL }}
         # $GITHUB_STEP_SUMMARY is a runner env var, so it is read in the shell
         # rather than through a ${{ }} context that does not exist.
-        run: FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh
+        run: |
+          FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh \
+            ${{ inputs.allow_coverage_drop && '--allow-coverage-drop' || '' }}
 
       # The summary is written BY THE SCRIPT, via FLEET_PUBLISH_SUMMARY. This
       # file's own rule is that it does platform glue only, and the first draft

@@ -38,6 +38,7 @@ and assume the key landed where it looks like it landed.
 Run: ./test/test-workflows.py
 """
 import glob
+import io
 import os
 import sys
 
@@ -136,6 +137,62 @@ for name, doc in loaded.items():
                   c.get("group") == "fleet-publish"
                   or uses.endswith("_publish-dashboard.yml"),
                   "group=%r uses=%r" % (c.get("group"), uses))
+
+# --- the coverage-drop override ------------------------------------------
+# Added 2026-08-28. The guard's own error message said "pass
+# --allow-coverage-drop if the drop is real and expected" and NO workflow
+# exposed it, so from Actions there was no way to say "yes, expected" at all.
+# A legitimately smaller run -- the consent sweep reaches 71 of 79 sites from a
+# runner against 78 from a laptop, because 7 refuse the runner with HTTP 403 --
+# blocked every publish from every workflow until somebody published by hand.
+#
+# It is an override on a safety guard, so the two things that must stay true
+# are that it is OFF unless asked for, and that BOTH guards get told. There are
+# two independent coverage checks: persist-ledger.sh looks at the run it just
+# ingested, publish-dashboard.sh looks at the whole ledger's standing state.
+# Telling only one leaves the publish refusing anyway.
+def dispatch_inputs(doc):
+    on = doc.get(True) or doc.get("on") or {}
+    out = {}
+    for key in ("workflow_dispatch", "workflow_call"):
+        out.update(((on.get(key) or {}).get("inputs") or {}))
+    return out
+
+
+scanners = [n for n, d in loaded.items()
+            if isinstance(d, dict) and "persist-ledger" in str(d.get("jobs", {}))]
+check("the scanner workflows were found", len(scanners) >= 4, str(scanners))
+
+for name in sorted(scanners) + ["_publish-dashboard.yml"]:
+    ins = dispatch_inputs(loaded[name])
+    got = ins.get("allow_coverage_drop")
+    check("%s offers allow_coverage_drop" % name, got is not None)
+    if got is not None:
+        # DEFAULT FALSE IS THE WHOLE POINT. A guard whose override defaults on
+        # is not a guard.
+        check("%s defaults allow_coverage_drop to false" % name,
+              got.get("default") is False, repr(got.get("default")))
+
+# Both guards must be reachable: the env var for persist, the flag for publish.
+for name in sorted(scanners):
+    body = io.open(os.path.join(WF, name), encoding="utf-8").read()
+    check("%s passes the drop decision to persist-ledger.sh" % name,
+          "FLEET_ALLOW_COVERAGE_DROP" in body)
+    check("%s passes the drop decision on to the publish side" % name,
+          "allow_coverage_drop: ${{ inputs.allow_coverage_drop }}" in body
+          or "--allow-coverage-drop" in body)
+
+pub = io.open(os.path.join(WF, "_publish-dashboard.yml"), encoding="utf-8").read()
+check("the shared publish workflow can actually pass the flag",
+      "--allow-coverage-drop" in pub)
+
+# The script side: an override that silences its own reason hides a worse page.
+persist = io.open(os.path.join(ROOT, "scripts", "persist-ledger.sh"),
+                  encoding="utf-8").read()
+check("persist-ledger.sh still prints what dropped when overridden",
+      persist.count('grep -A 3 "COVERAGE DROPPED"') >= 2, "only one branch prints")
+check("persist-ledger.sh defaults the override to off",
+      'FLEET_ALLOW_COVERAGE_DROP:-0' in persist)
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

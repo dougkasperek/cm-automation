@@ -39,6 +39,10 @@ on:
         description: "Ingest this run into history/ and push it back to main"
         type: boolean
         default: false
+      allow_coverage_drop:
+        description: "Publish even though a source measured fewer sites than last run. Only when you have read the drop and it is expected."
+        type: boolean
+        default: false
       publish_dashboard:
         description: "After ingesting, re-render and publish to fleet.thudstaff.com"
         type: boolean
@@ -247,6 +251,10 @@ jobs:
           path: /tmp/ci-reports
 
       - name: Ingest, render and push
+        env:
+          # persist-ledger.sh prints the drop either way; this only decides
+          # the exit code, and therefore whether publish is allowed to run.
+          FLEET_ALLOW_COVERAGE_DROP: ${{ inputs.allow_coverage_drop && '1' || '0' }}
         run: ./scripts/persist-ledger.sh /tmp/ci-reports "Nexcess estate discovery"
 
   # -------------------------------------------------------------------------
@@ -264,4 +272,5 @@ jobs:
     uses: ./.github/workflows/_publish-dashboard.yml
     secrets: inherit
     with:
+      allow_coverage_drop: ${{ inputs.allow_coverage_drop }}
       label: "Nexcess estate discovery"

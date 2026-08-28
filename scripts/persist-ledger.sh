@@ -129,7 +129,30 @@ echo "ledger verified"
 # so exiting non-zero is what stops a worse measurement replacing a better one
 # on the live page.
 if grep -q "COVERAGE DROPPED" "$INGEST_LOG"; then
-  echo "::error::coverage dropped: this run measured fewer sites than the run before it. The observations WERE committed; the dashboard was not published, because publishing would replace a better measurement with a worse one. Re-run the scan from somewhere less likely to be blocked, or ingest locally with --allow-coverage-drop if the drop is real and expected."
-  grep -A 3 "COVERAGE DROPPED" "$INGEST_LOG" || true
-  exit 1
+  # FLEET_ALLOW_COVERAGE_DROP: the caller has looked at the drop and says it is
+  # expected. Added 2026-08-28, because until then the guard's own advice --
+  # "pass --allow-coverage-drop if the drop is real and expected" -- named a
+  # flag NO workflow exposed. There was no way to say "yes, expected" from
+  # Actions at all, so a legitimately smaller run blocked every publish from
+  # every workflow until somebody ran the publish by hand.
+  #
+  # The case that forced it: the consent sweep reaches 78 of 79 sites from a
+  # laptop and 71 of 79 from a GitHub runner, because 7 sites refuse the
+  # runner with HTTP 403. Neither number is wrong -- they are different
+  # vantage points -- and the page already names each blocked site and says
+  # its consent posture is unmeasured rather than clean. The drop is real,
+  # expected, and explained, and there was still no way to publish it.
+  #
+  # Deliberately NOT a default and deliberately still loud. The drop is
+  # printed either way; this only decides the exit code. An override that
+  # silences its own reason is how a worse page becomes invisible.
+  if [ "${FLEET_ALLOW_COVERAGE_DROP:-0}" = "1" ]; then
+    echo "::warning::coverage dropped, and the run was dispatched with allow_coverage_drop. Publishing anyway. What dropped:"
+    grep -A 3 "COVERAGE DROPPED" "$INGEST_LOG" || true
+    echo "::notice::If this was not expected, the page now shows fewer measured sites than before. Re-run the scan."
+  else
+    echo "::error::coverage dropped: this run measured fewer sites than the run before it. The observations WERE committed; the dashboard was not published, because publishing would replace a better measurement with a worse one. Re-run the scan from somewhere less likely to be blocked, or re-dispatch with allow_coverage_drop if the drop is real and expected."
+    grep -A 3 "COVERAGE DROPPED" "$INGEST_LOG" || true
+    exit 1
+  fi
 fi

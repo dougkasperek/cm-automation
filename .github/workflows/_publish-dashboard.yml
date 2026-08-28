@@ -31,6 +31,11 @@ on:
         type: string
         required: false
         default: "ledger update"
+      allow_coverage_drop:
+        description: "Publish even though a source measured fewer sites than last run. Only when you have read the drop and it is expected -- e.g. a CI sweep reaching fewer sites than a laptop one."
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   publish:
@@ -91,4 +96,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           FLEET_PUBLIC_URL: ${{ vars.FLEET_PUBLISH_URL }}
           FLEET_PUBLISH_LABEL: ${{ inputs.label }}
-        run: FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh
+        # The flag is passed only when the caller asked for it. publish-dashboard.sh
+        # runs its OWN coverage check over the whole ledger's standing state --
+        # independent of the one in persist-ledger.sh, which looks only at the run
+        # it just ingested. Both have to be told, or the publish still refuses.
+        run: |
+          FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh \
+            ${{ inputs.allow_coverage_drop && '--allow-coverage-drop' || '' }}

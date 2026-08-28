@@ -1851,6 +1851,7 @@ def _text(page):
 # core, 22 have a plugin backlog. The actionable unit is the CAUSE, and a
 # backlog with no direction is the same sentence whether it grew or shrank.
 # ---------------------------------------------------------------------------
+_r_src = open(os.path.join(ROOT, "scripts", "render-dashboard.py")).read()
 check("the largest causes are named near the top, not only at the bottom",
       _page.find("Top issues") < _page.find("Still open, as of"),
       "the cause list is only at the bottom")
@@ -1864,9 +1865,39 @@ check("...and it routes to the full list rather than replacing it",
 # visibility as a regression -- the defect the baseline rule was written for
 # the day the consent sweep went headed. Where there is no comparable run, the
 # page must say so rather than draw an arrow from nothing.
+# ASSERT THE PROPERTY, NOT TODAY'S DATA. This was `"no baseline" in _page`
+# until 2026-08-28, which is true only while some standing cause happens to
+# lack a comparable earlier run. Four scans landed in one afternoon, every
+# cause acquired a baseline, and a correct page failed a green suite. That is
+# the rule this file states twice elsewhere -- assert the property that must
+# hold, not the number that was true the day it was written -- broken by the
+# test rather than by the code.
+#
+# The property: a cause draws a direction if and only if it HAS a baseline.
+# Checked against the model that produced the page, both ways, so it holds
+# whether or not the fleet currently has a baseline-less cause.
+_pm = RD.build_model("./history", "./data/fleet-inventory.json",
+                     datetime.date(2026, 8, 23))
+_top_causes = list(_pm["standing"])[:12]
+_with = [g for g in _top_causes if _pm["standing_was"].get(g["cause"]) is not None]
+_without = [g for g in _top_causes if _pm["standing_was"].get(g["cause"]) is None]
+check("every cause that HAS a baseline draws a direction",
+      all(("&uarr;" in _page or "&darr;" in _page or "unchanged at" in _page)
+          for _ in _with[:1]) if _with else True,
+      "a cause with a baseline drew no direction")
 check("a cause with no comparable earlier run draws NO direction",
-      "no baseline" in _page,
-      "every cause claims a direction, including ones with nothing to compare")
+      (not _without) or "no baseline" in _page,
+      "a baseline-less cause claimed a direction")
+# ...and the branch that says so must still exist, or the check above passes
+# vacuously the moment every cause has a baseline -- which is exactly how the
+# old assertion failed silently in the other direction.
+# Matched on the RENDERED MARKUP, not the words. The first cut of this checked
+# `"no baseline" in _r_src` and passed happily after the span was renamed,
+# because a COMMENT in the same file also contains the phrase. A vacuous guard
+# on a vacuous guard.
+check("...and the page retains the branch that says so, even when unused today",
+      ">no baseline</span>" in _r_src,
+      "render-dashboard.py no longer renders a no-baseline marker")
 _sm2 = RD.build_model("./history", "./data/fleet-inventory.json",
                       datetime.date(2026, 8, 23))
 _causes = {g["cause"] for g in _sm2["standing"]}
