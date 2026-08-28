@@ -562,6 +562,17 @@ this fleet has never counted.
 
 ## WITHDRAWN 2026-08-27: the workbook was right and the scanner was wrong
 
+**Correction, 2026-08-28: the withdrawal stands, its measurement does not.**
+The "instrumented properly" re-run below was made with a window that opened
+AFTER the load event, erasing everything the consent-denied page fired while
+loading — so "zero requests" and "0 of 23 still fire" were manufactured by the
+instrument, not measured, and 3 sites recorded `gcs=G100` pings even through
+that window. Nick being right about the trigger rests on the synthetic-cookie
+pass, which was always windowed correctly, so the withdrawal's conclusion
+holds. The fleet-wide numbers do not; re-run the gating sweep (window v3,
+`test/test-gating-window.mjs`) before quoting any. See CLAUDE.md's bug table,
+last row.
+
 This item claimed `onetrust-audit.xlsx` and the gating scan disagreed about
 `interstatewaste.com` — the workbook recording "Scripts Fire w/ Respect to
 Consent: Yes" while the scan reported MS Clarity still firing after Reject All.

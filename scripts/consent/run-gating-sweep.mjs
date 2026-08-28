@@ -136,7 +136,12 @@ const usable = results.filter(r => r.usable);
 const out = {
   schema: 'fleet-consent-gating/1',
   stamp: STAMP,
-  method: 'chromium-headed, cold load then real Reject All click, then reload',
+  // The window changed 2026-08-28 (reload -> fresh consent-denied page; see
+  // the v1/v2/v3 note in test-gating.mjs), so the method string changed WITH
+  // it: the ledger refuses a baseline whose method differs, and the first run
+  // of v3 must not be diffed against a v2 run that could not see the load
+  // phase. One run with no baseline is the honest price.
+  method: 'chromium-headed, cold load then real Reject All click, then a fresh consent-denied load',
   // THE DENOMINATOR, stated. "3 sites still fire after rejection" means
   // nothing without how many were successfully tested.
   sites_in_roster: roster.length,

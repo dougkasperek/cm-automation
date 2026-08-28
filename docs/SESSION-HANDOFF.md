@@ -8,7 +8,68 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-27, end of day: everything is pushed, published and deployed
+## PICK UP HERE — 2026-08-28: the gating window was wrong AGAIN, fixed as v3. Re-run before Nick
+
+**The correction to Nick has NOT been sent, and that is now correct twice
+over.** An outside review of the whole repo ran today (delivered to Doug as a
+shareable page; its top items are also in `docs/DO-THIS-NEXT.md` territory) and
+its most urgent finding was in the gating test we fixed yesterday:
+
+**v2's window erased the load it exists to measure.** The 2026-08-27 fix
+cleared the request counters after `page.reload({waitUntil:'load'})` resolved.
+The load event fires AFTER the fresh page's load-phase requests — where GA4
+pageview hits normally fire — so everything the consent-denied page did while
+loading was recorded and then wiped. "Nothing fires after rejection" is the
+best possible result, and the instrument manufactured it: run 2159's "0 of 23
+still fire" is unmeasured, and the bug-table sentence "ZERO requests on all
+23" was false as written (3 sites show G100 pings even through the broken
+window). Both are corrected in place.
+
+**Fixed as v3, 2026-08-28.** The reject pass now closes the page and measures
+a FRESH one on the same context: the rejection cookie persists, the listener
+exists before the first request, the window is the measured page's lifetime.
+No clear whose ordering can be wrong a third time. It is the shape the
+synthetic-cookie pass always had — which is also why Nick being right about
+the trigger still stands: that pass was never mis-windowed.
+
+- `test/test-gating-window.mjs` (new, 10 checks) drives both boundaries
+  against a local fixture: a load-phase request IS measured, the old page's
+  post-click beacon is NOT. **Verified to fail against v2 before v3 existed**
+  (the two load-phase checks failed, the exclusion passed — exactly the
+  defect).
+- `test-consent.py` is 124: two new greps refuse the known regression shapes.
+- The sweep's `method` string changed with the window, deliberately: the
+  ledger refuses a baseline whose method differs, so the FIRST v3 run gets no
+  baseline and no change rows. One quiet run is the honest price; do not
+  "fix" it.
+
+### Next, in order
+
+1. **Re-run the gating sweep with v3.** The last cold-scan JSON on this
+   laptop is from 2026-08-22 (the 08-25 run was CI), so run a fresh cold
+   sweep first, then gate from it:
+
+   ```
+   node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"
+   node scripts/consent/run-gating-sweep.mjs \
+       --from-scan reports/fleet-consent-<that stamp>.json \
+       --stamp "$(date -u +%Y-%m-%d_%H%M)"
+   ```
+
+   **Expect G100 pings to APPEAR on sites currently reading "none", and
+   possibly load-phase trackers nobody has seen yet.** That is the correct
+   behaviour becoming visible, not a regression. Then ingest, render, read
+   the consent page.
+2. **Then send Nick the correction**, quoting v3 numbers only. His second
+   objection — that a compliant site should still send cookieless pings and
+   our report showed none — was v2's defect showing; the re-run should
+   finally answer it properly.
+3. Everything in the 2026-08-27 block below still stands otherwise: B1 blocked
+   on content, B6 open, no gating severity codes until Nick answers.
+
+---
+
+## Previously — 2026-08-27, end of day: everything is pushed, published and deployed
 
 `HEAD` and `origin/main` are both `1af5401`. All four pages are live and were
 verified by reading them back from R2 and from the deployed Worker, not by

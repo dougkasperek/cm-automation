@@ -578,6 +578,20 @@ check("...and the sweep counts it separately from the tested ones",
       "sites_inconclusive" in _gsweep_src and "sites_tested" in _gsweep_src)
 check("the gating sweep requires an explicit UTC stamp too",
       "--stamp is required" in _gsweep_src)
+
+# THE MEASURED WINDOW. This instrument has been wrong about it twice, in
+# opposite directions, and both versions passed every grep here -- so the
+# window's BOUNDARIES are asserted behaviorally, by test/test-gating-window.mjs
+# driving pass() against a local fixture. These two greps only refuse the known
+# regression shapes: reintroducing reload (v2's window starts after the load
+# event and erases the load it exists to measure) and losing the fixture test.
+# "await page.reload", not "page.reload": the v3 comment NAMES v2's call while
+# documenting why it was wrong, and a grep that forbids the name would force
+# deleting the history to pass -- the same trap as the old option-get assertion.
+check("the reject pass measures a fresh page, never a reload of the old one",
+      "await page.reload" not in _gate_src and _gate_src.count("ctx.newPage()") == 2)
+check("...and the window's boundaries have a behavioral test, not only greps",
+      os.path.exists(os.path.join(ROOT, "test", "test-gating-window.mjs")))
 # SCOPE: a site with no banner has no Reject button, so the question does not
 # apply and a "could not click" there would be noise, not a finding.
 check("the sweep only runs where consent tooling was detected",

@@ -31,8 +31,8 @@
 // a table of what that costs.
 import { chromium } from 'playwright';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -50,12 +50,6 @@ const TRACKERS = [...block[1].matchAll(/\{\s*name:\s*'([^']+)',\s*re:\s*(\/.*?\/
   .map(m => ({ name: m[1], re: new RegExp(m[2].slice(1, -1)) }));
 if (TRACKERS.length < 5) {
   console.error(`only parsed ${TRACKERS.length} tracker pattern(s); expected the full table.`);
-  process.exit(2);
-}
-
-const domain = process.argv[2];
-if (!domain) {
-  console.error('usage: node test-gating.mjs <domain>');
   process.exit(2);
 }
 
@@ -79,13 +73,18 @@ function optanonCookies(host) {
   ];
 }
 
-async function pass(browser, url, cookies, label, clickSel) {
+// Exported so test/test-gating-window.mjs can drive the measured window
+// against a local fixture page. The waits are parameters for the same reason:
+// the window's BOUNDARIES are the contract, its durations are tuning, and the
+// fixture only needs to outlast its own timings.
+export async function pass(browser, url, cookies, label, clickSel,
+                           { settleMs = 6000, persistMs = 3000, measureMs = 9000 } = {}) {
   const ctx = await browser.newContext({
     viewport: { width: 1280, height: 900 },
     ignoreHTTPSErrors: true,
   });
   if (cookies) await ctx.addCookies(cookies);
-  const page = await ctx.newPage();
+  let page = await ctx.newPage();
   const hits = [];
   // GOOGLE'S CONSENT SIGNAL, captured rather than assumed. Under Consent Mode
   // a denied visitor still gets a GA/Ads request -- a COOKIELESS ping carrying
@@ -94,46 +93,66 @@ async function pass(browser, url, cookies, label, clickSel) {
   // here, a correctly configured site and a leaking one look identical in the
   // denied pass, which is the exact ambiguity this script exists to remove.
   const gcs = [];
-  page.on('request', r => {
+  const arm = p => p.on('request', r => {
     const u = r.url();
     for (const t of TRACKERS) if (t.re.test(u)) hits.push(t.name);
     const m = u.match(/[?&]gcs=(G1[01][01])/);
     if (m) gcs.push(m[1]);
   });
+  arm(page);
   let error = null, status = null;
   try {
     const resp = await page.goto(url, { waitUntil: 'load', timeout: 45000 });
     status = resp ? resp.status() : null;
     // Tags fire on triggers that can lag load; the cold sweep waits too.
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(settleMs);
     if (clickSel) {
-      // CLEAR AFTER THE RELOAD, NOT BEFORE IT. This ordering is the whole
-      // measurement and the first version got it wrong.
+      // THE MEASURED WINDOW IS A FRESH PAGE, NOT A RELOAD. This is the third
+      // version of this window; the first two were wrong in opposite
+      // directions, so the boundaries are stated exactly:
       //
-      // It used to clear the counters, wait 2s, then reload -- which merged
-      // two completely different windows into one bucket. Scripts already
-      // running on the open page keep working until navigation, so a
-      // session-recorder flushing its buffer after the click landed in the
-      // same list as a tag firing on a fresh consent-denied load. On
-      // interstatewaste.com that reported "MS Clarity still fires after Reject
-      // All" for five beacons that were Clarity finishing its work on the page
-      // the visitor was already looking at.
+      // v1 cleared the counters BEFORE the reload. Scripts on the open page
+      // keep working until navigation, so Clarity flushing its session buffer
+      // after the click was counted as a tag ignoring consent. That reported
+      // "MS Clarity still fires after Reject All" on two compliant sites, and
+      // it reached Nick Federico as a finding.
       //
-      // Nick Federico checked it by hand and said the trigger was correct; the
-      // instrumented re-run agreed with him -- after the reload, ZERO requests
-      // fire. The question this test asks is "what does a consent-denied page
-      // load do", and only the window after the reload answers it.
+      // v2 cleared them AFTER page.reload({waitUntil:'load'}) resolved. The
+      // load event fires after the fresh page's load-phase requests -- which
+      // is where GA4 pageview hits normally fire -- so the clear ERASED the
+      // exact load this test exists to measure, and the gcs=G100 pings with
+      // it. "Nothing fires after rejection" is the best possible result, and
+      // v2 manufactured it out of a window that excluded the load.
+      //
+      // v3: close the page and open a FRESH one on the same context. The
+      // rejection cookie lives on the context, so the new page loads
+      // consent-denied, and its listener exists before its first request, so
+      // the whole load is inside the window. The window IS the measured
+      // page's lifetime; there is no clear whose ordering can be wrong again.
+      // This is the shape the synthetic-cookie pass has always had, which is
+      // why that pass saw the G100 pings v2 could not.
+      //
+      // test/test-gating-window.mjs asserts BOTH boundaries against a local
+      // fixture: a load-phase request IS measured, and the old page's
+      // post-click beacon is NOT. It was run against v2 and failed before
+      // this version existed.
       try {
         await page.click(clickSel, { timeout: 8000 });
+      } catch (e) {
+        error = `could not click ${clickSel}: ${e.message.split('\n')[0]}`;
+      }
+      if (!error) {
         // Let the rejection persist and the old page settle. Anything that
         // fires here is the PREVIOUS page finishing, and is deliberately not
         // measured.
-        await page.waitForTimeout(3000);
-        await page.reload({ waitUntil: 'load', timeout: 45000 });
+        await page.waitForTimeout(persistMs);
+        await page.close();
         hits.length = 0; gcs.length = 0;
-        await page.waitForTimeout(9000);
-      } catch (e) {
-        error = `could not click ${clickSel}: ${e.message.split('\n')[0]}`;
+        page = await ctx.newPage();
+        arm(page);
+        const resp2 = await page.goto(url, { waitUntil: 'load', timeout: 45000 });
+        status = resp2 ? resp2.status() : status;
+        await page.waitForTimeout(measureMs);
       }
     }
   } catch (e) {
@@ -153,6 +172,19 @@ async function pass(browser, url, cookies, label, clickSel) {
            // G100 = both storage types denied. G111 = both granted.
            gcs: [...new Set(gcs)].sort(),
            optanon_groups_after_load: groups ? groups[1] : null, cookieNames };
+}
+
+// The CLI half. Guarded so importing pass() from a test does not launch a
+// browser at a real site -- run-gating-sweep.mjs spawns this file as a
+// subprocess and takes this path.
+const RUN_AS_CLI = process.argv[1]
+  && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (RUN_AS_CLI) {
+
+const domain = process.argv[2];
+if (!domain) {
+  console.error('usage: node test-gating.mjs <domain>');
+  process.exit(2);
 }
 
 const url = `https://${domain}/`;
@@ -235,3 +267,5 @@ const out = {
         : `NOT FULLY GATED: ${stillFiring.join(', ')} still fired after Reject All`,
 };
 console.log(JSON.stringify(out, null, 2));
+
+}
