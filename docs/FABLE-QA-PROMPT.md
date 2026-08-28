@@ -12,7 +12,7 @@ view, and every fact in them survived the move.
 ---
 
 You are reviewing `cm-automation` as a senior engineer and a product thinker at
-once. Three parts, and **Part 1 is the one I care most about** — it is first
+once. Three parts, and **Part 1 is the one I care most about**. It is first
 for that reason, not because it is easiest.
 
 ## What this system is
@@ -27,15 +27,15 @@ shows in places. Nothing has ever been refactored.
 
 ## Read these first
 
-- `CLAUDE.md` — the project's own rules and, more usefully, a table of roughly
+- `CLAUDE.md`: the project's own rules and, more usefully, a table of roughly
   fifty bugs it has made. Read that table. It is the best single description of
   how this system fails.
-- `docs/DATA-MODEL.md` — inventory, ledger, components. Three layers.
-- `docs/SEVERITY.md` — how a site gets a status, and why "unknown" is never
+- `docs/DATA-MODEL.md`: inventory, ledger, components. Three layers.
+- `docs/SEVERITY.md`: how a site gets a status, and why "unknown" is never
   folded into yes or no.
-- `docs/DO-THIS-NEXT.md` — the current backlog, including six items raised by
+- `docs/DO-THIS-NEXT.md`: the current backlog, including six items raised by
   the team on 2026-08-27.
-- `docs/SESSION-HANDOFF.md`, "PICK UP HERE" — where things stand.
+- `docs/SESSION-HANDOFF.md`, "PICK UP HERE": where things stand.
 
 Then render the pages and look at them:
 
@@ -59,7 +59,7 @@ this review.
 
 ---
 
-## Part 1 — opportunity. The important one.
+## Part 1: opportunity. The important one.
 
 **This system already collects data it does not use.** Find it, and say what
 it is worth.
@@ -80,7 +80,7 @@ Go and look. Query the ledger, read the inventory, open the pages. Then answer:
   JSON file, where the evidence for the pitch is already measured.
 - **What would make a paying client glad they pay**, and what would make a
   non-paying client consider it? A senior dev on the team, Victoria Brake,
-  raised exactly this on 2026-08-27 — see `docs/DO-THIS-NEXT.md` B1.
+  raised exactly this on 2026-08-27. See `docs/DO-THIS-NEXT.md` B1.
 - **Where does the data show risk the agency carries and has not priced?**
 - **What would be cheap and is not built?** A per-client view. A shareable
   read-only page. An export. A "what changed on your site this month" digest.
@@ -89,7 +89,7 @@ Go and look. Query the ledger, read the inventory, open the pages. Then answer:
 Then read Appendix A and tell me what you found that is not in it. That
 difference is the most useful output of this whole review.
 
-## Part 2 — direction
+## Part 2: direction
 
 The system started as "is the fleet patched" and has grown a consent axis, an
 email axis, a component catalogue, and an ownership model. Ask whether that is
@@ -111,7 +111,7 @@ stopped, say that.** A review that can only recommend building more is not a
 review. Parts of this were built in a day and have never been questioned by
 anyone who was not present when they were written.
 
-## Part 3 — codebase QA
+## Part 3: codebase QA
 
 Be specific and rank by consequence. What is fragile, duplicated, untested, or
 wrong.
@@ -152,7 +152,7 @@ Do not implement anything. Do not push, publish, or deploy. This is a review.
 
 ---
 
-## Appendix A — what we already know
+## Appendix A: what we already know
 
 **Read this only after Part 1.** It exists so the review is not spent
 rediscovering things, and so you can tell us what we have missed rather than
@@ -164,7 +164,7 @@ confirming what we have not.
 |---|---|
 | trackers fire before consent, no consent tooling at all | 37 |
 | OneTrust present that clevermethod does not manage | 22 |
-| DMARC published but `p=none` — no enforcement | 49 |
+| DMARC published but `p=none`, so no enforcement | 49 |
 | PHP 8.2, security support ends 2026-12-31 | 46 |
 | plugin backlog of 10 or more | 27 |
 | no health evidence of any kind | 11 |
@@ -190,4 +190,4 @@ Some of those are on a page. Several are one query away and on none.
   serve.
 
 These are known. What is not known is what they are worth, who would pay for
-the work, and what the tool should do about them — which is Part 1.
+the work, and what the tool should do about them, which is Part 1.
