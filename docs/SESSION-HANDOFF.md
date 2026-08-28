@@ -166,23 +166,41 @@ firing — `previous_run_of_same_source`, `coverage_regressions`, ingest's
 
 ### Next, in order
 
-1. ~~**Send Nick the correction.**~~ **DONE. Doug told Nick he was right**, in
-   a different session on 2026-08-28. Recorded here 2026-08-28 because this
-   file said it was still outstanding and it was not — chats share this folder
-   and not each other's history, which is the whole reason this file exists,
-   and it is the second time today a doc told the next session to redo
-   finished work.
+1. **NOTHING HAS BEEN SENT TO NICK.** Corrected 2026-08-28, late: this file
+   said the correction was DONE, because earlier in the session Doug said he
+   had told Nick he was right and it should have been recorded elsewhere. He
+   later said plainly: "i did not send anything to nick yet. i dont have
+   confidence in the tooling." The later statement is the record.
 
-   **Both of Nick's objections were correct and both were our defect**: the
-   trigger he had checked by hand WAS configured correctly, and a compliant
-   site SHOULD still send cookieless pings where our report showed none. The
-   second was v2's window erasing the load it existed to measure.
+   **His reason is the important part and it is not unreasonable.** This
+   instrument has been wrong twice about this exact question, and both times it
+   produced the BEST possible answer -- v1 counted the old page's tail, v2
+   erased the load it existed to measure. A third wrong answer sent to the same
+   person would be the end of the tool's credibility with him.
 
-   **What this session does NOT know**, and should be established rather than
-   assumed by whoever picks this up: whether the v3 numbers were quoted to him
-   (18 of 27 tested, 0 still firing, 14 sending `gcs=G100`), and whether the
-   pass-standard question in item 4 below was put to him at the same time.
-   Ask Doug rather than inferring it from this file.
+   **What the evidence actually supports**, separated so the decision is not
+   all-or-nothing:
+
+   - **The correction itself is well supported and does not depend on the
+     fleet numbers.** It is a claim about TWO sites. Three independent signals
+     agree that `actioncarting.com` and `interstatewaste.com` are fine: the
+     synthetic-cookie pass, the real-click pass, and Nick's own manual check of
+     the trigger.
+   - **The laptop measurement is reproducible.** Three runs nine hours apart --
+     1212, 1322, 2151 -- all identical: 27 roster, 18 tested, 0 leaking.
+   - **The fleet numbers are weaker.** 9 of 27 are untestable, and the CI run
+     reached only 10 of 26 for reasons not yet established.
+
+   **THE GAP THAT WOULD EARN CONFIDENCE, and it is real: this instrument has
+   never once reported a leak.** Zero on 18 sites, three runs running. That is
+   the same shape as both previous defects, and there is no end-to-end proof it
+   would catch a site that genuinely ignores a rejection. `test-gating-window`
+   proves a load-phase request IS measured, which is a window-level positive
+   control, not a sweep-level one. Build a local fixture that ignores the
+   rejection, run it through the real sweep, and assert it comes out as a leak.
+   Until that exists, "0 leaking" is unfalsified rather than verified, and Doug
+   is right to hold.
+
 2. **The `interstatewaste` pass disagreement**, above. Code, and mine to do.
 3. **The 5 Cloudflare-challenged sites.** The WAF skip rule is Matt's existing
    item for the 8 CI-blocked sites; these 5 are the same problem seen from the
