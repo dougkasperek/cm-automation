@@ -275,6 +275,78 @@ check("an api-only site reports wp_unestablished, not this one -- the "
       [r["code"] for r in S.evaluate(apionly())["reasons"]])
 
 # --------------------------------------------------------------------------
+# THE GAP BETWEEN THE TWO GUARDS ABOVE, found 2026-08-28 when the Nexcess SSH
+# scan reached 1 of 22 sites from a GitHub runner instead of the 21 it reaches
+# from a laptop.
+#
+# The scanner behaved perfectly: `wp_checked: false` and the literal string
+# `unknown` for every WordPress fact. Nothing was fabricated. But the site
+# scored a clean OK with an EMPTY reason list, because it fell between both
+# guards:
+#
+#   wp_unestablished          needs `wp is None and nx_wp is None`. The Nexcess
+#                             control plane HAD an app version, so nx_wp is set
+#                             and the rule cannot fire.
+#   wp_update_status_unknown  needed `wp_checked is True`. A scan that FAILED
+#                             sets it False, so the rule could not fire either.
+#   nexcess_app_version_unknown  needs `nx_wp is None`. Same reason.
+#
+# Seven real client sites carrying plugin backlogs would have published as
+# green with no findings. Latent since the SSH scan was built; it surfaced only
+# on the first fleet-wide run where that scan failed.
+#
+# The question the rule answers is "do we know whether anything is pending on
+# this site", and that question does not depend on WHICH tool established the
+# version, or on whether the deep scan succeeded.
+# --------------------------------------------------------------------------
+def ssh_failed(**kw):
+    """Nexcess site: control plane answered, the SSH deep scan did not.
+
+    These are the real facts recorded for eamusicfest.com in
+    health-nexcess-2026-08-28_1428, not an invented shape.
+    """
+    base = dict(site(), wp_checked=False, wp_version="unknown",
+                wp_core_update="unknown", plugin_updates="unknown",
+                theme_updates="unknown", php_version="unknown",
+                db_backup_age_days="unknown", framework="unknown",
+                nexcess_app_version="7.1", nexcess_php_version="8.3")
+    base.update(kw)
+    return base
+
+
+_sf = S.evaluate(ssh_failed())
+_sf_codes = [r["code"] for r in _sf["axes"]["health"]["reasons"]]
+check("a site whose deep scan FAILED does not read OK just because the "
+      "control plane knows its version",
+      _sf["axes"]["health"]["status"] != "OK", _sf["axes"]["health"]["status"])
+check("...and it says something, rather than carrying an empty reason list",
+      len(_sf_codes) > 0, str(_sf_codes))
+check("...and what it says is that the update status is unknown",
+      "wp_update_status_unknown" in _sf_codes, str(_sf_codes))
+
+# The remedies differ, so the two codes must not both fire on one site.
+check("it does not ALSO claim nothing has established the version, which the "
+      "control plane did",
+      "wp_unestablished" not in _sf_codes, str(_sf_codes))
+
+# The neighbouring cases must not move. Each was a bug in its own right.
+check("a site nothing has looked at still reports wp_unestablished",
+      "wp_unestablished" in [r["code"] for r in S.evaluate(apionly())["reasons"]])
+check("the half-scanned Pantheon case still reports the same code",
+      "wp_update_status_unknown" in
+      [r["code"] for r in S.evaluate(halfscanned())["reasons"]])
+check("a fully measured site is still OK and silent",
+      st() == "OK" and "wp_update_status_unknown" not in codes())
+
+# The control plane answering NOTHING is a different finding, and keeps it.
+_nx = S.evaluate(ssh_failed(nexcess_app_version=None))
+check("a Nexcess site with no app version still reports "
+      "nexcess_app_version_unknown",
+      "nexcess_app_version_unknown" in
+      [r["code"] for r in _nx["axes"]["health"]["reasons"]],
+      str([r["code"] for r in _nx["axes"]["health"]["reasons"]]))
+
+# --------------------------------------------------------------------------
 # The production flag. Tri-state on purpose, and null must fail SAFE.
 # --------------------------------------------------------------------------
 check("production null counts as production",

@@ -496,16 +496,47 @@ def evaluate(site, today=None):
     # family, different thing to go and do.
     core_unknown = site.get("wp_core_update") in (None, UNKNOWN)
     plugins_unknown = _num(site.get("plugin_updates")) is None
-    if (site.get("wp_checked") is True and wp_framework
+    # GATED ON THE VERSION BEING KNOWN, NOT ON THE DEEP SCAN HAVING SUCCEEDED.
+    #
+    # This was `site.get("wp_checked") is True` until 2026-08-28, which left a
+    # gap between this rule and the two around it. A Nexcess site whose SSH
+    # scan FAILED records wp_checked=False and `unknown` for every WordPress
+    # fact -- honestly, nothing is fabricated -- and then scored a clean OK
+    # with an EMPTY reason list:
+    #
+    #   wp_unestablished             needs wp is None AND nx_wp is None. The
+    #                                control plane had an app version.
+    #   nexcess_app_version_unknown  needs nx_wp is None. Same reason.
+    #   this rule                    needed wp_checked is True. The scan failed.
+    #
+    # Seven real client sites carrying plugin backlogs would have published as
+    # green. Found when the first fleet-wide SSH scan to FAIL reached 1 of 22
+    # sites; latent from the day the scan was built, because until then it had
+    # always succeeded.
+    #
+    # The question here is "do we know whether anything is pending", and that
+    # does not depend on which tool established the version, nor on the deep
+    # scan succeeding. When NO source has a version, wp_unestablished or
+    # nexcess_app_version_unknown covers the site instead, so the three rules
+    # partition the space rather than overlapping.
+    version_known = wp is not None or nx_wp is not None
+    if (health_seen and wp_framework and version_known
             and (core_unknown or plugins_unknown)):
         missing = []
         if core_unknown:
             missing.append("core update status")
         if plugins_unknown:
             missing.append("plugin backlog")
+        # The old wording claimed the deep scan read the version. It does not
+        # always: on the failed-SSH case the version came from the control
+        # plane and the deep scan read nothing at all. Saying which source
+        # answered is the difference between "find out why WP-CLI refused on
+        # this site" and "this site was never reached".
+        how = ("The deep scan read the WordPress version but could not "
+               if site.get("wp_checked") is True else
+               "The WordPress version is known, but no scan could ")
         add(warn, "wp_update_status_unknown",
-            "The deep scan read the WordPress version but could not establish "
-            "the %s" % " or the ".join(missing))
+            "%sestablish the %s" % (how, " or the ".join(missing)))
 
     # --- Nexcess control-plane rules ---------------------------------------
     # The API answered for this site but told us nothing about the application
