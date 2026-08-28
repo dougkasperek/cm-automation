@@ -107,19 +107,34 @@ as a successful denial.
 
 ### Next, in order
 
-1. **Send Nick the correction.** Human task, and now unblocked: the v3 numbers
-   above are the ones to quote. His second objection — that a compliant site
-   should still send cookieless pings while our report showed none — is
-   answered: 14 of the 18 tested sites send them.
+1. ~~**Send Nick the correction.**~~ **DONE. Doug told Nick he was right**, in
+   a different session on 2026-08-28. Recorded here 2026-08-28 because this
+   file said it was still outstanding and it was not — chats share this folder
+   and not each other's history, which is the whole reason this file exists,
+   and it is the second time today a doc told the next session to redo
+   finished work.
+
+   **Both of Nick's objections were correct and both were our defect**: the
+   trigger he had checked by hand WAS configured correctly, and a compliant
+   site SHOULD still send cookieless pings where our report showed none. The
+   second was v2's window erasing the load it existed to measure.
+
+   **What this session does NOT know**, and should be established rather than
+   assumed by whoever picks this up: whether the v3 numbers were quoted to him
+   (18 of 27 tested, 0 still firing, 14 sending `gcs=G100`), and whether the
+   pass-standard question in item 4 below was put to him at the same time.
+   Ask Doug rather than inferring it from this file.
 2. **The `interstatewaste` pass disagreement**, above. Code, and mine to do.
 3. **The 5 Cloudflare-challenged sites.** The WAF skip rule is Matt's existing
    item for the 8 CI-blocked sites; these 5 are the same problem seen from the
    gating sweep. Until it lands they are unreadable from this instrument, and
    saying so is better than a number that excludes them silently.
 4. B1 is still blocked on CONTENT (`client`/`owner`, Victoria's question), B6
-   is still open, and there are still **no severity codes for gating** until
-   Nick answers what counts as a pass. The measurements are true whatever he
-   says.
+   is still open, and there are still **no severity codes for gating**. That
+   waits on the STANDARD — is "Reject All, then nothing but cookieless pings"
+   a pass? — which is a judgement about what compliance means, not a
+   measurement. Whether it has been put to Nick is unknown here; see item 1.
+   The measurements are true whatever the answer.
 
 ---
 
