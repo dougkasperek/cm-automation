@@ -768,6 +768,20 @@ _gated_untested = [x for x in _m2["sites"]
                    if "gating_tested" in x and x.get("gating_tested") is not True]
 check("...and each is named", all(x["site_id"] in _cp for x in _gated_untested),
       repr([x["site_id"] for x in _gated_untested]))
+# THE REASON SENTENCE IS COMPUTED, NEVER TYPED. "Two of these run a generic
+# banner..." was a hardcoded literal beside a computed count; the day the
+# untested list grew from 3 to 9 (five WAF challenges), the page confidently
+# explained a different list than the one it printed. The only reason the
+# ledger can support is the generic-banner one, from the cold sweep's own
+# vendor fact -- so that is computed, and no other reason is asserted.
+check("the untested call-out never hardcodes its explanation",
+      "Two of these" not in _cp)
+_generic_untested = [x for x in _gated_untested
+                     if x.get("consent_banner_vendor") == "generic"]
+if _generic_untested:
+    check("...the generic-banner count is computed from the vendor fact",
+          ("%d of these run a generic banner" % len(_generic_untested)) in _cp,
+          "expected %d" % len(_generic_untested))
 
 # A COOKIELESS GOOGLE PING IS NOT A LEAK, and the page has to show that
 # distinction rather than imply it: the first fleet run reported 9 sites where

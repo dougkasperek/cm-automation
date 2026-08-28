@@ -2931,10 +2931,22 @@ def render_consent(m):
     # after rejection" is the best possible result, so a site the test could
     # not complete would otherwise read as the cleanest on the fleet.
     if untested:
+        # THE REASON IS COMPUTED, NEVER TYPED. This sentence was the literal
+        # "Two of these run a generic banner..." while the list beside it grew
+        # from 3 to 9 (five WAF challenges on the reject pass, 2026-08-28), so
+        # the page confidently explained a different list than the one it
+        # printed. The generic-banner reason is the only one the ledger can
+        # support -- the cold sweep's own vendor fact -- so that one is
+        # computed and no other reason is guessed at; the rest live in the
+        # run log.
+        generic = [x for x in untested
+                   if x.get("consent_banner_vendor") == "generic"]
+        why = ((" %d of these run a generic banner with no Reject control "
+                "the test knows how to find." % len(generic)) if generic else "")
         A('<p class="notice"><b>%d site(s) could not be tested for gating.</b> '
-          'Not clean &mdash; unread. Two of these run a generic banner with no '
-          'Reject control the test knows how to find. <span class="mono">%s'
-          '</span></p>' % (len(untested), ", ".join(e(x["site_id"]) for x in untested)))
+          'Not clean &mdash; unread.%s <span class="mono">%s'
+          '</span></p>' % (len(untested), why,
+                           ", ".join(e(x["site_id"]) for x in untested)))
 
     A('<h2 class="sec">Every site the sweep reached</h2>')
     # THE OURS TOGGLE. Consent work is done by whoever configures it, and the
