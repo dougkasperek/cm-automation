@@ -67,6 +67,40 @@ the trigger still stands: that pass was never mis-windowed.
 3. Everything in the 2026-08-27 block below still stands otherwise: B1 blocked
    on content, B6 open, no gating severity codes until Nick answers.
 
+### Also 2026-08-28: six review findings fixed, each verified to fail first
+
+An outside review of the whole repo ran today. The gating window above was its
+most urgent item; five more landed the same day, one commit each:
+
+1. **The JSON feed reported the wrong health run, permanently.** `latest`
+   picked by run_id STRING compare, and `health-nexcess-…` sorts after
+   `health-…` on every date, so `/api/fleet-scan` named the 22-site Nexcess
+   run as THE health run while the page showed the 52-site one. Fixed to
+   observed_at; test-page.py asserts feed==page against runs.jsonl.
+2. **Six fabricated red "no" cells in the Aligned column.** The alignment
+   booleans folded "never measured" into False; three-state now, and the
+   candidate rules carry Unknown through instead of printing a confident
+   Fail for a timed-out lookup. The six wrong ledger rows self-correct on
+   the next email-dns run.
+3. **Item 22 on the API leg.** A failed upstream:updates:list recorded a
+   measured-looking 0 (reads as RESOLVED). Now null -> unknown, and the mock
+   finally fails that call so the branch is testable.
+4. **The queued wrong sentence.** page.js printed "0 facts became visible
+   this run (, on undefined sites)" on any quiet run, and claimed the first
+   fact's site count for every fact. Guarded, per-fact counts, DOM-tested in
+   both states. Pages re-rendered and committed.
+5. **CI now runs every offline suite on every push**
+   (`.github/workflows/offline-tests.yml`, incl. both Chromium suites), and
+   test-email-dns.py stops pinning the fleet at 78 — it asserts the scan
+   covers its roster instead.
+6. **build-fleet-inventory.py refuses an existing --out.** A rerun per its
+   own Usage block would have silently erased every hand ruling in the
+   inventory. test-build-inventory.py asserts the refusal.
+
+Not done, still Doug's: the `client`/`owner` content for B1; turning on the
+email-dns and worker-exposure schedules; ruling the four Lactalis redirect
+domains (their consent rows describe lactalisusa.com, not themselves).
+
 ---
 
 ## Previously — 2026-08-27, end of day: everything is pushed, published and deployed
