@@ -194,5 +194,29 @@ check("persist-ledger.sh still prints what dropped when overridden",
 check("persist-ledger.sh defaults the override to off",
       'FLEET_ALLOW_COVERAGE_DROP:-0' in persist)
 
+# --- the push retry loop tells the truth about WHY it failed ---------------
+# 2026-08-28: a consent run lost a 6-minute headed sweep of 79 sites to
+# `remote: fatal error in commit_refs`, a GitHub server error. The scan and the
+# ingest both succeeded; only the push failed, and the runner workspace is
+# discarded, so the observations went with it. The log said "another run got
+# there first, re-ingesting" -- printed for EVERY push failure -- and nothing
+# had raced it: the remote was still on the commit from twenty minutes earlier.
+# One message for every cause, which is the `probe` row in the bug table.
+check("the race message is conditional, not printed for every failure",
+      "non-fast-forward" in persist,
+      "persist-ledger.sh still claims a race for any push failure")
+check("...and a non-race failure prints the actual git error",
+      "NOT because of a concurrent run" in persist)
+check("...and the final error says the scan and ingest succeeded, so the loss "
+      "is understood",
+      "The scan and the ingest both SUCCEEDED" in persist)
+# THE TRAP THIS AVOIDS. persist-ledger.sh runs under `set -e`. A bare
+# `PUSH_ERR="$(git push ...)"` aborts the script on the first failed push --
+# no retry, no message, worse than the bug it was fixing. As an `if` condition
+# it is exempt. Asserted because the difference is one character of structure.
+check("the push capture is the if-condition, so `set -e` cannot kill the loop",
+      'if PUSH_ERR="$(git push' in persist,
+      "a bare assignment under set -e would abort on the first failure")
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

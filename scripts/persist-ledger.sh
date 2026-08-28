@@ -99,17 +99,42 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
     -m "Ingested by ${GITHUB_WORKFLOW:-local} run ${GITHUB_RUN_NUMBER:-0}." \
     -m "${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-.}/actions/runs/${GITHUB_RUN_ID:-0}"
 
-  if git push --quiet origin "HEAD:${BRANCH}"; then
+  # SAY WHICH FAILURE THIS IS. Until 2026-08-28 every push failure printed
+  # "another run got there first, re-ingesting" -- one cause for every cause,
+  # the same defect as `probe` reporting a DNS failure, a TLS trust failure and
+  # a dead host with one word.
+  #
+  # On 2026-08-28 a consent run lost a 6-minute headed sweep of 79 sites to
+  # `remote: fatal error in commit_refs`, a GitHub SERVER error. Nothing had
+  # raced it -- the remote was still on the commit from twenty minutes earlier
+  # and no other ledger-writing workflow had run -- and the log sent a reader
+  # looking for a concurrent run that did not exist.
+  #
+  # A non-fast-forward IS a race, and re-ingesting onto the winner is the right
+  # answer. Anything else is not, and saying so costs nothing.
+  # The assignment is the `if` CONDITION on purpose. This file runs under
+  # `set -e`, so a bare `PUSH_ERR="$(git push ...)"` on its own line would kill
+  # the script on the first failed push -- no retry, no message, worse than the
+  # bug above. As a condition it is exempt.
+  if PUSH_ERR="$(git push origin "HEAD:${BRANCH}" 2>&1)"; then
     echo "ledger pushed to ${BRANCH} (attempt ${attempt})"
     pushed="yes"
     break
   fi
-  echo "push rejected on attempt ${attempt}; another run got there first, re-ingesting"
+  if printf '%s' "$PUSH_ERR" | grep -qiE "non-fast-forward|fetch first|stale info|behind its remote"; then
+    echo "push rejected on attempt ${attempt}: another run got there first, re-ingesting onto it"
+  else
+    # Retried anyway -- a server-side error often clears -- but never described
+    # as a race, and the actual text is printed so the next reader sees it.
+    echo "push FAILED on attempt ${attempt}, and NOT because of a concurrent run:"
+    printf '%s\n' "$PUSH_ERR" | sed 's/^/    /'
+  fi
   sleep $(( attempt * 5 ))
 done
 
 if [ -z "$pushed" ]; then
-  echo "::error::could not push the ledger after ${ATTEMPTS} attempts."
+  echo "::error::could not push the ledger after ${ATTEMPTS} attempts. The scan and the ingest both SUCCEEDED; what was lost is the push, and with it this run's observations, because the runner workspace is discarded. Last error follows."
+  printf '%s\n' "${PUSH_ERR:-（no output captured）}" | sed 's/^/    /'
   exit 1
 fi
 
