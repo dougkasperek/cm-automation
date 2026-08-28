@@ -113,6 +113,12 @@ else
   check "dbmissing: a failed core check is unknown, NOT up-to-date" "unknown" "$(n_of dbmissing wp_core_update)"
   check "dbmissing: a failed plugin call is null, NOT 0"     "null"   "$(n_of dbmissing plugin_updates)"
   check "dbmissing: a failed theme call is null, NOT 0"      "null"   "$(n_of dbmissing theme_updates)"
+  # The API leg has the same obligation as the WP-CLI legs above. A failed
+  # upstream:updates:list left the initialised 0 in place -- a measured-looking
+  # zero that reads as RESOLVED in the change feed and drops the site from the
+  # standing upstream group. The mock fails this call on staleback only.
+  check "staleback: a failed upstream call is null, NOT 0"   "null"   "$(n_of staleback upstream_pending)"
+  check "plugindrift: an answered upstream call still counts" "2"     "$(n_of plugindrift upstream_pending)"
   # WAS "WARN". This is cm-whitelabel's shape: WordPress 6.9.4 on disk, below
   # the 7.0.2 wp2shell floor, with every database-backed call failing. The old
   # bash model had no version floor, so the one genuinely dangerous site in the

@@ -285,9 +285,19 @@ while IFS= read -r site <&3; do
   # --- pending upstream (platform) updates ---
   run_with_timeout "$API_CALL_TIMEOUT" terminus site:upstream:clear-cache "$site" >/dev/null 2>&1 || true
   upstream_json="$(run_with_timeout "$API_CALL_TIMEOUT" terminus upstream:updates:list "$site.dev" --format=json | json_or_empty)" || upstream_json=""
-  upstream_count=0
-  if [ -n "$upstream_json" ] && [ "$upstream_json" != "[]" ]; then
-    upstream_count="$(printf '%s' "$upstream_json" | jq 'length' 2>/dev/null || echo 0)"
+  # A call that produced nothing is NOT zero pending. Every WP-CLI leg records
+  # null/unknown on failure since the item-22 fix (2026-08-23); this API leg
+  # kept its initialised 0, so a timeout recorded a measured-looking zero that
+  # read as RESOLVED in the change feed and dropped the site from the standing
+  # upstream group. terminus answers [] when nothing is genuinely pending;
+  # only an empty (failed or unparseable) response is null. The ledger's
+  # fact() maps JSON null to unknown, same as plugin_updates.
+  if [ -z "$upstream_json" ]; then
+    upstream_count="null"
+  elif [ "$upstream_json" = "[]" ]; then
+    upstream_count=0
+  else
+    upstream_count="$(printf '%s' "$upstream_json" | jq 'length' 2>/dev/null || echo null)"
   fi
 
   # --- WordPress specifics via remote WP-CLI (SSH; skipped in API-only mode) ---
@@ -548,7 +558,9 @@ while IFS= read -r site <&3; do
     [ "$status" = "OK" ] && status="WARN"
     add_note "WP-CLI did not answer for one or more checks; those read unknown"
   fi
-  if [ "$upstream_count" -gt 0 ]; then
+  if [ "$upstream_count" = "null" ]; then
+    add_note "upstream check did not answer; pending upstream reads unknown"
+  elif [ "$upstream_count" -gt 0 ]; then
     [ "$status" = "OK" ] && status="WARN"; add_note "$upstream_count upstream commit(s) pending"
   fi
   if [ "$API_ONLY" -eq 1 ]; then

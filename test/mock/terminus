@@ -157,6 +157,12 @@ JSON
     se="${1:-}"
     case "$se" in
       plugindrift.*) echo '[{"hash":"a1"},{"hash":"b2"}]' ;;
+      # staleback's upstream call FAILS: non-JSON on stdout, non-zero exit.
+      # Every WP-CLI leg records unknown on failure since the item-22 fix;
+      # this API leg kept a measured-looking 0, so a timed-out call read as
+      # "0 pending" and RESOLVED in the change feed. The mock never failed
+      # this call, which is why no test could see it.
+      staleback.*)   echo 'Connection to appserver timed out'; exit 1 ;;
       *)             echo '[]' ;;
     esac
     exit 0
