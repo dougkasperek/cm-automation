@@ -123,16 +123,45 @@ Claude may now run `add`, `commit` and `status`. **Still not `push`** — that i
 outward-facing and stays a human action. If a lock ever does appear, `mv` it:
 `mkdir -p _to_delete && mv .git/index.lock _to_delete/`, then say so.
 
-**Half the premise came back on 2026-08-29.** The repo is still on local disk,
-but a Claude session reaching it through the device bridge cannot delete files
-there either — `rm` returns `Operation not permitted`, the same as on the old
-iCloud volume. That session's first `git status` left a `.git/index.lock`
-behind, and found an older one already sitting in `_to_delete/` from a previous
-session, so this has happened before and nobody noticed. **A session working
-through the bridge checks for the lock after any git command and `mv`s it**,
-and `_to_delete/` needs a person to empty it. The rule stays lifted; what
-changed is that "Claude could not delete files on that volume" is true again
-for one access path.
+**Half the premise came back on 2026-08-29, and it is worse than one lock.**
+The repo is still on local disk, but a Claude session reaching it through the
+device bridge cannot delete files there — `rm` returns `Operation not
+permitted`, the same as on the old iCloud volume. Git creates a temporary file
+for almost everything and unlinks it afterwards, so through the bridge every
+git command leaves litter:
+
+- `git status` and `git log` leave `.git/index.lock`.
+- `git add` leaves an orphaned `.git/objects/XX/tmp_obj_*` per object written.
+- `git commit` leaves `index.lock`, **`HEAD.lock`** and
+  `objects/maintenance.lock`.
+
+**`HEAD.lock` is the one that matters** — it blocks the next ref update, so the
+next commit from any client fails until it is gone. One session's work left 47
+such files. They all match `*.lock` or `tmp_obj_*`, and no real git object
+does, so the cleanup is one command:
+
+```bash
+cd ~/dev/cm-automation
+mkdir -p _to_delete/git-locks
+find .git \( -name "*.lock" -o -name "tmp_obj_*" \) \
+  -exec sh -c 'mv "$1" _to_delete/git-locks/$(echo "$1" | sed "s|^\./*\.git/||; s|/|_|g")' _ {} \;
+git fsck --no-dangling      # confirm the repo is still sound
+```
+
+Run it after any git command through the bridge, and `git fsck` afterwards
+rather than assuming. `_to_delete/` needs a person to empty it; an `index.lock`
+from an earlier session was already sitting there unnoticed.
+
+**The bridge VM also has no git identity.** `git commit` there fails with
+`Author identity unknown` before it writes anything. Commit with the repo's own
+identity passed on the command line, so nothing is written to `.git/config`:
+
+```bash
+git -c user.name="Doug Kasperek" -c user.email="doug@clevermethod.com" commit -F msg.txt
+```
+
+The rule stays lifted; what changed is that "Claude could not delete files on
+that volume" is true again for one access path.
 
 Kept rather than deleted because it is another written-down rule that outlived
 its reason. Check a claim before acting on it, including the claims in this file.
