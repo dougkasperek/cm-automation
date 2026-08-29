@@ -8,7 +8,81 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-28, afternoon: the v3 re-run is DONE, ingested and published. Nick is next, and he is a human task
+## PICK UP HERE — 2026-08-29: a SUBTRACTION session. Do not add anything
+
+**Doug, at the end of 2026-08-28, looking at the page he designed:** *"the page
+is already extremely busy and borderline trying to do too much."*
+
+He is right, and the previous session made it worse before it noticed. The next
+session's job is to take things OFF — the page, and the codebase. **If you find
+yourself adding a feature, you are in the wrong session.**
+
+### What is already true, so nothing needs re-establishing
+
+All six scans run in GitHub Actions. The dashboard is current across every
+source and was verified by reading it back out of R2, not by trusting a green
+check. Gating is scored (`consent_gating_leak`, 0 sites leaking) and, since
+2026-08-28, **the sweep is proven able to catch a leak** — `test-gating-leak.mjs`
+plants three sites and requires the verdict to tell them apart, verified against
+both real regression directions. All 14 Python suites and both Chromium suites
+pass.
+
+### The case for subtraction, in the words of the page itself
+
+The fleet page now carries: a banner with its own predicate, seven lane tiles
+each with a gloss, two tabs, a tools row with two checkboxes, a seven-symbol
+key, a Workbook paragraph, a thesis line, per-column denominators, 85 rows of
+roughly 14 columns, and a site drawer. Several of those explain overlapping
+things.
+
+**The pattern to hold onto: adding an explanation where something is USED
+usually makes an explanation somewhere else dead.** That happened on
+2026-08-28 — the lane glosses moved up to the tiles, which made the key list's
+prose enumeration of the same seven lanes redundant, and nobody noticed until
+Doug said the page was too busy. One line was cut. There are more.
+
+### Candidates, in the order I would look at them
+
+None of these is a decision already made. Each needs the page opened and read.
+
+1. **The audit-workbook checkbox.** Adds four columns behind a toggle, for
+   per-site security claims **nobody has re-confirmed**, and it needs a full
+   paragraph in the key to explain what they are. Ask what it is for and who
+   has used it. If the answer is "the workbook is what this page replaces",
+   that is an argument for removing it, not keeping it.
+2. **The key list.** Seven symbol definitions plus the Workbook paragraph plus
+   a lane-order sentence, sitting under a thesis line and above columns that
+   carry their own denominators. Four things explaining adjacent concepts.
+3. **`render()` and `--legacy-out`.** CLAUDE.md says retire them after one
+   published cycle. That cycle happened days ago. Not on the page, but it is a
+   second page that has to keep working, and `test-ledger.py` still carries
+   `RD.render(...)` assertions for it.
+4. **The `/components` page and the `/consent` page** — not to remove, but to
+   ask what the fleet page is still doing that one of them does better. Moving
+   something OFF the main page is subtraction too.
+
+### The rule that makes this session hard, and is the point
+
+**Every one of those exists because someone had a reason.** The bug table is a
+list of things that went wrong when a page said less than it knew. Subtracting
+is therefore riskier here than adding, and the test is not "is this used" but
+**"if this were gone, what would a reader get wrong?"** If the answer is
+nothing, cut it. If the answer is something, the fix is usually to move it
+where the thing it explains already is — not to keep both.
+
+Do not cut anything that names an absence. `n/a`, hatched cells, "unmeasured,
+not clean", the coverage denominators and the banner predicate are all load
+bearing; they are what stops this page reading as an all-clear.
+
+### Before touching the page
+
+`node test/test-page.mjs` must pass before and after, and **render the page and
+look at it** — most of the bug table was found that way. `test-page.py`
+asserts the page never says "all good"; keep it that way.
+
+---
+
+## Previously — 2026-08-28, afternoon: the v3 re-run is DONE, ingested and published
 
 **Nothing in this repo is waiting on code right now.** State verified this
 afternoon rather than read off this file, which is the point of the paragraph
