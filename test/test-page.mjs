@@ -248,6 +248,20 @@ check('...nor their N/M fractions', !/\d+\/\d+/.test(bnSub), bnSub.slice(0, 160)
 // defined a symbol; both explained things stated better elsewhere (the site
 // drawer, and the group headers you can see). Property: every item in the key
 // defines one glyph. Prose has no swatch, so it cannot pass.
+// THE MASTHEAD IS A TITLE, NOT AN ABSTRACT. Until 2026-08-29 a paragraph sat
+// under the h1 -- "One row per site, one column per question. Hatched is
+// unmeasured. Schedule tab: the same evidence arranged by decision." -- whose
+// three clauses were each stated lower down, beside the thing they describe
+// and in a form that follows the data. A summary of a page, at the top of the
+// page, is three more copies to keep true, and static copy beside live counts
+// is the defect this file already pins in two other places. Property: the
+// masthead holds the title and the sweep strip, and no prose.
+// NOTE: the CONSENT page keeps its `p.thesis`, legitimately -- it states the
+// two-question distinction that page exists for and that page says nowhere
+// else. This check runs against the fleet page only.
+const topParas = await page.$$eval('header.top p', els => els.map(e => e.textContent.trim()));
+check('the masthead carries no prose paragraph', topParas.length === 0, JSON.stringify(topParas));
+
 const keyItems = await page.$$eval('.key li', els =>
   els.map(e => ({ hasSwatch: !!e.querySelector('.cell'), words: e.textContent.trim().split(/\s+/).length })));
 check('the key has an entry per cell state', keyItems.length >= 5, String(keyItems.length));
@@ -376,6 +390,44 @@ const items = await page.$$eval('#view-schedule .item', els => els.length);
 check('the schedule tab has its decisions', items >= 4, items);
 const itemNums = await page.$$eval('#view-schedule .it-num', els => els.map(e => e.textContent));
 check('every schedule item states what it is counted over', itemNums.every(t => /of \d+|components|installs/.test(t)), itemNums.join(' | '));
+// THE SIDE PANEL DESCRIBES THIS TAB, and until 2026-08-29 its last paragraph
+// described a different one: "The 4 sites that need a person today, the
+// rulings and the coverage gaps stay in the matrix" -- while the column
+// beside it listed iroquoisfence.com, one of those four, and the panel's own
+// FIRST paragraph said so. A backlog site that needs a person for some other
+// reason is still a scheduling decision and is listed here. Rulings and
+// coverage gaps really are absent, so that clause survived the cut.
+// Measured while writing this: THREE of the four needs-a-person sites appear
+// somewhere in the Schedule column -- iroquoisfence.com as a backlog decision
+// of its own, hoffmanscheese and runtalnorthamerica.com inside the install
+// lists of batched components. So the old sentence was not off by one site,
+// it was off by three, and no version of "those sites are elsewhere" is true.
+// There is deliberately NO positive check that the panel names them: a site
+// inside a component's install list is not a decision about that site, and a
+// check demanding the panel name it would fail on a correct page.
+const sideText = await page.$eval('.sched-side', e => e.textContent);
+check('the schedule panel never says the needs-a-person sites are only in the matrix',
+      !/need s?a person[^.]*stay in the matrix/.test(sideText),
+      (sideText.match(/[^.]*stay in the matrix[^.]*/) || [''])[0]);
+
+// THE RECONCILIATION IS ARITHMETIC, so check the arithmetic rather than the
+// wording. The inline version recomputed its filter three times in one
+// sentence and hardcoded the plural, printing "the other 1
+// (iroquoisfence.com) need a person ... and are listed here too" every day
+// the count was 1 -- which was every day the page has existed. At a count of
+// 0 the same sentence would have rendered an empty parenthesis; that branch
+// had never run.
+const split = sideText.match(/(\d+) sites carry a warning that is only a WordPress or plugin backlog\. (\d+) of them sit under "needs scheduling" in the matrix(?:; the other (\d+) \(([^)]*)\) (needs?) a person for something else first and (is|are) listed here too\.|, and every one of them is listed here\.)/);
+check('the schedule panel reconciles the backlog against the matrix', !!split, sideText.slice(0, 220));
+check('...its two halves add up to its total',
+      !!split && Number(split[2]) + Number(split[3] || 0) === Number(split[1]),
+      split ? split.slice(1, 4).join(' / ') : 'no match');
+check('...and its verbs agree with the count it just printed',
+      !!split && (!split[3] || (Number(split[3]) === 1
+        ? (split[5] === 'needs' && split[6] === 'is')
+        : (split[5] === 'need' && split[6] === 'are'))),
+      split ? 'n=' + split[3] + ' "' + split[5] + '" "' + split[6] + '"' : 'no match');
+
 check('the URL records the view', page.url().includes('view=schedule'));
 
 console.log('\n-- narrow screens --');

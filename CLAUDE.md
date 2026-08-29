@@ -123,6 +123,17 @@ Claude may now run `add`, `commit` and `status`. **Still not `push`** — that i
 outward-facing and stays a human action. If a lock ever does appear, `mv` it:
 `mkdir -p _to_delete && mv .git/index.lock _to_delete/`, then say so.
 
+**Half the premise came back on 2026-08-29.** The repo is still on local disk,
+but a Claude session reaching it through the device bridge cannot delete files
+there either — `rm` returns `Operation not permitted`, the same as on the old
+iCloud volume. That session's first `git status` left a `.git/index.lock`
+behind, and found an older one already sitting in `_to_delete/` from a previous
+session, so this has happened before and nobody noticed. **A session working
+through the bridge checks for the lock after any git command and `mv`s it**,
+and `_to_delete/` needs a person to empty it. The rule stays lifted; what
+changed is that "Claude could not delete files on that volume" is true again
+for one access path.
+
 Kept rather than deleted because it is another written-down rule that outlived
 its reason. Check a claim before acting on it, including the claims in this file.
 
@@ -238,6 +249,9 @@ do not add a total.
 | `4 trackers` on a site the sweep COULD see | 6. Hotjar and Meta Pixel detect automation and decline to fire, so a headless browser cannot see them on ANY site. Every headless count was a floor printed as a total |
 | Pantheon blocks the scanner, and the fix is an allowlist | a Cloudflare bot challenge, and the variable was HEADLESS. Headed loads 27 of the 28 "blocked" sites. Three separate wrong answers were written down before anyone changed one setting and measured |
 | a current-looking dashboard | three of four workflows ingested and never published |
+| the Schedule panel: "the N sites that need a person today, the rulings and the coverage gaps stay in the matrix" | three of the four were on the Schedule tab. `iroquoisfence.com` as a backlog decision of its own, `hoffmanscheese` and `runtalnorthamerica.com` inside batched components' install lists. The panel's own FIRST paragraph named the first of them |
+| `the other 1 (iroquoisfence.com) need a person for something else first and are listed here too` | one site. The plural was hardcoded, and the count has been 1 every day the page has existed, so the sentence was ungrammatical on every render |
+| four commits unpushed, `origin/main` at `29a650f` | `origin/main` was `be0b75c`, the same as HEAD. Written into the handoff by the session that made the commits, and read forward into the next one |
 | `js.cookie.min.js` in `cmpScripts` | a WooCommerce helper, not a consent manager |
 | the Worker is read-only, no write route, no secrets | true of the repo; the DEPLOYED Worker still had `PUT /api/publish/` and its `PUBLISH_TOKEN` |
 | `workers_dev = false` is pinned in `wrangler.toml` | it sat below `[[routes]]`, so TOML made it a key of the ROUTE. Wrangler had never applied it and refused to deploy the first time anyone tried |
@@ -513,6 +527,23 @@ The previous page is `render()` behind `--legacy-out` for one cycle.
   test for a candidate is not "is this used" but "if this were gone, what would
   a reader get wrong" — and when the answer is something, the fix is to move it
   next to what it explains, not to keep both.
+- **Subtraction pass 2026-08-29, second one.** The masthead's `p.thesis` went:
+  its three clauses are each stated lower down, beside what they describe and
+  in a form that follows the data — the tools row's live row/question count,
+  the key's "not measured — an absence, never a pass", and the Schedule
+  panel's "This tab arranges the backlog by the decision instead of the site".
+  The Schedule panel's fifth paragraph went from three clauses to one: two
+  restated its first paragraph and the third was false (see the bug table).
+  The clause that survived names an absence, which is the one thing these
+  passes do not cut. **730px → 707px before the first data row, 320 → 301
+  chrome words**, measured with `_scratch/measure-page.mjs` in headless
+  Chromium 141 on Linux — NOT comparable to the 697px in the 2026-08-29
+  handoff, which was measured on a mac with different fonts. Run the script on
+  the machine you want the number for; it states its own definitions.
+- **The CONSENT page still uses `.top .thesis`.** `render-dashboard.py` emits
+  one in that page's header and that page inlines `page.css`. The rule is
+  commented as consent-only; do not delete it because the fleet page stopped
+  using it.
 - **The DOM test IS in CI, since 2026-08-28**, in `offline-tests.yml`, reusing
   the playwright install `fleet-consent.yml` already pays for. This bullet said
   the opposite for a day and told people to run it by hand instead.
@@ -607,7 +638,7 @@ python3 test/test-access-policies.py  # 46   offline, no token
 python3 test/test-ledger.py       # 319
 python3 test/test-severity.py     # 166
 python3 test/test-page.py         #  35   offline; the page's model is the feed's, never "all good"
-node test/test-page.mjs           #  63   headless Chromium; the rendered DOM. Needs `npm install`.
+node test/test-page.mjs           #  68   headless Chromium; the rendered DOM. Needs `npm install`.
                                   #       RENDER FIRST -- it opens ./fleet.html,
                                   #       a committed artifact, and renders
                                   #       nothing itself
@@ -648,6 +679,17 @@ python3 test/test-wp-calls.py     #  48   offline, drives the mock
 - **A test that only passes in one environment is not passing.** This suite has
   been broken by a gitignored directory, by a positional index, and by stdin
   being a terminal.
+- **Four suites cannot run through the Claude device bridge, as of
+  2026-08-29.** `test-email-dns.py` wants dnspython, which the bridge VM does
+  not have; `test-wp-calls.py` exceeds the bridge's 45s call cap, like
+  `run-local-test.sh`; and the three Chromium suites cannot launch a browser
+  there, because `npx playwright install` is refused by the egress allowlist
+  (`403 Connection blocked by network allowlist`). A session working through
+  the bridge can render the page and run every offline Python suite except
+  those two, and must say which suites it did NOT run rather than reporting
+  "all suites pass". `test-page.mjs` can be run by copying `fleet.html` and
+  the test into an environment that has Chromium; that is how the 2026-08-29
+  session verified its three new checks failed before they passed.
 
 ---
 

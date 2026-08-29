@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-29.** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-29 (evening).** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,7 +8,186 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-29: page work DONE and committed, NOT pushed
+## PICK UP HERE — 2026-08-29, evening: two more cuts, and a correction
+
+### The correction first
+
+**The block below this one says `origin/main` is `29a650f` and four commits are
+unpushed. That was wrong when it was written.** Measured this session:
+
+    $ git ls-remote origin main
+    be0b75c30ad8cff2e033f45db16663c7f900dae7	refs/heads/main
+
+`git rev-list --count be0b75c..<remote>` is 0. Nothing was unpushed. The claim
+was written by the session that made those commits and read forward into the
+next one, which is the same shape as every row in CLAUDE.md's bug table. It has
+a row of its own now.
+
+**`git status` through the device bridge leaves a `.git/index.lock` that the
+bridge cannot delete.** One was left this session and moved to `_to_delete/`,
+where an older one from a previous session was already sitting. See the
+hard-boundaries section of CLAUDE.md; `_to_delete/` needs a person to empty it.
+
+### State
+
+`HEAD` and `origin/main` were `be0b75c` at the start of this session. This
+session's work is committed on top and **is not pushed**. Nothing published;
+`publish-dashboard.sh` has not run. Rendering on a new day dirties `fleet.html`
+and `components.html` by one line — the embedded `"generated"` date — and
+nothing else; the fleet counts were byte-identical to the committed artifact.
+
+### What came off
+
+**The masthead's `p.thesis`.** `One row per site, one column per question.
+Hatched is unmeasured. Schedule tab: the same evidence arranged by decision.`
+Each clause is stated lower down, beside the thing it describes and in a form
+that follows the data — the tools row's live `85 rows · 16 questions`, the
+key's `not measured — an absence, never a pass`, and the Schedule panel's
+`This tab arranges the backlog by the decision instead of the site`. All three
+were checked on the rendered page, not in the source, before the cut.
+
+**The `.top .thesis` CSS rule stays.** The consent page emits its own
+`p.thesis` and inlines `page.css`. The rule is commented as consent-only now.
+
+**The Schedule panel's fifth paragraph, from three clauses to one.** It read
+"Nothing here is an emergency. The 4 sites that need a person today, the
+rulings and the coverage gaps stay in the matrix; this tab is the maintenance
+calendar." Two clauses restated paragraph 1. **The third was false**, and that
+was found by reading the rendered Schedule column for site ids rather than by
+reading the copy: three of the four needs-a-person sites are on that tab —
+`iroquoisfence.com` as a backlog decision of its own, `hoffmanscheese` and
+`runtalnorthamerica.com` inside batched components' install lists. Paragraph 1
+of the same panel said the first of those explicitly. It now reads:
+
+> Rulings and coverage gaps are not scheduled here; they stay in the matrix.
+
+Rulings and coverage gaps really are absent from the tab — the six decisions
+are all drift and maintenance. Naming an absence is the one thing these passes
+do not cut.
+
+### One bug fixed on the way, found by looking at the page
+
+Paragraph 1 printed `the other 1 (iroquoisfence.com) need a person for
+something else first and are listed here too`. The plural was hardcoded, and
+the count has been 1 every day the page has existed, so that sentence was
+ungrammatical on every render anyone has seen. The inline version also
+recomputed its filter three times in one sentence, and at a count of 0 would
+have rendered an empty parenthesis — a branch that had never run.
+
+`backlogScheduled` and `backlogElsewhere` are named once in `AGG` now, and the
+paragraph is built by `schedIntro()`, which has the zero branch and agrees its
+verbs with the count it just printed.
+
+### Measurement
+
+| | before | after |
+|---|---|---|
+| first data row | 730px | **707px** |
+| page height | 4400px | 4377px |
+| chrome words | 320 | **301** |
+
+**These are NOT comparable to the 697px in the block below.** That figure was
+measured on Doug's mac; these were measured in headless Chromium 141 on Linux,
+which has different fonts and wraps differently. What is comparable is the
+delta: **-23px and -19 words**, both measured this session on the same page in
+the same browser.
+
+`_scratch/measure-page.mjs` is new and committed, because every earlier session
+measured this by hand and quoted a number the next one could not reproduce. It
+states its own definitions in its header. Run it where you want the number:
+
+```bash
+./scripts/render-dashboard.py --out fleet.html --components-out components.html
+node _scratch/measure-page.mjs fleet.html
+```
+
+### Tests
+
+`test-page.mjs` is **63 → 68**. Three new checks, **each verified to fail
+against the previous page** before it was fixed:
+
+- the masthead carries no prose paragraph
+- the Schedule panel never says the needs-a-person sites are only in the matrix
+- the panel's backlog split reconciles, adds up, and agrees its verbs with its
+  own count
+
+A fourth check was written and **removed for being wrong**: it demanded the
+panel name every needs-a-person site the Schedule column mentions, which fails
+on a correct page, because a site inside a component's install list is not a
+decision about that site. The reason is written above the surviving checks so
+nobody adds it back.
+
+`test-page.py` went red once on the way and it was a real catch: its
+typed-count rule reads comments too, so a comment saying "the four sites"
+tripped it. Reworded, not suppressed.
+
+**13 of 17 suites were run this session, all green.** score-scan 27,
+consent-rulings 17, nexcess-ssh 43, worker-exposure 48, workflows 67,
+access-policies 46, ledger 319, severity 166, page.py 35, build-inventory 6,
+nexcess 96, consent 126, and page.mjs 68.
+
+**Four were NOT run**, all for environment reasons, none touched by this
+change. Run these on the mac before pushing:
+
+```bash
+cd ~/dev/cm-automation
+python3 test/test-email-dns.py      # needs dnspython
+python3 test/test-wp-calls.py       # exceeds the device bridge's 45s cap
+node test/test-gating-leak.mjs      # needs Chromium
+node test/test-gating-window.mjs    # needs Chromium
+```
+
+The bridge VM cannot install a browser: `npx playwright install` is refused
+with `403 Connection blocked by network allowlist`. This is now in CLAUDE.md's
+testing section.
+
+### Still on the table
+
+- **The Evidence tab has no sub-label while Schedule has one.** Unchanged and
+  still deliberate.
+- **`render()` and `--legacy-out`.** Examined this session, not touched, and
+  **it is not the small delete this file has been calling it.** `render()` is
+  ~1,460 lines (3,364–2,827 in `render-dashboard.py`), with ten `RD.render(...)`
+  assertion sites in `test-ledger.py` and one in `test-page.py`. Three of the
+  strings those assertions pin appear **only** in the legacy page and nowhere
+  in `fleet.html`:
+
+      no site is UNKNOWN on health
+      had no recorded From: address at all
+      all agreeing with what was recorded
+
+  The first is the copy behind the `UNKNOWN: 0` row in CLAUDE.md's bug table.
+  Deleting `render()` deletes that coverage unless those assertions are
+  re-pointed at the new page, or the copy is consciously dropped from the
+  product. That is a decision about what the new page should say, not a
+  cleanup. Give it its own session.
+- **The green-state residual is TWO instances, not one.** The block below
+  names the backlog count. `unmeasured` in the same sentence has the same
+  defect: it is `D.no_health_evidence.length` printed above a `Not established`
+  chip computed from the lane. Both were 11 on 2026-08-29 over different sets —
+  one holds `elderwoodipa.com`, the other holds `app.eastauroracc.com`. That is
+  exactly the coincidence the red branch's own comment warns about, still live
+  in the green branch. Green has never occurred on this fleet, so nobody has
+  seen either. Fixing them edits the sentence `test-page.mjs` pins as the
+  not-an-all-clear guarantee; decide the replacement copy first.
+- **"The page renders the last GOOD run per source"** (DECIDED 2026-08-28).
+  Still the next substantial piece. Untouched.
+
+### To resume, cold
+
+```bash
+cd ~/dev/cm-automation
+./scripts/render-dashboard.py --out fleet.html --components-out components.html
+node test/test-page.mjs
+for t in test/test-*.py; do echo "== $t"; python3 "$t"; done
+open fleet.html
+```
+
+**Render BEFORE testing, every time.** `test-page.mjs` renders nothing.
+
+---
+
+## Previously — 2026-08-29, morning: three passes on the page (superseded above)
 
 **Three commits, none pushed.** `HEAD` is `cc28ac7`; `origin/main` is still on
 `29a650f`, checked with `git ls-remote` rather than inferred. Working tree

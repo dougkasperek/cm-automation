@@ -302,6 +302,13 @@ const AGG = (() => {
   const c = COUNTED;
   const byLane = {}; for (const s of SITES) (byLane[lane(s)] ||= []).push(s);
   const backlogOnly = c.filter(s => s.health.status === 'WARN' && codes(s, 'health').every(x => BACKLOG.has(x)));
+  /* The two halves, named once. The Schedule panel used to recompute this
+     filter three times in one sentence, and the Schedule tab lists BOTH
+     halves -- a backlog site that needs a person for some other reason is
+     still a scheduling decision. Splitting it here is what lets the panel
+     say so instead of claiming those sites are only in the matrix. */
+  const backlogScheduled = backlogOnly.filter(s => lane(s) === 'schedule');
+  const backlogElsewhere = backlogOnly.filter(s => lane(s) !== 'schedule');
   const warnUnest = c.filter(s => s.health.status === 'WARN' && codes(s, 'health').some(x => UNESTABLISHED.has(x)));
   const pendingSites = SITES.filter(s => (isMeasured(s.f.plugin_updates) && s.f.plugin_updates > 0) || (isMeasured(s.f.theme_updates) && s.f.theme_updates > 0));
   const pluginTotal = SITES.reduce((n, s) => n + (isMeasured(s.f.plugin_updates) ? s.f.plugin_updates : 0), 0);
@@ -315,7 +322,7 @@ const AGG = (() => {
   }
   const fullRuns = D.all_runs.filter(r => r.source === 'health' && r.mode === 'full' && r.site_count > 3);
   const nexcess = SITES.filter(s => s.host === 'CM Nexcess');
-  return { byLane, backlogOnly, warnUnest, pendingSites, pluginTotal, themeTotal, inventoried, grew, same, shrank, withHist, wpMoved,
+  return { byLane, backlogOnly, backlogScheduled, backlogElsewhere, warnUnest, pendingSites, pluginTotal, themeTotal, inventoried, grew, same, shrank, withHist, wpMoved,
            histFrom: fullRuns[0]?.observed_at, histTo: fullRuns[fullRuns.length - 1]?.observed_at, fullRunCount: fullRuns.length, nexcess };
 })();
 
@@ -744,14 +751,45 @@ const attTotals = (() => {
   return out;
 })();
 
+/* The Schedule panel's opening paragraph. A function because it has a branch:
+   backlogElsewhere can be empty, and the inline version could not say so --
+   at a count of 0 it would have rendered "the other 0 () need a person for
+   something else first", a sentence with an empty parenthesis in it. It has
+   never been 0 on this fleet, which is why nobody saw it. The same inline
+   version also hardcoded the plural and printed "the other 1
+   (iroquoisfence.com) need a person ... and are listed here too" every day
+   the count was 1, which was every day. */
+function schedIntro() {
+  const n = AGG.backlogElsewhere.length;
+  let t = AGG.backlogOnly.length + ' sites carry a warning that is only a WordPress or plugin backlog. '
+        + AGG.backlogScheduled.length + ' of them sit under "needs scheduling" in the matrix';
+  if (n) {
+    t += '; the other ' + n + ' (' + AGG.backlogElsewhere.map(s => s.id).join(', ') + ') need'
+       + (n === 1 ? 's' : '') + ' a person for something else first and ' + (n === 1 ? 'is' : 'are')
+       + ' listed here too.';
+  } else {
+    t += ', and every one of them is listed here.';
+  }
+  return t + ' This tab arranges the backlog by the decision instead of the site. A WordPress release is one decision per target version; a plugin is one decision per component, because every install wants the same version.';
+}
+
 $('#app').append(h('div', { class: 'wrap' },
   h('header', { class: 'top' },
     h('div', {}, /* The counts are in the tools row, above the table, where they are LIVE --
    they follow the filter. This masthead copy and the Evidence tab label were
    both static, so a reader filtering down to one host read the whole-fleet
-   total twice beside a much shorter table. Three copies, one of them true. */
-      h('h1', {}, 'clevermethod fleet', h('small', {}, 'read-only')),
-      h('p', { class: 'thesis' }, 'One row per site, one column per question. Hatched is unmeasured. Schedule tab: the same evidence arranged by decision.')),
+   total twice beside a much shorter table. Three copies, one of them true.
+
+   NO PROSE PARAGRAPH HERE. Until 2026-08-29 a `p.thesis` sat under the h1:
+   "One row per site, one column per question. Hatched is unmeasured. Schedule
+   tab: the same evidence arranged by decision." Each clause is stated lower
+   down, next to the thing it describes and in a form that follows the data:
+   the tools row's live row/question count, the key's "not measured -- an
+   absence, never a pass", and the Schedule panel's "This tab arranges the
+   backlog by the decision instead of the site." An abstract of a page, at the
+   top of the page, is three more copies to keep true. test-page.mjs asserts
+   header.top carries no paragraph. */
+      h('h1', {}, 'clevermethod fleet', h('small', {}, 'read-only'))),
     h('div', { class: 'sweep' }, ...sweep.map(([name, r]) => h('div', { class: ageDays(r.observed_at) > 1 ? 'stale' : '' }, name + ' ', h('b', {}, fmtEastern(r.observed_at)), ' ' + (r.deep_scanned ?? '?') + '/' + r.site_count)))),
   banner(),
   tabs,
@@ -768,11 +806,24 @@ $('#app').append(h('div', { class: 'wrap' },
       h('div', { class: 'sched-main' }, ...col2),
       h('aside', { class: 'sched-side' },
         h('h2', {}, 'Reading this view'),
-        h('p', {}, AGG.backlogOnly.length + ' sites carry a warning that is only a WordPress or plugin backlog. ' + AGG.backlogOnly.filter(s => lane(s) === 'schedule').length + ' of them sit under "needs scheduling" in the matrix; the other ' + AGG.backlogOnly.filter(s => lane(s) !== 'schedule').length + ' (' + AGG.backlogOnly.filter(s => lane(s) !== 'schedule').map(s => s.id).join(', ') + ') need a person for something else first and are listed here too. This tab arranges the backlog by the decision instead of the site. A WordPress release is one decision per target version; a plugin is one decision per component, because every install wants the same version.'),
+        h('p', {}, schedIntro()),
         h('p', {}, 'Counts carry the set they are counted over. "Of ' + D.components.sites_inventoried.length + ' inventoried sites" is not the fleet: ' + D.components.sites_missing.length + ' Pantheon and Nexcess sites have no component list, and ' + (SITES.length - D.components.expected.length) + ' sites are on hosts no inventory reaches.'),
         h('p', {}, 'The arrow beside a count is movement since the previous run of the same tool, from the ledger\'s own baseline. "No baseline" means the instrument changed and no honest comparison exists.'),
         h('p', {}, h('a', { href: '/components' }, 'Full component catalogue'), ' — every plugin, mu-plugin and theme, with the sites that run each.'),
-        h('p', {}, 'Nothing here is an emergency. The ' + SITES.filter(s => lane(s) === 'person').length + ' site' + (SITES.filter(s => lane(s) === 'person').length === 1 ? '' : 's') + ' that need a person today, the rulings and the coverage gaps stay in the matrix; this tab is the maintenance calendar.')))),
+        /* WHAT IS NOT ON THIS TAB, and nothing else. This paragraph read
+           "Nothing here is an emergency. The N sites that need a person
+           today, the rulings and the coverage gaps stay in the matrix; this
+           tab is the maintenance calendar." Two of its three clauses restated
+           the first paragraph, and the third was FALSE: on 2026-08-29 the
+           Schedule column listed iroquoisfence.com, a site the "needs a
+           person" lane names, while this sentence said those sites stay
+           in the matrix. (Spelling out the lane's count here would trip
+           test-page.py's typed-count check, which reads comments too.) The first paragraph said the opposite in the same
+           panel. Checked by reading the rendered column for the id, not by
+           reading the code. Rulings and coverage gaps ARE absent from this
+           tab, so that clause stays -- naming an absence is the one thing
+           these subtraction passes never cut. */
+        h('p', {}, 'Rulings and coverage gaps are not scheduled here; they stay in the matrix.')))),
   h('div', { class: 'below' },
     h('section', {}, h('h2', {}, 'What the audit workbook claims, and what the plugin inventory can see'),
       h('p', {}, 'The audit workbook is the manual spreadsheet this page replaces. Every attestation was imported from it with no confirming person or date, and nobody here has re-confirmed one. Where a claim names a plugin, the component inventory can confirm it; open any site to see its claims beside what was measured.'),
