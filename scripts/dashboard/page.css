@@ -132,12 +132,6 @@ table.matrix thead tr.groups th { font-size: 10.5px; text-transform: uppercase; 
 table.matrix thead tr.cols th { padding: 2px 6px 6px; font-size: 11.5px; line-height: 1.2; border-bottom: 2px solid var(--ink); }
 table.matrix thead tr.cols th .cov { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink2); margin-top: 2px; }
 table.matrix thead tr.cols th .cov.short { color: var(--warn-ink); }
-table.matrix thead tr.census th { padding: 0 6px 6px; border-bottom: 1px solid var(--line); }
-.census-bar { display: flex; height: 6px; gap: 1px; width: 100%; }
-.census-bar i { display: block; height: 100%; }
-.cb-crit { background: var(--crit); } .cb-warn { background: var(--warn); } .cb-good { background: color-mix(in srgb, var(--good) 45%, transparent); }
-.cb-abs { background: repeating-linear-gradient(135deg, transparent 0 2px, var(--ink2) 2px 3px); opacity: 0.6; } .cb-na { background: var(--line); }
-.cb-plan { background: var(--plan); }
 
 table.matrix th.site, table.matrix td.site { position: sticky; left: 0; z-index: 2; background: var(--surface); min-width: 210px; max-width: 250px; border-right: 2px solid var(--ink); }
 table.matrix thead th.site { z-index: 4; background: var(--surface2); }
@@ -239,7 +233,6 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 .bn-rule { margin: 4px 0 0; font-size: 11.5px; color: var(--ink2); font-family: var(--font-mono); }
 .rc { font-size: 10.5px; color: var(--ink2); }
 
-.mwrap.flash th[colspan]:last-child { background: color-mix(in srgb, var(--accent) 18%, var(--surface2)); transition: background 0.6s; }
 .key li b { color: var(--ink); }
 
 .key li.def { display: block; } .key li.def b { margin-right: 0; }

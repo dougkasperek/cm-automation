@@ -133,6 +133,63 @@ check('a red banner names exactly the needs-a-person sites',
 check('the banner is red or can\'t-say whenever anyone needs a person', personN === 0 || !banner.cls.includes('banner-green'));
 check('a coverage regression forces can\'t-say', model.coverage_regressions.length === 0 || banner.cls.includes('banner-cant'));
 
+// THE BANNER DOES NOT RESTATE THE SWEEP STRIP. Until 2026-08-29 its basis
+// clause appended the per-source coverage fractions -- the same sweepLine()
+// runs the strip renders directly above it, which also carries each run's
+// timestamp and stale marker. Two copies of one fact, 40px apart, and the
+// banner held the worse one. Asserted as a PROPERTY (no source name from the
+// strip appears in the banner) rather than against the sentence, so a reword
+// cannot quietly put it back.
+// The source name is the text node BEFORE the <b> timestamp. Reading the
+// whole div and trimming at the first digit gives "Pantheon health Aug", which
+// appears nowhere and made this check pass against a banner that HAD been put
+// back -- caught by running the negative control, not by reading it.
+const sweepNames = await page.$$eval('.sweep > div', els =>
+  els.map(e => (e.firstChild ? e.firstChild.textContent : '').trim()).filter(Boolean));
+check('the sweep strip has a line per source', sweepNames.length >= 3, JSON.stringify(sweepNames));
+const bnSub = await page.$eval('.bn-sub', e => e.textContent);
+check('the banner does not repeat the sweep strip\'s per-source coverage',
+      sweepNames.every(n => !bnSub.includes(n)),
+      JSON.stringify(sweepNames.filter(n => bnSub.includes(n))));
+// ...and the other half of what was duplicated: the N/M fractions themselves.
+// The can't-say branch writes coverage in words ("measured 71 of 79, down from
+// 78"), never as a fraction, so this stays true in every banner state.
+check('...nor their N/M fractions', !/\d+\/\d+/.test(bnSub), bnSub.slice(0, 160));
+
+// THE KEY IS A KEY, NOT A PLACE TO PUT PARAGRAPHS. It carried a Workbook
+// paragraph and a sentence describing the row grouping, neither of which
+// defined a symbol; both explained things stated better elsewhere (the site
+// drawer, and the group headers you can see). Property: every item in the key
+// defines one glyph. Prose has no swatch, so it cannot pass.
+const keyItems = await page.$$eval('.key li', els =>
+  els.map(e => ({ hasSwatch: !!e.querySelector('.cell'), words: e.textContent.trim().split(/\s+/).length })));
+check('the key has an entry per cell state', keyItems.length >= 5, String(keyItems.length));
+check('every key entry defines a symbol', keyItems.every(k => k.hasSwatch),
+      JSON.stringify(keyItems.filter(k => !k.hasSwatch)));
+check('no key entry is a paragraph', keyItems.every(k => k.words <= 12),
+      JSON.stringify(keyItems.filter(k => k.words > 12).map(k => k.words)));
+
+// THE WORKBOOK IS NOT A COLUMN GROUP. Its per-site claims live in the site
+// drawer, which carries a "Confirmed by" cell the matrix cells never had.
+const groupNames = await page.$$eval('thead tr.groups th', els => els.map(e => e.textContent.trim()));
+check('the matrix carries no audit-workbook column group',
+      !groupNames.some(g => /workbook/i.test(g)), JSON.stringify(groupNames));
+await page.click('tr.row .nm');
+await page.waitForSelector('.drawer.open .site-detail');
+const drawerWb = await page.$eval('.drawer', d => {
+  const sec = [...d.querySelectorAll('section')].find(x => /Workbook attestations/.test(x.textContent));
+  return sec ? sec.textContent : '';
+});
+check('...because the site drawer carries the claims instead',
+      /Workbook attestations/.test(drawerWb) && /Confirmed by/.test(drawerWb), drawerWb.slice(0, 80));
+// CLOSE IT THE WAY A PERSON DOES. Clearing .open and body.drawer-open by hand
+// does not stick: openSite() sets location.hash, the hashchange listener fires
+// on the NEXT task and re-opens the drawer. The page then swallows every later
+// click behind the backdrop, and playwright reports it 30 seconds later as an
+// unrelated test timing out. Escape runs closeSite(), which clears the hash.
+await page.keyboard.press('Escape');
+await page.waitForFunction(() => !document.body.classList.contains('drawer-open'));
+
 // THE OTHER TWO STATES, driven with an edited copy of the same file. The
 // green branch and the can't-say branch never run on a fleet with someone
 // needing a person, so on most days nothing exercises them.

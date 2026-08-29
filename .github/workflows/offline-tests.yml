@@ -55,6 +55,14 @@ jobs:
           node-version: "20"
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # RENDER FIRST. test-page.mjs defaults to ./fleet.html, a COMMITTED
+      # artifact, so without this step CI opened whatever page was last
+      # committed and said nothing about the page.js in the diff. An edit to
+      # page.js with no re-render passed green. Found 2026-08-29 the hard way:
+      # two local runs reported "47 passed" against a page rendered before the
+      # edits. A green check standing in for a check that did not happen.
+      - name: Render the page from this commit, not the committed artifact
+        run: ./scripts/render-dashboard.py --out fleet.html --components-out components.html
       - name: The rendered page, read the way a person does
         run: node test/test-page.mjs
       - name: The gating window's two boundaries, against a local fixture

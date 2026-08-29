@@ -385,21 +385,23 @@ const COLS = [
       return A(m);
     }, title: 'The domain the site actually sends from, read off post-smtp, beside the workbook ruling. A disagreement means every DNS cell on this row is about the wrong domain.' },
 ];
+/* THE WORKBOOK IS NOT A COLUMN GROUP ANY MORE. Removed 2026-08-29.
+   It was on this page four times: a paragraph in the key, four columns behind
+   a checkbox, the site drawer's "Workbook attestations" table, and the totals
+   section below the matrix. The drawer beats the columns outright -- it
+   carries a "Confirmed by" cell that renders "nobody here yet (import)" in
+   place, which is exactly what the key paragraph was saying in prose, said
+   where the claim is. The totals section names the only rows anyone acts on
+   (a claim with no matching plugin). Two copies were doing no work and one of
+   them cost a paragraph of key.
+   These four survive because the totals section still counts over them; they
+   are no longer matrix columns, so they carry no cell(), cov or title. */
 const ATT_COLS = [
-  { group: 'Audit workbook says', key: 'att_hide_login', label: 'Login hidden', att: 'hide_login' },
-  { group: 'Audit workbook says', key: 'att_wp_2fa', label: '2FA', att: 'wp_2fa' },
-  { group: 'Audit workbook says', key: 'att_activity_log', label: 'Activity log', att: 'activity_log' },
-  { group: 'Audit workbook says', key: 'att_xmlrpc', label: 'XML-RPC off', att: 'xmlrpc_disabled' },
-].map(c => ({ ...c, cov: [SITES.filter(s => s.att.some(a => a.key === c.att && a.evidence === 'evidence')).length, SITES.filter(s => s.att.some(a => a.key === c.att)).length], covLabel: 'confirmed of claimed', cell: s => {
-  const a = s.att.find(x => x.key === c.att); if (!a) return A(null, 'no row');
-  const said = a.value == null ? '—' : String(a.value).replace(/ - .*$/, '').slice(0, 5);
-  if (a.evidence === 'evidence') return G(said + ' ✓');
-  if (a.evidence === 'no-evidence') return W(said + ' ✗');
-  if (a.evidence === 'platform') return NA(said + ' · platform');
-  if (a.evidence === 'not-inventoried') return A(null, said + ' · uninv.');
-  if (a.evidence === 'unclaimed-evidence') return I(said + ' ✓?');
-  return I(said);
-}, title: 'What the workbook says beside what the component inventory can see. ✓ a matching plugin is active; ✗ the claim is Yes and no matching plugin is present. Platform controls (Pantheon, Cloudflare WAF) are not checkable here.' }));
+  { label: 'Login hidden', att: 'hide_login' },
+  { label: '2FA', att: 'wp_2fa' },
+  { label: 'Activity log', att: 'activity_log' },
+  { label: 'XML-RPC off', att: 'xmlrpc_disabled' },
+];
 
 const GLY = { crit: '■', warn: '▲', good: '●', info: '·', plan: '◔', abs: '', na: '' };
 function cellEl(col, s) {
@@ -407,20 +409,18 @@ function cellEl(col, s) {
   const r = col.cell(s);
   return h('td', { class: 'c s-' + r.state, title: col.label + ': ' + r.text + (r.state === 'abs' ? ' — not measured' : r.state === 'na' ? ' — not measurable here' : '') }, r.state in GLY && GLY[r.state] ? h('span', { class: 'g' }, GLY[r.state]) : null, h('span', { class: 't' }, r.text));
 }
-function census(col) {
-  if (col.axis) return h('th');
-  const n = { crit: 0, warn: 0, plan: 0, good: 0, info: 0, abs: 0, na: 0 };
-  for (const s of SITES) n[col.cell(s).state]++;
-  const tot = SITES.length;
-  const seg = (k, cls) => n[k] ? h('i', { class: cls, style: 'width:' + (100 * n[k] / tot) + '%', title: k + ' ' + n[k] }) : null;
-  return h('th', { title: `critical ${n.crit} · warning ${n.warn} · planning ${n.plan} · measured, nothing pending ${n.good + n.info} · not measured ${n.abs} · not measurable ${n.na}` },
-    h('div', { class: 'census-bar' }, seg('crit', 'cb-crit'), seg('warn', 'cb-warn'), seg('plan', 'cb-plan'), seg('info', 'cb-good'), seg('good', 'cb-good'), seg('abs', 'cb-abs'), seg('na', 'cb-na')));
-}
+/* THE CENSUS BAR ROW IS GONE. Removed 2026-08-29.
+   A seven-segment stacked bar under every column header, computed over the
+   whole fleet and never following the filter, whose only legend was a title=
+   tooltip (needs a mouse) and one clause in a footer 3,800px below the row it
+   explained. Every fact it summarised is still stated in place: the column
+   header carries its own denominator, and each of the 85 cells carries its own
+   state. What went with it was an explanation nobody could reach from the
+   thing being explained. */
 
-let showAtt = false, laneFilter = '', absOnly = false;
+let laneFilter = '', absOnly = false;
 const q = h('input', { type: 'search', placeholder: 'Filter sites', 'aria-label': 'Filter sites' });
 const hostSel = h('select', {}, h('option', { value: '' }, 'All hosts'), ...[...new Set(SITES.map(s => s.host))].sort().map(x => h('option', { value: x }, x)));
-const attBox = h('input', { type: 'checkbox', onchange: e => { showAtt = e.target.checked; draw(); syncUrl(); if (showAtt) { mwrap.scrollTo({ left: mwrap.scrollWidth, behavior: 'smooth' }); mwrap.classList.add('flash'); setTimeout(() => mwrap.classList.remove('flash'), 1200); } } });
 const absBox = h('input', { type: 'checkbox', onchange: e => { absOnly = e.target.checked; draw(); syncUrl(); } });
 const count = h('span', { class: 'count' });
 const mwrap = h('div', { class: 'mwrap' });
@@ -432,7 +432,6 @@ function syncUrl() {
   if (hostSel.value) u.set('host', hostSel.value);
   if (laneFilter) u.set('lane', laneFilter);
   if (q.value.trim()) u.set('q', q.value.trim());
-  if (showAtt) u.set('claims', '1');
   if (absOnly) u.set('unmeasured', '1');
   const qs = u.toString();
   history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
@@ -442,12 +441,11 @@ function readUrl() {
   if (u.get('host')) hostSel.value = u.get('host');
   if (u.get('lane') && LANE[u.get('lane')]) laneFilter = u.get('lane');
   if (u.get('q')) q.value = u.get('q');
-  if (u.get('claims') === '1') { showAtt = true; attBox.checked = true; }
   if (u.get('unmeasured') === '1') { absOnly = true; absBox.checked = true; }
 }
 
 function draw() {
-  const cols = showAtt ? COLS.concat(ATT_COLS) : COLS;
+  const cols = COLS;
   const term = q.value.trim().toLowerCase();
   const rows = SITES.filter(s => (!term || s.id.includes(term)) && (!hostSel.value || s.host === hostSel.value) && (!laneFilter || lane(s) === laneFilter)
     && (!absOnly || cols.some(c => !c.axis && ['abs'].includes(c.cell(s).state))));
@@ -463,13 +461,16 @@ function draw() {
         ? h('a', { href: '/consent', title: 'Consent detail: what fires on load, what still fires after Reject All, who manages each site' }, g.name)
         : g.name))),
     h('tr', { class: 'cols' }, h('th', { class: 'site' }, 'Site', h('span', { class: 'cov' }, rows.length + ' of ' + SITES.length)),
-      ...cols.map(c => h('th', { title: c.title || '' }, c.label, c.cov ? h('span', { class: 'cov' + (c.cov[0] < c.cov[1] ? ' short' : '') }, c.cov[0] + ' of ' + c.cov[1] + (c.covLabel ? ' ' + c.covLabel : '')) : h('span', { class: 'cov' }, c.axis ? 'scored' : '')))),
-    h('tr', { class: 'census' }, h('th', { class: 'site' }, h('span', { class: 'cov' }, 'column census, all ' + SITES.length)), ...cols.map(census)));
+      ...cols.map(c => h('th', { title: c.title || '' }, c.label, c.cov ? h('span', { class: 'cov' + (c.cov[0] < c.cov[1] ? ' short' : '') }, c.cov[0] + ' of ' + c.cov[1] + (c.covLabel ? ' ' + c.covLabel : '')) : h('span', { class: 'cov' }, c.axis ? 'scored' : '')))));
   const tbody = h('tbody');
   for (const L of LANE_ORDER) {
     const rs = rows.filter(s => lane(s) === L).sort((a, b) => a.id.localeCompare(b.id));
     if (!rs.length) continue;
-    tbody.append(h('tr', { class: 'grp' }, h('th', { colspan: 1 }, LANE[L].word, h('span', { class: 'n' }, rs.length), h('small', {}, LANE[L].sub)), h('td', { colspan: cols.length })));
+    /* The gloss is on the TILE, not here as well. Both rendered LANE[L].sub
+       verbatim, ~600px apart. The tiles are the copy that has to keep it: they
+       are what a reader meets first, and test-page.mjs pins them unfolded for
+       that reason. */
+    tbody.append(h('tr', { class: 'grp' }, h('th', { colspan: 1 }, LANE[L].word, h('span', { class: 'n' }, rs.length)), h('td', { colspan: cols.length })));
     for (const s of rs) tbody.append(h('tr', { class: 'row' },
       h('td', { class: 'site' }, h('span', { class: 'nm', tabindex: 0, role: 'button', onclick: () => openSite(s.id), onkeydown: e => { if (e.key === 'Enter') openSite(s.id); } }, s.id), h('span', { class: 'hs' }, s.host.replace('CM ', '') + (s.production === false ? ' · excluded' : '') + (D.unreviewed.includes(s.id) ? ' · no ruling' : ''))),
       ...cols.map(c => cellEl(c, s))));
@@ -556,7 +557,7 @@ if (gUp) col2.push(item({ title: 'Merge the pending Pantheon upstream', n: gUp.s
 
 let view = 'matrix';
 const tabs = h('div', { class: 'tabs', role: 'tablist' },
-  h('button', { role: 'tab', 'aria-selected': 'true', 'data-v': 'matrix', onclick: () => setView('matrix') }, 'Evidence', h('small', {}, SITES.length + ' sites × ' + (COLS.length - 2) + ' questions')),
+  h('button', { role: 'tab', 'aria-selected': 'true', 'data-v': 'matrix', onclick: () => setView('matrix') }, 'Evidence'),
   h('button', { role: 'tab', 'aria-selected': 'false', 'data-v': 'schedule', onclick: () => setView('schedule') }, 'Schedule', h('small', {}, col2.length + ' decisions · ' + AGG.backlogOnly.length + ' backlog sites')));
 function setView(v) {
   view = v;
@@ -588,7 +589,13 @@ function banner() {
   const runs = sweepLine();
   const oldest = runs.reduce((a, b) => (a[1].observed_at < b[1].observed_at ? a : b));
   const newest = runs.reduce((a, b) => (a[1].observed_at > b[1].observed_at ? a : b));
-  const basis = 'on scans from ' + fmtDay(oldest[1].observed_at.slice(0, 10)) + ' to ' + fmtDay(newest[1].observed_at.slice(0, 10)) + ' (' + runs.map(([n, r]) => n + ' ' + (r.deep_scanned ?? '?') + '/' + r.site_count).join(', ') + ')';
+  /* NOT the per-source fractions again. Until 2026-08-29 this appended
+     `(Pantheon health 48/52, Nexcess health 21/22, ...)` -- the same
+     sweepLine() runs the sweep strip renders 40px directly above, which also
+     carries each run's timestamp and its stale marker. Two copies of one
+     fact, and the banner held the worse one. The date range stays because
+     the strip does not state it. */
+  const basis = 'on scans from ' + fmtDay(oldest[1].observed_at.slice(0, 10)) + ' to ' + fmtDay(newest[1].observed_at.slice(0, 10));
   const backlog = AGG.backlogOnly.length, unmeasured = D.no_health_evidence.length;
   let state, head, sub;
   if (regress.length) {
@@ -636,7 +643,11 @@ const attTotals = (() => {
 
 $('#app').append(h('div', { class: 'wrap' },
   h('header', { class: 'top' },
-    h('div', {}, h('h1', {}, 'clevermethod fleet', h('small', {}, SITES.length + ' sites · ' + (COLS.length - 2) + ' questions · read-only')),
+    h('div', {}, /* The counts are in the tools row, above the table, where they are LIVE --
+   they follow the filter. This masthead copy and the Evidence tab label were
+   both static, so a reader filtering down to one host read the whole-fleet
+   total twice beside a much shorter table. Three copies, one of them true. */
+      h('h1', {}, 'clevermethod fleet', h('small', {}, 'read-only')),
       h('p', { class: 'thesis' }, 'One row per site, one column per question. Hatched is unmeasured. Schedule tab: the same evidence arranged by decision.')),
     h('div', { class: 'sweep' }, ...sweep.map(([name, r]) => h('div', { class: ageDays(r.observed_at) > 1 ? 'stale' : '' }, name + ' ', h('b', {}, fmtEastern(r.observed_at)), ' ' + (r.deep_scanned ?? '?') + '/' + r.site_count)))),
   banner(),
@@ -648,6 +659,9 @@ $('#app').append(h('div', { class: 'wrap' },
      matrix group headers and the site drawer, so from the top of the page
      there was nothing to read. Doug, who designed the lanes, said he could not
      remember them.
+     2026-08-29: the matrix group headers no longer repeat it, so THIS is the
+     only place the seven words are defined. Do not fold it, tooltip it, or
+     move it back down into the table.
      The bug table already carries this exact row: a key put one click away on
      a page where every <details> renders closed. A KEY YOU HAVE TO DISCOVER IS
      NOT A KEY -- and a title= tooltip is worse, because it needs a mouse. */
@@ -658,14 +672,12 @@ $('#app').append(h('div', { class: 'wrap' },
     h('span', { class: 'lane-sub' }, LANE[L].sub)))),
   tabs,
   h('div', { class: 'view view-matrix', id: 'view-matrix' },
-  h('div', { class: 'tools' }, q, hostSel, h('label', { title: 'Adds four columns at the right of the matrix: what the audit workbook claims about 2FA, hidden login, activity log and XML-RPC, beside whether a matching plugin is actually installed.' }, attBox, 'Show audit-workbook claims beside installed plugins'), h('label', {}, absBox, 'Only rows with an unmeasured cell'), count),
+  h('div', { class: 'tools' }, q, hostSel, h('label', {}, absBox, 'Only rows with an unmeasured cell'), count),
   h('ul', { class: 'key' },
     h('li', {}, h('span', { class: 'c s-crit cell' }, '■'), 'critical / risk'), h('li', {}, h('span', { class: 'c s-warn cell' }, '▲'), 'warning: schedule or decide'),
     h('li', {}, h('span', { class: 'c s-plan cell' }, '◔'), 'planning, dated'), h('li', {}, h('span', { class: 'c s-good cell' }, '●'), 'measured, nothing pending'),
     h('li', {}, h('span', { class: 'c s-info cell' }, '·'), 'measured, recorded, not scored'), h('li', {}, h('span', { class: 'c s-abs cell' }), 'not measured — an absence, never a pass'),
-    h('li', {}, h('span', { class: 'c s-na cell' }, 'n/a'), 'not measurable on this host'),
-    h('li', { class: 'def' }, h('b', {}, 'Workbook'), ': the team\'s manual audit spreadsheet this page replaces. Its per-site security claims were imported into the inventory as attestations; no one here has re-confirmed any of them. They are shown only as claims, beside what a scan measured.'),
-    h('li', {}, 'Rows are grouped by what happens next, in the order of the lanes above. The two axis chips stay on every row.')),
+    h('li', {}, h('span', { class: 'c s-na cell' }, 'n/a'), 'not measurable on this host')),
   mwrap),
   h('div', { class: 'view view-schedule', id: 'view-schedule', hidden: true },
     h('div', { class: 'sched' },
@@ -679,7 +691,7 @@ $('#app').append(h('div', { class: 'wrap' },
         h('p', {}, 'Nothing here is an emergency. The ' + SITES.filter(s => lane(s) === 'person').length + ' site' + (SITES.filter(s => lane(s) === 'person').length === 1 ? '' : 's') + ' that need a person today, the rulings and the coverage gaps stay in the matrix; this tab is the maintenance calendar.')))),
   h('div', { class: 'below' },
     h('section', {}, h('h2', {}, 'What the audit workbook claims, and what the plugin inventory can see'),
-      h('p', {}, 'Every attestation was imported from the audit workbook with no confirming person or date. Where a claim names a plugin, the component inventory can confirm it. Toggle the column group above to see it per site.'),
+      h('p', {}, 'The audit workbook is the manual spreadsheet this page replaces. Every attestation was imported from it with no confirming person or date, and nobody here has re-confirmed one. Where a claim names a plugin, the component inventory can confirm it; open any site to see its claims beside what was measured.'),
       h('div', { class: 'att-grid' }, ...attTotals.map(a => h('div', { class: 'a' }, h('b', {}, a.label),
         h('span', { class: 'n' }, a.evidence), ' confirmed of ', h('span', { class: 'n' }, a.claimedYes), ' claimed yes', h('br'),
         h('span', { class: 'n ' + (a['no-evidence'] ? 'bad' : '') }, a['no-evidence']), ' claimed with no plugin seen', a.sites.length ? h('small', {}, ' (' + a.sites.join(', ') + ')') : null, h('br'),
@@ -697,7 +709,7 @@ $('#app').append(h('div', { class: 'wrap' },
         D.coverage_changes.map(c => c.fact + ' on ' + c.sites.length + ' site' + (c.sites.length === 1 ? '' : 's')).join(', ') +
         '): the instrument changed, not the fleet.') : null)),
   h('footer', { class: 'foot' },
-    h('p', {}, 'Health counts: ' + D.counts.CRIT + ' critical · ' + D.counts.WARN + ' warning · ' + D.counts.OK + ' OK · ' + D.counts.SKIP + ' skip · ' + D.counts.FROZEN + ' frozen, ' + D.excluded_sites.length + ' excluded by ruling (' + D.excluded_sites.join(', ') + '). Consent: ' + D.axes.consent.WARN + ' warning · ' + D.axes.consent.OK + ' OK · ' + D.axes.consent.UNKNOWN + ' unknown. Column headers carry each question\'s own denominator; a census bar under each shows how the whole fleet answers it, hatched where nobody could.'),
+    h('p', {}, 'Health counts: ' + D.counts.CRIT + ' critical · ' + D.counts.WARN + ' warning · ' + D.counts.OK + ' OK · ' + D.counts.SKIP + ' skip · ' + D.counts.FROZEN + ' frozen, ' + D.excluded_sites.length + ' excluded by ruling (' + D.excluded_sites.join(', ') + '). Consent: ' + D.axes.consent.WARN + ' warning · ' + D.axes.consent.OK + ' OK · ' + D.axes.consent.UNKNOWN + ' unknown.'),
     h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. ', h('a', { href: '/api/fleet-scan' }, 'JSON feed'), ' · ', h('a', { href: '/components' }, 'component catalogue'), ' · ', h('a', { href: '/consent' }, 'consent'), '. Read-only: nothing on this page changes a site.'))));
 readUrl();
 draw();

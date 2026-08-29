@@ -38,14 +38,26 @@ the rendered DOM.
 
 **Every column carries its own denominator.** The header says `48 of 52
 Pantheon`, `68 of 75 inventoried`, `71 of 79 loaded`, read from the same
-coverage lines the JSON feed publishes. A census bar under each header shows
-how the whole fleet answers that question, hatched where nobody could.
+coverage lines the JSON feed publishes.
+
+There was a census bar under each header too, until 2026-08-29 — a stacked bar
+showing how the whole fleet answered that question. It went in the subtraction
+pass. It was computed over all 85 sites and never followed the filter, and its
+only legend was a `title=` tooltip plus one clause in a footer 3,800px below
+it. Everything it summarised is still stated in place, by the denominator above
+and the 85 cells below.
 
 Rows are grouped by **what happens next**, in a printed priority order: needs a
 person, not established, needs scheduling, needs a ruling, nothing pending,
 not measurable, excluded by ruling. This is a workflow view over the two axes
 and it lives in `scripts/dashboard/page.js`, never in `severity.py`. The two
 axis chips stay on every row, so the grouping can never replace the verdict.
+
+**Each lane is defined exactly once, on its tile.** The definitions used to
+render on the tiles AND again in the matrix group headers, the same words about
+600px apart. The tiles are the copy that keeps them: they are what a reader
+meets first, and `test-page.mjs` pins them rendered and unfolded. The group
+headers carry the lane word and its count only.
 
 **The banner.** The dev team asked for something at the top that says they
 need not worry. The phrase they used was "all good", and on this fleet that
@@ -76,19 +88,29 @@ fact family with its provenance in the heading, the pending component list,
 the workbook attestations checked against the plugin inventory, and the
 plugin-backlog series over the full health runs.
 
-## The workbook is back on the page, as claims
+## The workbook: in the drawer and in the totals, not in the matrix
 
-The workbook's columns were removed on 2026-08-20 because they were displayed
-as if they were evidence. This page shows the workbook's per-site attestations
-(2FA, hidden login, activity log, XML-RPC) labelled as claims, beside whether
-the component inventory can see a matching plugin. Four answers, kept four: a
-claim of Yes with the plugin present, Yes with no plugin, No with a plugin
-present anyway, No with none. Platform controls ("Yes - Pantheon") are not
-checkable and say so. The column group is behind a toggle; the key defines the
-word "workbook" once, because the dev team asked what it meant.
+The workbook's per-site attestations (2FA, hidden login, activity log,
+XML-RPC) are claims, never evidence, and the page says so wherever it shows
+them. They live in two places:
 
-Doug chose to leave it in on 2026-08-27 ("lets leave it for now"). Removing it
-is one column group and one panel.
+- **the site drawer**, per site, in a table whose `Confirmed by` cell reads
+  `nobody here yet (workbook import 2026-08-18)`;
+- **the totals section below the matrix**, which counts claims against what the
+  component inventory can see and names the sites where a claim has no matching
+  plugin — the only rows anyone acts on.
+
+**They were also four matrix columns behind a checkbox until 2026-08-29.** That
+made three copies of one thing, and the weakest of the three cost a paragraph
+in the key to explain a column group that was hidden by default. The drawer
+beats it outright: it shows six claims rather than four, and it carries the
+`Confirmed by` cell the matrix cells never had, so the "nobody re-confirmed
+this" fact is stated beside each claim instead of in prose 3,000px away.
+
+Removed on Doug's instruction in the 2026-08-29 subtraction pass, having been
+left in on 2026-08-27 ("lets leave it for now"). `test-page.mjs` asserts the
+matrix carries no workbook column group AND that the drawer carries the claims
+instead — both directions, so the cut cannot be half-undone.
 
 ## How it is built
 

@@ -305,6 +305,8 @@ do not add a total.
 | `push rejected on attempt 3; another run got there first, re-ingesting` | **nothing had raced it.** The remote was still on the commit from twenty minutes earlier and no other ledger-writing workflow had run. GitHub answered `remote: fatal error in commit_refs` — a SERVER error — and `persist-ledger.sh` printed the race message for every push failure alike, the `probe` row again. It cost a 6-minute headed sweep of 79 sites: the scan and the ingest both SUCCEEDED and the observations died with the runner workspace, because only the push failed. Now classified — non-fast-forward is a race and re-ingesting is right, anything else prints the real git error and says it is not a race. **The obvious fix was a trap:** this file runs under `set -e`, so a bare `PUSH_ERR="$(git push …)"` aborts on the FIRST failure with no retry and no message, worse than the bug. As an `if` condition it is exempt, proven by running the loop against a failing push. `test-workflows.py` asserts the guarded form |
 | the gating sweep is in the suite, so it runs like the others | **it had no workflow at all.** `fleet-consent.yml` ran only the cold sweep; nothing anywhere invoked `run-gating-sweep.mjs`, so every gating measurement on the live page came from a laptop while the other five sources were refreshed from Actions. Step 4 of this file's own "adding a workflow" checklist, never done for this source, and invisible because the data looked no different. Found by Doug asking whether ALL the scans run in Actions — the answer was five of six |
 | a headed sweep in CI, because the cold sweep proved xvfb works | `test-gating.mjs` asked for headed and **never checked it got it**. `check-site.mjs` has recorded `browserActual` since the first sweep and `run-sweep.mjs` aborts on a mismatch; the gating path did neither. It matters MORE here: "nothing fires after rejection" is the BEST possible result, so a silently headless run — which sees fewer tags and cannot load a site behind a bot challenge at all — reads as a clean pass on every site. The instrument manufacturing the best answer, which is exactly how the v1 and v2 windows went wrong. Fixed before it reached CI, and proven by forcing headless: the tester exits 3, the sweep aborts rather than writing one INCONCLUSIVE row per site, and **no report file is written** |
+| `47 passed, 0 failed` from `test-page.mjs`, twice, after editing `page.js` | **it had opened a page rendered before the edits.** The test takes an optional path and DEFAULTS to `./fleet.html`, a committed artifact; nothing in it renders. So the run said the old page was fine and reported it in the same voice as a real pass — and the second run, after more edits, said it again. CI had the identical hole: `offline-tests.yml` ran the test with no render step, so any change to `page.js` unaccompanied by a re-render passed green. Caught only because a check I had just added FAILED against the stale file while passing against the fresh one, and the contradiction was unexplainable. Both fixed 2026-08-29: CI renders first, and CLAUDE.md's page section states the local sequence. **A green check standing in for a check that did not happen**, which is the `probe` row aimed at this page's own instrument |
+| a new check that the banner no longer repeats the sweep strip | it matched nothing and could never fail. It read each strip line's full text and trimmed at the first digit — but the line is `Pantheon health Aug 28, 12:16 PM ET 48/52`, so the trim landed on "Aug 28" and produced `Pantheon health Aug`, a string that appears nowhere. The check passed against a banner with the duplication PUT BACK. Found by running the negative control, not by reading the code, and it is the reason the negative control is not optional: **a test that only ever passes is not evidence, and one written the same hour as the fix is the likeliest to be vacuous.** The name now comes from the text node before the `<b>`, and a second check refuses any `N/M` fraction in the banner |
 | the lane names explain themselves | **seven invented terms with no definition anywhere near them.** "Not established", "Needs a ruling" and "Needs scheduling" are this page's own vocabulary; the strip at the top of the page rendered the WORD and the COUNT alone. The glosses existed the whole time in `LANE[].sub` and were rendered only inside the matrix group headers and the site drawer — so a reader had to scroll into the table or open a site to learn what the number above them meant. **Doug, who designed the lanes, said he could not remember them.** Second occurrence of the row four above: a key you have to discover is not a key. Now inline under each lane, and `test-page.mjs` asserts the definition is RENDERED and not folded — verified to fail both ways, by demoting it to a `title=` tooltip (which needs a mouse) and by wrapping the strip in a `<details>` |
 | `0 leaking` on every gating run, three runs running | **true, and unproven.** Every test asked whether a CLEAN site reads clean; none planted a leak and demanded it be found. "Nothing fires after rejection" is the BEST possible result of this test, and the instrument had already been wrong twice in exactly that direction — v1 counted the old page's tail, v2 erased the load it was measuring. So `0 leaking` was **unfalsified, not verified**, and Doug refused to send the fleet numbers to Nick over precisely this. He was right on the evidence available. `test-gating-leak.mjs` now plants three sites — one that ignores the rejection, one that stops everything but a cookieless `gcs=G100` ping, and one where a single non-Google tag keeps firing — and requires the verdict to tell them apart. The verdict had to be extracted from the CLI block to be testable at all, which is why nothing could check it before. Verified against both real regression directions: dropping the G100 exclusion (the actual 2026-08-27 defect) fails 5 checks by reporting the compliant site as leaking; making it a blanket "ignore all Google" fails the check that a Google tag still at `gcs=G111` after a rejection IS a leak |
 | `OK` beside `4 before consent` in the same cell | both true, and together they read as a contradiction. The status was right and the cell never said why: on an opt-out site the four are the configured behaviour. A green verdict next to its own contrary-looking evidence is a reader's problem even when the model is correct. The cell now reads `4 on load, as configured`. Found by reading the rendered row |
@@ -495,9 +497,30 @@ The previous page is `render()` behind `--legacy-out` for one cycle.
   A Nexcess backup cell says `no API`: unmeasurable, which is not unmeasured.
 - **The page's model is the feed's.** `page_data()` and `emit_data()` are built
   from one `m`; the test compares every status, reason code and fact.
-- **The DOM test is not in CI.** It needs Chromium on the publish runner, a
-  cost to decide on, not add silently. Run `node test/test-page.mjs` by hand
-  before a publish until then. `publish-dashboard.sh` runs the offline test.
+- **Each thing is explained once, where it is used.** Subtraction pass
+  2026-08-29: the banner stopped repeating the sweep strip's per-source
+  coverage fractions; the lane glosses stopped rendering a second time in the
+  matrix group headers; the site/question count went from three copies to the
+  one that follows the filter; the key lost a Workbook paragraph and a sentence
+  describing a visible layout; the audit-workbook column group and its checkbox
+  went, the drawer and the totals section keeping the claims; and the census
+  bar row went with the footer clause that was its only legend. **759px of
+  header before the first data row, on a 720px screen, became 654px.** The
+  test for a candidate is not "is this used" but "if this were gone, what would
+  a reader get wrong" — and when the answer is something, the fix is to move it
+  next to what it explains, not to keep both.
+- **The DOM test IS in CI, since 2026-08-28**, in `offline-tests.yml`, reusing
+  the playwright install `fleet-consent.yml` already pays for. This bullet said
+  the opposite for a day and told people to run it by hand instead.
+- **`test-page.mjs` renders nothing. It opens `./fleet.html` by default — a
+  COMMITTED artifact.** So editing `page.js` and running the test proves
+  nothing until you re-render; on 2026-08-29 two runs reported "47 passed"
+  against a page rendered before the edits, and CI had the same hole because
+  its step had no render before it. Both fixed the same day: CI renders first,
+  and locally the sequence is
+  `./scripts/render-dashboard.py --out fleet.html && node test/test-page.mjs`.
+  A green check standing in for a check that did not happen — the `probe` row
+  again, pointed at the page's own instrument.
 
 ---
 
@@ -580,7 +603,10 @@ python3 test/test-access-policies.py  # 46   offline, no token
 python3 test/test-ledger.py       # 319
 python3 test/test-severity.py     # 166
 python3 test/test-page.py         #  35   offline; the page's model is the feed's, never "all good"
-node test/test-page.mjs           #  47   headless Chromium; the rendered DOM. Needs `npm install`
+node test/test-page.mjs           #  55   headless Chromium; the rendered DOM. Needs `npm install`.
+                                  #       RENDER FIRST -- it opens ./fleet.html,
+                                  #       a committed artifact, and renders
+                                  #       nothing itself
 python3 test/test-email-dns.py    #  65   (needs dnspython)
 python3 test/test-build-inventory.py #  6  offline; the seed generator REFUSES an existing inventory
 python3 test/test-nexcess.py      #  96   offline, no API call

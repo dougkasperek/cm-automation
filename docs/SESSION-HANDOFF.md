@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-27.** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-29.** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,77 +8,72 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-29: a SUBTRACTION session. Do not add anything
+## PICK UP HERE — 2026-08-29: the subtraction pass is DONE. What is left
 
-**Doug, at the end of 2026-08-28, looking at the page he designed:** *"the page
-is already extremely busy and borderline trying to do too much."*
+**Doug asked for six cuts and they are made, tested, rendered and looked at.**
+Nothing here is waiting on code. The page is smaller and says the same things.
 
-He is right, and the previous session made it worse before it noticed. The next
-session's job is to take things OFF — the page, and the codebase. **If you find
-yourself adding a feature, you are in the wrong session.**
+### What came off, and the measurement
 
-### What is already true, so nothing needs re-establishing
+**759px of header before the first data row, on a 720px screen, is now 654px.**
+A reader's first screen used to be entirely chrome; it now reaches the data.
+Header prose fell from 331 words to 215, the key block from 100px to 40px, the
+whole page from 4583px to 4334px.
 
-All six scans run in GitHub Actions. The dashboard is current across every
-source and was verified by reading it back out of R2, not by trusting a green
-check. Gating is scored (`consent_gating_leak`, 0 sites leaking) and, since
-2026-08-28, **the sweep is proven able to catch a leak** — `test-gating-leak.mjs`
-plants three sites and requires the verdict to tell them apart, verified against
-both real regression directions. All 14 Python suites and both Chromium suites
-pass.
+| cut | why it was safe |
+|---|---|
+| the banner's `(Pantheon health 48/52, Nexcess health 21/22, …)` | the same `sweepLine()` runs render in the strip 40px above it, with timestamps and a stale marker the banner has no room for |
+| the audit-workbook checkbox and its four columns, and the Workbook paragraph in the key | the drawer shows SIX claims per site with a `Confirmed by` cell reading `nobody here yet (workbook import 2026-08-18)` — the thing the paragraph said in prose, said beside the claim. The totals section below the matrix names the sites where a claim has no matching plugin |
+| two of the three `85 sites · 16 questions` | the survivor is the tools-row count, the only one that follows the filter |
+| "Rows are grouped by what happens next…" | it described a layout you can see: the group headers are in the table, the AXES group is labelled |
+| the lane gloss inside the matrix group headers | the same words render on the tiles, ~600px up. The tiles keep them — `test-page.mjs` pins them rendered and unfolded, and the 2026-08-28 comment above them now says so |
+| the census bar row, with the footer clause that was its only legend | computed over all 85 sites, never followed the filter, explained by a `title=` tooltip and one sentence 3,800px below it. Its column denominator and its 85 cells all stay |
 
-### The case for subtraction, in the words of the page itself
+Nothing that names an absence was touched: the hatch, `n/a`, `no API`,
+`not in sweep`, every column denominator, the banner predicate, the
+`1 excluded by ruling (cm-whitelabel)` naming, and the drawer's "Zero rows is
+not 'nothing pending'".
 
-The fleet page now carries: a banner with its own predicate, seven lane tiles
-each with a gloss, two tabs, a tools row with two checkboxes, a seven-symbol
-key, a Workbook paragraph, a thesis line, per-column denominators, 85 rows of
-roughly 14 columns, and a site drawer. Several of those explain overlapping
-things.
+### Two things went wrong doing it, and both are in the bug table now
 
-**The pattern to hold onto: adding an explanation where something is USED
-usually makes an explanation somewhere else dead.** That happened on
-2026-08-28 — the lane glosses moved up to the tiles, which made the key list's
-prose enumeration of the same seven lanes redundant, and nobody noticed until
-Doug said the page was too busy. One line was cut. There are more.
+1. **`test-page.mjs` renders nothing — it opens `./fleet.html`, a committed
+   artifact.** Two runs reported "47 passed" against a page rendered before the
+   edits, in the same voice as a real pass. CI had the same hole: its step had
+   no render before it, so any change to `page.js` without a re-render passed
+   green. `offline-tests.yml` renders first now. Locally the sequence is
+   `./scripts/render-dashboard.py --out fleet.html && node test/test-page.mjs`.
+2. **The first version of the new banner check was vacuous.** It trimmed each
+   sweep line at the first digit, producing `Pantheon health Aug` — a string
+   that appears nowhere — so it passed against a banner with the duplication
+   put back. Found by running the negative control, not by reading it.
 
-### Candidates, in the order I would look at them
+**Every new check was verified to fail** by re-adding the thing it forbids and
+watching it go red. `test-page.mjs` is 47 → 55.
 
-None of these is a decision already made. Each needs the page opened and read.
+### Still on the table, not done
 
-1. **The audit-workbook checkbox.** Adds four columns behind a toggle, for
-   per-site security claims **nobody has re-confirmed**, and it needs a full
-   paragraph in the key to explain what they are. Ask what it is for and who
-   has used it. If the answer is "the workbook is what this page replaces",
-   that is an argument for removing it, not keeping it.
-2. **The key list.** Seven symbol definitions plus the Workbook paragraph plus
-   a lane-order sentence, sitting under a thesis line and above columns that
-   carry their own denominators. Four things explaining adjacent concepts.
-3. **`render()` and `--legacy-out`.** CLAUDE.md says retire them after one
-   published cycle. That cycle happened days ago. Not on the page, but it is a
-   second page that has to keep working, and `test-ledger.py` still carries
-   `RD.render(...)` assertions for it.
-4. **The `/components` page and the `/consent` page** — not to remove, but to
-   ask what the fleet page is still doing that one of them does better. Moving
-   something OFF the main page is subtraction too.
+- **The thesis line.** `One row per site, one column per question. Hatched is
+  unmeasured. Schedule tab: the same evidence arranged by decision.` All three
+  clauses are stated better lower down: the tools-row count, the key's
+  `not measured — an absence, never a pass`, and the Schedule tab's own
+  sub-label. Not cut because Doug did not pick it; it is the obvious next one.
+- **The Evidence tab now has no sub-label while Schedule has one.** They are
+  the same height and it renders fine, but it is lopsided. Restoring a label
+  means re-adding a third copy of the count, so the alternative is to cut
+  Schedule's — which would remove the only preview of what is behind that tab.
+  Left alone deliberately.
+- **`render()` and `--legacy-out`.** Handoff candidate 3, untouched. CLAUDE.md
+  says retire after one published cycle; that cycle passed days ago, and
+  `test-ledger.py` still carries `RD.render(...)` assertions for it.
+- **The Schedule side panel's five paragraphs.** Paragraph 5 ("Nothing here is
+  an emergency… this tab is the maintenance calendar") restates paragraph 1 and
+  the thesis line. Candidate 4 territory, not examined closely this session.
 
-### The rule that makes this session hard, and is the point
+### Before publishing
 
-**Every one of those exists because someone had a reason.** The bug table is a
-list of things that went wrong when a page said less than it knew. Subtracting
-is therefore riskier here than adding, and the test is not "is this used" but
-**"if this were gone, what would a reader get wrong?"** If the answer is
-nothing, cut it. If the answer is something, the fix is usually to move it
-where the thing it explains already is — not to keep both.
-
-Do not cut anything that names an absence. `n/a`, hatched cells, "unmeasured,
-not clean", the coverage denominators and the banner predicate are all load
-bearing; they are what stops this page reading as an all-clear.
-
-### Before touching the page
-
-`node test/test-page.mjs` must pass before and after, and **render the page and
-look at it** — most of the bug table was found that way. `test-page.py`
-asserts the page never says "all good"; keep it that way.
+`fleet.html` and `components.html` in the repo root are re-rendered and
+committed with the change. **Nothing has been published**; `publish-dashboard.sh`
+has not run and pushing is a human action.
 
 ---
 
