@@ -43,8 +43,20 @@ console.log('\n-- every site, once --');
 const rows = await page.$$eval('tr.row', els => els.map(e => e.querySelector('.nm').textContent));
 check('one row per site in the model', rows.length === model.sites.length, rows.length + ' vs ' + model.sites.length);
 check('no site twice', new Set(rows).size === rows.length);
-const laneCounts = await page.$$eval('.lanes .n', els => els.map(e => +e.textContent));
+// EVERY SITE IS IN EXACTLY ONE LANE, and the strip must account for all of
+// them. Read the four card headings plus the aside, never `.lanes .n`
+// generally -- the chips inside a card repeat their card's members, so summing
+// every number in the strip double-counts and the total silently exceeds the
+// fleet. Four cards + the aside = 85.
+const laneCounts = await page.$$eval('.gc-hd .n, .lanes-aside b', els => els.map(e => +e.textContent));
 check('the lane counts sum to the fleet', laneCounts.reduce((a, b) => a + b, 0) === model.sites.length, laneCounts.join('+'));
+const chipSums = await page.$$eval('.gc', cards => cards.map(c => ({
+  head: +c.querySelector('.gc-hd .n').textContent,
+  chips: [...c.querySelectorAll('.gc-chips b')].map(b => +b.textContent),
+})));
+check('a card with chips equals the sum of its chips',
+      chipSums.every(c => !c.chips.length || c.chips.reduce((a, b) => a + b, 0) === c.head),
+      JSON.stringify(chipSums));
 const grpCounts = await page.$$eval('tr.grp .n', els => els.map(e => +e.textContent));
 check('the row groups carry the same counts as the lane strip', grpCounts.reduce((a, b) => a + b, 0) === model.sites.length, grpCounts.join('+'));
 
@@ -94,24 +106,63 @@ console.log('\n-- the lane vocabulary is defined where it is used --');
 // VISIBLE -- rendered, non-empty, and not inside a fold -- rather than merely
 // present somewhere in the file. A title= tooltip would also fail this, and
 // should: it needs a mouse.
-const laneDefs = await page.$$eval('.lanes li', els => els.map(e => ({
-  word: (e.querySelector('button') || {}).textContent || '',
-  sub: (e.querySelector('.lane-sub') || {}).textContent || '',
-  folded: !!e.closest('details'),
-  // offsetParent is null for display:none and for an unrendered subtree.
-  shown: !!(e.querySelector('.lane-sub') || {}).offsetParent,
-})));
-check('every lane is listed', laneDefs.length === 7, String(laneDefs.length));
+// ASSERT THE PROPERTY, NOT THE SHAPE. This block used to count seven `.lanes
+// li` and read a `.lane-sub` out of each, which is a description of the markup
+// on the day it was written; the four-card grouping of 2026-08-29 broke all of
+// it while leaving the guarantee intact. The guarantee is: every lane word
+// this page invents is displayed, and a visible definition is displayed WITH
+// it -- in its card, or on the aside line. Where it lives is not the contract.
+const laneDefs = await page.evaluate(() => Object.entries(LANE).map(([key, L]) => {
+  const strip = document.querySelector('.lanes');
+  // The container that displays this lane's word: a card, or the aside line.
+  const host = [...strip.querySelectorAll('.gc, .lanes-aside')]
+    .find(e => e.textContent.includes(L.word));
+  if (!host) return { key, word: L.word, found: false };
+  const gloss = host.classList.contains('lanes-aside')
+    // On the aside each lane has its OWN gloss span; pick the one next to this
+    // word, not the first on the line.
+    ? [...host.querySelectorAll('button')].filter(b => b.textContent.includes(L.word))
+        .map(b => (b.nextElementSibling || {}).textContent || '').join('')
+    : (host.querySelector('.gc-sub') || {}).textContent || '';
+  return { key, word: L.word, found: true, gloss: gloss.trim(),
+           folded: !!host.closest('details'),
+           shown: !!host.offsetParent };
+}));
+check('every lane is displayed', laneDefs.length === 7 && laneDefs.every(l => l.found),
+      JSON.stringify(laneDefs.filter(l => !l.found).map(l => l.word)));
 check('every lane carries a definition, not just a word',
-      laneDefs.every(l => l.sub.trim().length > 10),
-      JSON.stringify(laneDefs.map(l => [l.word, l.sub.length])));
-check('...and none of them is inside a fold',
-      laneDefs.every(l => !l.folded));
+      laneDefs.every(l => l.gloss && l.gloss.length > 10),
+      JSON.stringify(laneDefs.map(l => [l.word, (l.gloss || '').length])));
+check('...and none of them is inside a fold', laneDefs.every(l => !l.folded));
 check('...and each one is actually rendered, not display:none',
-      laneDefs.every(l => l.shown),
-      JSON.stringify(laneDefs.map(l => [l.word, l.shown])));
+      laneDefs.every(l => l.shown), JSON.stringify(laneDefs.map(l => [l.word, l.shown])));
 check('...and the definition is distinct from the word',
-      laneDefs.every(l => l.sub.trim() !== l.word.trim()));
+      laneDefs.every(l => l.gloss.trim() !== l.word.trim()));
+// A CARD GLOSS MUST DEFINE EVERY LANE IT HOLDS. A chip reading "17 Needs a
+// ruling" under a group heading is one of this page's invented words with no
+// meaning beside it -- the 2026-08-28 bug, one level down. So where a card
+// covers more than one lane, its gloss has to name each of them.
+const multi = await page.evaluate(() => [...document.querySelectorAll('.gc')]
+  .filter(c => c.querySelectorAll('.gc-chips button').length > 1)
+  .map(c => ({
+    chips: [...c.querySelectorAll('.gc-chips button')].map(b => b.textContent.replace(/^\d+\s*/, '').trim()),
+    gloss: (c.querySelector('.gc-sub') || {}).textContent || '',
+  })));
+check('a card holding several lanes defines each of them in its gloss',
+      multi.length > 0 && multi.every(c => c.chips.every(w => c.gloss.includes(w))),
+      JSON.stringify(multi.map(c => c.chips.filter(w => !c.gloss.includes(w)))));
+// THE ABSENCE IS NEVER FOLDED INTO A BACKLOG. Drawn that way in the concept:
+// "Not established" sat inside a planning card reading "work must be
+// scheduled, defined, or ruled on", about sites where nothing is known.
+check('the "Not established" lane is not grouped with scheduling or rulings',
+      await page.evaluate(() => {
+        const c = [...document.querySelectorAll('.gc')].find(x => x.textContent.includes('Not established'));
+        return !!c && !/Needs scheduling|Needs a ruling/.test(c.textContent);
+      }));
+// AND NOTHING CALLS A SCORED SITE UNSCORED. SKIP and FROZEN are severity
+// statuses and an excluded site is scored and left out of the totals --
+// cm-whitelabel was CRIT with three findings the day a card claimed otherwise.
+check('no group claims a site is unscored', !/not scored/i.test(await page.$eval('.lanes', e => e.textContent)));
 
 console.log('\n-- the banner --');
 // SCOPE THE PROSE CHECKS TO THE PROSE. The lane strip moved INSIDE .banner on

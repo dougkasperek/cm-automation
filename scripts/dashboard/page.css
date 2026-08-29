@@ -104,16 +104,30 @@ body { font-size: 13.5px; }
 .sweep b { color: var(--ink); font-weight: 500; }
 .sweep .stale { color: var(--warn-ink); }
 
-.lanes { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 0 0 14px; padding: 0; list-style: none; font-size: 12.5px; }
+.lanes { margin: 0 0 14px; font-size: 12.5px; }
+.grp-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.gc { border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px 9px; background: var(--surface2); display: flex; flex-direction: column; }
+.gc-hd { display: flex; align-items: baseline; gap: 7px; border: 0; background: none; padding: 0; cursor: pointer; text-align: left; color: var(--ink); }
+.gc-hd .n { font-family: var(--font-mono); font-size: 22px; font-weight: 500; line-height: 1; }
+.gc-hd .w { font-weight: 600; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.gc-hd[aria-pressed="true"] .w { text-decoration-color: var(--accent); color: var(--accent); }
+.gc-sub { margin: 4px 0 0; font-size: 11px; line-height: 1.35; color: var(--ink2); }
+.gc-chips { margin: 6px 0 0; padding-top: 5px; border-top: 1px solid var(--line); font-size: 11px; color: var(--ink2); }
+.gc-chips button, .lanes-aside button { border: 0; background: none; padding: 0; cursor: pointer; font-size: 11px; color: var(--ink2); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
+.gc-chips button[aria-pressed="true"], .lanes-aside button[aria-pressed="true"] { color: var(--accent); text-decoration-color: var(--accent); }
+.gc-chips b, .lanes-aside b { font-family: var(--font-mono); color: var(--ink); font-weight: 500; }
+.lanes .sep { margin: 0 5px; color: var(--line); }
+.lanes-aside { margin: 8px 0 0; font-size: 11px; color: var(--ink2); }
+.lanes-aside .aside-sub { color: var(--ink2); }
+/* The card border carries the lane colour the seven tiles used to. */
+.gc-act { border-left: 3px solid var(--crit); }
+.gc-planning { border-left: 3px solid var(--warn); }
+.gc-unknown { border-left: 3px solid var(--ink2); background: repeating-linear-gradient(135deg, var(--surface2) 0 3px, var(--hatch) 3px 4px); }
+.gc-clear { border-left: 3px solid var(--good); }
 /* Each lane is a small block: count and word on one line, the definition
    directly under it. Costs two lines of height and removes the need to
    remember seven invented terms. */
-.lanes li { display: block; max-width: 210px; }
-.lanes .lane-hd { display: flex; align-items: baseline; gap: 6px; }
-.lanes .lane-sub { display: block; font-size: 11px; line-height: 1.35; color: var(--ink2); margin-top: 1px; }
-.lanes .n { font-family: var(--font-mono); font-size: 18px; font-weight: 500; }
-.lanes button { border: 0; background: none; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; color: var(--ink); }
-.lanes button[aria-pressed="true"] { text-decoration-color: var(--accent); color: var(--accent); }
+
 
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .tools input, .tools select { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); }
@@ -174,9 +188,8 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 .foot { margin-top: 26px; font-size: 12px; color: var(--ink2); border-top: 1px solid var(--line); padding-top: 12px; }
 .foot p { margin: 4px 0; }
 @media (max-width: 980px) { .below { grid-template-columns: 1fr; } }
-@media (max-width: 640px) { .wrap { padding: 12px 10px 50px; } table.matrix th.site, table.matrix td.site { min-width: 118px; max-width: 130px; } .lanes .n { font-size: 15px; }
-  /* Two per row rather than seven cramped ones; the definition still shows. */
-  .lanes { gap: 8px 14px; } .lanes li { max-width: none; flex: 1 1 44%; } }
+@media (max-width: 640px) { .wrap { padding: 12px 10px 50px; } table.matrix th.site, table.matrix td.site { min-width: 118px; max-width: 130px; }   /* Two per row rather than seven cramped ones; the definition still shows. */
+  .grp-cards { grid-template-columns: 1fr 1fr; gap: 8px; } .gc-hd .n { font-size: 18px; } }
 
 /* --- schedule view --- */
 .item { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; margin-bottom: 8px; overflow: hidden; }

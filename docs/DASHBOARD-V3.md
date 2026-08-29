@@ -59,6 +59,33 @@ render on the tiles AND again in the matrix group headers, the same words about
 meets first, and `test-page.mjs` pins them rendered and unfolded. The group
 headers carry the lane word and its count only.
 
+## The headline block: four cards, and the four copy rules it must not break
+
+Doug's concept, 2026-08-29: group the seven lanes into cards with the lane
+counts as chips beneath, rather than seven equal tiles. Built. **Four things in
+the concept as drawn were wrong and are not in the build** — two are in
+CLAUDE.md's bug table because they are the canonical failure, and these are the
+rest, recorded here because they are copy rules for anyone editing this block:
+
+- **The predicate keeps its definition.** The concept shortened it to `0 sites
+  in needs a person`, dropping `(health critical, a consent banner that leaks,
+  or no SPF)`. That parenthetical is the ONLY place the page says what puts a
+  site in that lane; without it a reader cannot check the claim, which is the
+  entire job of printing a predicate.
+- **One name per lane.** The concept called the same set "require human
+  attention" in the headline, "Action required" on the card and "needs a
+  person" in the predicate — three names in one block, for a page whose lanes
+  are its own invented vocabulary. The build uses "Needs a person" everywhere,
+  which is also what the matrix group headers say.
+- **"Nothing pending" means both axes.** The concept read "Measured
+  successfully; no maintenance action is currently outstanding" — dropping
+  "on either axis" and naming only maintenance, on a page whose severity model
+  is per-axis and where a site can be clear on health and WARN on consent.
+- **A chip is vocabulary too.** `41 Needs scheduling · 17 Needs a ruling` as
+  bare chips under a group gloss reintroduces exactly what 2026-08-28 fixed:
+  the page's own words with no definition where they are used. Each card's
+  gloss defines every lane inside it.
+
 **The banner and the lane strip are one block, since 2026-08-29.** They were
 stacked boxes both summarising the same fleet, and the banner's prose restated
 the strip in numbers that were **not the strip's**: "a backlog (42 sites)" over

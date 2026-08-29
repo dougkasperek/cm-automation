@@ -79,6 +79,46 @@ showed 42 in the sentence and 44 on the tile. Fixing it means changing wording
 that `test-page.mjs` pins as the "not an all-clear" guarantee, which is not a
 thing to do casually. Decide it deliberately.
 
+### Then the seven tiles became four cards
+
+Doug's concept, drawn as a mockup: group the lanes into cards with the counts
+as chips beneath. Built. **Two of the four groups as drawn were false**, both
+now in CLAUDE.md's bug table, both caught by scoring the sites rather than
+reading the label:
+
+- `Not scored` held `4 Not measurable` and `1 Excluded by ruling`. **All five
+  are scored.** SKIP and FROZEN are severity statuses, and `excluded` means
+  scored and not counted — `cm-whitelabel` was **CRIT with three findings** the
+  day a card said the tool could produce no result for it. They are a quiet
+  line under the cards now, worded as what they are.
+- `Planning / decision pending` held `11 Not established` beside the backlog
+  and the rulings, under "work must be scheduled, defined, or ruled on". On
+  those sites nothing is known, so there is no work to schedule. **The absence
+  folded into a backlog**, in the page's own headline block. It has its own
+  card and is never merged upward.
+
+Two more, recorded in `docs/DASHBOARD-V3.md` as copy rules rather than as bugs:
+the predicate had lost `(health critical, a consent banner that leaks, or no
+SPF)`, which is the only place the page says what puts a site in that lane; and
+the same set was called three different names in one block. The build uses
+"Needs a person" everywhere, matching the predicate and the matrix headers.
+
+**The cards cost height, and the definitions are why.** 697px before the first
+data row, against 654px for the seven tiles and 759px at the start of the
+session. The cards carry fuller definitions than the tiles did — including the
+two the concept dropped — so they are wordier on purpose: 285 chrome words
+against 250. Net against where the session started, still 62px and 46 words
+better.
+
+`test-page.mjs` was rewritten around this rather than patched. The old lane
+block counted seven `.lanes li` and read a `.lane-sub` out of each, which
+describes the markup of 2026-08-28 and broke entirely on a change that kept the
+guarantee intact. It now asserts the property: **every lane word this page
+invents is displayed, and a visible definition is displayed with it**, wherever
+that lives. Plus three new guards, each verified to fail — a card holding
+several lanes must define each in its gloss, "Not established" must not be
+grouped with scheduling or rulings, and nothing may call a scored site unscored.
+
 ### Still on the table, not done
 
 - **The thesis line.** `One row per site, one column per question. Hatched is

@@ -112,16 +112,30 @@ body { font-size: 13.5px; }
 .sweep b { color: var(--ink); font-weight: 500; }
 .sweep .stale { color: var(--warn-ink); }
 
-.lanes { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 0 0 14px; padding: 0; list-style: none; font-size: 12.5px; }
+.lanes { margin: 0 0 14px; font-size: 12.5px; }
+.grp-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.gc { border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px 9px; background: var(--surface2); display: flex; flex-direction: column; }
+.gc-hd { display: flex; align-items: baseline; gap: 7px; border: 0; background: none; padding: 0; cursor: pointer; text-align: left; color: var(--ink); }
+.gc-hd .n { font-family: var(--font-mono); font-size: 22px; font-weight: 500; line-height: 1; }
+.gc-hd .w { font-weight: 600; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.gc-hd[aria-pressed="true"] .w { text-decoration-color: var(--accent); color: var(--accent); }
+.gc-sub { margin: 4px 0 0; font-size: 11px; line-height: 1.35; color: var(--ink2); }
+.gc-chips { margin: 6px 0 0; padding-top: 5px; border-top: 1px solid var(--line); font-size: 11px; color: var(--ink2); }
+.gc-chips button, .lanes-aside button { border: 0; background: none; padding: 0; cursor: pointer; font-size: 11px; color: var(--ink2); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
+.gc-chips button[aria-pressed="true"], .lanes-aside button[aria-pressed="true"] { color: var(--accent); text-decoration-color: var(--accent); }
+.gc-chips b, .lanes-aside b { font-family: var(--font-mono); color: var(--ink); font-weight: 500; }
+.lanes .sep { margin: 0 5px; color: var(--line); }
+.lanes-aside { margin: 8px 0 0; font-size: 11px; color: var(--ink2); }
+.lanes-aside .aside-sub { color: var(--ink2); }
+/* The card border carries the lane colour the seven tiles used to. */
+.gc-act { border-left: 3px solid var(--crit); }
+.gc-planning { border-left: 3px solid var(--warn); }
+.gc-unknown { border-left: 3px solid var(--ink2); background: repeating-linear-gradient(135deg, var(--surface2) 0 3px, var(--hatch) 3px 4px); }
+.gc-clear { border-left: 3px solid var(--good); }
 /* Each lane is a small block: count and word on one line, the definition
    directly under it. Costs two lines of height and removes the need to
    remember seven invented terms. */
-.lanes li { display: block; max-width: 210px; }
-.lanes .lane-hd { display: flex; align-items: baseline; gap: 6px; }
-.lanes .lane-sub { display: block; font-size: 11px; line-height: 1.35; color: var(--ink2); margin-top: 1px; }
-.lanes .n { font-family: var(--font-mono); font-size: 18px; font-weight: 500; }
-.lanes button { border: 0; background: none; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; color: var(--ink); }
-.lanes button[aria-pressed="true"] { text-decoration-color: var(--accent); color: var(--accent); }
+
 
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .tools input, .tools select { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); }
@@ -182,9 +196,8 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 .foot { margin-top: 26px; font-size: 12px; color: var(--ink2); border-top: 1px solid var(--line); padding-top: 12px; }
 .foot p { margin: 4px 0; }
 @media (max-width: 980px) { .below { grid-template-columns: 1fr; } }
-@media (max-width: 640px) { .wrap { padding: 12px 10px 50px; } table.matrix th.site, table.matrix td.site { min-width: 118px; max-width: 130px; } .lanes .n { font-size: 15px; }
-  /* Two per row rather than seven cramped ones; the definition still shows. */
-  .lanes { gap: 8px 14px; } .lanes li { max-width: none; flex: 1 1 44%; } }
+@media (max-width: 640px) { .wrap { padding: 12px 10px 50px; } table.matrix th.site, table.matrix td.site { min-width: 118px; max-width: 130px; }   /* Two per row rather than seven cramped ones; the definition still shows. */
+  .grp-cards { grid-template-columns: 1fr 1fr; gap: 8px; } .gc-hd .n { font-size: 18px; } }
 
 /* --- schedule view --- */
 .item { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; margin-bottom: 8px; overflow: hidden; }
@@ -377,6 +390,43 @@ const LANE = {
   excluded:     { word: 'Excluded by ruling',  sub: 'production: false in the inventory; scored, not counted' },
 };
 const LANE_ORDER = ['person', 'unestablished', 'schedule', 'decide', 'clear', 'unmeasurable', 'excluded'];
+
+/* FOUR CARDS OVER SEVEN LANES. Doug's concept, 2026-08-29: seven equal tiles
+   ask a reader to hold seven things; the cards say what kind of answer each
+   group is. Display only -- severity.py decides status, lane() decides lane,
+   and this decides nothing at all.
+
+   TWO GROUPINGS IN THE CONCEPT WERE FALSE and are not here; both are in
+   CLAUDE.md's bug table:
+
+   - `unestablished` was drawn inside a "planning / decision pending" card
+     reading "work must be scheduled, defined, or ruled on". On those sites
+     NOTHING IS KNOWN -- the lane is health.status UNKNOWN, or coverage_partial
+     and framework_not_wordpress. There is no work to schedule and nothing to
+     rule on. An absence folded into a backlog is this repo's cardinal bug, so
+     it gets its own card and is never merged upward.
+   - `unmeasurable` + `excluded` were drawn as "Not scored". All five ARE
+     scored: SKIP and FROZEN are severity statuses, and `excluded` means
+     "scored, NOT COUNTED" -- cm-whitelabel was CRIT with three findings on the
+     day the card claimed the tool could produce no result for it. They are a
+     quiet line under the cards, worded as what they are.
+
+   Each card's gloss defines EVERY lane inside it. A chip carrying one of this
+   page's invented lane words with no definition beside it is the 2026-08-28
+   bug again, one level down. */
+const GROUPS = [
+  { key: 'act',      word: 'Needs a person',        lanes: ['person'],
+    sub: 'a measured finding that a person acts on now: health critical, a tag that fires after a rejection, or no SPF' },
+  { key: 'planning', word: 'Planning and decisions', lanes: ['schedule', 'decide'],
+    sub: 'measured, and waiting on a person rather than a scan. Needs scheduling is a maintenance backlog, the same work on many sites; Needs a ruling has nothing to run until someone decides' },
+  { key: 'unknown',  word: 'Not established',       lanes: ['unestablished'],
+    sub: 'looked at, but the maintenance question has no answer yet. An absence, never a pass, and never counted as a backlog' },
+  { key: 'clear',    word: 'Nothing pending',       lanes: ['clear'],
+    sub: 'measured, nothing outstanding on either axis: health and consent both' },
+];
+/* Not a card. Neither is news, and neither is unscored: SKIP and FROZEN are
+   statuses, and an excluded site is scored and left out of the fleet totals. */
+const ASIDE_LANES = ['unmeasurable', 'excluded'];
 
 /* ---- sparkline (10 points is movement, not a trend; label it that way) ----- */
 function spark(series, opts = {}) {
@@ -678,7 +728,8 @@ function cellEl(col, s) {
    state. What went with it was an explanation nobody could reach from the
    thing being explained. */
 
-let laneFilter = '', absOnly = false;
+let laneFilter = [], absOnly = false;   // a card selects several lanes, a chip one
+const sameFilter = a => a.length === laneFilter.length && a.every(x => laneFilter.includes(x));
 const q = h('input', { type: 'search', placeholder: 'Filter sites', 'aria-label': 'Filter sites' });
 const hostSel = h('select', {}, h('option', { value: '' }, 'All hosts'), ...[...new Set(SITES.map(s => s.host))].sort().map(x => h('option', { value: x }, x)));
 const absBox = h('input', { type: 'checkbox', onchange: e => { absOnly = e.target.checked; draw(); syncUrl(); } });
@@ -690,7 +741,7 @@ function syncUrl() {
   const u = new URLSearchParams();
   if (view === 'schedule') u.set('view', 'schedule');
   if (hostSel.value) u.set('host', hostSel.value);
-  if (laneFilter) u.set('lane', laneFilter);
+  if (laneFilter.length) u.set('lane', laneFilter.join(','));
   if (q.value.trim()) u.set('q', q.value.trim());
   if (absOnly) u.set('unmeasured', '1');
   const qs = u.toString();
@@ -699,7 +750,9 @@ function syncUrl() {
 function readUrl() {
   const u = new URLSearchParams(location.search);
   if (u.get('host')) hostSel.value = u.get('host');
-  if (u.get('lane') && LANE[u.get('lane')]) laneFilter = u.get('lane');
+  // Every named lane must exist, or the filter silently matches nothing and
+  // the page looks like an empty fleet.
+  if (u.get('lane')) { const ls = u.get('lane').split(',').filter(x => LANE[x]); if (ls.length) laneFilter = ls; }
   if (u.get('q')) q.value = u.get('q');
   if (u.get('unmeasured') === '1') { absOnly = true; absBox.checked = true; }
 }
@@ -707,7 +760,7 @@ function readUrl() {
 function draw() {
   const cols = COLS;
   const term = q.value.trim().toLowerCase();
-  const rows = SITES.filter(s => (!term || s.id.includes(term)) && (!hostSel.value || s.host === hostSel.value) && (!laneFilter || lane(s) === laneFilter)
+  const rows = SITES.filter(s => (!term || s.id.includes(term)) && (!hostSel.value || s.host === hostSel.value) && (!laneFilter.length || laneFilter.includes(lane(s)))
     && (!absOnly || cols.some(c => !c.axis && ['abs'].includes(c.cell(s).state))));
   const groups = []; let last = null;
   for (const c of cols) { if (c.group !== last) { groups.push({ name: c.group, n: 1 }); last = c.group; } else groups[groups.length - 1].n++; }
@@ -737,7 +790,7 @@ function draw() {
   }
   mwrap.innerHTML = ''; mwrap.append(h('table', { class: 'matrix' }, thead, tbody));
   count.textContent = rows.length + ' rows · ' + cols.filter(c => !c.axis).length + ' questions';
-  $$('.lanes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lane === laneFilter)));
+  $$('.lanes [data-lanes]').forEach(b => b.setAttribute('aria-pressed', String(sameFilter(b.dataset.lanes.split(',')))));
 }
 
 const standingBy = cause => D.standing.find(g => g.cause === cause);
@@ -915,26 +968,41 @@ function banner() {
     lanes(),
     h('p', { class: 'bn-rule' }, 'Green requires: 0 sites in "needs a person" (health critical, a consent banner that leaks, or no SPF) and no coverage regression since the previous run. A source that did not run or saw fewer sites reads "can\'t say", never green.'));
 }
-/* THE GLOSS IS PART OF THE TILE, not a tooltip and not a fold.
-   These seven words are the page's own vocabulary -- "Not established" and
-   "Needs a ruling" mean nothing until someone tells you -- and until
-   2026-08-28 the strip rendered the word and the count alone. The
-   definitions existed the whole time in LANE[].sub, shown only inside the
-   matrix group headers and the site drawer, so from the top of the page
-   there was nothing to read. Doug, who designed the lanes, said he could not
-   remember them.
-   2026-08-29: the matrix group headers no longer repeat it, so THIS is the
-   only place the seven words are defined. Do not fold it, tooltip it, or
-   move it back down into the table.
-   The bug table already carries this exact row: a key put one click away on
-   a page where every <details> renders closed. A KEY YOU HAVE TO DISCOVER IS
-   NOT A KEY -- and a title= tooltip is worse, because it needs a mouse. */
+/* THE DEFINITION IS PART OF THE CARD, not a tooltip and not a fold.
+   These words are the page's own vocabulary -- "Not established" and "Needs a
+   ruling" mean nothing until someone tells you -- and until 2026-08-28 the
+   strip rendered the word and the count alone. Doug, who designed the lanes,
+   said he could not remember them. The matrix group headers stopped repeating
+   the definitions on 2026-08-29, so this is the ONLY place they are given.
+   Do not fold it, tooltip it, or move it back down into the table.
+   A KEY YOU HAVE TO DISCOVER IS NOT A KEY -- and a title= tooltip is worse,
+   because it needs a mouse. That applies to the CHIPS too: a card gloss must
+   define every lane whose word appears as a chip inside it. */
 function lanes() {
-  return h('ul', { class: 'lanes' }, ...LANE_ORDER.map(L => h('li', {},
-  h('span', { class: 'lane-hd' },
-    h('span', { class: 'n' }, laneCounts[L]),
-    h('button', { 'data-lane': L, onclick: () => { laneFilter = laneFilter === L ? '' : L; draw(); syncUrl(); } }, LANE[L].word)),
-  h('span', { class: 'lane-sub' }, LANE[L].sub))));
+  const n = ls => ls.reduce((a, L) => a + laneCounts[L], 0);
+  const pick = ls => { laneFilter = sameFilter(ls) ? [] : ls; draw(); syncUrl(); };
+  return h('div', { class: 'lanes' },
+    h('ul', { class: 'grp-cards' }, ...GROUPS.map(g => h('li', { class: 'gc gc-' + g.key },
+      h('button', { class: 'gc-hd', 'data-lanes': g.lanes.join(','), onclick: () => pick(g.lanes) },
+        h('span', { class: 'n' }, n(g.lanes)), h('span', { class: 'w' }, g.word)),
+      h('p', { class: 'gc-sub' }, g.sub),
+      /* Only where a card covers more than one lane. A single-lane card would
+         print its own count twice, and the chip would say nothing the heading
+         did not. */
+      g.lanes.length > 1
+        ? h('p', { class: 'gc-chips' }, ...g.lanes.map((L, i) => [
+            i ? h('span', { class: 'sep' }, '\u00b7') : null,
+            h('button', { 'data-lanes': L, onclick: () => pick([L]) },
+              h('b', {}, laneCounts[L]), ' ' + LANE[L].word)]).flat().filter(Boolean))
+        : null))),
+    /* NOT A CARD, and NOT "not scored" -- see GROUPS. Both of these are
+       measured outcomes: SKIP and FROZEN are severity statuses, and an
+       excluded site is scored and then left out of the fleet totals. */
+    h('p', { class: 'lanes-aside' }, ...ASIDE_LANES.map((L, i) => [
+      i ? h('span', { class: 'sep' }, '\u00b7') : null,
+      h('button', { 'data-lanes': L, onclick: () => pick([L]) },
+        h('b', {}, laneCounts[L]), ' ' + LANE[L].word),
+      h('span', { class: 'aside-sub' }, ' \u2014 ' + LANE[L].sub)]).flat().filter(Boolean)));
 }
 
 const sweep = sweepLine();
