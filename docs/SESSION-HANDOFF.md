@@ -86,6 +86,9 @@ verbs with the count it just printed.
 | page height | 4400px | 4377px |
 | chrome words | 320 | **301** |
 
+**Then the coverage line put 25px and 38 words back** — see the section below.
+The day ended at **732px / 339 words** against **730px / 320** at its start.
+
 **These are NOT comparable to the 697px in the block below.** That figure was
 measured on Doug's mac; these were measured in headless Chromium 141 on Linux,
 which has different fonts and wraps differently. What is comparable is the
@@ -103,7 +106,8 @@ node _scratch/measure-page.mjs fleet.html
 
 ### Tests
 
-`test-page.mjs` is **63 → 68**. Three new checks, **each verified to fail
+`test-page.mjs` is **63 → 68** in this pass, and **71** after the
+coverage-line pass below. Three new checks here, **each verified to fail
 against the previous page** before it was fixed:
 
 - the masthead carries no prose paragraph
@@ -124,7 +128,8 @@ tripped it. Reworded, not suppressed.
 **13 of 17 suites were run this session, all green.** score-scan 27,
 consent-rulings 17, nexcess-ssh 43, worker-exposure 48, workflows 67,
 access-policies 46, ledger 319, severity 166, page.py 35, build-inventory 6,
-nexcess 96, consent 126, and page.mjs 68.
+nexcess 96, consent 126, and page.mjs 68 (71 after the pass below; ledger,
+severity, page.py, score-scan and consent-rulings were re-run after it).
 
 **Four were NOT run**, all for environment reasons, none touched by this
 change. Run these on the mac before pushing:
@@ -140,6 +145,55 @@ node test/test-gating-window.mjs    # needs Chromium
 The bridge VM cannot install a browser: `npx playwright install` is refused
 with `403 Connection blocked by network allowlist`. This is now in CLAUDE.md's
 testing section.
+
+### Later the same evening: the health-coverage count is on the page
+
+**The scoreboard was not on the dashboard.** CLAUDE.md calls the
+health-coverage count "the number printed under the fleet-health card" and
+"what progress looks like". There is no fleet-health card on the v3 page. Its
+only fleet-level appearance was inside the GREEN banner sentence, and this
+fleet has never been green — so the project's own measure of progress has been
+invisible since the redesign. Found by searching the rendered text of both
+tabs, not the source. Per site it was in the drawer the whole time
+(`coverage_partial`, "Seen only by the consent sweep"); nothing totalled it.
+
+It now renders in **every** state, in the banner block, as:
+
+> **11** with no health evidence — a scan reached the site, but no backup age
+> and no plugin or theme count. Cuts across the lanes rather than being one:
+> 1 in Needs a person, 10 in Not established.
+
+The split is computed, not asserted, and it is there to stop the count being
+read as the `Not established` chip beside it. Measured this session: in the red
+state both are 11 over **different sets** — the lane holds
+`app.eastauroracc.com` and not `elderwoodipa.com`, the count the reverse. In
+the green state they are **11 and 12**.
+
+**The green banner sentence now carries one figure, not two:**
+
+> 42 sites carry a maintenance backlog; none of it needs anyone today.
+
+The coverage clause moved to its own line rather than being deleted. The
+not-an-all-clear guarantee is unchanged in substance and is now pinned by two
+checks instead of one: the sentence must name the backlog, and the block must
+carry the coverage count.
+
+**The line is not `.lanes-aside` and not inside `.lanes`, and that took two
+tries.** `test-page.mjs` sums `.gc-hd .n, .lanes-aside b` against the fleet
+size; a number that cuts across the lanes does not belong in that sum. Both
+wrong versions were caught by the existing suite, not by reading the diff. It
+has `.cov-line` of its own now, with the reason in both the JS and the CSS.
+
+**It costs height and that is the trade.** 707px → **732px** before the first
+data row, 301 → **339** chrome words, same script and browser as the earlier
+measurement. That is 2px above where the day started, and 38 words spent on a
+number that was previously on no page at all. If you want it shorter, the
+sentence that can go is the definition ("a scan reached the site, but no backup
+age and no plugin or theme count") — but that makes it a bare number, which is
+what the four cards existed to stop.
+
+`test-page.mjs` is **68 → 71**. Three more checks, each verified to fail
+against the page as it stood before this pass.
 
 ### Still on the table
 
@@ -161,15 +215,12 @@ testing section.
   re-pointed at the new page, or the copy is consciously dropped from the
   product. That is a decision about what the new page should say, not a
   cleanup. Give it its own session.
-- **The green-state residual is TWO instances, not one.** The block below
-  names the backlog count. `unmeasured` in the same sentence has the same
-  defect: it is `D.no_health_evidence.length` printed above a `Not established`
-  chip computed from the lane. Both were 11 on 2026-08-29 over different sets —
-  one holds `elderwoodipa.com`, the other holds `app.eastauroracc.com`. That is
-  exactly the coincidence the red branch's own comment warns about, still live
-  in the green branch. Green has never occurred on this fleet, so nobody has
-  seen either. Fixing them edits the sentence `test-page.mjs` pins as the
-  not-an-all-clear guarantee; decide the replacement copy first.
+- ~~**The green-state residual.**~~ **DONE 2026-08-29, evening — see the
+  coverage-line section above.** Measuring it first changed the fix: the
+  backlog pair agreed on the day's data (42 and 42, by coincidence, still from
+  different sources) and the coverage pair was the one that visibly disagreed
+  (11 against 12 in green; both 11 in red over different sets). And the count
+  turned out to be on no page in any state, which was the bigger problem.
 - **"The page renders the last GOOD run per source"** (DECIDED 2026-08-28).
   Still the next substantial piece. Untouched.
 
@@ -211,7 +262,10 @@ figure to quote is **759px → 697px** of header before the first data row.
 | before the session | 759px | 4583px | 331 |
 | after the six cuts | 654px | 4334px | 250 |
 | after the merge | 661px | 4341px | 237 |
-| **after the four cards (now)** | **697px** | **4376px** | **285** |
+| **after the four cards** | **697px** | **4376px** | **285** |
+
+Superseded by the evening block at the top of this file, which measures the
+same page with a committed script rather than by hand.
 
 **The last two rows go the wrong way and that is deliberate.** The merge cost
 7px in borders and the cards cost 36px in definitions — including two the

@@ -23,8 +23,18 @@ a second scoring model or a second site list.
 
 **The scoreboard is the HEALTH-COVERAGE count on the dashboard** — sites that
 have been looked at but have **no health evidence**: no backup age, no plugin
-or theme count. It is **11, re-measured 2026-08-25** after the Nexcess SSH scan first ran (it was 32), and it is the number printed
-under the fleet-health card. That number falling is what progress looks like.
+or theme count. It is **11, re-measured 2026-08-25** after the Nexcess SSH scan first ran (it was 32). That number falling is what progress looks like.
+
+**This paragraph said "it is the number printed under the fleet-health card"
+until 2026-08-29, and there is no fleet-health card on the v3 page.** The
+number was not on the dashboard at all. Its only fleet-level appearance was
+inside the GREEN banner sentence, and this fleet has never been green, so the
+project's own measure of progress had been invisible for the life of the
+redesign. Per site it was in the drawer the whole time (`coverage_partial`,
+"Seen only by the consent sweep"); nothing totalled it. It now has its own
+line in the banner block, in **every** state, with its split by lane printed
+beside it — because the count and the "Not established" lane were both 11 on
+2026-08-29 over different sets, and are 11 against 12 in the green state.
 
 It breaks down as **Azure 4, Pressable 3, Flywheel 2, WP Engine 1, Pantheon 1**
 (`hoosierfeeder.com`). The Nexcess 21 are gone: the SSH deep scan ran on
@@ -278,6 +288,8 @@ do not add a total.
 | `4 trackers` on a site the sweep COULD see | 6. Hotjar and Meta Pixel detect automation and decline to fire, so a headless browser cannot see them on ANY site. Every headless count was a floor printed as a total |
 | Pantheon blocks the scanner, and the fix is an allowlist | a Cloudflare bot challenge, and the variable was HEADLESS. Headed loads 27 of the 28 "blocked" sites. Three separate wrong answers were written down before anyone changed one setting and measured |
 | a current-looking dashboard | three of four workflows ingested and never published |
+| the scoreboard is "the number printed under the fleet-health card" | there is no fleet-health card, and the number was on no page in any state the fleet has ever been in. Written in this file, describing the page it replaced |
+| the green banner: `N sites carry a maintenance backlog and M have never had health measured` | printed directly above a `Not established` chip: same number, different set in the red state; different number (11 against 12) in the green one. Measured both ways rather than reasoned about |
 | the Schedule panel: "the N sites that need a person today, the rulings and the coverage gaps stay in the matrix" | three of the four were on the Schedule tab. `iroquoisfence.com` as a backlog decision of its own, `hoffmanscheese` and `runtalnorthamerica.com` inside batched components' install lists. The panel's own FIRST paragraph named the first of them |
 | `the other 1 (iroquoisfence.com) need a person for something else first and are listed here too` | one site. The plural was hardcoded, and the count has been 1 every day the page has existed, so the sentence was ungrammatical on every render |
 | four commits unpushed, `origin/main` at `29a650f` | `origin/main` was `be0b75c`, the same as HEAD. Written into the handoff by the session that made the commits, and read forward into the next one |
@@ -569,6 +581,14 @@ The previous page is `render()` behind `--legacy-out` for one cycle.
   Chromium 141 on Linux — NOT comparable to the 697px in the 2026-08-29
   handoff, which was measured on a mac with different fonts. Run the script on
   the machine you want the number for; it states its own definitions.
+- **The health-coverage count has its own line in the banner block, since
+  2026-08-29**, rendered in every state. It is deliberately NOT `.lanes-aside`
+  and not inside `.lanes`: `test-page.mjs` sums `.gc-hd .n, .lanes-aside b`
+  against the fleet size, and this number cuts across the lanes rather than
+  being one. Two versions of the line wore the wrong class and broke that
+  correct check; the third has `.cov-line` of its own. **The suite caught both,
+  not a person reading the diff.** The line prints its own split by lane, so
+  the count can never be read as the `Not established` chip beside it.
 - **The CONSENT page still uses `.top .thesis`.** `render-dashboard.py` emits
   one in that page's header and that page inlines `page.css`. The rule is
   commented as consent-only; do not delete it because the fleet page stopped
@@ -667,7 +687,7 @@ python3 test/test-access-policies.py  # 46   offline, no token
 python3 test/test-ledger.py       # 319
 python3 test/test-severity.py     # 166
 python3 test/test-page.py         #  35   offline; the page's model is the feed's, never "all good"
-node test/test-page.mjs           #  68   headless Chromium; the rendered DOM. Needs `npm install`.
+node test/test-page.mjs           #  71   headless Chromium; the rendered DOM. Needs `npm install`.
                                   #       RENDER FIRST -- it opens ./fleet.html,
                                   #       a committed artifact, and renders
                                   #       nothing itself

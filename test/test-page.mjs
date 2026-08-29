@@ -179,6 +179,24 @@ check('exactly one banner state', ['banner-green', 'banner-red', 'banner-cant'].
 check('the predicate is printed under it', banner.text.includes('Green requires'));
 const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
 check("the page never says 'all good'", !bodyText.includes('all good'));
+// THE SCOREBOARD MUST BE ON THE PAGE. CLAUDE.md calls the health-coverage
+// count "the number printed under the fleet-health card" and "what progress
+// looks like". The v3 page has no fleet-health card, and until 2026-08-29 the
+// only fleet-level statement of the number lived inside the GREEN banner
+// sentence -- a state this fleet has never been in. The project's own measure
+// of progress was invisible on its own dashboard for the life of the redesign.
+// Property: the count renders in whatever state the banner is in.
+const covLine = await page.$eval('.banner .cov-line', e => e.textContent).catch(() => '');
+check('the fleet states its health-coverage count', /\d+ with no health evidence/.test(covLine), covLine.slice(0, 120));
+// ...AND IS NOT READ AS THE "Not established" LANE. On 2026-08-29 both were
+// 11 over different sets -- the lane holds app.eastauroracc.com and not
+// elderwoodipa.com, the count the reverse -- and in the green state they are
+// 11 and 12. Two figures that agree by coincidence are the ones nobody
+// catches, so the line prints its own split by lane.
+check('...and says which lanes those sites are in, so it cannot be read as one',
+      /Cuts across the lanes rather than being one: \d+ in |Nothing is in this state/.test(covLine),
+      covLine.slice(0, 200));
+
 const personN = await page.$eval('.lanes li:first-child .n', e => +e.textContent);
 // THREE STATES, NOT TWO. This read `banner-red ? names them : personN === 0`
 // until 2026-08-28, which quietly assumed the live ledger never carries a
@@ -327,7 +345,19 @@ check('with nobody needing a person the banner is green', green.cls.includes('ba
 // because in green there is no red headline and this is the only thing
 // standing between the banner and "all good". Reading .prose rather than the
 // container means the lane counts cannot stand in for it.
-check('...and says it is NOT "all good" in the same breath: backlog and unmeasured counts are in the sentence', /\d+ sites carry a maintenance backlog and \d+ have never had health measured/.test(green.prose) && !green.text.toLowerCase().includes('all good'), green.prose.slice(0, 160));
+//
+// ONE FIGURE IN THE SENTENCE, NOT TWO, since 2026-08-29. It used to carry the
+// coverage count too, directly above a "Not established" chip that was a
+// different set in red and a different NUMBER in green (11 vs 12, measured).
+// The coverage count is checked above instead, on its own line, where it
+// renders in every state rather than only this one. The guarantee is
+// unchanged in substance: green never reads as an all-clear, because the
+// sentence names the backlog and the block names the coverage gap.
+check('...and says it is NOT "all good" in the same breath: the backlog is in the sentence',
+      /\d+ sites carry a maintenance backlog/.test(green.prose) && !green.text.toLowerCase().includes('all good'),
+      green.prose.slice(0, 160));
+check('...and the green block still carries the coverage count beside it',
+      /\d+ with no health evidence/.test(green.text), green.text.slice(0, 160));
 // THE REAL RECORD SHAPE, not an invented one. This fixture carried a `what`
 // key, which `coverage_regressions()` has never emitted -- its keys are
 // source, run_id, deep_scanned, site_count, previous_run_id,

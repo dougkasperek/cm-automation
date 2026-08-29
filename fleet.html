@@ -131,6 +131,13 @@ body { font-size: 13.5px; }
 .lanes .sep { margin: 0 5px; color: var(--line); }
 .lanes-aside { margin: 8px 0 0; font-size: 11px; color: var(--ink2); }
 .lanes-aside .aside-sub { color: var(--ink2); }
+/* The health-coverage line. Reads like `.lanes-aside` and is deliberately NOT
+   that class: test-page.mjs sums `.lanes-aside b` against the fleet size, and
+   this number is not a lane -- it cuts across them. Its count is plain, not a
+   button, because there is no lane filter to apply. */
+.cov-line { margin: 8px 0 0; font-size: 11px; color: var(--ink2); }
+.cov-line b { font-family: var(--font-mono); color: var(--ink); font-weight: 500; }
+.cov-line .aside-sub { color: var(--ink2); }
 /* The card border carries the lane colour the seven tiles used to. */
 .gc-act { border-left: 3px solid var(--crit); }
 .gc-planning { border-left: 3px solid var(--warn); }
@@ -920,7 +927,7 @@ function banner() {
      fact, and the banner held the worse one. The date range stays because
      the strip does not state it. */
   const basis = 'on scans from ' + fmtDay(oldest[1].observed_at.slice(0, 10)) + ' to ' + fmtDay(newest[1].observed_at.slice(0, 10));
-  const backlog = AGG.backlogOnly.length, unmeasured = D.no_health_evidence.length;
+  const backlog = AGG.backlogOnly.length;
   let state, head, sub;
   if (regress.length) {
     state = 'cant'; head = "Can't say";
@@ -965,7 +972,17 @@ function banner() {
        honestly give -- a phrase this file must not contain, in copy OR in a
        comment, because page.js is embedded verbatim in the rendered HTML and
        the guard scans the whole page. */
-    sub = backlog + ' sites carry a maintenance backlog and ' + unmeasured + ' have never had health measured; neither needs anyone today. Based ' + basis + '.';
+    /* ONE FIGURE, NOT TWO. This sentence used to carry the coverage count as
+       well -- "and 11 have never had health measured" -- printed directly
+       above a "Not established" chip that was 11 in the red state over a
+       DIFFERENT set of sites and 12 in the green state over a nested one.
+       Measured both ways on 2026-08-29. It was the last surviving instance of
+       the thing the 2026-08-29 merge existed to remove: a prose number beside
+       a lane count from another source. The coverage count now has its own
+       line in coverageLine(), inside this same block, next to its own
+       definition and its split by lane -- so it renders in EVERY state, not
+       only the one this fleet has never been in. */
+    sub = backlog + ' sites carry a maintenance backlog; none of it needs anyone today. Based ' + basis + '.';
   }
   /* ONE BLOCK, NOT TWO. The banner and the lane strip were stacked boxes both
      summarising the same fleet, and the banner's prose restated the strip in
@@ -977,6 +994,11 @@ function banner() {
     h('div', { class: 'bn-head' }, h('span', { class: 'bn-glyph', 'aria-hidden': 'true' }, state === 'green' ? '●' : state === 'red' ? '■' : '?'), head),
     h('p', { class: 'bn-sub' }, sub),
     lanes(),
+    /* OUTSIDE `lanes()`, deliberately. This number is not a lane, and
+       test-page.mjs sums every count inside `.lanes` against the fleet size --
+       so a first version that rendered it in there broke a correct check.
+       The DOM says what the copy says. */
+    coverageLine(),
     h('p', { class: 'bn-rule' }, 'Green requires: 0 sites in "needs a person" (health critical, a consent banner that leaks, or no SPF) and no coverage regression since the previous run. A source that did not run or saw fewer sites reads "can\'t say", never green.'));
 }
 /* THE DEFINITION IS PART OF THE CARD, not a tooltip and not a fold.
@@ -989,6 +1011,40 @@ function banner() {
    A KEY YOU HAVE TO DISCOVER IS NOT A KEY -- and a title= tooltip is worse,
    because it needs a mouse. That applies to the CHIPS too: a card gloss must
    define every lane whose word appears as a chip inside it. */
+/* THE HEALTH-COVERAGE COUNT, which until 2026-08-29 was not on this page at
+   all. CLAUDE.md calls it the scoreboard -- "that number falling is what
+   progress looks like" -- and says it is printed under the fleet-health card.
+   There is no fleet-health card on the v3 page. The only fleet-level statement
+   of the number was inside the GREEN banner sentence, and this fleet has never
+   been green, so the project's own measure of progress had been invisible
+   since the redesign. Per site it was still in the drawer (`coverage_partial`,
+   "Seen only by the consent sweep"); nothing totalled it.
+
+   IT IS NOT A LANE, and the breakdown is here to stop it being read as one.
+   On 2026-08-29 it was 11 and the "Not established" lane was also 11, over
+   DIFFERENT SETS: the lane holds app.eastauroracc.com and not
+   elderwoodipa.com, this count holds elderwoodipa.com and not
+   app.eastauroracc.com. Two figures that agree by coincidence are the ones
+   nobody catches, so the split by lane is computed and printed, never
+   asserted. */
+function coverageLine() {
+  const ids = D.no_health_evidence;
+  const by = {};
+  let offRoster = 0;
+  for (const id of ids) {
+    const s = SITES.find(x => x.id === id);
+    if (!s) { offRoster++; continue; }
+    (by[lane(s)] ||= []).push(id);
+  }
+  const parts = LANE_ORDER.filter(L => by[L]).map(L => by[L].length + ' in ' + LANE[L].word);
+  if (offRoster) parts.push(offRoster + ' not in the table');
+  return h('p', { class: 'cov-line' },
+    h('b', {}, ids.length), ' with no health evidence',
+    h('span', { class: 'aside-sub' }, ' \u2014 a scan reached the site, but no backup age and no plugin or theme count. '
+      + (ids.length ? 'Cuts across the lanes rather than being one: ' + parts.join(', ') + '.'
+                    : 'Nothing is in this state.')));
+}
+
 function lanes() {
   const n = ls => ls.reduce((a, L) => a + laneCounts[L], 0);
   const pick = ls => { laneFilter = sameFilter(ls) ? [] : ls; draw(); syncUrl(); };

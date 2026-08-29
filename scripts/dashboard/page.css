@@ -123,6 +123,13 @@ body { font-size: 13.5px; }
 .lanes .sep { margin: 0 5px; color: var(--line); }
 .lanes-aside { margin: 8px 0 0; font-size: 11px; color: var(--ink2); }
 .lanes-aside .aside-sub { color: var(--ink2); }
+/* The health-coverage line. Reads like `.lanes-aside` and is deliberately NOT
+   that class: test-page.mjs sums `.lanes-aside b` against the fleet size, and
+   this number is not a lane -- it cuts across them. Its count is plain, not a
+   button, because there is no lane filter to apply. */
+.cov-line { margin: 8px 0 0; font-size: 11px; color: var(--ink2); }
+.cov-line b { font-family: var(--font-mono); color: var(--ink); font-weight: 500; }
+.cov-line .aside-sub { color: var(--ink2); }
 /* The card border carries the lane colour the seven tiles used to. */
 .gc-act { border-left: 3px solid var(--crit); }
 .gc-planning { border-left: 3px solid var(--warn); }
