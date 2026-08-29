@@ -8,17 +8,40 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-29: the subtraction pass is DONE. What is left
+## PICK UP HERE — 2026-08-29: page work DONE and committed, NOT pushed
 
-**Doug asked for six cuts and they are made, tested, rendered and looked at.**
-Nothing here is waiting on code. The page is smaller and says the same things.
+**Three commits, none pushed.** `HEAD` is `cc28ac7`; `origin/main` is still on
+`29a650f`, checked with `git ls-remote` rather than inferred. Working tree
+clean. **Nothing has been published** — `publish-dashboard.sh` has not run.
 
-### What came off, and the measurement
+    cc28ac7  Four cards over the seven lanes, minus two false groupings
+    a646c9d  Merge the banner and the lane strip into one block
+    f336122  Subtract six things from the fleet page
 
-**759px of header before the first data row, on a 720px screen, is now 654px.**
-A reader's first screen used to be entirely chrome; it now reaches the data.
-Header prose fell from 331 words to 215, the key block from 100px to 40px, the
-whole page from 4583px to 4334px.
+The session ran in three passes, each asked for separately. Nothing below is
+waiting on code; all 17 suites pass and every page state was rendered and
+looked at.
+
+### The measurement, all three states, one viewport
+
+Measured at 1280×900 this session, not carried over from an earlier one. The
+figure to quote is **759px → 697px** of header before the first data row.
+
+| state | first data row | page | chrome words |
+|---|---|---|---|
+| before the session | 759px | 4583px | 331 |
+| after the six cuts | 654px | 4334px | 250 |
+| after the merge | 661px | 4341px | 237 |
+| **after the four cards (now)** | **697px** | **4376px** | **285** |
+
+**The last two rows go the wrong way and that is deliberate.** The merge cost
+7px in borders and the cards cost 36px in definitions — including two the
+concept had dropped. Do not "reclaim" that by shortening a card gloss; those
+words are the fix for a bug in the bug table. An earlier version of this
+measurement claimed the merge made things WORSE, because it counted the lane
+strip twice once it moved inside the banner.
+
+### Pass one: what came off
 
 | cut | why it was safe |
 |---|---|
@@ -34,7 +57,7 @@ Nothing that names an absence was touched: the hatch, `n/a`, `no API`,
 `1 excluded by ruling (cm-whitelabel)` naming, and the drawer's "Zero rows is
 not 'nothing pending'".
 
-### Two things went wrong doing it, and both are in the bug table now
+### Pass one: two things went wrong doing it, both in the bug table now
 
 1. **`test-page.mjs` renders nothing — it opens `./fleet.html`, a committed
    artifact.** Two runs reported "47 passed" against a page rendered before the
@@ -50,7 +73,7 @@ not 'nothing pending'".
 **Every new check was verified to fail** by re-adding the thing it forbids and
 watching it go red. `test-page.mjs` is 47 → 55.
 
-### Then the banner and the lane strip were merged into one block
+### Pass two: the banner and the lane strip merged into one block
 
 Doug, looking at the two stacked boxes: *"can we combine these?"* Yes — and it
 turned out to be a correctness fix, not a layout one. **The banner's prose was
@@ -79,7 +102,14 @@ showed 42 in the sentence and 44 on the tile. Fixing it means changing wording
 that `test-page.mjs` pins as the "not an all-clear" guarantee, which is not a
 thing to do casually. Decide it deliberately.
 
-### Then the seven tiles became four cards
+**Still true after pass three**, now against the `Needs scheduling` chip inside
+the Planning card rather than a tile. It is the last surviving instance of the
+thing pass two existed to remove — a prose number beside a lane count from a
+different source — and the only reason it survived is that the guard pins the
+sentence. **It appears in the GREEN state only**, which this fleet has never
+been in, so nobody has seen it on a real page.
+
+### Pass three: the seven tiles became four cards
 
 Doug's concept, drawn as a mockup: group the lanes into cards with the counts
 as chips beneath. Built. **Two of the four groups as drawn were false**, both
@@ -142,7 +172,35 @@ grouped with scheduling or rulings, and nothing may call a scored site unscored.
 
 `fleet.html` and `components.html` in the repo root are re-rendered and
 committed with the change. **Nothing has been published**; `publish-dashboard.sh`
-has not run and pushing is a human action.
+has not run, and pushing is a human action.
+
+### To resume, cold
+
+```bash
+./scripts/render-dashboard.py --out fleet.html --components-out components.html
+```
+
+**Render BEFORE testing, every time.** `test-page.mjs` renders nothing — it
+opens `./fleet.html`, a committed artifact — so running it on a page.js edit
+without this step tests the last commit's page and reports a pass. It cost two
+false "47 passed" this session and CI had the same hole.
+
+```bash
+node test/test-page.mjs
+```
+
+Then the offline suites, all of which run in CI on every push:
+
+```bash
+for t in test/test-*.py; do echo "== $t"; python3 "$t"; done
+```
+
+To look at the page rather than the HTML — which is how most of the bug table
+was found, and is step 2 of the definition of done:
+
+```bash
+open fleet.html
+```
 
 ---
 
