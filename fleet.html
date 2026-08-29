@@ -239,6 +239,13 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 .banner-green .bn-glyph { color: var(--good); } .banner-red .bn-glyph { color: var(--crit); } .banner-cant .bn-glyph { color: var(--ink2); }
 .bn-sub { margin: 4px 0 0; font-size: 13px; }
 .bn-rule { margin: 4px 0 0; font-size: 11.5px; color: var(--ink2); font-family: var(--font-mono); }
+/* The lane strip lives INSIDE the banner since 2026-08-29 -- one block, not
+   two stacked summaries of the same fleet. Rules divide the three parts so the
+   state line, the counts and the predicate stay legible as separate registers
+   without needing three boxes. */
+.banner .lanes { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); }
+.banner .bn-rule { margin: 0; padding-top: 7px; border-top: 1px solid var(--line); }
+.banner-cant .lanes, .banner-cant .bn-rule { border-top-color: var(--ink2); }
 .rc { font-size: 10.5px; color: var(--ink2); }
 
 .key li b { color: var(--ink); }
@@ -872,16 +879,64 @@ function banner() {
       + (person.length ? ' On what WAS measured, ' + person.length + ' site' + (person.length === 1 ? '' : 's') + ' need' + (person.length === 1 ? 's' : '') + ' a person: ' + person.map(s => s.id).join(', ') + '.' : '');
   } else if (person.length) {
     state = 'red'; head = person.length + ' site' + (person.length === 1 ? '' : 's') + ' need' + (person.length === 1 ? 's' : '') + ' a person';
-    sub = person.map(s => s.id).join(', ') + '. Everything else is a backlog (' + backlog + ' sites), a ruling, or unmeasured (' + unmeasured + ' sites). Based ' + basis + '.';
+    /* NO "everything else is a backlog (N sites), a ruling, or unmeasured (M
+        sites)" HERE. The lane strip is inside this banner now and says it
+        better: it counts the rulings rather than saying "a ruling", and it
+        names three lanes the sentence never mentioned. Worse, the two numbers
+        were NOT the lanes below them -- `backlog` is backlogOnly (42) against
+        a schedule lane of 41, and `unmeasured` is no_health_evidence, which on
+        2026-08-29 was ELEVEN, exactly like the "Not established" lane beside
+        it, over a different set of sites: it holds elderwoodipa.com, which is
+        in "needs a person", and not app.eastauroracc.com, which is not. Two
+        figures that agree by coincidence are the ones nobody catches.
+        The green branch keeps its sentence -- see below. */
+    sub = person.map(s => s.id).join(', ') + '. Based ' + basis + '.';
   } else {
     state = 'green'; head = 'Nothing needs a person';
+    /* THIS SENTENCE STAYS, unlike the red branch's. In the red state the
+       headline names a problem, so nothing is at risk of reading as an
+       all-clear; in the green state this sentence IS the safeguard, and
+       test-page.mjs pins its shape for that reason. It is the answer to the
+       two-word reassurance the dev team asked for and this fleet cannot
+       honestly give -- a phrase this file must not contain, in copy OR in a
+       comment, because page.js is embedded verbatim in the rendered HTML and
+       the guard scans the whole page. */
     sub = backlog + ' sites carry a maintenance backlog and ' + unmeasured + ' have never had health measured; neither needs anyone today. Based ' + basis + '.';
   }
+  /* ONE BLOCK, NOT TWO. The banner and the lane strip were stacked boxes both
+     summarising the same fleet, and the banner's prose restated the strip in
+     numbers that were NOT the strip's -- see the red branch above. They are one
+     statement: the headline is a claim about the "needs a person" lane, which
+     is literally what the predicate underneath says. Doug, looking at the two
+     of them: "can we combine these?" */
   return h('div', { class: 'banner banner-' + state, role: 'status' },
     h('div', { class: 'bn-head' }, h('span', { class: 'bn-glyph', 'aria-hidden': 'true' }, state === 'green' ? '●' : state === 'red' ? '■' : '?'), head),
     h('p', { class: 'bn-sub' }, sub),
+    lanes(),
     h('p', { class: 'bn-rule' }, 'Green requires: 0 sites in "needs a person" (health critical, a consent banner that leaks, or no SPF) and no coverage regression since the previous run. A source that did not run or saw fewer sites reads "can\'t say", never green.'));
 }
+/* THE GLOSS IS PART OF THE TILE, not a tooltip and not a fold.
+   These seven words are the page's own vocabulary -- "Not established" and
+   "Needs a ruling" mean nothing until someone tells you -- and until
+   2026-08-28 the strip rendered the word and the count alone. The
+   definitions existed the whole time in LANE[].sub, shown only inside the
+   matrix group headers and the site drawer, so from the top of the page
+   there was nothing to read. Doug, who designed the lanes, said he could not
+   remember them.
+   2026-08-29: the matrix group headers no longer repeat it, so THIS is the
+   only place the seven words are defined. Do not fold it, tooltip it, or
+   move it back down into the table.
+   The bug table already carries this exact row: a key put one click away on
+   a page where every <details> renders closed. A KEY YOU HAVE TO DISCOVER IS
+   NOT A KEY -- and a title= tooltip is worse, because it needs a mouse. */
+function lanes() {
+  return h('ul', { class: 'lanes' }, ...LANE_ORDER.map(L => h('li', {},
+  h('span', { class: 'lane-hd' },
+    h('span', { class: 'n' }, laneCounts[L]),
+    h('button', { 'data-lane': L, onclick: () => { laneFilter = laneFilter === L ? '' : L; draw(); syncUrl(); } }, LANE[L].word)),
+  h('span', { class: 'lane-sub' }, LANE[L].sub))));
+}
+
 const sweep = sweepLine();
 const laneCounts = Object.fromEntries(LANE_ORDER.map(L => [L, SITES.filter(s => lane(s) === L).length]));
 const attTotals = (() => {
@@ -904,25 +959,6 @@ $('#app').append(h('div', { class: 'wrap' },
       h('p', { class: 'thesis' }, 'One row per site, one column per question. Hatched is unmeasured. Schedule tab: the same evidence arranged by decision.')),
     h('div', { class: 'sweep' }, ...sweep.map(([name, r]) => h('div', { class: ageDays(r.observed_at) > 1 ? 'stale' : '' }, name + ' ', h('b', {}, fmtEastern(r.observed_at)), ' ' + (r.deep_scanned ?? '?') + '/' + r.site_count)))),
   banner(),
-  /* THE GLOSS IS PART OF THE TILE, not a tooltip and not a fold.
-     These seven words are the page's own vocabulary -- "Not established" and
-     "Needs a ruling" mean nothing until someone tells you -- and until
-     2026-08-28 the strip rendered the word and the count alone. The
-     definitions existed the whole time in LANE[].sub, shown only inside the
-     matrix group headers and the site drawer, so from the top of the page
-     there was nothing to read. Doug, who designed the lanes, said he could not
-     remember them.
-     2026-08-29: the matrix group headers no longer repeat it, so THIS is the
-     only place the seven words are defined. Do not fold it, tooltip it, or
-     move it back down into the table.
-     The bug table already carries this exact row: a key put one click away on
-     a page where every <details> renders closed. A KEY YOU HAVE TO DISCOVER IS
-     NOT A KEY -- and a title= tooltip is worse, because it needs a mouse. */
-  h('ul', { class: 'lanes' }, ...LANE_ORDER.map(L => h('li', {},
-    h('span', { class: 'lane-hd' },
-      h('span', { class: 'n' }, laneCounts[L]),
-      h('button', { 'data-lane': L, onclick: () => { laneFilter = laneFilter === L ? '' : L; draw(); syncUrl(); } }, LANE[L].word)),
-    h('span', { class: 'lane-sub' }, LANE[L].sub)))),
   tabs,
   h('div', { class: 'view view-matrix', id: 'view-matrix' },
   h('div', { class: 'tools' }, q, hostSel, h('label', {}, absBox, 'Only rows with an unmeasured cell'), count),

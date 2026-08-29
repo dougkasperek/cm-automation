@@ -114,7 +114,16 @@ check('...and the definition is distinct from the word',
       laneDefs.every(l => l.sub.trim() !== l.word.trim()));
 
 console.log('\n-- the banner --');
-const banner = await page.$eval('.banner', e => ({ cls: e.className, text: e.textContent }));
+// SCOPE THE PROSE CHECKS TO THE PROSE. The lane strip moved INSIDE .banner on
+// 2026-08-29, so e.textContent now carries seven lane words, seven counts and
+// seven glosses. A check that reads the whole container can be satisfied by
+// text it was never about -- which is how a check goes vacuous without anyone
+// editing it.
+const banner = await page.$eval('.banner', e => ({
+  cls: e.className,
+  text: e.textContent,
+  prose: e.querySelector('.bn-head').textContent + ' ' + e.querySelector('.bn-sub').textContent,
+}));
 check('exactly one banner state', ['banner-green', 'banner-red', 'banner-cant'].filter(c => banner.cls.includes(c)).length === 1, banner.cls);
 check('the predicate is printed under it', banner.text.includes('Green requires'));
 const bodyText = await page.evaluate(() => document.body.innerText.toLowerCase());
@@ -126,11 +135,38 @@ const personN = await page.$eval('.lanes li:first-child .n', e => +e.textContent
 // 79 where a laptop reaches 78 -- the banner correctly went can't-say with 4
 // sites in the lane and a CORRECT page failed. The can't-say branch names them
 // too, in its own clause, and the check below already covers that case.
-check('a red banner names exactly the needs-a-person sites',
-      banner.cls.includes('banner-red') ? banner.text.includes(personN + ' site')
+check('a red banner states the needs-a-person count',
+      banner.cls.includes('banner-red') ? banner.prose.includes(personN + ' site')
       : banner.cls.includes('banner-cant') ? true
       : personN === 0, personN + ' in lane');
+// ...AND ACTUALLY NAMES THEM. The check above is titled "names exactly the
+// needs-a-person sites" and never tested a name: the headline already reads
+// "4 sites need a person", so `includes(personN + ' site')` passes with the
+// site list replaced by "See the matrix." Proven by doing exactly that, on
+// 2026-08-29 -- the negative control failed to fail, which is the only way a
+// check like this is ever found. The names come from the matrix rather than
+// the model, so this also cross-checks the lane tile against the table.
+const personSites = await page.evaluate(() => {
+  const out = []; let inLane = false;
+  for (const tr of document.querySelectorAll('table.matrix tbody tr')) {
+    if (tr.classList.contains('grp')) { inLane = /Needs a person/.test(tr.textContent); continue; }
+    if (inLane) out.push(tr.querySelector('.nm').textContent);
+  }
+  return out;
+});
+check('the needs-a-person lane and its tile agree', personSites.length === personN,
+      personSites.length + ' rows vs ' + personN + ' on the tile');
+check('...and the banner names every one of them',
+      !banner.cls.includes('banner-red') || (personSites.length > 0 && personSites.every(id => banner.prose.includes(id))),
+      JSON.stringify(personSites.filter(id => !banner.prose.includes(id))));
 check('the banner is red or can\'t-say whenever anyone needs a person', personN === 0 || !banner.cls.includes('banner-green'));
+// THE LANE STRIP IS PART OF THE BANNER, and its definitions must survive the
+// move. The lane checks above read '.lanes li' wherever it sits; this pins
+// WHERE it sits, so the two cannot be separated again without a test saying so.
+check('the lane strip is inside the banner, not a second box below it',
+      await page.$eval('.lanes', e => !!e.closest('.banner')));
+check('...and the predicate still sits under both',
+      await page.$eval('.bn-rule', e => !!e.closest('.banner')));
 check('a coverage regression forces can\'t-say', model.coverage_regressions.length === 0 || banner.cls.includes('banner-cant'));
 
 // THE BANNER DOES NOT RESTATE THE SWEEP STRIP. Until 2026-08-29 its basis
@@ -203,7 +239,11 @@ async function variant(mutate) {
   const p2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await p2.goto('file://' + tmp);
   await p2.waitForSelector('.banner');
-  const b = await p2.$eval('.banner', e => ({ cls: e.className, text: e.textContent }));
+  const b = await p2.$eval('.banner', e => ({
+    cls: e.className,
+    text: e.textContent,
+    prose: e.querySelector('.bn-head').textContent + ' ' + e.querySelector('.bn-sub').textContent,
+  }));
   await p2.close(); unlinkSync(tmp);
   return b;
 }
@@ -217,7 +257,12 @@ const green = await variant(m2 => { for (const s of m2.sites) {
   // failure looked like a banner defect rather than an unstated precondition.
   m2.coverage_regressions = []; });
 check('with nobody needing a person the banner is green', green.cls.includes('banner-green'), green.cls);
-check('...and says it is NOT "all good" in the same breath: backlog and unmeasured counts are in the sentence', /\d+ sites carry a maintenance backlog and \d+ have never had health measured/.test(green.text) && !green.text.toLowerCase().includes('all good'), green.text.slice(0, 160));
+// The sentence must be in the SENTENCE. The red state drops its equivalent
+// clause because the lane strip below says it better; green keeps this one,
+// because in green there is no red headline and this is the only thing
+// standing between the banner and "all good". Reading .prose rather than the
+// container means the lane counts cannot stand in for it.
+check('...and says it is NOT "all good" in the same breath: backlog and unmeasured counts are in the sentence', /\d+ sites carry a maintenance backlog and \d+ have never had health measured/.test(green.prose) && !green.text.toLowerCase().includes('all good'), green.prose.slice(0, 160));
 // THE REAL RECORD SHAPE, not an invented one. This fixture carried a `what`
 // key, which `coverage_regressions()` has never emitted -- its keys are
 // source, run_id, deep_scanned, site_count, previous_run_id,

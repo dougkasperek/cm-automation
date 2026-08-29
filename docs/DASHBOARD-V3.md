@@ -59,6 +59,21 @@ render on the tiles AND again in the matrix group headers, the same words about
 meets first, and `test-page.mjs` pins them rendered and unfolded. The group
 headers carry the lane word and its count only.
 
+**The banner and the lane strip are one block, since 2026-08-29.** They were
+stacked boxes both summarising the same fleet, and the banner's prose restated
+the strip in numbers that were **not the strip's**: "a backlog (42 sites)" over
+a `Needs scheduling` tile of 41, and "unmeasured (11 sites)" over a
+`Not established` tile of 11 — the same figure over a different set of sites,
+which is the version nobody catches. The red state now names who needs a person
+and stops; the seven lane counts say the rest.
+
+**The green state keeps its sentence.** In red the headline names a problem, so
+nothing reads as an all-clear; in green that sentence is the only thing doing
+that job, and `test-page.mjs` pins its shape. One residual, visible in the
+green render and not fixed: its backlog count comes from `backlogOnly` and the
+tile beneath it from the `schedule` lane, so the two can differ by a site or
+two in that state.
+
 **The banner.** The dev team asked for something at the top that says they
 need not worry. The phrase they used was "all good", and on this fleet that
 would be false for months: 41 sites carry a backlog and 11 have never had

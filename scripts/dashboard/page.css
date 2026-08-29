@@ -231,6 +231,13 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 .banner-green .bn-glyph { color: var(--good); } .banner-red .bn-glyph { color: var(--crit); } .banner-cant .bn-glyph { color: var(--ink2); }
 .bn-sub { margin: 4px 0 0; font-size: 13px; }
 .bn-rule { margin: 4px 0 0; font-size: 11.5px; color: var(--ink2); font-family: var(--font-mono); }
+/* The lane strip lives INSIDE the banner since 2026-08-29 -- one block, not
+   two stacked summaries of the same fleet. Rules divide the three parts so the
+   state line, the counts and the predicate stay legible as separate registers
+   without needing three boxes. */
+.banner .lanes { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); }
+.banner .bn-rule { margin: 0; padding-top: 7px; border-top: 1px solid var(--line); }
+.banner-cant .lanes, .banner-cant .bn-rule { border-top-color: var(--ink2); }
 .rc { font-size: 10.5px; color: var(--ink2); }
 
 .key li b { color: var(--ink); }

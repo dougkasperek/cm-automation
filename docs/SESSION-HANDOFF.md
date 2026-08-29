@@ -50,6 +50,35 @@ not 'nothing pending'".
 **Every new check was verified to fail** by re-adding the thing it forbids and
 watching it go red. `test-page.mjs` is 47 → 55.
 
+### Then the banner and the lane strip were merged into one block
+
+Doug, looking at the two stacked boxes: *"can we combine these?"* Yes — and it
+turned out to be a correctness fix, not a layout one. **The banner's prose was
+printing numbers that were not the tiles beneath it**: "a backlog (42 sites)"
+over a `Needs scheduling` tile of 41, and "unmeasured (11 sites)" over a
+`Not established` tile of 11, the same figure over a different set of sites.
+Both pairs are in the bug table now.
+
+The red state names who needs a person and stops; the lane counts say the rest.
+The green state keeps its equivalent sentence, because there it is the only
+thing stopping the banner reading as an all-clear, and `test-page.mjs` pins its
+shape.
+
+**It cost 7px, it did not save any.** Measured at 1280×900 across three
+renders: 759px of header before the first data row at the start of the session,
+654px after the six cuts, 661px after the merge. Chrome prose went 331 → 250 →
+237 words. The merge buys coherence and removes two misleading numbers; it does
+not buy height, and the first version of this measurement claimed it made
+things WORSE because it double-counted the lane strip now that it sits inside
+the banner.
+
+**One residual, seen in the green render and left alone.** The green sentence's
+backlog count comes from `backlogOnly` and the tile below it from the
+`schedule` lane, so in that state they can differ — the synthetic green render
+showed 42 in the sentence and 44 on the tile. Fixing it means changing wording
+that `test-page.mjs` pins as the "not an all-clear" guarantee, which is not a
+thing to do casually. Decide it deliberately.
+
 ### Still on the table, not done
 
 - **The thesis line.** `One row per site, one column per question. Hatched is
