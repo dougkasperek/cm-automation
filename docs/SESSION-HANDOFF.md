@@ -30,9 +30,24 @@ hard-boundaries section of CLAUDE.md; `_to_delete/` needs a person to empty it.
 
 ### State
 
-`HEAD` and `origin/main` were `be0b75c` at the start of this session. This
-session's work is committed on top and **is not pushed**. Nothing published;
-`publish-dashboard.sh` has not run. Rendering on a new day dirties `fleet.html`
+`HEAD` and `origin/main` were `be0b75c` at the start of this session. **Four
+commits on top, all pushed, and PUBLISHED 2026-08-29 evening Eastern.**
+`origin/main` is `2153605`; tree clean.
+
+**The live page at https://fleet.thudstaff.com is current for the first time
+since the v3 UI work.** Before publishing, the dry-run render was checked
+against the committed artifacts by sha256 and was **byte-identical, not merely
+identical apart from the date stamp**:
+
+    59e6d80ccc6a4e3a  reports/publish-preview/dashboard.html == fleet.html
+    7462371bc8d1b0c5  reports/publish-preview/components.html == components.html
+
+So what is live is what was reviewed. The publish itself is Doug's report plus
+the script's own post-upload read-back, which compares byte counts and fails
+the run if an object cannot be pulled back; **no sha256 comparison against R2
+was made by this session.** If that matters later, the 2026-08-28 precedent is
+`wrangler r2 object get --remote` on each of the four keys and `shasum -a 256`
+on the pair. Rendering on a new day dirties `fleet.html`
 and `components.html` by one line — the embedded `"generated"` date — and
 nothing else; the fleet counts were byte-identical to the committed artifact.
 
