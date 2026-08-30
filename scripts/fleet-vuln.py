@@ -26,10 +26,23 @@ read 2026-08-30. Three facts in VULN-INTEL-REVIEW.md are wrong against it and
 are corrected here rather than repeated:
 
   - The rate limit is NOT "1 per 30 minutes". The vendor states no number, only
-    a 429 when requesting too often. So this backs off on 429; it does not
-    schedule around a cadence nobody published.
-  - The feed size is NOT "~120 MB". The vendor states no size. `probe` measures
-    it, which is why the number it prints is the first real one we will have.
+    a 429 when requesting too often. MEASURED 2026-08-30: two full-feed
+    requests NINE SECONDS APART returned
+    `429 API key limit exceeded, try again later` on the second. That is one
+    data point and it establishes only that two requests nine seconds apart is
+    over the line -- it does NOT establish the 30-minute figure, and nothing
+    here should be written as though it does.
+  - The feed size is NOT "~120 MB". MEASURED 2026-08-30: **153,806,638 bytes
+    decoded, 39,455 records**, of which 11,823 have `patched=false`.
+
+ONE FETCH PER RUN. THIS COST A CI RUN ON 2026-08-30.
+----------------------------------------------------
+The first version of this script fetched inside BOTH `probe` and `fixture`, so
+the workflow pulled 147 MB twice in nine seconds and the second call was
+refused. The feed is expensive and rate-limited, so it is fetched ONCE by
+`fetch` and every other subcommand reads that file. `--feed-file` is how they
+do it; passing no file still fetches, which keeps a one-off laptop run to one
+command.
   - Wordfence V3 carries NO exploitation flag. The review's table said it did.
     KEV is the only exploitation signal in this design.
 
@@ -164,6 +177,46 @@ def fetch(feed, key, timeout=180):
         return UNREACHABLE, "%s: %s" % (type(e).__name__, e), None, b""
 
 
+def read_feed(args):
+    """The feed bytes, from a file if given and otherwise from the network.
+
+    Every subcommand goes through here so that no code path can issue a second
+    fetch by accident -- which is exactly what happened on 2026-08-30.
+
+    Returns (raw_bytes, verdict, detail, status). raw is b"" unless verdict is
+    OK.
+    """
+    path = getattr(args, "feed_file", None)
+    if path:
+        if not os.path.exists(path):
+            return b"", UNREACHABLE, "no such feed file: %s" % path, None
+        raw = open(path, "rb").read()
+        if not raw:
+            # An empty cache file that reads as a successful fetch is the bug
+            # this repo keeps making. Refuse it.
+            return b"", BAD_BODY, "feed file %s is empty" % path, None
+        return raw, OK, None, None
+    key = os.environ.get("WF_KEY", "").strip()
+    if not key:
+        return b"", UNAUTHORISED, "WF_KEY is not set in the environment", None
+    verdict, detail, status, raw = fetch(args.feed, key)
+    return raw, verdict, detail, status
+
+
+def report_failure(verdict, detail, status, feed):
+    print("%-13s %s  HTTP %s" % (verdict, feed, status))
+    if detail:
+        print("  body: %s" % detail)
+    if verdict == FORBIDDEN:
+        print("  NOTE: 403 is an edge refusing the request, not the key being "
+              "rejected. 401 would be the key.")
+    if verdict == RATE_LIMITED:
+        print("  NOTE: measured 2026-08-30, two full-feed requests nine seconds "
+              "apart trips this.")
+        print("        Fetch ONCE with `fetch --out`, then pass --feed-file to "
+              "everything else.")
+
+
 def parse(raw):
     """The feed is an object keyed by vulnerability UUID.
 
@@ -187,22 +240,9 @@ def parse(raw):
 # ---------------------------------------------------------------------------
 
 def probe(args):
-    key = os.environ.get("WF_KEY", "").strip()
-    if not key:
-        print("FAIL  WF_KEY is not set in the environment.")
-        return 2
-
-    verdict, detail, status, raw = fetch(args.feed, key)
+    raw, verdict, detail, status = read_feed(args)
     if verdict != OK:
-        print("%-13s %s  HTTP %s" % (verdict, args.feed, status))
-        if detail:
-            print("  body: %s" % detail)
-        if verdict == FORBIDDEN:
-            print("  NOTE: 403 is an edge refusing the request, not the key "
-                  "being rejected. 401 would be the key.")
-        if verdict == RATE_LIMITED:
-            print("  NOTE: the vendor publishes no rate limit. Back off and "
-                  "retry; email wfi-support@wordfence.com for a higher one.")
+        report_failure(verdict, detail, status, args.feed)
         return 1
 
     d, why = parse(raw)
@@ -263,13 +303,9 @@ def fixture(args):
     testable without a key -- the comparator is developed offline against this
     file, so the feed is fetched once and never again from a laptop.
     """
-    key = os.environ.get("WF_KEY", "").strip()
-    if not key:
-        print("FAIL  WF_KEY is not set in the environment.")
-        return 2
-    verdict, detail, status, raw = fetch(args.feed, key)
+    raw, verdict, detail, status = read_feed(args)
     if verdict != OK:
-        print("%-13s %s  HTTP %s  %s" % (verdict, args.feed, status, detail or ""))
+        report_failure(verdict, detail, status, args.feed)
         return 1
     d, why = parse(raw)
     if d is None:
@@ -302,12 +338,48 @@ def fixture(args):
     return 0
 
 
+def fetch_cmd(args):
+    """Pull the feed once and write it to disk.
+
+    Deliberately dumb: no filtering, no parsing beyond a shape check. Its whole
+    job is that everything downstream can run without touching the network.
+    """
+    key = os.environ.get("WF_KEY", "").strip()
+    if not key:
+        print("FAIL  WF_KEY is not set in the environment.")
+        return 2
+    verdict, detail, status, raw = fetch(args.feed, key)
+    if verdict != OK:
+        report_failure(verdict, detail, status, args.feed)
+        return 1
+    d, why = parse(raw)
+    if d is None:
+        # Refuse to cache a body that is not the feed. A cached web page would
+        # look like a successful fetch to every later step.
+        print("%-13s %s  HTTP %s  %s bytes" % (BAD_BODY, args.feed, status, len(raw)))
+        print("  %s  Nothing written." % why)
+        return 1
+    with open(args.out, "wb") as fh:
+        fh.write(raw)
+    print("wrote %s  (%s bytes, %s records, %s feed)"
+          % (args.out, len(raw), len(d), args.feed))
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     sub = p.add_subparsers(dest="cmd", required=True)
 
+    ft = sub.add_parser("fetch", help="pull the feed once and cache it to disk")
+    ft.add_argument("--feed", choices=FEEDS, default="production")
+    ft.add_argument("--out", required=True)
+    ft.set_defaults(fn=fetch_cmd)
+
     pr = sub.add_parser("probe", help="does the key work, and what is in the feed?")
     pr.add_argument("--feed", choices=FEEDS, default="production")
+    pr.add_argument("--feed-file", dest="feed_file", default=None,
+                    help="read this cached feed instead of fetching. "
+                         "The feed is rate-limited; prefer this.")
     pr.add_argument("--components", default="history/components.jsonl")
     pr.add_argument("--show", type=int, default=40)
     pr.set_defaults(fn=probe)
@@ -315,6 +387,8 @@ def main(argv=None):
     fx = sub.add_parser("fixture", help="extract one slug's records as a test fixture")
     fx.add_argument("--slug", required=True)
     fx.add_argument("--feed", choices=FEEDS, default="production")
+    fx.add_argument("--feed-file", dest="feed_file", default=None,
+                    help="read this cached feed instead of fetching.")
     fx.add_argument("--out", required=True)
     fx.set_defaults(fn=fixture)
 

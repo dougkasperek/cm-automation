@@ -241,9 +241,20 @@ or "no vulnerable component" reads as clean on a site nobody inventoried.
    emailing `wfi-support@wordfence.com` with a reason. Both figures came from
    third-party write-ups of the 2026-02-02 notice and were repeated here in
    the same voice as a measurement -- CLAUDE.md's rule about stating a cause
-   without checking, pointed at a vendor fact. So: **back off on 429; do not
-   schedule around a cadence nobody published**, and treat the size as
-   unknown until `fleet-vuln.py probe` prints it.
+   without checking, pointed at a vendor fact.
+
+   **Both are now MEASURED, run 33313337785 on 2026-08-30.** The feed is
+   **153,806,638 bytes decoded, 39,455 records**, 18,189 distinct slugs,
+   11,823 of them with `patched=false`. And the limit is real and tight:
+   two full-feed requests **nine seconds apart** returned
+   `429 API key limit exceeded, try again later` on the second.
+
+   That one data point says two requests nine seconds apart is over the
+   line. **It does not establish 30 minutes**, and writing it up as though
+   it did would be the same error as the figure it replaces. What it does
+   settle is the design: **fetch once per run and cache**, which is what
+   `fleet-vuln.py fetch --out` exists for. Back off on 429; email
+   `wfi-support@wordfence.com` if a higher limit is ever needed.
 
    Still true: key required, **free** for personal and commercial use, and
    the disclosure-to-patch window was 36 hours for Pods, so a poll every few

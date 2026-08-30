@@ -22,10 +22,23 @@
 # run died three steps later as a Python traceback. A diagnostic whose exit
 # code is discarded is not a diagnostic.
 #
-# THE FEED IS NEVER COMMITTED. The vendor publishes no size and this repo's
-# ledger is the one asset that cannot be regenerated; a large opaque blob does
-# not belong beside it. The extracted fixture comes back as an artifact and a
-# person commits it after looking at it.
+# THE FEED IS NEVER COMMITTED. Measured 2026-08-30 it is **153,806,638 bytes**
+# and 39,455 records; this repo's ledger is the one asset that cannot be
+# regenerated and a 147 MB opaque blob does not belong beside it. The extracted
+# fixture comes back as an artifact and a person commits it after looking.
+#
+# IT IS FETCHED EXACTLY ONCE, AND THAT COST THE FIRST RUN.
+# Run 33313337785 on 2026-08-30 pulled the feed in `probe` and AGAIN in
+# `fixture`, nine seconds apart, and Wordfence answered the second with
+# `429 API key limit exceeded, try again later`. The probe had already
+# succeeded; the run went red on a step that was asking for something it
+# already had. So the fetch is its own step and everything after it reads the
+# cached file with --feed-file. Do not add a step that fetches again.
+#
+# One data point, and it is worth stating precisely: it establishes that two
+# full-feed requests nine seconds apart is over the limit. It does NOT
+# establish the "1 per 30 minutes" figure that docs/VULN-INTEL-REVIEW.md used
+# to assert, and which is struck through there for having no vendor source.
 
 name: Vulnerability Feed Probe
 
@@ -81,16 +94,30 @@ jobs:
             || { echo "::error::WF_KEY is not set. Add it under Settings -> Secrets and variables -> Actions. It is never committed."; exit 1; }
           echo "key present (${#WF_KEY} characters)"
 
-      - name: Probe the feed
-        # No `|| true`. A non-zero exit here is the answer, not a nuisance.
-        # 401 and 403 are reported as different problems on purpose: 401 is
-        # Wordfence rejecting the key, 403 is an edge refusing the request
-        # before the key is read. Collapsing those cost five days on Nexcess.
+      - name: Fetch the feed (once)
+        # The ONLY network call in this workflow. No `|| true`: a non-zero exit
+        # here is the answer, not a nuisance. 401 and 403 are reported as
+        # different problems on purpose -- 401 is Wordfence rejecting the key,
+        # 403 is an edge refusing the request before the key is read.
+        # Collapsing those cost five days on Nexcess.
+        #
+        # It also refuses to cache a body that is not the feed, because a
+        # cached web page would look like a successful fetch to every step
+        # after it.
         env:
           WF_KEY: ${{ secrets.WF_KEY }}
         run: |
+          python3 scripts/fleet-vuln.py fetch \
+            --feed "${{ inputs.feed }}" \
+            --out "$RUNNER_TEMP/wf-feed.json"
+
+      - name: Probe the feed
+        # Reads the cached file. Passing no --feed-file would fetch again and
+        # trip the rate limit; that is what happened on 2026-08-30.
+        run: |
           python3 scripts/fleet-vuln.py probe \
             --feed "${{ inputs.feed }}" \
+            --feed-file "$RUNNER_TEMP/wf-feed.json" \
             --components history/components.jsonl \
             --show "${{ inputs.show }}"
 
@@ -102,12 +129,15 @@ jobs:
         #
         # `fixture` REFUSES to write an empty file. An extraction that produced
         # nothing but exited 0 would look exactly like a successful one.
-        env:
-          WF_KEY: ${{ secrets.WF_KEY }}
+        #
+        # Reads the cached feed. No WF_KEY here on purpose: without it this step
+        # CANNOT fetch, so the double-fetch bug cannot come back by someone
+        # dropping --feed-file.
         run: |
           mkdir -p out
           python3 scripts/fleet-vuln.py fixture \
             --feed "${{ inputs.feed }}" \
+            --feed-file "$RUNNER_TEMP/wf-feed.json" \
             --slug "${{ inputs.fixture_slug }}" \
             --out "out/wf-${{ inputs.fixture_slug }}-${{ inputs.feed }}.json"
 

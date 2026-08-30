@@ -9,11 +9,21 @@
 # that runs identically on a laptop. If you are editing this file to change
 # WHAT gets measured, the change belongs in scripts/fleet-nexcess.py.
 #
-# NOTE FOR WHOEVER COPIES THIS ACROSS: the Claude file bridge cannot write into
-# .github/, so this file lands in ci/github-actions/ and a person moves it. The
-# two copies have already diverged once, with the live workflow demanding a
-# secret that had been deleted for a code path that no longer existed. Diff
-# them before telling anyone to run this.
+# THIS FILE IS THE ONLY COPY. Edit it here.
+#
+# It used to carry a note saying the Claude file bridge could not write into
+# .github/, so this file "lands in ci/github-actions/ and a person moves it".
+# That mirror was GITIGNORED, so it was never version-controlled, and the two
+# copies diverged once already -- the live workflow demanded a secret that had
+# been deleted for a code path that no longer existed. It was deleted on
+# 2026-08-22 after all five files were verified byte-identical, and CLAUDE.md
+# has said so since.
+#
+# The note outlived its own premise by eight days and still told the next
+# reader to maintain a second copy. Kept as a correction rather than deleted,
+# because a stale instruction that sounds procedural is the hardest kind to
+# notice. If a future environment cannot write .github/, say so and stop --
+# do not recreate a mirror.
 
 name: Nexcess Estate Discovery
 
