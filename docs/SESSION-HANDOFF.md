@@ -131,8 +131,10 @@ access-policies 46, ledger 319, severity 166, page.py 35, build-inventory 6,
 nexcess 96, consent 126, and page.mjs 68 (71 after the pass below; ledger,
 severity, page.py, score-scan and consent-rulings were re-run after it).
 
-**Four were NOT run**, all for environment reasons, none touched by this
-change. Run these on the mac before pushing:
+**The other four could not run through the device bridge and Doug ran them on
+the mac the same evening. All green:** email-dns 65, wp-calls 48,
+gating-leak 14, gating-window 20 — the counts CLAUDE.md's testing table already
+carried, so none had drifted.
 
 ```bash
 cd ~/dev/cm-automation
@@ -142,9 +144,10 @@ node test/test-gating-leak.mjs      # needs Chromium
 node test/test-gating-window.mjs    # needs Chromium
 ```
 
-The bridge VM cannot install a browser: `npx playwright install` is refused
-with `403 Connection blocked by network allowlist`. This is now in CLAUDE.md's
-testing section.
+**17 of 17 suites pass as of 2026-08-29 evening.** The bridge VM cannot install
+a browser — `npx playwright install` is refused with `403 Connection blocked by
+network allowlist` — so a session working through the bridge runs 13 and has to
+hand these four to a person. That split is in CLAUDE.md's testing section.
 
 ### Later the same evening: the health-coverage count is on the page
 
