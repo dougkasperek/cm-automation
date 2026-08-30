@@ -1,0 +1,121 @@
+# Wordfence Intelligence V3 feed probe.
+#
+# MANUAL ONLY. It carries a credential, and CLAUDE.md's rule for a new
+# workflow is that credential-free checks run on every push while anything
+# needing a secret stays human-triggered until it has been trusted for several
+# cycles. There is no schedule below and none should be added until the
+# numbers here have been read by a person more than once.
+#
+# THIS WORKFLOW DOES NOT WRITE TO THE LEDGER AND DOES NOT PUBLISH.
+# It answers two questions and stops:
+#   1. Does the key work, and what is actually in the feed?
+#   2. What does the Pods record look like, so step 4 can be built offline?
+#
+# It is deliberately not step 3 of docs/VULN-INTEL-REVIEW.md in full. There is
+# no `vuln-intel` source in fleet-ledger.py yet, and CLAUDE.md's checklist for
+# adding a workflow puts reconciliation and a MEASURED predicate before any
+# ingest. Fetching first and ingesting later is the order that checklist asks
+# for.
+#
+# NO STEP HERE ENDS IN `|| true`. On 2026-08-25 the Nexcess probe step did:
+# the token was rejected, the step printed "unauthorised", went GREEN, and the
+# run died three steps later as a Python traceback. A diagnostic whose exit
+# code is discarded is not a diagnostic.
+#
+# THE FEED IS NEVER COMMITTED. The vendor publishes no size and this repo's
+# ledger is the one asset that cannot be regenerated; a large opaque blob does
+# not belong beside it. The extracted fixture comes back as an artifact and a
+# person commits it after looking at it.
+
+name: Vulnerability Feed Probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      feed:
+        description: "production carries cvss/cwe/cve and is what severity needs. scanner is match-only."
+        type: choice
+        options: [production, scanner]
+        default: production
+      fixture_slug:
+        description: "Extract this slug's records as a test fixture. Blank skips extraction."
+        type: string
+        default: pods
+      show:
+        description: "How many intersecting slugs to print."
+        type: string
+        default: "40"
+
+permissions:
+  contents: read
+
+jobs:
+  # Not named `persist-ledger` or `publish`: this job does neither, and
+  # test/test-workflows.py keys the shared-state contract on those names.
+  vuln-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Confirm the component catalogue is committed
+        # The catalogue IS the thing the feed is matched against. Without it
+        # the probe still runs but reports the intersection as UNMEASURED
+        # rather than zero -- which is correct but useless, so fail early and
+        # say why instead.
+        run: |
+          test -f history/components.jsonl \
+            || { echo "::error::history/components.jsonl is missing. It is the component catalogue and must not be gitignored."; exit 1; }
+          python3 -c "import json,sys;n=sum(1 for _ in open('history/components.jsonl'));print('catalogue OK: %d rows' % n);sys.exit(1 if n==0 else 0)"
+
+      - name: Confirm the key is present
+        env:
+          WF_KEY: ${{ secrets.WF_KEY }}
+        run: |
+          test -n "$WF_KEY" \
+            || { echo "::error::WF_KEY is not set. Add it under Settings -> Secrets and variables -> Actions. It is never committed."; exit 1; }
+          echo "key present (${#WF_KEY} characters)"
+
+      - name: Probe the feed
+        # No `|| true`. A non-zero exit here is the answer, not a nuisance.
+        # 401 and 403 are reported as different problems on purpose: 401 is
+        # Wordfence rejecting the key, 403 is an edge refusing the request
+        # before the key is read. Collapsing those cost five days on Nexcess.
+        env:
+          WF_KEY: ${{ secrets.WF_KEY }}
+        run: |
+          python3 scripts/fleet-vuln.py probe \
+            --feed "${{ inputs.feed }}" \
+            --components history/components.jsonl \
+            --show "${{ inputs.show }}"
+
+      - name: Extract the fixture
+        if: ${{ inputs.fixture_slug != '' }}
+        # The Pods record is the test fixture for the version comparator, and
+        # the comparator is the piece that must be right. Extracting it here
+        # means step 4 is developed and tested with no key on any laptop.
+        #
+        # `fixture` REFUSES to write an empty file. An extraction that produced
+        # nothing but exited 0 would look exactly like a successful one.
+        env:
+          WF_KEY: ${{ secrets.WF_KEY }}
+        run: |
+          mkdir -p out
+          python3 scripts/fleet-vuln.py fixture \
+            --feed "${{ inputs.feed }}" \
+            --slug "${{ inputs.fixture_slug }}" \
+            --out "out/wf-${{ inputs.fixture_slug }}-${{ inputs.feed }}.json"
+
+      - name: Upload the fixture
+        if: ${{ inputs.fixture_slug != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vuln-fixture-${{ inputs.fixture_slug }}-${{ inputs.feed }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 14

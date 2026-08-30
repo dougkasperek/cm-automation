@@ -233,20 +233,35 @@ or "no vulnerable component" reads as clean on a site nobody inventoried.
    decision. Scheduled polling from GitHub Actions needs no new surface.
    Defer webhooks indefinitely; the polling cadence below is enough.
 
-5. **The rate limit is now known: 1 request per 30 minutes by default**, feed
-   size ~120 MB, V2 dead since March 2026, key required, **free** with a
-   Wordfence account (per two independent write-ups of the 2026-02-02
-   notice). Hourly polling (§11.2) is legal but pointless at that size; the
-   disclosure-to-patch window was 36 hours for Pods. Every 6 hours is plenty.
-   Do not commit the feed; cache it in the runner and commit only the
-   filtered records that touch slugs in our catalog.
+5. ~~**The rate limit is now known: 1 request per 30 minutes by default**,
+   feed size ~120 MB~~ **BOTH WRONG. Corrected 2026-08-30 against the vendor
+   page itself.** Wordfence publishes **no rate-limit number and no feed
+   size**. The V3 doc says only that requests are subject to usage limits,
+   that exceeding them returns **429**, and that a higher limit is granted by
+   emailing `wfi-support@wordfence.com` with a reason. Both figures came from
+   third-party write-ups of the 2026-02-02 notice and were repeated here in
+   the same voice as a measurement -- CLAUDE.md's rule about stating a cause
+   without checking, pointed at a vendor fact. So: **back off on 429; do not
+   schedule around a cadence nobody published**, and treat the size as
+   unknown until `fleet-vuln.py probe` prints it.
+
+   Still true: key required, **free** for personal and commercial use, and
+   the disclosure-to-patch window was 36 hours for Pods, so a poll every few
+   hours is ample. Do not commit the feed; cache it in the runner and commit
+   only the filtered records that touch slugs in our catalog.
 
 6. **Version comparison (§13).** WordPress plugin versions are not semver;
    `3.3.9.1` and `2.9.19.4` are normal. The repo's contract is stdlib Python,
    so no `packaging`. Write a small comparator that mirrors PHP
    `version_compare`, and test it against the six Pods ranges before anything
-   else. The feed represents ranges as `{from_version, from_inclusive,
-   to_version, to_inclusive}` with `*` for unbounded (*verify against V3*).
+   else. **VERIFIED 2026-08-30 against the vendor page; no longer a guess.**
+   The feed represents ranges as `{from_version, from_inclusive, to_version,
+   to_inclusive}` with `*` for unbounded. Two details the guess did not
+   carry. First, `*` is meaningful only as the ENTIRE string -- `1.*` matches
+   an asterisk literally, so there is no glob to expand. Second, the KEY of
+   an `affected_versions` entry may be a bare version, a range, or a
+   bracketed interval, and it is display text: **parse the value object,
+   never the key.**
 
 7. **The dashboard headline (§17, "74 / 78 Healthy") is the single-status
    page we removed yesterday.** Scoring is per axis now. This is a section
@@ -285,10 +300,21 @@ or "no vulnerable component" reads as clean on a site nobody inventoried.
 | Coverage | Largest WordPress-specific DB; Wordfence is a CNA | Comparable; Patchstack is also a CNA and often first to flag exploitation | Smaller | Cross-ecosystem, lags |
 | Machine format | JSON feed, affected ranges per slug | JSON API | JSON API | JSON |
 | Rate limit | 1 / 30 min default | plan-dependent | plan-dependent | none practical |
-| Exploitation signal | in record text/priority | explicit "known exploited" flag | partial | the catalog itself |
+| Exploitation signal | ~~in record text/priority~~ **NONE. Corrected 2026-08-30: the V3 schema has no exploitation field at all** | explicit "known exploited" flag | partial | the catalog itself |
 
-Start with Wordfence V3 (free, complete, machine-matchable) plus KEV (free,
-one file). Revisit Patchstack only if we want its exploitation flag as a
+**Two V3 feeds exist, and this review knew about only one.** `/production`
+carries `cve`, `cvss`, `cwe`, `description`, `remediation` and `researchers`;
+`/scanner` carries enough to MATCH and nothing else. The severity mapping in
+item 2 above is written on CVSS and CWE, which are production-only, so
+**production is the feed** and that is a constraint, not a preference. Both
+carry `informational`, a boolean this review did not know about, marking
+records with "extremely limited or no real-world impact" -- a filter input.
+
+And because Wordfence carries no exploitation signal, **KEV is the only one
+in this design**, which the struck-through table row above had hidden.
+
+Start with Wordfence V3 production (free, complete, machine-matchable) plus
+KEV (free, one file). Revisit Patchstack only if we want its exploitation flag as a
 second signal after the first cycle.
 
 **Human task now:** create the Wordfence account and API key on a
