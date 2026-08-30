@@ -680,6 +680,11 @@ reads the ledger and is what gets published. Do not delete either.
 
 ```bash
 python3 test/test-score-scan.py       # 27   offline, no scan
+python3 test/test-vuln-match.py       # 20   offline; the vulnerability matcher's
+                                      #      COUNTING -- sites vs installs, lowercase
+                                      #      slugs, and 'no advisory exists' kept apart
+                                      #      from 'not affected'. Five ways of breaking
+                                      #      it were verified to fail
 python3 test/test-vercmp.py           # 51   offline; the version comparator.
                                       #      Replays 2,602 answers from real PHP
                                       #      version_compare, frozen as a fixture so

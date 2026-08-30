@@ -75,6 +75,9 @@ import time
 import urllib.error
 import urllib.request
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+import vercmp                                              # noqa: E402
+
 BASE = "https://www.wordfence.com/api/intelligence/v3/vulnerabilities"
 FEEDS = ("production", "scanner")
 
@@ -131,6 +134,53 @@ def catalogue(path):
             continue
         slugs.setdefault(s, set()).add(r.get("site"))
     return slugs, sorted(keep)
+
+
+def installs(path):
+    """Every current install as a dict: site, slug, version, type, status.
+
+    Same cohort merge as `catalogue`. One row per install, so a site carrying a
+    component twice appears twice -- `hoffmanscheese` has pdfembedder-premium
+    at 3.2 inactive beside 5.1.4 active, and the inactive copy is still files
+    on disk. Counting per SITE happens afterwards, so both views stay possible.
+    """
+    if not os.path.exists(path):
+        return []
+    latest, rows = {}, []
+    for line in open(path, encoding="utf-8"):
+        line = line.strip()
+        if not line:
+            continue
+        r = json.loads(line)
+        rows.append(r)
+        m = RUN_ID.match(r.get("run_id") or "")
+        if not m:
+            continue
+        kind, stamp = m.group("kind"), m.group("stamp")
+        if kind not in latest or stamp > latest[kind][1]:
+            latest[kind] = (r["run_id"], stamp)
+    keep = {v[0] for v in latest.values()}
+    return [{"site": r.get("site"), "slug": (r.get("slug") or "").lower(),
+             "version": r.get("version"), "type": r.get("type"),
+             "status": r.get("status")}
+            for r in rows if r.get("run_id") in keep]
+
+
+def by_slug(feed):
+    """slug -> [(vuln_id, record, software_entry)], lowercased.
+
+    Wordfence publishes lowercase slugs; WP-CLI reports the on-disk directory
+    name, whose casing differs per site. A case-sensitive match on
+    `pdfembedder-premium` would hit 2 of our 13 sites and call the other 11
+    clean.
+    """
+    idx = {}
+    for vid, rec in feed.items():
+        for sw in rec.get("software") or []:
+            sl = (sw.get("slug") or "").lower()
+            if sl:
+                idx.setdefault(sl, []).append((vid, rec, sw))
+    return idx
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +416,160 @@ def fetch_cmd(args):
     return 0
 
 
+def evaluate(rows, idx):
+    """Score installs against a slug index. Pure function, no printing.
+
+    Extracted from the CLI so it can be tested. The gating verdict had to be
+    pulled out of its CLI block for the same reason, and until it was, nothing
+    could check it.
+
+    Four buckets, and the last two are NOT the same statement:
+
+      affected        a known advisory covers this exact version
+      cannot say      the version is unreadable, or a range would not parse
+      not affected    an advisory EXISTS and this version is outside it
+      no advisory     Wordfence has never published anything for this slug
+
+    Folding `no advisory` into `not affected` would inflate the reassuring
+    number with components nobody has ever assessed. Half this catalogue runs
+    on exactly one site -- bespoke and white-label code no researcher looks at.
+    """
+    hits, unsure, n_clean, n_no_advisory = [], [], 0, 0
+    for r in rows:
+        recs = idx.get(r["slug"])
+        if not recs:
+            n_no_advisory += 1
+            continue
+        if vercmp.is_absent(r["version"]):
+            unsure.append((r, "no readable version"))
+            continue
+        verdicts = []
+        for vid, rec, sw in recs:
+            v = vercmp.is_affected(r["version"], sw.get("affected_versions"))
+            if v is True:
+                hits.append((r, vid, rec, sw))
+            verdicts.append(v)
+        if True in verdicts:
+            continue
+        if None in verdicts:
+            # One unevaluable range among clean ones is still "cannot say".
+            # A range we failed to parse is not a range we cleared.
+            unsure.append((r, "a range could not be evaluated"))
+        else:
+            n_clean += 1
+    return {
+        "sites": {r["site"] for r in rows},
+        "hits": hits,
+        "unsure": unsure,
+        "n_clean": n_clean,
+        "n_no_advisory": n_no_advisory,
+        # Per SITE, never per install. A site carrying one component twice is
+        # one site; the catalogue counted rows as sites once and said 13
+        # PDFEmbedder sites where there were 12.
+        "hit_sites": {h[0]["site"] for h in hits},
+        "nofix": [h for h in hits if h[3].get("patched") is False],
+        "fixed": [h for h in hits if h[3].get("patched") is not False],
+    }
+
+
+def match(args):
+    """Score every install against the feed. REPORTING ONLY.
+
+    This writes nothing and scores no severity. There is no `vuln-intel` source
+    in fleet-ledger.py yet and no severity codes, and CLAUDE.md puts both
+    before an ingest. This prints what is true so a person looks first.
+
+    The three-valued answer is carried all the way to the output. CANNOT SAY is
+    its own line and is never folded into "not affected", and the sites with no
+    component inventory at all are named as absent rather than counted clean.
+    """
+    raw, verdict, detail, status = read_feed(args)
+    if verdict != OK:
+        report_failure(verdict, detail, status, args.feed)
+        return 1
+    feed, why = parse(raw)
+    if feed is None:
+        print("%-13s %s" % (BAD_BODY, why))
+        return 1
+
+    rows = installs(args.components)
+    if not rows:
+        print("FAIL  no installs read from %s. Nothing to match." % args.components)
+        return 1
+    idx = by_slug(feed)
+
+    m = evaluate(rows, idx)
+    sites, hits, unsure = m["sites"], m["hits"], m["unsure"]
+    n_clean, n_no_advisory = m["n_clean"], m["n_no_advisory"]
+    hit_sites, nofix, fixed = m["hit_sites"], m["nofix"], m["fixed"]
+
+    print("MATCHED %d installs on %d sites against %d feed records"
+          % (len(rows), len(sites), len(feed)))
+    print()
+    print("  affected            %4d finding(s) over %d site(s)"
+          % (len(hits), len(hit_sites)))
+    print("    a fix exists      %4d finding(s) over %d site(s)"
+          % (len(fixed), len({h[0]["site"] for h in fixed})))
+    print("    NO fix exists     %4d finding(s) over %d site(s)"
+          % (len(nofix), len({h[0]["site"] for h in nofix})))
+    print("  not affected        %4d install(s)  (an advisory exists; this"
+          % n_clean)
+    print("                                       version is outside its range)")
+    print("  CANNOT SAY          %4d install(s) over %d site(s)"
+          % (len(unsure), len({u[0]["site"] for u in unsure})))
+    print("  no advisory at all  %4d install(s)  (%d distinct component(s))"
+          % (n_no_advisory,
+             len({r["slug"] for r in rows if r["slug"] not in idx})))
+    print()
+    print("  TWO CAVEATS ON THAT LAST LINE. Wordfence never having published an")
+    print("  advisory is not evidence a component is sound -- half this catalogue")
+    print("  runs on exactly one site, and bespoke or white-label code is not")
+    print("  something researchers look at. And a component whose version could")
+    print("  not be read lands there too if its slug is unknown to the feed.")
+    print()
+    print("  This run saw %d sites. Any site with no component inventory is" % len(sites))
+    print("  absent from every number above and is NOT 'not affected'.")
+
+    if nofix:
+        print()
+        print("  --- FINDINGS WITH NO FIX AVAILABLE ---")
+        print("  These cannot be closed by updating. Each needs a decision:")
+        print("  remove the component, mitigate it, or accept the risk.")
+        print()
+        agg = {}
+        for r, vid, rec, sw in nofix:
+            a = agg.setdefault(r["slug"], {"sites": set(), "recs": {}, "vers": set()})
+            a["sites"].add(r["site"])
+            a["vers"].add(str(r["version"]))
+            a["recs"][vid] = rec
+        for slug in sorted(agg, key=lambda k: (-len(agg[k]["sites"]), k)):
+            a = agg[slug]
+            oldest = min((str(x.get("published") or "")[:10]
+                          for x in a["recs"].values()), default="?")
+            worst = max(((x.get("cvss") or {}).get("score") or 0)
+                        for x in a["recs"].values())
+            print("    %-32s %2d site(s)  %d advisory  oldest %s  worst CVSS %s"
+                  % (slug, len(a["sites"]), len(a["recs"]), oldest, worst))
+            for vid, rec in sorted(a["recs"].items(),
+                                   key=lambda kv: str(kv[1].get("published"))):
+                print("        %-16s %s  %s"
+                      % (rec.get("cve") or vid[:14],
+                         str(rec.get("published") or "")[:10],
+                         (rec.get("title") or "")[:58]))
+            print("        installed at: %s" % ", ".join(sorted(a["vers"])))
+    else:
+        print()
+        print("  No finding lacks a fix. Every affected component can be closed")
+        print("  by updating it.")
+
+    if unsure and getattr(args, "show_unsure", False):
+        print()
+        print("  --- CANNOT SAY ---")
+        for r, reason in unsure[:args.show]:
+            print("    %-30s %-32s %s" % (r["site"], r["slug"], reason))
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -383,6 +587,16 @@ def main(argv=None):
     pr.add_argument("--components", default="history/components.jsonl")
     pr.add_argument("--show", type=int, default=40)
     pr.set_defaults(fn=probe)
+
+    mt = sub.add_parser("match", help="score every install against the feed (reports only)")
+    mt.add_argument("--feed", choices=FEEDS, default="production")
+    mt.add_argument("--feed-file", dest="feed_file", default=None,
+                    help="read this cached feed instead of fetching.")
+    mt.add_argument("--components", default="history/components.jsonl")
+    mt.add_argument("--show", type=int, default=40)
+    mt.add_argument("--show-unsure", dest="show_unsure", action="store_true",
+                    help="list the installs whose exposure could not be decided")
+    mt.set_defaults(fn=match)
 
     fx = sub.add_parser("fixture", help="extract one slug's records as a test fixture")
     fx.add_argument("--slug", required=True)

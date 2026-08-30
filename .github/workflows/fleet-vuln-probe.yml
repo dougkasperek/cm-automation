@@ -7,9 +7,12 @@
 # numbers here have been read by a person more than once.
 #
 # THIS WORKFLOW DOES NOT WRITE TO THE LEDGER AND DOES NOT PUBLISH.
-# It answers two questions and stops:
+# It answers three questions and stops:
 #   1. Does the key work, and what is actually in the feed?
-#   2. What does the Pods record look like, so step 4 can be built offline?
+#   2. Which installed components are actually affected, at the versions we
+#      actually run -- and which of those have no fix available?
+#   3. What does the Pods record look like, so the matcher stays testable
+#      offline?
 #
 # It is deliberately not step 3 of docs/VULN-INTEL-REVIEW.md in full. There is
 # no `vuln-intel` source in fleet-ledger.py yet, and CLAUDE.md's checklist for
@@ -116,6 +119,21 @@ jobs:
         # trip the rate limit; that is what happened on 2026-08-30.
         run: |
           python3 scripts/fleet-vuln.py probe \
+            --feed "${{ inputs.feed }}" \
+            --feed-file "$RUNNER_TEMP/wf-feed.json" \
+            --components history/components.jsonl \
+            --show "${{ inputs.show }}"
+
+      - name: Match the fleet against the feed
+        # Reads the cached feed. Reporting only: it writes nothing, scores no
+        # severity, and touches no ledger. There is no `vuln-intel` source in
+        # fleet-ledger.py yet and no severity codes, and CLAUDE.md's checklist
+        # puts both of those before an ingest.
+        #
+        # No WF_KEY here on purpose, same as the fixture step: without it this
+        # step CANNOT fetch, so the double-fetch bug cannot return.
+        run: |
+          python3 scripts/fleet-vuln.py match \
             --feed "${{ inputs.feed }}" \
             --feed-file "$RUNNER_TEMP/wf-feed.json" \
             --components history/components.jsonl \
