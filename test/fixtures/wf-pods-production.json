@@ -1,0 +1,1308 @@
+{
+ "0b8a9c85-a7cd-469c-834b-d1d89387cf63": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2014-7956",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2014-7956",
+  "cvss": {
+   "rating": "Medium",
+   "score": 6.1,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "Cross-site scripting (XSS) vulnerability in the Pods plugin before 2.5 for WordPress allows remote attackers to inject arbitrary web script or HTML via the id parameter in an edit action in the pods page to wp-admin/admin.php.",
+  "id": "0b8a9c85-a7cd-469c-834b-d1d89387cf63",
+  "informational": false,
+  "published": "2015-01-12 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/0b8a9c85-a7cd-469c-834b-d1d89387cf63?source=api-prod"
+  ],
+  "researchers": [
+   "Pietro Oliva"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-2.4.3": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "2.4.3"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.5"
+    ],
+    "remediation": "Update to version 2.5, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods <= 2.4.3 - Cross-Site Scripting",
+  "updated": "2024-01-22 19:56:02"
+ },
+ "19b4a27d-d9de-4567-86cd-8ec821ee299a": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2014-7957",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2014-7957",
+  "cvss": {
+   "rating": "Critical",
+   "score": 9.6,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "The web application does not, or cannot, sufficiently verify whether a request was intentionally provided by the user who sent the request, which could have originated from an unauthorized actor.",
+   "id": 352,
+   "name": "Cross-Site Request Forgery (CSRF)"
+  },
+  "description": "Multiple cross-site request forgery (CSRF) vulnerabilities in the Pods plugin before 2.5 for WordPress allow remote attackers to hijack the authentication of administrators for requests that (1) conduct cross-site scripting (XSS) attacks via the toggled parameter in a toggle action in the pods-components page to wp-admin/admin.php, (2) delete a pod in a delete action in the pods page to wp-admin/admin.php, (3) reset pod settings and data via the pods_reset parameter in the pod-settings page to wp-admin/admin.php, (4) deactivate and reset pod data via the pods_reset_deactivate parameter in the pod-settings page to wp-admin/admin.php, (5) delete the admin role via the id parameter in a delete action in the pods-component-roles-and-capabilities page to wp-admin/admin.php, or (6) enable \"roles and capabilities\" in a toggle action in the pods-components page to wp-admin/admin.php.",
+  "id": "19b4a27d-d9de-4567-86cd-8ec821ee299a",
+  "informational": false,
+  "published": "2015-01-12 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/19b4a27d-d9de-4567-86cd-8ec821ee299a?source=api-prod"
+  ],
+  "researchers": [
+   "Pietro Oliva"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-2.4.3": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "2.4.3"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.5"
+    ],
+    "remediation": "Update to version 2.5, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods <= 2.4.3 - Multiple Cross-Site Request Forgery",
+  "updated": "2024-01-22 19:56:02"
+ },
+ "1aa7d0c2-27ec-47ad-8baa-c281c273078e": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2023-6967",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2023-6967",
+  "cvss": {
+   "rating": "High",
+   "score": 8.8,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "The product constructs all or part of an SQL command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended SQL command when it is sent to a downstream component. Without sufficient removal or quoting of SQL syntax in user-controllable inputs, the generated SQL query can cause those inputs to be interpreted as SQL instead of ordinary user data.",
+   "id": 89,
+   "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to SQL Injection via shortcode in all versions up to, and including, 3.0.10 (with the exception of 2.7.31.2, 2.8.23.2, 2.9.19.2) due to insufficient escaping on the user supplied parameter and lack of sufficient preparation on the existing SQL query.  This makes it possible for authenticated attackers, with contributor level access or higher, to append additional SQL queries into already existing queries that can be used to extract sensitive information from the database.",
+  "id": "1aa7d0c2-27ec-47ad-8baa-c281c273078e",
+  "informational": false,
+  "published": "2024-03-28 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/1aa7d0c2-27ec-47ad-8baa-c281c273078e?source=api-prod"
+  ],
+  "researchers": [
+   "Nex Team"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "[*, 2.7.31)": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": false,
+      "to_version": "2.7.31"
+     },
+     "[2.8, 2.8.23.2)": {
+      "from_inclusive": true,
+      "from_version": "2.8",
+      "to_inclusive": false,
+      "to_version": "2.8.23.2"
+     },
+     "[3, 3.0.10.2)": {
+      "from_inclusive": true,
+      "from_version": "3",
+      "to_inclusive": false,
+      "to_version": "3.0.10.2"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.7.31.2",
+     "2.8.23.2",
+     "2.9.19.2",
+     "3.0.10.2"
+    ],
+    "remediation": "Update to one of the following versions, or a newer patched version: 2.7.31.2, 2.8.23.2, 2.9.19.2, 3.0.10.2",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods - Custom Content Types and Fields - Authenticated (Contributor+) SQL Injection via Shortcode",
+  "updated": "2024-07-29 21:35:56"
+ },
+ "232378ba-5992-4ac0-975b-8c329bce83b6": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2024-9883",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2024-9883",
+  "cvss": {
+   "rating": "Medium",
+   "score": 4.4,
+   "vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Stored Cross-Site Scripting via admin settings in all versions up to, and including, 3.2.7 due to insufficient input sanitization and output escaping. This makes it possible for authenticated attackers, with administrator-level permissions and above, to inject arbitrary web scripts in pages that will execute whenever a user accesses an injected page. This only affects multi-site installations and installations where unfiltered_html has been disabled.",
+  "id": "232378ba-5992-4ac0-975b-8c329bce83b6",
+  "informational": false,
+  "published": "2024-10-15 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/232378ba-5992-4ac0-975b-8c329bce83b6?source=api-prod"
+  ],
+  "researchers": [
+   "Dmitrii Ignatyev"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-3.2.7": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "3.2.7"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "3.2.7.1"
+    ],
+    "remediation": "Update to version 3.2.7.1, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods <= 3.2.7 - Authenticated (Administrator+) Stored Cross-Site Scripting",
+  "updated": "2024-11-06 18:28:27"
+ },
+ "3628032a-3121-45a7-8a78-cfcd8ba6af2f": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2026-19598",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2026-19598",
+  "cvss": {
+   "rating": "Critical",
+   "score": 9.8,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "The product performs an authorization check when an actor attempts to access a resource or perform an action, but it does not correctly perform the check.",
+   "id": 863,
+   "name": "Incorrect Authorization"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Privilege Escalation via Authorization Bypass in all versions up to, and including, 3.3.9. The vulnerability exists because the pods_admin AJAX router funnels every access check \u2014 including the method allowlist, nonce verification, login enforcement, and capability gate \u2014 through pods_error(), which under the JSON meta-box-loader compatibility path only writes failures to the PHP error log and returns false instead of terminating the request, rendering all guards ineffective.  This makes it possible for unauthenticated attackers to escalate their privileges to Administrator or overwrite the password of any user account, including the site owner's, enabling complete site takeover, or perform another administrator action.",
+  "id": "3628032a-3121-45a7-8a78-cfcd8ba6af2f",
+  "informational": false,
+  "published": "2026-08-15 04:54:21",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/3628032a-3121-45a7-8a78-cfcd8ba6af2f?source=api-prod"
+  ],
+  "researchers": [
+   "Nhien Pham (nhienit) (nhienit)",
+   "thevietronin"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "2.8-2.8.23.3": {
+      "from_inclusive": true,
+      "from_version": "2.8",
+      "to_inclusive": true,
+      "to_version": "2.8.23.3"
+     },
+     "2.9-2.9.19.3": {
+      "from_inclusive": true,
+      "from_version": "2.9",
+      "to_inclusive": true,
+      "to_version": "2.9.19.3"
+     },
+     "3.0-3.0.10.3": {
+      "from_inclusive": true,
+      "from_version": "3.0",
+      "to_inclusive": true,
+      "to_version": "3.0.10.3"
+     },
+     "3.1-3.1.4.1": {
+      "from_inclusive": true,
+      "from_version": "3.1",
+      "to_inclusive": true,
+      "to_version": "3.1.4.1"
+     },
+     "3.2-3.2.8.2": {
+      "from_inclusive": true,
+      "from_version": "3.2",
+      "to_inclusive": true,
+      "to_version": "3.2.8.2"
+     },
+     "3.3-3.3.9": {
+      "from_inclusive": true,
+      "from_version": "3.3",
+      "to_inclusive": true,
+      "to_version": "3.3.9"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.8.23.4",
+     "2.9.19.4",
+     "3.0.10.4",
+     "3.1.4.2",
+     "3.2.8.3",
+     "3.3.9.1"
+    ],
+    "remediation": "Update to one of the following versions, or a newer patched version: 2.8.23.4, 2.9.19.4, 3.0.10.4, 3.1.4.2, 3.2.8.3, 3.3.9.1",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods <= 3.3.9 - Unauthenticated Privilege Escalation via Authorization Bypass to Admin Methods via 'pods_admin' AJAX Router",
+  "updated": "2026-08-17 04:53:46"
+ },
+ "43b59e94-047e-4bdf-abe1-538f2f043ffe": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2025-1446",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2025-1446",
+  "cvss": {
+   "rating": "Medium",
+   "score": 4.4,
+   "vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Stored Cross-Site Scripting via admin settings in all versions up to, and including, 3.2.8.1 due to insufficient input sanitization and output escaping. This makes it possible for authenticated attackers, with administrator-level permissions and above, to inject arbitrary web scripts in pages that will execute whenever a user accesses an injected page. This only affects multi-site installations and installations where unfiltered_html has been disabled.",
+  "id": "43b59e94-047e-4bdf-abe1-538f2f043ffe",
+  "informational": false,
+  "published": "2025-03-02 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/43b59e94-047e-4bdf-abe1-538f2f043ffe?source=api-prod"
+  ],
+  "researchers": [
+   "Dmitrii Ignatyev"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-3.2.8.1": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "3.2.8.1"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "3.2.8.2"
+    ],
+    "remediation": "Update to version 3.2.8.2, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods \u2013 Custom Content Types and Fields <= 3.2.8.1 - Authenticated (Admin+) Stored Cross-Site Scripting",
+  "updated": "2025-04-07 20:25:11"
+ },
+ "56d24bc8-4a1a-4e60-aec5-960703a6058a": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2024-6297",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2024-6297",
+  "cvss": {
+   "rating": "Critical",
+   "score": 10,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "The product contains code that appears to be malicious in nature.",
+   "id": 506,
+   "name": "Embedded Malicious Code"
+  },
+  "description": "Several plugins for WordPress hosted on WordPress.org have been compromised and injected with malicious PHP scripts. A malicious threat actor compromised the source code of various plugins and injected code that exfiltrates database credentials and is used to create new, malicious, administrator users and send that data back to a server. All plugins have received updates reverting any added malicious code. Simply Show Hooks affected version (1.2.1) is the same as the patched version (1.2.1) - it does not appear that the malicious copy was ever officially released, so sites running 1.2.1 should be unaffected, though it is a good idea to run a complete Wordfence scan and verify that there are no rogue administrator accounts present.",
+  "id": "56d24bc8-4a1a-4e60-aec5-960703a6058a",
+  "informational": true,
+  "published": "2024-06-24 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/56d24bc8-4a1a-4e60-aec5-960703a6058a?source=api-prod"
+  ],
+  "researchers": [],
+  "software": [
+   {
+    "affected_versions": {
+     "1.5.4": {
+      "from_inclusive": true,
+      "from_version": "1.5.4",
+      "to_inclusive": true,
+      "to_version": "1.5.4"
+     },
+     "1.6.2": {
+      "from_inclusive": true,
+      "from_version": "1.6.2",
+      "to_inclusive": true,
+      "to_version": "1.6.2"
+     },
+     "1.6.3": {
+      "from_inclusive": true,
+      "from_version": "1.6.3",
+      "to_inclusive": true,
+      "to_version": "1.6.3"
+     }
+    },
+    "name": "Twenty20 Image Before-After",
+    "patched": true,
+    "patched_versions": [
+     "1.6.4"
+    ],
+    "remediation": "Update to version 1.6.4, or a newer patched version",
+    "slug": "twenty20",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "2.1.2": {
+      "from_inclusive": true,
+      "from_version": "2.1.2",
+      "to_inclusive": true,
+      "to_version": "2.1.2"
+     }
+    },
+    "name": "Seo Optimized Images",
+    "patched": true,
+    "patched_versions": [
+     "2.1.4"
+    ],
+    "remediation": "Update to version 2.1.4, or a newer patched version",
+    "slug": "seo-optimized-images",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "11.9.3-11.9.4": {
+      "from_inclusive": true,
+      "from_version": "11.9.3",
+      "to_inclusive": true,
+      "to_version": "11.9.4"
+     }
+    },
+    "name": "PowerPress Podcasting plugin by Blubrry",
+    "patched": true,
+    "patched_versions": [
+     "11.9.6"
+    ],
+    "remediation": "Update to version 11.9.6, or a newer patched version",
+    "slug": "powerpress",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "1.3.15": {
+      "from_inclusive": true,
+      "from_version": "1.3.15",
+      "to_inclusive": true,
+      "to_version": "1.3.15"
+     },
+     "1.3.16": {
+      "from_inclusive": true,
+      "from_version": "1.3.16",
+      "to_inclusive": true,
+      "to_version": "1.3.16"
+     }
+    },
+    "name": "WPCOM Member",
+    "patched": true,
+    "patched_versions": [
+     "1.3.14"
+    ],
+    "remediation": "Update to version 1.3.14, or a newer patched version",
+    "slug": "wpcom-member",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "4.4.6.4-4.4.7.1": {
+      "from_inclusive": true,
+      "from_version": "4.4.6.4",
+      "to_inclusive": true,
+      "to_version": "4.4.7.1"
+     }
+    },
+    "name": "Social Sharing Plugin \u2013 Social Warfare",
+    "patched": true,
+    "patched_versions": [
+     "4.4.7.3"
+    ],
+    "remediation": "Update to version 4.4.7.3, or a newer patched version",
+    "slug": "social-warfare",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "1.0.4-1.0.5": {
+      "from_inclusive": true,
+      "from_version": "1.0.4",
+      "to_inclusive": true,
+      "to_version": "1.0.5"
+     }
+    },
+    "name": "Contact Form Multi-Step Addon",
+    "patched": true,
+    "patched_versions": [
+     "1.0.7"
+    ],
+    "remediation": "Update to version 1.0.7, or a newer patched version",
+    "slug": "contact-form-7-multi-step-addon",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "1.2.1-1.2.2": {
+      "from_inclusive": true,
+      "from_version": "1.2.1",
+      "to_inclusive": true,
+      "to_version": "1.2.2"
+     }
+    },
+    "name": "Simply Show Hooks",
+    "patched": true,
+    "patched_versions": [
+     "1.2.1"
+    ],
+    "remediation": "Update to version 1.2.1, or a newer patched version",
+    "slug": "simply-show-hooks",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "2.2.7": {
+      "from_inclusive": true,
+      "from_version": "2.2.7",
+      "to_inclusive": true,
+      "to_version": "2.2.7"
+     }
+    },
+    "name": "Britetechs Companion",
+    "patched": true,
+    "patched_versions": [
+     "2.2.8"
+    ],
+    "remediation": "Update to version 2.2.8, or a newer patched version",
+    "slug": "britetechs-companion",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "1.0.2-1.0.3": {
+      "from_inclusive": true,
+      "from_version": "1.0.2",
+      "to_inclusive": true,
+      "to_version": "1.0.3"
+     }
+    },
+    "name": "Wrapper Link Elementor",
+    "patched": true,
+    "patched_versions": [
+     "1.0.5"
+    ],
+    "remediation": "Update to version 1.0.5, or a newer patched version",
+    "slug": "wrapper-link-elementor",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "1.2.9": {
+      "from_inclusive": true,
+      "from_version": "1.2.9",
+      "to_inclusive": true,
+      "to_version": "1.2.9"
+     }
+    },
+    "name": "Ad Invalid Click Protector (AICP)",
+    "patched": true,
+    "patched_versions": [
+     "1.2.11"
+    ],
+    "remediation": "Update to version 1.2.11, or a newer patched version",
+    "slug": "ad-invalid-click-protector",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "2.2.5-2.5.2": {
+      "from_inclusive": true,
+      "from_version": "2.2.5",
+      "to_inclusive": true,
+      "to_version": "2.5.2"
+     }
+    },
+    "name": "BLAZE Retail Widget",
+    "patched": true,
+    "patched_versions": [
+     "2.5.4"
+    ],
+    "remediation": "Update to version 2.5.4, or a newer patched version",
+    "slug": "blaze-widget",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "3.2.3": {
+      "from_inclusive": true,
+      "from_version": "3.2.3",
+      "to_inclusive": true,
+      "to_version": "3.2.3"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "3.2.4"
+    ],
+    "remediation": "Update to version 3.2.4, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   },
+   {
+    "affected_versions": {
+     "1.7.6": {
+      "from_inclusive": true,
+      "from_version": "1.7.6",
+      "to_inclusive": true,
+      "to_version": "1.7.6"
+     }
+    },
+    "name": "WP Server Health Stats",
+    "patched": true,
+    "patched_versions": [
+     "1.7.8"
+    ],
+    "remediation": "Update to version 1.7.8, or a newer patched version",
+    "slug": "wp-server-stats",
+    "type": "plugin"
+   }
+  ],
+  "title": "Several WordPress.org Plugins <= Various Versions  - Injected Backdoor",
+  "updated": "2024-10-08 17:17:24"
+ },
+ "76d850dd-75f3-4671-9561-0e361d09a121": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright"
+  },
+  "cve": null,
+  "cve_link": null,
+  "cvss": {
+   "rating": "Medium",
+   "score": 5.5,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Stored Cross-Site Scripting via several parameters in versions up to, and including, 2.7.28 due to insufficient input sanitization and output escaping. This makes it possible for authenticated attackers to inject arbitrary web scripts in pages that will execute whenever a user accesses an injected page.",
+  "id": "76d850dd-75f3-4671-9561-0e361d09a121",
+  "informational": false,
+  "published": "2021-08-06 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/76d850dd-75f3-4671-9561-0e361d09a121?source=api-prod"
+  ],
+  "researchers": [
+   "Muhammad Daffa"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-2.7.28": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "2.7.28"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.7.29"
+    ],
+    "remediation": "Update to version 2.7.29, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods \u2013 Custom Content Types and Fields <= 2.7.28 - Authenticated (Admin+) Cross-Site Scripting",
+  "updated": "2024-01-22 19:56:02"
+ },
+ "a0707c92-96e9-444a-8a13-52d49c9e3f5c": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2024-3956",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2024-3956",
+  "cvss": {
+   "rating": "Medium",
+   "score": 5.4,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Stored Cross-Site Scripting via the Pod Form widget in all versions up to, and including, 3.2.1 due to insufficient input sanitization and output escaping on user supplied attributes. This makes it possible for authenticated attackers, with contributor-level access and above, to inject arbitrary web scripts in pages that will execute whenever a user accesses an injected page.",
+  "id": "a0707c92-96e9-444a-8a13-52d49c9e3f5c",
+  "informational": false,
+  "published": "2024-05-09 20:29:15",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/a0707c92-96e9-444a-8a13-52d49c9e3f5c?source=api-prod"
+  ],
+  "researchers": [
+   "wesley (wcraft)"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-3.2.1": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "3.2.1"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "3.2.1.1"
+    ],
+    "remediation": "Update to version 3.2.1.1, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods \u2013 Custom Content Types and Fields <= 3.2.1 - Authenticated (Contributor+) Stored Cross-Site Scripting via Pod Form Redirect URL",
+  "updated": "2024-05-10 08:32:34"
+ },
+ "a57d218c-0aee-4764-9496-065e71448a9b": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2026-54191",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2026-54191",
+  "cvss": {
+   "rating": "High",
+   "score": 7.2,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Stored Cross-Site Scripting in versions up to, and including, 3.3.8 due to insufficient input sanitization and output escaping. This makes it possible for unauthenticated attackers to inject arbitrary web scripts in pages that will execute whenever a user accesses an injected page.",
+  "id": "a57d218c-0aee-4764-9496-065e71448a9b",
+  "informational": false,
+  "published": "2026-06-15 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/a57d218c-0aee-4764-9496-065e71448a9b?source=api-prod"
+  ],
+  "researchers": [
+   "Bonds"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-3.3.8": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "3.3.8"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "3.3.9"
+    ],
+    "remediation": "Update to version 3.3.9, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods \u2013 Custom Content Types and Fields <= 3.3.8 - Unauthenticated Stored Cross-Site Scripting",
+  "updated": "2026-06-23 15:45:19"
+ },
+ "aba54af1-732a-49e6-a8c4-76f276a5581a": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2021-24338",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2021-24338",
+  "cvss": {
+   "rating": "Medium",
+   "score": 5.4,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields WordPress plugin before 2.7.27 was vulnerable to an Authenticated Stored Cross-Site Scripting (XSS) security vulnerability within the 'Singular Label' field parameter.",
+  "id": "aba54af1-732a-49e6-a8c4-76f276a5581a",
+  "informational": false,
+  "published": "2021-01-15 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/aba54af1-732a-49e6-a8c4-76f276a5581a?source=api-prod"
+  ],
+  "researchers": [
+   "WhiteSource"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "[2.4.4.1, 2.7.27)": {
+      "from_inclusive": true,
+      "from_version": "2.4.4.1",
+      "to_inclusive": false,
+      "to_version": "2.7.27"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.7.27"
+    ],
+    "remediation": "Update to version 2.7.27, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods 2.4.4.1 - 2.7.26 - Authenticated Stored Cross-Site Scripting",
+  "updated": "2024-01-22 19:56:02"
+ },
+ "ac8214af-00d0-4dde-a3e7-f657decc4b93": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2021-24339",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2021-24339",
+  "cvss": {
+   "rating": "Medium",
+   "score": 5.4,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields WordPress plugin before 2.7.27 was vulnerable to an Authenticated Stored Cross-Site Scripting (XSS) security vulnerability within the 'Menu Label' field parameter.",
+  "id": "ac8214af-00d0-4dde-a3e7-f657decc4b93",
+  "informational": false,
+  "published": "2021-01-15 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/ac8214af-00d0-4dde-a3e7-f657decc4b93?source=api-prod"
+  ],
+  "researchers": [
+   "WhiteSource"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "2.4.4.2-2.7.26": {
+      "from_inclusive": true,
+      "from_version": "2.4.4.2",
+      "to_inclusive": true,
+      "to_version": "2.7.26"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.7.27"
+    ],
+    "remediation": "Update to version 2.7.27, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods <= 2.7.26 - Authenticated Stored Cross-Site Scripting via Menu Label field",
+  "updated": "2024-01-22 19:56:02"
+ },
+ "c5d330cd-ad1f-451e-bf41-39cfeb296cf0": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2023-6965",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2023-6965",
+  "cvss": {
+   "rating": "Medium",
+   "score": 4.3,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not perform an authorization check when an actor attempts to access a resource or perform an action.",
+   "id": 862,
+   "name": "Missing Authorization"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Missing Authorization in all versions up to, and including, 3.0.10 (with the exception of 2.7.31.2, 2.8.23.2, 2.9.19.2). This is due to the fact that the plugin allows the use of a file inclusion feature via shortcode. This makes it possible for authenticated attackers, with contributor access or higher, to create pods and users (with default role).",
+  "id": "c5d330cd-ad1f-451e-bf41-39cfeb296cf0",
+  "informational": false,
+  "published": "2024-03-28 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/c5d330cd-ad1f-451e-bf41-39cfeb296cf0?source=api-prod"
+  ],
+  "researchers": [
+   "Nex Team"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "[*, 2.7.31)": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": false,
+      "to_version": "2.7.31"
+     },
+     "[2.8, 2.8.23.2)": {
+      "from_inclusive": true,
+      "from_version": "2.8",
+      "to_inclusive": false,
+      "to_version": "2.8.23.2"
+     },
+     "[3, 3.0.10.2)": {
+      "from_inclusive": true,
+      "from_version": "3",
+      "to_inclusive": false,
+      "to_version": "3.0.10.2"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.7.31.2",
+     "2.8.23.2",
+     "2.9.19.2",
+     "3.0.10.2"
+    ],
+    "remediation": "Update to one of the following versions, or a newer patched version: 2.7.31.2, 2.8.23.2, 2.9.19.2, 3.0.10.2",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods - Custom Content Types and Fields - Missing Authorization",
+  "updated": "2024-07-29 21:37:23"
+ },
+ "d874f9d7-c532-467d-9e3d-9529dd5bdc47": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2023-23790",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2023-23790",
+  "cvss": {
+   "rating": "High",
+   "score": 7.1,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:L"
+  },
+  "cwe": {
+   "description": "The web application does not, or cannot, sufficiently verify whether a request was intentionally provided by the user who sent the request, which could have originated from an unauthorized actor.",
+   "id": 352,
+   "name": "Cross-Site Request Forgery (CSRF)"
+  },
+  "description": "The Pods plugin for WordPress is vulnerable to Cross-Site Request Forgery in versions up to, and including, 2.9.10.2. This is due to missing or incorrect nonce validation when deleting pods. This makes it possible for unauthenticated attackers to delete pods via forged request granted they can trick a site administrator into performing an action such as clicking on a link.",
+  "id": "d874f9d7-c532-467d-9e3d-9529dd5bdc47",
+  "informational": false,
+  "published": "2023-01-20 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/d874f9d7-c532-467d-9e3d-9529dd5bdc47?source=api-prod"
+  ],
+  "researchers": [
+   "Rafshanzani Suhada"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-2.9.10.2": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "2.9.10.2"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.9.11"
+    ],
+    "remediation": "Update to version 2.9.11, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods <= 2.9.10.2 - Cross-Site Request Forgery",
+  "updated": "2024-01-22 19:56:02"
+ },
+ "d8fbfcfe-3597-4c59-b47c-4e48ecbb8d83": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2024-11849",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2024-11849",
+  "cvss": {
+   "rating": "Medium",
+   "score": 4.4,
+   "vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "The product does not neutralize or incorrectly neutralizes user-controllable input before it is placed in output that is used as a web page that is served to other users.",
+   "id": 79,
+   "name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Stored Cross-Site Scripting via admin settings in all versions up to, and including, 3.2.8 due to insufficient input sanitization and output escaping. This makes it possible for authenticated attackers, with administrator-level permissions and above, to inject arbitrary web scripts in pages that will execute whenever a user accesses an injected page. This only affects multi-site installations and installations where unfiltered_html has been disabled.",
+  "id": "d8fbfcfe-3597-4c59-b47c-4e48ecbb8d83",
+  "informational": false,
+  "published": "2024-12-16 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/d8fbfcfe-3597-4c59-b47c-4e48ecbb8d83?source=api-prod"
+  ],
+  "researchers": [
+   "Dmitrii Ignatyev"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "*-3.2.8": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "3.2.8"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "3.2.8.1"
+    ],
+    "remediation": "Update to version 3.2.8.1, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods \u2013 Custom Content Types and Fields <= 3.2.8 - Authenticated (Admin+) Stored Cross-Site Scripting",
+  "updated": "2025-01-17 12:47:04"
+ },
+ "d9108d5f-7b8b-478d-ba9d-f895bdb7dbf2": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright",
+   "mitre": {
+    "license": "CVE Usage: MITRE hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Common Vulnerabilities and Exposures (CVE\u00ae). Any copy you make for such purposes is authorized provided that you reproduce MITRE's copyright designation and this license in any such copy.",
+    "license_url": "https://www.cve.org/Legal/TermsOfUse",
+    "notice": "Copyright 1999-2026 The MITRE Corporation"
+   }
+  },
+  "cve": "CVE-2023-6999",
+  "cve_link": "https://www.cve.org/CVERecord?id=CVE-2023-6999",
+  "cvss": {
+   "rating": "High",
+   "score": 8.8,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "The product constructs all or part of a command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended command when it is sent to a downstream component.",
+   "id": 77,
+   "name": "Improper Neutralization of Special Elements used in a Command ('Command Injection')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to Remote Code Exxecution via shortcode in all versions up to, and including, 3.0.10 (with the exception of 2.7.31.2, 2.8.23.2, 2.9.19.2). This makes it possible for authenticated attackers, with contributor level access or higher, to execute code on the server.",
+  "id": "d9108d5f-7b8b-478d-ba9d-f895bdb7dbf2",
+  "informational": false,
+  "published": "2024-03-28 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/d9108d5f-7b8b-478d-ba9d-f895bdb7dbf2?source=api-prod"
+  ],
+  "researchers": [
+   "Nex Team"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "[*, 2.7.31)": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": false,
+      "to_version": "2.7.31"
+     },
+     "[2.8, 2.8.23.2)": {
+      "from_inclusive": true,
+      "from_version": "2.8",
+      "to_inclusive": false,
+      "to_version": "2.8.23.2"
+     },
+     "[3, 3.0.10.2)": {
+      "from_inclusive": true,
+      "from_version": "3",
+      "to_inclusive": false,
+      "to_version": "3.0.10.2"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.7.31.2",
+     "2.8.23.2",
+     "2.9.19.2",
+     "3.0.10.2"
+    ],
+    "remediation": "Update to one of the following versions, or a newer patched version: 2.7.31.2, 2.8.23.2, 2.9.19.2, 3.0.10.2",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods - Custom Content Types and Fields - Authenticated (Contributor+) Remote Code Execution",
+  "updated": "2024-07-29 21:37:34"
+ },
+ "e95b2bfe-8675-4932-9b37-73ad15fa228e": {
+  "copyrights": {
+   "defiant": {
+    "license": "Defiant hereby grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute this software vulnerability information. Any copy of the software vulnerability information you make for such purposes is authorized provided that you include a hyperlink to this vulnerability record and reproduce Defiant's copyright designation and this license in any such copy.",
+    "license_url": "https://www.wordfence.com/wordfence-intelligence-terms-and-conditions/",
+    "notice": "Copyright 2012-2026 Defiant Inc."
+   },
+   "message": "This record contains material that is subject to copyright"
+  },
+  "cve": null,
+  "cve_link": null,
+  "cvss": {
+   "rating": "Critical",
+   "score": 9.8,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "The product constructs all or part of an SQL command using externally-influenced input from an upstream component, but it does not neutralize or incorrectly neutralizes special elements that could modify the intended SQL command when it is sent to a downstream component. Without sufficient removal or quoting of SQL syntax in user-controllable inputs, the generated SQL query can cause those inputs to be interpreted as SQL instead of ordinary user data.",
+   "id": 89,
+   "name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+  },
+  "description": "The Pods \u2013 Custom Content Types and Fields plugin for WordPress is vulnerable to SQL Injection via the \u2018orderby\u2019 parameter in versions before 2.5.1.2 due to insufficient escaping on the user supplied parameter and lack of sufficient preparation on the existing SQL query. This makes it possible for attackers to append additional SQL queries into already existing queries that can be used to extract sensitive information from the database.",
+  "id": "e95b2bfe-8675-4932-9b37-73ad15fa228e",
+  "informational": false,
+  "published": "2015-03-16 00:00:00",
+  "references": [
+   "https://www.wordfence.com/threat-intel/vulnerabilities/id/e95b2bfe-8675-4932-9b37-73ad15fa228e?source=api-prod"
+  ],
+  "researchers": [
+   "Scott Kingsley Clark"
+  ],
+  "software": [
+   {
+    "affected_versions": {
+     "[*, 2.5.1.2)": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": false,
+      "to_version": "2.5.1.2"
+     }
+    },
+    "name": "Pods \u2013 Custom Content Types and Fields",
+    "patched": true,
+    "patched_versions": [
+     "2.5.1.2"
+    ],
+    "remediation": "Update to version 2.5.1.2, or a newer patched version",
+    "slug": "pods",
+    "type": "plugin"
+   }
+  ],
+  "title": "Pods \u2013 Custom Content Types and Fields < 2.5.1.2 - SQL Injection",
+  "updated": "2024-01-22 19:56:02"
+ }
+}

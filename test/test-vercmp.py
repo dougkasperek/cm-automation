@@ -22,10 +22,18 @@ That mattered immediately: the first cut of this file asserted
 disagreed with the first one. The code was right and the test was wrong. A
 hand-reasoned expectation is evidence about the reasoner.
 
-THE PODS RANGES ARE STILL TRANSCRIBED BY HAND, AND THAT IS TEMPORARY.
-They come from docs/VULN-INTEL-REVIEW.md section 1, typed by a person from
-NVD. `fleet-vuln.py fixture` pulls the real record; when that fixture is
-committed this suite should read it and these literals should go.
+THE PODS RANGES COME FROM THE REAL FEED, SINCE 2026-08-30.
+They were transcribed by hand from NVD until run 33314981104 pulled the actual
+record into test/fixtures/wf-pods-production.json. The two agreed on all six
+ranges -- which is a pleasant result and not a reason to keep the transcript:
+a hand-typed fixture is evidence about the typist, and the next record nobody
+checks is the one that differs.
+
+THAT FIXTURE IS COPYRIGHTED, AND THE LICENCE TRAVELS WITH IT.
+Defiant's licence permits reproduction provided any copy carries a hyperlink to
+the vulnerability record plus their copyright notice and licence text; MITRE's
+requires the same for CVE data. The fixture holds `copyrights` and `references`
+verbatim for that reason, and a check below refuses to let them be stripped.
 """
 
 import json
@@ -100,39 +108,70 @@ for bad_v in (None, "", "unknown", "n/a", "UNKNOWN"):
     check("is_absent(%r)" % bad_v, vercmp.is_absent(bad_v))
 check("is_absent('3.3.9.1') is False", not vercmp.is_absent("3.3.9.1"))
 
-# --- the Pods record, CVE-2026-19598 --------------------------------------
-PODS = {
-    "2.8 - 2.8.23.3": {"from_version": "2.8", "from_inclusive": True,
-                       "to_version": "2.8.23.3", "to_inclusive": True},
-    "2.9 - 2.9.19.3": {"from_version": "2.9", "from_inclusive": True,
-                       "to_version": "2.9.19.3", "to_inclusive": True},
-    "3.0 - 3.0.10.3": {"from_version": "3.0", "from_inclusive": True,
-                       "to_version": "3.0.10.3", "to_inclusive": True},
-    "3.1 - 3.1.4.1":  {"from_version": "3.1", "from_inclusive": True,
-                       "to_version": "3.1.4.1", "to_inclusive": True},
-    "3.2 - 3.2.8.2":  {"from_version": "3.2", "from_inclusive": True,
-                       "to_version": "3.2.8.2", "to_inclusive": True},
-    "3.3 - 3.3.9":    {"from_version": "3.3", "from_inclusive": True,
-                       "to_version": "3.3.9", "to_inclusive": True},
-}
+# --- the Pods record, CVE-2026-19598, from the real feed -------------------
+PODS_FIX = os.path.join(HERE, "fixtures", "wf-pods-production.json")
+if not os.path.exists(PODS_FIX):
+    check("the real Pods record fixture is present", False, PODS_FIX)
+    PODS, PODS_ALL = {}, {}
+else:
+    PODS_ALL = json.load(open(PODS_FIX, encoding="utf-8"))
+    _target = [r for r in PODS_ALL.values() if r.get("cve") == "CVE-2026-19598"]
+    check("the fixture contains CVE-2026-19598", len(_target) == 1)
+    _sw = [x for x in _target[0]["software"] if x["slug"] == "pods"][0]
+    PODS = _sw["affected_versions"]
 
-check("the fleet's Pods version 3.3.9.1 is NOT affected",
-      vercmp.is_affected("3.3.9.1", PODS) is False)
-check("3.3.9, one patch below, IS affected",
-      vercmp.is_affected("3.3.9", PODS) is True)
-check("2.8.23.3, top of the oldest affected branch, IS affected",
-      vercmp.is_affected("2.8.23.3", PODS) is True)
-check("2.8.23.4, its fix, is NOT affected",
-      vercmp.is_affected("2.8.23.4", PODS) is False)
-check("3.1.4.2, a fix in a middle branch, is NOT affected",
-      vercmp.is_affected("3.1.4.2", PODS) is False)
-check("2.7.9, below every affected branch, is NOT affected",
-      vercmp.is_affected("2.7.9", PODS) is False)
-check("a version between branches (3.0.11) is NOT affected",
-      vercmp.is_affected("3.0.11", PODS) is False)
-check("all six affected branches are matched, not just the first",
-      sum(1 for r in PODS.values()
-          if vercmp.in_range(r["to_version"], r) is True) == 6)
+    check("it is the CVSS 9.8 record the incident was about",
+          (_target[0].get("cvss") or {}).get("score") == 9.8)
+    check("it carries six disjoint affected branches", len(PODS) == 6, str(len(PODS)))
+    check("it names six patched versions", len(_sw.get("patched_versions") or []) == 6)
+    check("it is marked patched", _sw.get("patched") is True)
+
+    # Licence compliance. Stripping these to slim the fixture would breach the
+    # terms the data was obtained under.
+    _c = _target[0].get("copyrights") or {}
+    check("the fixture keeps Defiant's copyright notice",
+          bool((_c.get("defiant") or {}).get("notice")))
+    check("the fixture keeps MITRE's copyright notice",
+          bool((_c.get("mitre") or {}).get("notice")))
+    check("the fixture keeps a hyperlink back to the vulnerability record",
+          bool(_target[0].get("references")) or bool(_target[0].get("cve_link")))
+
+if PODS:
+    check("the fleet's Pods version 3.3.9.1 is NOT affected",
+          vercmp.is_affected("3.3.9.1", PODS) is False)
+    check("3.3.9, one patch below, IS affected",
+          vercmp.is_affected("3.3.9", PODS) is True)
+    check("2.7.9, below every affected branch, is NOT affected",
+          vercmp.is_affected("2.7.9", PODS) is False)
+    check("a version between branches (3.0.11) is NOT affected",
+          vercmp.is_affected("3.0.11", PODS) is False)
+
+    # Every branch, both sides of its boundary. This is the check that would
+    # have caught a comparator matching only the first range it was given.
+    _sw2 = [x for x in PODS_ALL.values() if x.get("cve") == "CVE-2026-19598"][0]
+    _entry = [x for x in _sw2["software"] if x["slug"] == "pods"][0]
+    _tops = sorted(r["to_version"] for r in PODS.values())
+    check("the last affected version of all six branches IS affected",
+          all(vercmp.is_affected(v, PODS) is True for v in _tops), str(_tops))
+    _fixes = sorted(_entry["patched_versions"])
+    check("all six patched versions are NOT affected",
+          all(vercmp.is_affected(v, PODS) is False for v in _fixes), str(_fixes))
+
+    # End to end, against every Pods advisory Wordfence has ever published.
+    # All 31 sites run 3.3.9.1, so the whole set must score clean; a single
+    # AFFECTED here is either a real finding or a broken comparator, and both
+    # are worth stopping for.
+    _verdicts = []
+    for _r in PODS_ALL.values():
+        for _s in _r["software"]:
+            if _s["slug"] == "pods":
+                _verdicts.append(vercmp.is_affected("3.3.9.1",
+                                                    _s.get("affected_versions")))
+    check("all %d Pods advisories score clean against 3.3.9.1" % len(_verdicts),
+          _verdicts and all(v is False for v in _verdicts),
+          str([v for v in _verdicts if v is not False]))
+    check("that set is the whole advisory history, not one record",
+          len(_verdicts) >= 15, str(len(_verdicts)))
 
 # --- the unbounded marker -------------------------------------------------
 check("* as from_version means unbounded below",

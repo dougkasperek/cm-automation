@@ -680,11 +680,13 @@ reads the ledger and is what gets published. Do not delete either.
 
 ```bash
 python3 test/test-score-scan.py       # 27   offline, no scan
-python3 test/test-vercmp.py           # 43   offline; the version comparator.
+python3 test/test-vercmp.py           # 51   offline; the version comparator.
                                       #      Replays 2,602 answers from real PHP
                                       #      version_compare, frozen as a fixture so
-                                      #      it needs no PHP. All four ways of
-                                      #      breaking the module were verified to fail
+                                      #      it needs no PHP, and scores the REAL
+                                      #      Pods record -- all 17 advisories, pulled
+                                      #      from the feed, not transcribed. Seven
+                                      #      ways of breaking it were verified to fail
 python3 test/test-consent-rulings.py  # 17   offline, no network
 python3 test/test-nexcess-ssh.py      # 43   offline, no key
 python3 test/test-worker-exposure.py  # 48   offline, no network
