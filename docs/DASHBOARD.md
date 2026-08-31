@@ -224,9 +224,13 @@ after the last `wrangler deploy`, so production still had the `PUT` route and
 still had `PUBLISH_TOKEN` set as a secret -- meaning the route answered rather
 than returning 503. Nothing was exposed, because Access fronts the hostname and
 `workers.dev` is off, but a write path existed that the docs and `CLAUDE.md`
-both said did not. **After changing this Worker, re-read the deployed code
-(`wrangler deployments view`, or the dashboard's Edit code view) and confirm it
-is what you committed.**
+both said did not. **After changing this Worker, re-read the deployed code (the dashboard's Edit
+code view, or the Cloudflare MCP `workers_get_worker_code`) and confirm it is
+what you committed.** No wrangler command returns the deployed script body:
+`wrangler deployments status` and `wrangler versions list` tell you which
+version is live and when it went up, not what is in it. (`deployments view` was
+this doc's instruction until 2026-08-31; wrangler 4 renamed it, and it never
+returned the code.)
 
 ---
 

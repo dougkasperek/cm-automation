@@ -214,9 +214,14 @@ changes when someone runs `wrangler deploy`, and Claude cannot. On 2026-08-20 an
 audit found the deployed `cm-fleet` was a day behind the repo: the write route
 removed on 2026-08-19 was still live, and `PUBLISH_TOKEN` was still set on it,
 so it answered rather than returning 503. **Never describe the Worker's
-behaviour from its source file.** Read the deployed code back --
-`wrangler deployments view`, the dashboard's Edit code view, or the Cloudflare
-MCP `workers_get_worker_code` -- and say which one you looked at.
+behaviour from its source file.** Read the deployed code back -- the
+dashboard's Edit code view, or the Cloudflare MCP `workers_get_worker_code` --
+and say which one you looked at. **No wrangler command returns the script
+body.** `wrangler deployments status` and `wrangler versions list` report which
+version is live and when it was uploaded, which answers "is the deploy current"
+and never "what does the deployed code say". This file named
+`wrangler deployments view` until 2026-08-31; wrangler 4 renamed it to
+`deployments status`, and it did not return the code under either name.
 
 **Access protects hostnames, never `*.workers.dev`. Since 2026-08-24 this is
 CHECKED, not asserted:** `./scripts/check-worker-exposure.py` fetches all five
