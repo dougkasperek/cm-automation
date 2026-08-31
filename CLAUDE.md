@@ -548,6 +548,39 @@ The previous page is `render()` behind `--legacy-out` for one cycle.
   it would be false for months. The banner says "Nothing needs a person" and
   states the backlog and the unmeasured count in the same sentence. Two tests
   assert the phrase is absent. Do not add it back under another wording.
+- **Lead with the finding, not with the worst number. Doug, 2026-08-31: the
+  first draft of the vulnerability page "induced panic."** It opened with `14`
+  in red, under the words "no fix exists". Measured, all fourteen are MEDIUM or
+  below — worst 6.4 of 10, nothing high, nothing critical, and four of the eight
+  components need the attacker to already hold a login (one needs an *admin*
+  account, which is close to no risk at all). A page that opens on the scariest
+  true number is the bug table's own failure with the sign flipped: a value
+  standing in for a reality it misrepresents, reassuring in one direction and
+  alarming in the other. **Both directions are defects.** So: state the
+  scoped verdict first, encode severity as a WORD beside the number (a bare
+  `6.4` means nothing to a reader who does not know the CVSS bands), and where
+  exploitability changes the reading more than the score does, show that
+  instead.
+  **This does NOT license "all good" on the fleet page** — see the rule above,
+  which stands. The distinction is scope: the vulnerability page answers ONE
+  question, and on that question the fleet genuinely is in good shape, so the
+  verdict is both plain and true. The fleet page answers maintenance, where it
+  is false. A verdict is allowed exactly as far as the evidence under it
+  reaches, and a page must say which question it is answering when it gives
+  one.
+- **Say installs or say components, never "components" for both.** The
+  catalogue is **362 distinct** plugins and themes installed **2,346** times
+  across 68 sites (median 31 per site, 13 to 67). The vulnerability page read
+  "2,346 plugins and themes" for one draft, which states the fleet runs 2,346
+  different products. Caught by Doug asking whether the number was real. Same
+  family as `13 sites run PDFEmbedder-premium` in the bug table: rows counted
+  as the thing the rows are about.
+- **The page's own vocabulary is not the reader's.** "Needs a ruling", "lane",
+  "needs a person" are invented here and mean nothing to the dev team or a
+  client. Worse, on a REPORT page the word "ruling" implies the action can be
+  taken on the page it is printed on. Use plain words for what the reader
+  does next -- "no update exists, someone has to choose" -- and keep the
+  internal vocabulary to the fleet matrix, where it is defined inline.
 - **`scripts/dashboard/page.js` computes no status and holds no threshold.**
   It groups and counts what `severity.py` decided, read from the JSON the
   renderer embeds. The "what happens next" lane is a display grouping and must
@@ -680,11 +713,13 @@ reads the ledger and is what gets published. Do not delete either.
 
 ```bash
 python3 test/test-score-scan.py       # 27   offline, no scan
-python3 test/test-vuln-match.py       # 20   offline; the vulnerability matcher's
+python3 test/test-vuln-match.py       # 30   offline; the vulnerability matcher's
                                       #      COUNTING -- sites vs installs, lowercase
                                       #      slugs, and 'no advisory exists' kept apart
-                                      #      from 'not affected'. Five ways of breaking
-                                      #      it were verified to fail
+                                      #      from 'not affected'; plus the feed cache,
+                                      #      where --allow-stale must forgive a 429 and
+                                      #      NEVER a 401. Nine ways of breaking it were
+                                      #      verified to fail
 python3 test/test-vercmp.py           # 51   offline; the version comparator.
                                       #      Replays 2,602 answers from real PHP
                                       #      version_compare, frozen as a fixture so
