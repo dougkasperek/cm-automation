@@ -581,6 +581,21 @@ The previous page is `render()` behind `--legacy-out` for one cycle.
   taken on the page it is printed on. Use plain words for what the reader
   does next -- "no update exists, someone has to choose" -- and keep the
   internal vocabulary to the fleet matrix, where it is defined inline.
+- **Vulnerability detail gets its OWN page, `/vulnerabilities`, following the
+  consent precedent. Agreed with Doug 2026-08-31.** The reason is grain: the
+  fleet matrix is one row per SITE, and findings are per component per site --
+  395 on 2026-08-31, eight components over eleven sites in the no-fix set alone.
+  That does not fit a cell, and this page already has a history of being too
+  tall before the first data row. So the same three places consent uses: a
+  `Vulnerable` column on the matrix whose header links out, that site's findings
+  in the drawer, and the cross-site view on its own page. **A page in R2 that no
+  route serves is invisible and looks exactly like a page that was never
+  rendered** -- see the consent row in the bug table -- so the Worker route and
+  `test-worker-exposure.py`'s both-directions assertion land in the same change,
+  and the route needs a human `wrangler deploy`.
+  Recorded because it drifted once: the first proposal was a column plus a
+  Schedule-tab group, the standalone page was then built without the change
+  being put to anyone, and Doug had to ask whether it had been agreed.
 - **`scripts/dashboard/page.js` computes no status and holds no threshold.**
   It groups and counts what `severity.py` decided, read from the JSON the
   renderer embeds. The "what happens next" lane is a display grouping and must
