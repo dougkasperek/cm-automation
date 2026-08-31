@@ -609,6 +609,77 @@ def _gating_rows(payload, by_domain):
     return out
 
 
+def _vuln_rows(payload, by_domain):
+    """Wordfence matching: scalars per site.
+
+    A site with no component inventory is written `vuln_checked: false` and
+    UNKNOWN for the counts. NOT zero, and not omitted -- 17 of 85 sites were
+    unmatchable on 2026-08-31, and "no findings" is the best possible result
+    on this axis, so an unmatched site recorded as zero would read as the
+    cleanest site on the fleet. Same trap as `_gating_rows` above, which is
+    why it is written the same way.
+    """
+    if not isinstance(payload, dict) or payload.get("schema") != "fleet-vuln-intel/1":
+        return None
+    out = []
+    for s_ in payload.get("sites", []):
+        d = (s_.get("domain") or "").lower()
+        if not d:
+            continue
+        rec = {"site_id": by_domain.get(d, d), "host_site_name": None,
+               "source": "vuln-intel",
+               "vuln_checked": bool(s_.get("matched"))}
+        if rec["vuln_checked"]:
+            rec["vuln_affected"] = int(s_.get("affected") or 0)
+            rec["vuln_nofix"] = int(s_.get("nofix") or 0)
+            # No finding at all means no score to report. UNKNOWN, never 0.0 --
+            # a zero here would sort and render as a real measured severity.
+            w = s_.get("worst_cvss")
+            rec["vuln_worst_cvss"] = float(w) if isinstance(w, (int, float)) else UNKNOWN
+        else:
+            for k_ in VULN_OBSERVED:
+                rec.setdefault(k_, UNKNOWN)
+            rec["vuln_checked"] = False
+        out.append(rec)
+    return out
+
+
+def _vuln_finding_rows(payload, by_domain):
+    """One row per (site, finding), for history/vulnerabilities.jsonl.
+
+    Separate from observations.jsonl for the reason components.jsonl is:
+    that ledger diffs SCALAR facts, and a list of findings per site would
+    either be diffed element-wise -- making every routine advisory fleet
+    news -- or stored as a blob nothing can query.
+
+    A site that was matched and found clean produces NO ROWS, exactly as a
+    site that could not be matched does. The two are told apart by
+    `vuln_checked` on the observation row, never by counting rows here.
+    """
+    if not isinstance(payload, dict) or payload.get("schema") != "fleet-vuln-intel/1":
+        return None
+    out = []
+    for s_ in payload.get("sites", []):
+        d = (s_.get("domain") or "").lower()
+        if not d or not s_.get("matched"):
+            continue
+        for f in s_.get("findings") or []:
+            out.append({
+                "site_id": by_domain.get(d, d),
+                "slug": (f.get("slug") or "").lower(),
+                "version": f.get("version"),
+                "cve": f.get("cve") or f.get("vuln_id"),
+                "cvss": f.get("cvss"),
+                # `patched` is the whole fixable/no-fix split. False means no
+                # release closes it, which is a decision rather than an update.
+                "patched": f.get("patched"),
+                "fix_version": f.get("fix_version"),
+                "title": f.get("title"),
+                "published": f.get("published"),
+            })
+    return out
+
+
 # Fact-name collision guard. If two sources ever claim the same fact name, the
 # ledger would silently merge unrelated measurements onto one timeline.
 #
@@ -770,7 +841,14 @@ RUN_MODE = {"consent": "browser", "nexcess": "api-estate", "email-dns": "dns",
             # instruments, and these two are the same browser asking
             # different questions. They are separate sources, so they never
             # get compared to each other anyway.
-            "consent-gating": "browser"}
+            "consent-gating": "browser",
+            # Its own instrument word, and NOT "api" shared with nexcess. The
+            # baseline rule refuses a comparison across instruments, and this
+            # one reads a published feed against a component inventory the
+            # health scan already produced -- it queries no site and no
+            # control plane. Sharing a word with a source that does would
+            # invite a comparison between two different questions.
+            "vuln-intel": "feed-match"}
 
 
 def ingest(reports_dir, history_dir, inventory=None):
@@ -839,9 +917,11 @@ def ingest(reports_dir, history_dir, inventory=None):
     # back and the CLI prints it.
     unresolved_by_run = {}
     comp_path = os.path.join(history_dir, "components.jsonl")
+    vuln_path = os.path.join(history_dir, "vulnerabilities.jsonl")
     added_components = 0
+    added_findings = 0
     with open(obs_path, "a") as obs_fh, open(runs_path, "a") as runs_fh, \
-            open(comp_path, "a") as comp_fh:
+            open(comp_path, "a") as comp_fh, open(vuln_path, "a") as vuln_fh:
         for path in files:
             meta = parse_run_id(path)
             if meta is None:
@@ -862,6 +942,8 @@ def ingest(reports_dir, history_dir, inventory=None):
                 rows = _consent_rows(payload, by_domain)
             if rows is None:
                 rows = _gating_rows(payload, by_domain)
+            if rows is None:
+                rows = _vuln_rows(payload, by_domain)
             if rows is None:
                 print("  skip (unrecognised shape): %s" % os.path.basename(path),
                       file=sys.stderr)
@@ -977,13 +1059,27 @@ def ingest(reports_dir, history_dir, inventory=None):
                 comp_fh.write(json.dumps(crec, sort_keys=True) + "\n")
                 added_components += 1
 
+            # Findings ride the same run_id as the scalars above, so a count on
+            # the observation row and the rows that justify it can never drift
+            # apart. Guarded on source for the same reason components is.
+            for f in ((_vuln_finding_rows(payload, by_domain) or [])
+                      if source == "vuln-intel" else []):
+                frec = dict(f)
+                frec["run_id"] = meta["run_id"]
+                frec["observed_at"] = meta["observed_at"]
+                frec["site"] = f["site_id"]
+                vuln_fh.write(json.dumps(frec, sort_keys=True) + "\n")
+                added_findings += 1
+
     return {
         "runs_added": added_runs,
         "runs_skipped": skipped,
         "observations_added": added_obs,
         "components_added": added_components,
+        "findings_added": added_findings,
         "ledger": obs_path,
         "components_ledger": comp_path,
+        "vulnerabilities_ledger": vuln_path,
         "unresolved_by_run": unresolved_by_run,
         "unresolved_count": sum(len(v) for v in unresolved_by_run.values()),
         "coverage_drops": coverage_drops,

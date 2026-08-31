@@ -2325,6 +2325,76 @@ _r = L._health_rows([{"site": "pan-machine", "site_id": "nx.com",
 check("an explicit site_id wins over a machine name that would resolve elsewhere",
       _r[0]["site_id"] == "nx.com", repr(_r[0]["site_id"]))
 
+
+# ---------------------------------------------------------------------------
+# WORDFENCE MATCHING: the vuln-intel adapter
+# ---------------------------------------------------------------------------
+# Written above the summary ON PURPOSE. The same block appended to the end of
+# test-severity.py on 2026-08-31 landed after sys.exit, never ran, and the
+# suite reported the SAME count as before it existed -- a green check standing
+# in for a check that did not happen.
+_VREP = {
+    "schema": "fleet-vuln-intel/1", "feed": "production",
+    "sites": [
+        {"domain": "a.com", "matched": True, "affected": 3, "nofix": 1,
+         "worst_cvss": 5.3,
+         "findings": [{"slug": "Wp-Google-Analytics-Events", "version": "2.8.2",
+                       "cve": "CVE-2025-63009", "cvss": 5.3, "patched": False,
+                       "published": "2025-12-04", "title": "t"}]},
+        {"domain": "b.com", "matched": True, "affected": 0, "nofix": 0,
+         "worst_cvss": None, "findings": []},
+        {"domain": "c.com", "matched": False},
+    ]}
+_VBY = {"a.com": "a.com", "b.com": "b.com", "c.com": "c.com"}
+_vrows = {r["site_id"]: r for r in L._vuln_rows(_VREP, _VBY)}
+
+check("a report of another shape is not claimed by the vuln adapter",
+      L._vuln_rows({"schema": "fleet-consent-gating/1", "sites": []}, _VBY) is None)
+
+# THE ROW THIS SOURCE EXISTS TO GET RIGHT. 17 of 85 sites had no component
+# inventory on 2026-08-31 and cannot be matched at all. "No findings" is the
+# best possible result here, so an unmatched site recorded as 0 would read as
+# the cleanest site on the fleet.
+check("an unmatched site is UNKNOWN, never zero",
+      _vrows["c.com"]["vuln_nofix"] == L.UNKNOWN
+      and _vrows["c.com"]["vuln_affected"] == L.UNKNOWN,
+      str(_vrows["c.com"]))
+check("...and it is not counted as measured",
+      L.measured_count(list(_vrows.values()), "vuln-intel") == 2,
+      str(L.measured_count(list(_vrows.values()), "vuln-intel")))
+check("a matched site with no findings IS measured, and reads zero",
+      _vrows["b.com"]["vuln_checked"] is True and _vrows["b.com"]["vuln_nofix"] == 0)
+# A clean site has no worst score. 0.0 would sort and render as a real
+# measured severity, which is an absence displayed as a value.
+check("...but its worst score is UNKNOWN, not 0.0",
+      _vrows["b.com"]["vuln_worst_cvss"] == L.UNKNOWN,
+      str(_vrows["b.com"]["vuln_worst_cvss"]))
+
+_vfind = L._vuln_finding_rows(_VREP, _VBY)
+check("one finding row per finding, and none for unmatched or clean sites",
+      len(_vfind) == 1 and _vfind[0]["site_id"] == "a.com", str(_vfind))
+# WP-CLI reports the on-disk directory name and its casing differs per site;
+# Wordfence publishes lowercase. A case-sensitive slug cost 11 of 12 sites once.
+check("finding slugs are lowercased",
+      _vfind[0]["slug"] == "wp-google-analytics-events", _vfind[0]["slug"])
+check("the fixable/no-fix split is carried on the finding row",
+      _vfind[0]["patched"] is False)
+
+# Every source needs all four registries, and ingest raises on a missing one
+# rather than guessing -- which is how the missing RUN_MODE entry was found.
+check("vuln-intel is registered in every source registry",
+      "vuln-intel" in L.FACT_FAMILIES and "vuln-intel" in L.MEASURED
+      and "vuln-intel" in L.RUN_MODE)
+check("its coverage flag is a coverage flag",
+      "vuln_checked" in L.COVERAGE_FLAGS
+      and "vuln_checked" in L.COVERAGE_DIRECTION)
+# Sharing an instrument word invites a baseline comparison between two
+# different questions. This source queries no site at all.
+check("its run mode is its own instrument, not shared with an API source",
+      L.RUN_MODE["vuln-intel"] not in
+      [v for k, v in L.RUN_MODE.items() if k != "vuln-intel"],
+      L.RUN_MODE["vuln-intel"])
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:
     print("FAILED: " + ", ".join(FAIL))
