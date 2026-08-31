@@ -369,6 +369,7 @@ do not add a total.
 | the lane names explain themselves | **seven invented terms with no definition anywhere near them.** "Not established", "Needs a ruling" and "Needs scheduling" are this page's own vocabulary; the strip at the top of the page rendered the WORD and the COUNT alone. The glosses existed the whole time in `LANE[].sub` and were rendered only inside the matrix group headers and the site drawer — so a reader had to scroll into the table or open a site to learn what the number above them meant. **Doug, who designed the lanes, said he could not remember them.** Second occurrence of the row four above: a key you have to discover is not a key. Now inline under each lane, and `test-page.mjs` asserts the definition is RENDERED and not folded — verified to fail both ways, by demoting it to a `title=` tooltip (which needs a mouse) and by wrapping the strip in a `<details>` |
 | the vendor publishes no rate limit, so the "1 per 30 minutes" figure is unsourced | **true, and then designed against as though there were NO limit.** The figure came from third-party write-ups; Wordfence's own V3 page states no number and no feed size, so both were struck from `docs/VULN-INTEL-REVIEW.md` on 2026-08-30 as unsourced. That was the right call about the DOC and the wrong one about the CODE: **"unverified" is not "false"**, and an absence of confirmation became a value in the same hour it was identified as an absence. The workflow written minutes later fetched the feed in `probe` and AGAIN in `fixture`, and Wordfence answered the second with `429 API key limit exceeded`. Run 33313337785 went red on a step asking for 147 MB it already had. Two independent reasons to fetch once -- an unknown limit, and 147 MB twice being wasteful regardless -- and neither was acted on. Now measured: **153,806,638 bytes, 39,455 records**, and two full-feed requests **nine seconds apart** is over the line. That last figure is one data point and does NOT establish 30 minutes; writing it up as though it did would be the same error twice in one day. The fetch is its own step, and only that step carries `WF_KEY`, so no later step *can* fetch |
 | `0 leaking` on every gating run, three runs running | **true, and unproven.** Every test asked whether a CLEAN site reads clean; none planted a leak and demanded it be found. "Nothing fires after rejection" is the BEST possible result of this test, and the instrument had already been wrong twice in exactly that direction — v1 counted the old page's tail, v2 erased the load it was measuring. So `0 leaking` was **unfalsified, not verified**, and Doug refused to send the fleet numbers to Nick over precisely this. He was right on the evidence available. `test-gating-leak.mjs` now plants three sites — one that ignores the rejection, one that stops everything but a cookieless `gcs=G100` ping, and one where a single non-Google tag keeps firing — and requires the verdict to tell them apart. The verdict had to be extracted from the CLI block to be testable at all, which is why nothing could check it before. Verified against both real regression directions: dropping the G100 exclusion (the actual 2026-08-27 defect) fails 5 checks by reporting the compliant site as leaking; making it a blanket "ignore all Google" fails the check that a Google tag still at `gcs=G111` after a rejection IS a leak |
+| `nothing critical on this fleet`, every vulnerability run to date | true as far as anyone knows, and **the critical path did not exist**. Every run has topped out at CVSS 6.4, so the code had never executed against a high or a critical -- and on 2026-08-31 `evaluate()` turned out to have no severity handling at all. It bucketed affected / cannot say / not affected / no advisory and read `cvss` in exactly ONE place: a print, inside the no-fix branch, as `(rec.get("cvss") or {}).get("score") or 0`. So a 9.8 and a 6.4 differed only in the digits printed, an advisory with no published score printed as **0.0 under a heading reading "worst CVSS"**, and a critical WITH a fix never reached any detail listing -- it was one install inside the count line `a fix exists  87 finding(s)`. A design mock of the alarm state had been rendered and checked in a browser, which proved the PAGE draws a critical row and nothing about the pipeline: the row was hand-written into the page's data object. Same shape as `0 leaking`, on the security axis, and fixed the same way -- `test-vuln-critical.py` plants a 9.8 covering our real `divi 4.27.6` and requires it found, banded, ranked and carrying its fix version, plus a second 9.8 whose range EXCLUDES us that must come back not affected. **Its own first cut had the bug too**: the ranking negative control PASSED while ranking was broken, because `sorted()` is stable and the fixture happened to list the critical first. The medium is listed first now, deliberately |
 | `OK` beside `4 before consent` in the same cell | both true, and together they read as a contradiction. The status was right and the cell never said why: on an opt-out site the four are the configured behaviour. A green verdict next to its own contrary-looking evidence is a reader's problem even when the model is correct. The cell now reads `4 on load, as configured`. Found by reading the rendered row |
 | `Plugin updates pending: 17 sites`, and a second row saying `7 sites` | 24. `standing()` is called once per COHORT, so a cause both health cohorts can raise renders twice with the fleet split across the two rows, each action line quoting its own half as the total (`268 update(s) across 17 site(s)`). The twelve existing groups never collided, but only by luck — upstream, backup and PHP read facts only the Pantheon cohort carries. Same family as the cohort split itself, and the fourth place that needed the same fix. Now unioned per SOURCE and scored once; a flat union across sources would have been worse, since 46 sites carry both a health row and an email row and one of each pair would have been dropped silently. The baseline had it too: `standing_was` keyed on cause, so the second cohort overwrote the first and a 24-site group whose baseline was 24 would have drawn `was 7` |
 | `One update decision covers all 21 site(s). Being one release behind...` | 20 of the 21 were one behind and `valbresocheese.com` was on 7.0.2, two patches back. A blanket distance nobody had measured, in an action line written the same hour. What is actually true of the group is the TARGET, so that is what it claims now; the per-site distance sits in `detail`. Caught by reading the rendered row, not the code |
@@ -735,6 +736,55 @@ python3 test/test-vuln-match.py       # 30   offline; the vulnerability matcher'
                                       #      where --allow-stale must forgive a 429 and
                                       #      NEVER a 401. Nine ways of breaking it were
                                       #      verified to fail
+python3 test/test-vuln-critical.py    # 53   offline; can the matcher FIND a critical?
+                                      #      Every fleet run has topped out at CVSS
+                                      #      6.4, so the critical path had never run
+                                      #      -- and when looked at on 2026-08-31 there
+                                      #      WAS no critical path. Plants a 9.8 that
+                                      #      covers our divi 4.27.6 and requires it
+                                      #      found, banded, ranked above the mediums
+                                      #      and carrying its fix version; plants a
+                                      #      second 9.8 whose range EXCLUDES us and
+                                      #      requires not-affected. Five breaks are
+                                      #      applied in-suite and each must be caught
+python3 test/test-vercmp.py           # 51   offline; the version comparator.
+                                      #      Replays 2,602 answers from real PHP
+                                      #      version_compare, frozen as a fixture so
+                                      #      it needs no PHP, and scores the REAL
+                                      #      Pods record -- all 17 advisories, pulled
+                                      #      from the feed, not transcribed. Seven
+                                      #      ways of breaking it were verified to fail
+python3 test/test-consent-rulings.py  # 17   offline, no network
+python3 test/test-nexcess-ssh.py      # 43   offline, no key
+python3 test/test-worker-exposure.py  # 48   offline, no network
+python3 test/test-workflows.py        # 67   offline; the CI concurrency contract
+python3 test/test-access-policies.py  # 46   offline, no token
+python3 test/test-ledger.py       # 319
+python3 test/test-severity.py     # 166
+python3 test/test-page.py         #  35   offline; the page's model is the feed's, never "all good"
+node test/test-page.mjs           #  71   headless Chromium; the rendered DOM. Needs `npm install`.
+                                  #       RENDER FIRST -- it opens ./fleet.html,
+                                  #       a committed artifact, and renders
+                                  #       nothing itself
+python3 test/test-email-dns.py    #  65   (needs dnspython)
+python3 test/test-build-inventory.py #  6  offline; the seed generator REFUSES an existing inventory
+python3 test/test-nexcess.py      #  96   offline, no API call
+python3 test/test-consent.py      # 126   offline, no browser
+node test/test-gating-leak.mjs    #  14   headless Chromium + a local fixture
+                                  #       server. Plants a leak and requires it
+                                  #       to be FOUND. Every fleet run reports
+                                  #       0 leaking; this is what makes that
+                                  #       falsifiable rather than merely
+                                  #       unfalsified
+node test/test-gating-window.mjs  #  20   headless Chromium + a local fixture
+                                  #       server; the gating window's two
+                                  #       boundaries. Verified to FAIL against
+                                  #       the v2 window before v3 existed
+python3 test/test-wp-calls.py     #  48   offline, drives the mock
+./test/run-local-test.sh          #  62   1-3 min, silent, two mock sites hang
+                                  #       on purpose. Never run it through the
+                                  #       device bridge: 45s timeout.
+```
 python3 test/test-vercmp.py           # 51   offline; the version comparator.
                                       #      Replays 2,602 answers from real PHP
                                       #      version_compare, frozen as a fixture so

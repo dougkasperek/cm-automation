@@ -1,0 +1,222 @@
+{
+ "00000000-0000-4000-8000-00000000c001": {
+  "copyrights": {
+   "_": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist."
+  },
+  "cve": "CVE-2026-00001",
+  "cve_link": null,
+  "cvss": {
+   "rating": "Critical",
+   "score": 9.8,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+   "id": 94,
+   "name": "Improper Control of Generation of Code"
+  },
+  "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+  "id": "00000000-0000-4000-8000-00000000c001",
+  "informational": false,
+  "published": "2026-08-30 00:00:00",
+  "references": [],
+  "researchers": [],
+  "software": [
+   {
+    "affected_versions": {
+     "* - 4.27.9": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "4.27.9"
+     }
+    },
+    "name": "Divi",
+    "patched": true,
+    "patched_versions": [
+     "4.28.0",
+     "5.12.0"
+    ],
+    "remediation": "Update to 4.28.0 or later.",
+    "slug": "divi",
+    "type": "plugin"
+   }
+  ],
+  "title": "Divi <= 4.27.9 - Unauthenticated Remote Code Execution",
+  "updated": "2026-08-30 00:00:00"
+ },
+ "00000000-0000-4000-8000-00000000c002": {
+  "copyrights": {
+   "_": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist."
+  },
+  "cve": "CVE-2026-00002",
+  "cve_link": null,
+  "cvss": {
+   "rating": "Critical",
+   "score": 9.8,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  "cwe": {
+   "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+   "id": 434,
+   "name": "Unrestricted Upload of File with Dangerous Type"
+  },
+  "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+  "id": "00000000-0000-4000-8000-00000000c002",
+  "informational": false,
+  "published": "2019-08-01 00:00:00",
+  "references": [],
+  "researchers": [],
+  "software": [
+   {
+    "affected_versions": {
+     "* - 3.29.3": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "3.29.3"
+     }
+    },
+    "name": "Divi",
+    "patched": true,
+    "patched_versions": [
+     "3.29.4"
+    ],
+    "remediation": "Update to 3.29.4 or later.",
+    "slug": "divi",
+    "type": "plugin"
+   }
+  ],
+  "title": "Divi <= 3.29.3 - Unauthenticated Arbitrary File Upload",
+  "updated": "2019-08-01 00:00:00"
+ },
+ "00000000-0000-4000-8000-00000000c003": {
+  "copyrights": {
+   "_": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist."
+  },
+  "cve": "CVE-2026-00004",
+  "cve_link": null,
+  "cvss": {
+   "rating": "Critical",
+   "score": 9.1,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+  },
+  "cwe": {
+   "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+   "id": 89,
+   "name": "SQL Injection"
+  },
+  "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+  "id": "00000000-0000-4000-8000-00000000c003",
+  "informational": false,
+  "published": "2026-07-01 00:00:00",
+  "references": [],
+  "researchers": [],
+  "software": [
+   {
+    "affected_versions": {
+     "* - 9.9.9": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "9.9.9"
+     }
+    },
+    "name": "Divi Booster",
+    "patched": false,
+    "patched_versions": [],
+    "remediation": "No patched version is available.",
+    "slug": "divi-booster",
+    "type": "plugin"
+   }
+  ],
+  "title": "Divi Booster <= 9.9.9 - Unauthenticated SQL Injection (no fix)",
+  "updated": "2026-07-01 00:00:00"
+ },
+ "00000000-0000-4000-8000-00000000m001": {
+  "copyrights": {
+   "_": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist."
+  },
+  "cve": "CVE-2026-00003",
+  "cve_link": null,
+  "cvss": {
+   "rating": "Medium",
+   "score": 6.4,
+   "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N"
+  },
+  "cwe": {
+   "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+   "id": 79,
+   "name": "Cross-site Scripting"
+  },
+  "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+  "id": "00000000-0000-4000-8000-00000000m001",
+  "informational": false,
+  "published": "2026-05-01 00:00:00",
+  "references": [],
+  "researchers": [],
+  "software": [
+   {
+    "affected_versions": {
+     "* - 1.9.16": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "1.9.16"
+     }
+    },
+    "name": "WPS Hide Login",
+    "patched": true,
+    "patched_versions": [
+     "1.9.17"
+    ],
+    "remediation": "Update to 1.9.17 or later.",
+    "slug": "wps-hide-login",
+    "type": "plugin"
+   }
+  ],
+  "title": "WPS Hide Login <= 1.9.16 - Stored Cross-Site Scripting",
+  "updated": "2026-05-01 00:00:00"
+ },
+ "00000000-0000-4000-8000-00000000u001": {
+  "copyrights": {
+   "_": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist."
+  },
+  "cve": null,
+  "cve_link": null,
+  "cvss": {
+   "rating": null,
+   "score": null,
+   "vector": null
+  },
+  "cwe": null,
+  "description": "SYNTHETIC. Not a Wordfence record. Hand-built for test/test-vuln-critical.py; the real feed is rate-limited and these advisories do not exist.",
+  "id": "00000000-0000-4000-8000-00000000u001",
+  "informational": false,
+  "published": "2026-06-01 00:00:00",
+  "references": [],
+  "researchers": [],
+  "software": [
+   {
+    "affected_versions": {
+     "* - 2.0.0": {
+      "from_inclusive": true,
+      "from_version": "*",
+      "to_inclusive": true,
+      "to_version": "2.0.0"
+     }
+    },
+    "name": "Divi Dash",
+    "patched": true,
+    "patched_versions": [
+     "2.0.1"
+    ],
+    "remediation": "Update to 2.0.1 or later.",
+    "slug": "divi-dash",
+    "type": "plugin"
+   }
+  ],
+  "title": "Divi Dash <= 2.0.0 - Unscored advisory",
+  "updated": "2026-06-01 00:00:00"
+ }
+}

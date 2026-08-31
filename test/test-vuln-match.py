@@ -288,9 +288,23 @@ _mb = [f for f in fv.build_report(
            _pidx, "production", set(), {})["sites"][0]["findings"]
        if f["cve"] == "CVE-2023-6967"]
 check("a real multi-branch advisory is matched at all", len(_mb) == 1, str(len(_mb)))
-check("...and every patched branch is kept, not just the first",
-      _mb and _mb[0]["fix_version"] == "2.7.31.2, 2.8.23.2, 2.9.19.2, 3.0.10.2",
+# THE NEAREST RELEASE THAT CLOSES IT, not the newest the vendor shipped.
+# CVE-2023-6967 patches four branches at once. This check first asserted that
+# every branch was kept and joined into a string, which told a 2.7.x site to
+# install 3.0.10.2 -- a major upgrade it does not need to close this finding.
+# Two DIFFERENT installed versions, because a single case cannot tell "picks
+# the right branch" from "always returns the first entry in the list".
+check("...and the fix is the lowest patched version above the one installed",
+      _mb and _mb[0]["fix_version"] == "2.7.31.2",
       _mb[0]["fix_version"] if _mb else "no match")
+_mb28 = [f for f in fv.build_report(
+             [{"site": "n.com", "slug": "pods", "version": "2.8.5",
+               "type": "plugin", "status": "active"}],
+             _pidx, "production", set(), {})["sites"][0]["findings"]
+         if f["cve"] == "CVE-2023-6967"]
+check("...and a site on another branch gets that branch's release, not the first",
+      _mb28 and _mb28[0]["fix_version"] == "2.8.23.2",
+      _mb28[0]["fix_version"] if _mb28 else "no match")
 
 # THE NO-FIX COUNT. Every record in the Pods fixture is patched: True -- 29 of
 # 29 -- so asserting this against it compares 0 to 0 and passes however the

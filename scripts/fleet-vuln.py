@@ -538,8 +538,20 @@ def evaluate(rows, idx):
             unsure.append((r, "a range could not be evaluated"))
         else:
             n_clean += 1
+    # Ranked worst-first here rather than at each call site, so the CLI, the
+    # report and any test all see one order.
+    findings = sorted((finding(r, vid, rec, sw) for r, vid, rec, sw in hits),
+                      key=rank_key)
+    n_by_band = {}
+    for f in findings:
+        n_by_band[f["band"]] = n_by_band.get(f["band"], 0) + 1
     return {
         "sites": {r["site"] for r in rows},
+        "findings": findings,
+        "n_by_band": n_by_band,
+        # None when nothing is affected -- NOT "none", which is a real CVSS
+        # band meaning a scored zero.
+        "worst_band": findings[0]["band"] if findings else None,
         "hits": hits,
         "unsure": unsure,
         "n_clean": n_clean,
@@ -553,13 +565,151 @@ def evaluate(rows, idx):
     }
 
 
-def _rating(score):
-    """The CVSS band as a word. Wordfence publishes its own `rating`, which is
-    what we use; this is only the fallback when a record omits it."""
-    if score is None:
+# ---------------------------------------------------------------------------
+# how bad is it, and can it be closed by updating?
+# ---------------------------------------------------------------------------
+
+# CVSS v3.1 severity bands, lower bound of each. Validated against the vendor's
+# own `cvss.rating` on all 17 real Pods advisories in
+# test/fixtures/wf-pods-production.json -- this table is not a belief about
+# where the bands sit, it agrees with Wordfence on every record we hold.
+#
+# The band is derived from the SCORE, not read from `rating`, for two reasons:
+# the scanner feed carries no `rating` at all, and two sources for one fact is
+# two answers. test-vuln-critical.py asserts the two never disagree.
+BANDS = (("critical", 9.0), ("high", 7.0), ("medium", 4.0), ("low", 0.1))
+
+# NOT "low", NOT "none". A score we could not read is an absence, and this
+# repo's cardinal bug is an absence rendered as a value in the reassuring
+# direction.
+UNKNOWN_BAND = "unknown"
+
+# Sort order. UNKNOWN sits directly BELOW critical and ABOVE high on purpose:
+# an unreadable score might be a 9.8, and sorting it in with the lows would
+# bury the exact case this ranking exists to surface.
+BAND_RANK = {"critical": 5, UNKNOWN_BAND: 4, "high": 3,
+             "medium": 2, "low": 1, "none": 0}
+
+
+def band(score):
+    """A CVSS score -> the WORD for its severity band.
+
+    The word, not the number, is what a reader understands. Doug, 2026-08-31:
+    the first vulnerability page "induced panic" because it led with a bare
+    figure -- a `6.4` means nothing to someone who does not know the bands.
+
+    Returns UNKNOWN_BAND for a missing, null, or non-numeric score. Booleans
+    are rejected explicitly: `True` is an int in Python and would otherwise
+    score as a 1.0 low.
+    """
+    if isinstance(score, bool):
+        return UNKNOWN_BAND
+    if isinstance(score, str):
+        # The production feed sends numbers. Accept a numeric string rather
+        # than calling a readable score unknown, but never invent one.
+        try:
+            score = float(score.strip())
+        except (ValueError, AttributeError):
+            return UNKNOWN_BAND
+    if not isinstance(score, (int, float)):
+        return UNKNOWN_BAND
+    for name, lo in BANDS:
+        if score >= lo:
+            return name
+    return "none"
+
+
+def score_of(rec):
+    """The CVSS score off a feed record, or None. Never 0 for absent.
+
+    `match()` used `(rec.get("cvss") or {}).get("score") or 0`, which renders a
+    record with no score as a 0.0 -- the bottom of the scale -- in a column
+    headed "worst CVSS".
+    """
+    c = rec.get("cvss")
+    if not isinstance(c, dict):
         return None
-    return ("Critical" if score >= 9.0 else "High" if score >= 7.0
-            else "Medium" if score >= 4.0 else "Low")
+    s = c.get("score")
+    if isinstance(s, bool) or not isinstance(s, (int, float, str)):
+        return None
+    if isinstance(s, str):
+        try:
+            return float(s.strip())
+        except (ValueError, AttributeError):
+            return None
+    return s
+
+
+def fix_version(installed, sw):
+    """The version this install must reach to close the finding, or None.
+
+    None means NO FIX: `patched` is false, the list is empty, or every entry
+    is at or below what is already installed. A None here is what turns a
+    finding from an update into a decision, so it must never stand in for
+    "we did not look".
+
+    `patched_versions` is a LIST and is not ordered. The answer is the LOWEST
+    entry strictly ABOVE the installed version -- the nearest release that
+    closes it, not the newest one the vendor has shipped. A site on 4.27.6
+    with fixes at 4.28.0 and 5.0.0 needs 4.28.0.
+    """
+    if sw.get("patched") is False:
+        return None
+    if vercmp.is_absent(installed):
+        return None
+    cands = []
+    for pv in sw.get("patched_versions") or []:
+        if vercmp.is_absent(pv):
+            continue
+        try:
+            if vercmp.compare(pv, installed) > 0:
+                cands.append(pv)
+        except ValueError:
+            continue
+    if not cands:
+        return None
+    lowest = cands[0]
+    for c in cands[1:]:
+        if vercmp.compare(c, lowest) < 0:
+            lowest = c
+    return lowest
+
+
+def finding(row, vid, rec, sw):
+    """One affected install, flattened and ranked-ready.
+
+    Built here rather than in the CLI so it is testable. The gating verdict had
+    to be pulled out of its CLI block for exactly this reason, and until it
+    was, nothing could check it.
+    """
+    score = score_of(rec)
+    fix = fix_version(row["version"], sw)
+    return {
+        "site": row["site"],
+        "slug": row["slug"],
+        "version": row["version"],
+        "vuln_id": vid,
+        "cve": rec.get("cve"),
+        "title": rec.get("title"),
+        "score": score,
+        "band": band(score),
+        "patched": sw.get("patched") is not False,
+        "fix_version": fix,
+        # What a person does next, in plain words. "no update exists, someone
+        # has to choose" is the reader-facing half of this.
+        "action": "update" if fix else "decide",
+    }
+
+
+def rank_key(f):
+    """Worst first. Band, then score, then slug so the order is stable.
+
+    A missing score sorts to the bottom WITHIN its band and never lifts a
+    finding above a band it does not belong to.
+    """
+    return (-BAND_RANK.get(f["band"], 0),
+            -(f["score"] if isinstance(f["score"], (int, float)) else -1.0),
+            f["slug"], f["site"], str(f["vuln_id"]))
 
 
 def build_report(rows, idx, feed, inventory_ids=None, feed_meta=None):
@@ -583,22 +733,30 @@ def build_report(rows, idx, feed, inventory_ids=None, feed_meta=None):
         for vid, rec, sw in recs:
             if vercmp.is_affected(r["version"], sw.get("affected_versions")) is not True:
                 continue
-            cvss = (rec.get("cvss") or {})
-            score = cvss.get("score")
+            # ONE implementation of each fact, shared with evaluate(). The
+            # first cut of this function derived the severity word here and
+            # joined every patched_version into a string; both are done better
+            # by the helpers above and a second copy is a second answer.
+            score = score_of(rec)
             patched = sw.get("patched")
-            # patched_versions is a LIST -- a plugin often patches several
-            # branches at once, and picking one would be a branch decision the
-            # matcher is not entitled to make. Wordfence's own `remediation`
-            # sentence is carried alongside it for display.
-            fixes = sw.get("patched_versions") or []
             e["findings"].append({
                 "slug": r["slug"],
                 "version": r["version"],
                 "cve": rec.get("cve") or vid,
                 "cvss": score,
-                "rating": cvss.get("rating") or _rating(score),
+                # DERIVED from the score, not read from `cvss.rating`. The
+                # scanner feed publishes no rating at all, and this page showed
+                # "unrated" on every row once already when the field failed to
+                # survive ingest. The vendor's own word is kept beside it and
+                # test-vuln-critical.py asserts the two never disagree.
+                "rating": band(score).capitalize(),
+                "vendor_rating": (rec.get("cvss") or {}).get("rating"),
                 "patched": patched,
-                "fix_version": ", ".join(str(x) for x in fixes) or None,
+                # The LOWEST patched release strictly above what is installed:
+                # the nearest version that closes it, not the newest the vendor
+                # has shipped. A site on 4.27.6 with fixes at 4.28.0 and 5.0.0
+                # needs 4.28.0, and the old code told it "4.28.0, 5.0.0".
+                "fix_version": fix_version(r["version"], sw),
                 "remediation": sw.get("remediation"),
                 "title": rec.get("title"),
                 "published": (rec.get("published") or "")[:10] or None,
@@ -716,10 +874,18 @@ def match(args):
             a = agg[slug]
             oldest = min((str(x.get("published") or "")[:10]
                           for x in a["recs"].values()), default="?")
-            worst = max(((x.get("cvss") or {}).get("score") or 0)
-                        for x in a["recs"].values())
-            print("    %-32s %2d site(s)  %d advisory  oldest %s  worst CVSS %s"
-                  % (slug, len(a["sites"]), len(a["recs"]), oldest, worst))
+            # score_of, not . A record with no score printed as 0.0
+            # under a heading reading "worst CVSS" -- the bottom of the scale
+            # standing in for an absence.
+            scores = [score_of(x) for x in a["recs"].values()]
+            known = [x for x in scores if x is not None]
+            worst = max(known) if known else None
+            # The WORD beside the number. A bare 6.4 means nothing to a reader
+            # who does not know the CVSS bands (Doug, 2026-08-31).
+            print("    %-32s %2d site(s)  %d advisory  oldest %s  worst %s"
+                  % (slug, len(a["sites"]), len(a["recs"]), oldest,
+                     "unknown (no score published)" if worst is None
+                     else "%s CVSS %s" % (band(worst).upper(), worst)))
             for vid, rec in sorted(a["recs"].items(),
                                    key=lambda kv: str(kv[1].get("published"))):
                 print("        %-16s %s  %s"
