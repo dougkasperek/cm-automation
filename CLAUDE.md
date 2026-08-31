@@ -869,6 +869,46 @@ python3 test/test-wp-calls.py     #  48   offline, drives the mock
 
 ---
 
+## The vulnerability numbers, checked against real sites
+
+**Two sites, four version reads, both scan transports, all exact.
+2026-08-31.** Every offline test in this repo can only prove the matcher is
+self-consistent. What none of them can prove is that the version we READ off a
+site is the version actually running there -- and that is the input the whole
+chain rests on.
+
+| site | host | plugin | we said | wp-admin said |
+|---|---|---|---|---|
+| `pfannenbergusa.com` | Pantheon | WPMU DEV Dashboard | 5.0.1 | 5.0.1 |
+| `eamusicfest.com` | Nexcess | MP Timetable | 2.4.11 | 2.4.11 |
+| `eamusicfest.com` | Nexcess | UpdraftPlus | 2.26.1.26 | 2.26.1.26 |
+| `eamusicfest.com` | Nexcess | TablePress | 2.2.4 | 2.2.4 |
+
+Checked by Matt Sullivan on the first, Doug on the second. **Deliberately
+across BOTH transports** -- Pantheon over terminus/WP-CLI and Nexcess over SSH
+-- because one host confirming proves that host's scan path and nothing else.
+
+**TablePress was the load-bearing one.** That single 2.2.4 install produces
+EIGHT findings, each a different advisory with a different fix version, and a
+count that multiplies like that is exactly where a double-count would hide. The
+version is right, so the eight are eight real advisories against one stale
+install. Same shape as `13 sites run PDFEmbedder-premium` in the bug table,
+checked before it became a row rather than after.
+
+**What this does NOT establish**, and a later session must not read it as
+though it does: Wordfence's own affected-version ranges, which cannot be
+audited from here; the other 387 findings, none of which has been opened; and
+the 7 of 75 sites with no component inventory, which are in no number at all.
+Two confirmed sites make the METHOD credible. They do not make the list proven.
+
+The first spot-check also produced a live discrepancy that is still open: we
+record **4 must-use plugins** on `pfannenbergusa.com` and wp-admin shows
+**5**. No finding moves -- nothing on the critical list is an mu-plugin -- but
+the inventory is short by one and nobody knows which or why. Must-use plugins
+are the ones a client can neither see nor disable.
+
+---
+
 ## Definition of done
 
 1. The relevant test suite passes, and any new rule has a test that was
