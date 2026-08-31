@@ -220,6 +220,101 @@ finally:
     import shutil
     shutil.rmtree(_tmp, ignore_errors=True)
 
+
+# ---------------------------------------------------------------------------
+# THE INGESTABLE REPORT
+# ---------------------------------------------------------------------------
+# Above the summary deliberately: a block appended after sys.exit never runs
+# and the suite reports the same count as before it existed.
+#
+# Scored against the REAL Pods records in test/fixtures, not a mock. A mock is
+# evidence about the parser, never about the world -- the post-smtp mock passed
+# every test while reading a field the plugin does not store.
+_pods = json.load(open(os.path.join(os.path.dirname(__file__),
+                                    "fixtures", "wf-pods-production.json")))
+_pidx = fv.by_slug(_pods)
+_prows = [{"site": "a.com", "slug": "pods", "version": "2.4.0",
+           "type": "plugin", "status": "active"},
+          {"site": "b.com", "slug": "pods", "version": "99.0",
+           "type": "plugin", "status": "active"}]
+_prep = fv.build_report(_prows, _pidx, "production",
+                       {"a.com", "b.com", "unmatched.com"},
+                       {"fetched_at": "2026-08-31T12:41:38Z", "records": len(_pods)})
+_pby = {x["domain"]: x for x in _prep["sites"]}
+
+check("the report declares the schema the ledger adapter looks for",
+      _prep["schema"] == "fleet-vuln-intel/1", _prep["schema"])
+
+# A site with NO component list must appear and carry no counts. Omitting it
+# would make the run look like it covered the whole fleet -- 17 of 85 sites
+# were unmatchable on 2026-08-31 -- and on this axis silence reads as good news.
+check("a site with no component list is reported, not omitted",
+      "unmatched.com" in _pby)
+check("...as matched: false, with no counts at all",
+      _pby["unmatched.com"]["matched"] is False
+      and "affected" not in _pby["unmatched.com"]
+      and "nofix" not in _pby["unmatched.com"],
+      str(_pby["unmatched.com"]))
+
+check("a matched site outside every affected range reads zero, not absent",
+      _pby["b.com"]["matched"] is True and _pby["b.com"]["affected"] == 0)
+check("...and carries no worst score rather than 0.0",
+      _pby["b.com"]["worst_cvss"] is None, str(_pby["b.com"]["worst_cvss"]))
+
+# THE CRITICAL PATH, on real published records. Every fleet run so far topped
+# out at 6.4, so this rule had never executed against real data.
+check("a real critical advisory produces a critical worst score",
+      _pby["a.com"]["worst_cvss"] == 9.8, str(_pby["a.com"]["worst_cvss"]))
+check("...and the finding count matches the findings listed",
+      _pby["a.com"]["affected"] == len(_pby["a.com"]["findings"]),
+      "%s vs %s" % (_pby["a.com"]["affected"], len(_pby["a.com"]["findings"])))
+
+_f = _pby["a.com"]["findings"][0]
+check("a finding carries the vendor's own rating word, not one we derived",
+      _f["rating"] in ("Low", "Medium", "High", "Critical"), str(_f["rating"]))
+# patched_versions is a LIST -- a plugin often patches several branches at
+# once, and picking one would be a branch decision the matcher cannot make.
+check("the fix version keeps every patched branch",
+      _f["patched"] is True and _f["fix_version"] == "2.5", str(_f["fix_version"]))
+check("every finding carries the fixable/no-fix flag",
+      all("patched" in x for x in _pby["a.com"]["findings"]))
+
+# MULTI-BRANCH FIX, on a real record. CVE-2023-6967 patches four branches at
+# once; keeping only the first would tell 3 of 4 branches to install a version
+# that is not on their line. 2.7.30 is inside its [*, 2.7.31) range.
+_mb = [f for f in fv.build_report(
+           [{"site": "m.com", "slug": "pods", "version": "2.7.30",
+             "type": "plugin", "status": "active"}],
+           _pidx, "production", set(), {})["sites"][0]["findings"]
+       if f["cve"] == "CVE-2023-6967"]
+check("a real multi-branch advisory is matched at all", len(_mb) == 1, str(len(_mb)))
+check("...and every patched branch is kept, not just the first",
+      _mb and _mb[0]["fix_version"] == "2.7.31.2, 2.8.23.2, 2.9.19.2, 3.0.10.2",
+      _mb[0]["fix_version"] if _mb else "no match")
+
+# THE NO-FIX COUNT. Every record in the Pods fixture is patched: True -- 29 of
+# 29 -- so asserting this against it compares 0 to 0 and passes however the
+# count is written. Flipping `patched` on a real record keeps the real SHAPE
+# while giving the counter something to count. The vacuity guard below is the
+# point: the first version of this check passed against a deliberately broken
+# counter, which is a test that cannot fail.
+_unpatched = json.loads(json.dumps(_pods))
+for _r in _unpatched.values():
+    for _sw in _r.get("software") or []:
+        _sw["patched"] = False
+_urep = fv.build_report(_prows, fv.by_slug(_unpatched), "production", set(), {})
+_ua = [x for x in _urep["sites"] if x["domain"] == "a.com"][0]
+check("the no-fix case is not vacuous: there is something to count",
+      _ua["nofix"] > 0, str(_ua["nofix"]))
+check("nofix counts exactly the findings whose patched is False",
+      _ua["nofix"] == sum(1 for x in _ua["findings"] if x["patched"] is False)
+      == _ua["affected"],
+      "%s / %s / %s" % (_ua["nofix"],
+                        sum(1 for x in _ua["findings"] if x["patched"] is False),
+                        _ua["affected"]))
+check("...and a patched fleet still counts zero of them",
+      _pby["a.com"]["nofix"] == 0, str(_pby["a.com"]["nofix"]))
+
 print()
 print("%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

@@ -553,6 +553,90 @@ def evaluate(rows, idx):
     }
 
 
+def _rating(score):
+    """The CVSS band as a word. Wordfence publishes its own `rating`, which is
+    what we use; this is only the fallback when a record omits it."""
+    if score is None:
+        return None
+    return ("Critical" if score >= 9.0 else "High" if score >= 7.0
+            else "Medium" if score >= 4.0 else "Low")
+
+
+def build_report(rows, idx, feed, inventory_ids=None, feed_meta=None):
+    """The ingestable report: one entry per site, findings nested.
+
+    Every site in the INVENTORY appears, not just the ones with a component
+    list. A site we cannot match is written `matched: false` and carries no
+    counts -- 17 of 85 on 2026-08-31. Leaving them out entirely would make the
+    run look like it covered the whole fleet, and "no findings" is the best
+    possible result on this axis, so silence reads as good news.
+    """
+    per = {}
+    for r in rows:
+        site = r["site"]
+        e = per.setdefault(site, {"domain": site, "matched": True,
+                                  "affected": 0, "nofix": 0,
+                                  "worst_cvss": None, "findings": []})
+        recs = idx.get(r["slug"])
+        if not recs:
+            continue
+        for vid, rec, sw in recs:
+            if vercmp.is_affected(r["version"], sw.get("affected_versions")) is not True:
+                continue
+            cvss = (rec.get("cvss") or {})
+            score = cvss.get("score")
+            patched = sw.get("patched")
+            # patched_versions is a LIST -- a plugin often patches several
+            # branches at once, and picking one would be a branch decision the
+            # matcher is not entitled to make. Wordfence's own `remediation`
+            # sentence is carried alongside it for display.
+            fixes = sw.get("patched_versions") or []
+            e["findings"].append({
+                "slug": r["slug"],
+                "version": r["version"],
+                "cve": rec.get("cve") or vid,
+                "cvss": score,
+                "rating": cvss.get("rating") or _rating(score),
+                "patched": patched,
+                "fix_version": ", ".join(str(x) for x in fixes) or None,
+                "remediation": sw.get("remediation"),
+                "title": rec.get("title"),
+                "published": (rec.get("published") or "")[:10] or None,
+            })
+            e["affected"] += 1
+            if patched is False:
+                e["nofix"] += 1
+            if score is not None and (e["worst_cvss"] is None
+                                      or score > e["worst_cvss"]):
+                e["worst_cvss"] = score
+
+    for sid in sorted(inventory_ids or ()):
+        # matched: false, and NO counts. See the docstring.
+        per.setdefault(sid, {"domain": sid, "matched": False})
+
+    meta = feed_meta or {}
+    return {
+        "schema": "fleet-vuln-intel/1",
+        "feed": feed,
+        "feed_fetched_at": meta.get("fetched_at"),
+        "feed_records": meta.get("records"),
+        "sites": [per[k] for k in sorted(per)],
+    }
+
+
+def inventory_ids(path):
+    """Every site the fleet knows about, so unmatched ones are still reported."""
+    if not path or not os.path.exists(path):
+        return set()
+    inv = json.load(open(path, encoding="utf-8"))
+    out = set()
+    for s in inv.get("sites", []):
+        sid = s.get("host_site_name") or s.get("domain")
+        if sid:
+            out.add(sid)
+    return out
+
+
 def match(args):
     """Score every install against the feed. REPORTING ONLY.
 
@@ -645,6 +729,26 @@ def match(args):
         print("  No finding lacks a fix. Every affected component can be closed")
         print("  by updating it.")
 
+    out_path = getattr(args, "report", None)
+    if out_path:
+        meta = {}
+        if getattr(args, "feed_file", None):
+            when, _ = feed_age(args.feed_file)
+            meta = {"fetched_at": when, "records": len(feed)}
+        rep = build_report(rows, idx, args.feed,
+                           inventory_ids(getattr(args, "inventory", None)),
+                           meta)
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(rep, fh, indent=1, sort_keys=True)
+            fh.write("\n")
+        n_unmatched = sum(1 for x in rep["sites"] if not x.get("matched"))
+        print()
+        print("  wrote %s" % out_path)
+        print("    %d site(s): %d matched, %d with no component inventory"
+              % (len(rep["sites"]), len(rep["sites"]) - n_unmatched, n_unmatched))
+        print("    the %d unmatched carry NO counts. They are unchecked, not clear."
+              % n_unmatched)
+
     if unsure and getattr(args, "show_unsure", False):
         print()
         print("  --- CANNOT SAY ---")
@@ -682,6 +786,11 @@ def main(argv=None):
     mt.add_argument("--show", type=int, default=40)
     mt.add_argument("--show-unsure", dest="show_unsure", action="store_true",
                     help="list the installs whose exposure could not be decided")
+    mt.add_argument("--report", default=None, metavar="PATH",
+                    help="write an ingestable fleet-vuln-intel/1 report here.")
+    mt.add_argument("--inventory", default="data/fleet-inventory.json",
+                    help="so sites with no component list are reported as "
+                         "unmatched rather than silently omitted.")
     mt.set_defaults(fn=match)
 
     fx = sub.add_parser("fixture", help="extract one slug's records as a test fixture")
