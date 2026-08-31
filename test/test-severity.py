@@ -1047,5 +1047,78 @@ check("an inventory ruling is not counted as the sweep having seen a site",
       not any(f in S.CONSENT_FACTS for f in ("consent_model", "consent_managed")),
       repr(S.CONSENT_FACTS))
 
+
+# --------------------------------------------------------------------------
+# WORDFENCE MATCHING, added 2026-08-31
+# --------------------------------------------------------------------------
+# The whole fleet topped out at CVSS 6.4 on the day these rules were written,
+# so `vuln_critical` had never fired on real data. Every case below is
+# therefore synthetic ON PURPOSE -- that is the point, not a shortcut. The
+# matcher's own end-to-end crisis test is test-vuln-critical.py.
+
+# The absence case first. A source that has never run must not change a score.
+check("no vuln facts at all leaves the score untouched",
+      st() == "OK" and st(vuln_checked=True, vuln_affected=0, vuln_nofix=0) == "OK",
+      st(vuln_checked=True, vuln_affected=0, vuln_nofix=0))
+
+# THE RULE THAT MUST NOT EXIST. 381 of 395 findings measured 2026-08-31 have a
+# patch, over 67 of 68 sites, and `plugin_backlog` already counts that same
+# work. A rule here would report one backlog twice and colour the fleet on a
+# routine update cycle.
+check("findings that a normal update closes do NOT score",
+      st(vuln_checked=True, vuln_affected=14, vuln_nofix=0, vuln_worst_cvss=6.4) == "OK",
+      str(codes(vuln_checked=True, vuln_affected=14, vuln_nofix=0, vuln_worst_cvss=6.4)))
+
+# ...and it must not sneak in through the worst-score fact either.
+check("a HIGH score with a patch available still does not score",
+      st(vuln_checked=True, vuln_affected=2, vuln_nofix=0, vuln_worst_cvss=8.9) == "OK",
+      str(codes(vuln_checked=True, vuln_affected=2, vuln_nofix=0, vuln_worst_cvss=8.9)))
+
+check("a vulnerability with no fix is a WARN",
+      st(vuln_checked=True, vuln_affected=3, vuln_nofix=1, vuln_worst_cvss=6.4) == "WARN")
+check("...and it is the vuln rule that fires, not something incidental",
+      codes(vuln_checked=True, vuln_affected=3, vuln_nofix=1,
+            vuln_worst_cvss=6.4) == ["vuln_no_fix"],
+      str(codes(vuln_checked=True, vuln_affected=3, vuln_nofix=1, vuln_worst_cvss=6.4)))
+
+# 9.0 is the published CVSS band boundary, not a number invented here.
+check("critical is CRIT even though a patch exists",
+      st(vuln_checked=True, vuln_affected=1, vuln_nofix=0, vuln_worst_cvss=9.8) == "CRIT",
+      st(vuln_checked=True, vuln_affected=1, vuln_nofix=0, vuln_worst_cvss=9.8))
+check("...because a patch changes the ACTION, never the urgency",
+      codes(vuln_checked=True, vuln_affected=1, vuln_nofix=0,
+            vuln_worst_cvss=9.8) == ["vuln_critical"],
+      str(codes(vuln_checked=True, vuln_affected=1, vuln_nofix=0, vuln_worst_cvss=9.8)))
+check("8.9 is not critical and 9.0 is",
+      st(vuln_checked=True, vuln_nofix=0, vuln_worst_cvss=8.9) == "OK"
+      and st(vuln_checked=True, vuln_nofix=0, vuln_worst_cvss=9.0) == "CRIT")
+
+# Both codes on one site: the critical one and a separate un-patchable one are
+# different actions -- update now, and decide -- so both must be reported.
+check("critical and no-fix both report on one site",
+      sorted(codes(vuln_checked=True, vuln_affected=2, vuln_nofix=2,
+                   vuln_worst_cvss=9.8)) == ["vuln_critical", "vuln_no_fix"],
+      str(codes(vuln_checked=True, vuln_affected=2, vuln_nofix=2, vuln_worst_cvss=9.8)))
+
+# Both codes must have an axis, or axis_of() raises at render time on the one
+# run where they first fire -- which would be a real incident.
+check("both vuln codes map to the health axis",
+      S.axis_of("vuln_critical") == "health" and S.axis_of("vuln_no_fix") == "health")
+
+# The matcher reads the component inventory the HEALTH scan produced, so it
+# cannot reach a site health has not. Listing its facts as coverage would add a
+# source that always agrees with health and can never disagree.
+_vuln_facts = ("vuln_checked", "vuln_affected", "vuln_nofix", "vuln_worst_cvss")
+check("vuln facts are NOT coverage facts",
+      not (set(_vuln_facts) & set(S.COVERAGE_FACTS)),
+      str(sorted(set(_vuln_facts) & set(S.COVERAGE_FACTS))))
+check("...so a site seen only by the matcher is still UNKNOWN",
+      S.evaluate({"site_id": "n.com", "in_workbook": True,
+                  "vuln_checked": True, "vuln_affected": 0,
+                  "vuln_nofix": 0})["status"] == "UNKNOWN",
+      S.evaluate({"site_id": "n.com", "in_workbook": True,
+                  "vuln_checked": True, "vuln_affected": 0,
+                  "vuln_nofix": 0})["status"])
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

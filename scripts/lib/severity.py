@@ -104,6 +104,12 @@ BACKUP_WARN_DAYS = 7     # a weekly cadence is the working assumption
 # ten pending updates is where a backlog stops looking like normal ops.
 PLUGIN_WARN_COUNT = 10
 
+# CVSS band boundary, not a number invented here: 9.0 is where the published
+# scale calls a score Critical. Measured 2026-08-31, the whole fleet topped out
+# at 6.4, so this rule has never fired on real data -- which is exactly why
+# test/test-vuln-critical.py plants one and requires it to be found.
+VULN_CRIT_CVSS = 9.0
+
 UNKNOWN = "unknown"
 
 # The facts evaluate() actually reads to produce a status. Anything not in here
@@ -181,6 +187,18 @@ CONSENT_FACTS = ("consent_scan_ok", "consent_banner_detected",
 # move 78 sites out of UNKNOWN without anyone having looked at one of them.
 COVERAGE_FACTS = HEALTH_FACTS + NEXCESS_FACTS + CONSENT_FACTS
 
+# The vuln-intel facts are DELIBERATELY NOT here, and there is no VULN_FACTS
+# tuple feeding coverage. The matcher scores the component inventory that the
+# HEALTH scan produced, so it cannot reach a site health has not already
+# reached -- a vuln row is a second reading of an existing look, never a new
+# one. Listing it would add a source that always agrees with health and can
+# never disagree, which is the shape of a coverage number that cannot fall.
+# See the `consent_model` entry above: an inventory ruling is not evidence
+# that anything looked, and neither is a derived one.
+#
+# Coverage for this source is answered in fleet-ledger.py by MEASURED
+# ["vuln-intel"], which is where "did the matcher see this site" belongs.
+
 # States, worst first. Callers that need to sort or pick a worst-of should use
 # this rather than hardcoding an order.
 ORDER = ["CRIT", "WARN", "OK", "UNKNOWN", "SKIP", "FROZEN"]
@@ -218,6 +236,11 @@ AXIS_OF_CODE = {
     "backup_aging":                "health",
     "core_update":                 "health",
     "plugin_backlog":              "health",
+    # Vulnerability findings answer "is this site maintained", so they land on
+    # HEALTH -- mapped by the QUESTION, never by the tool that found them, the
+    # same reason coverage_partial is a health reason.
+    "vuln_critical":               "health",
+    "vuln_no_fix":                 "health",
     "wp_version_unknown":          "health",
     # The sibling of the above, for the absence NO scan tried to fill.
     "wp_unestablished":            "health",
@@ -441,6 +464,14 @@ def evaluate(site, today=None):
             "No database backup found at all" if backup >= 9999
             else "No database backup in %d days" % backup)
 
+    # A CRITICAL advisory is urgent whether or not a patch exists. The patch
+    # changes the ACTION -- update it now, or decide what to do about it -- and
+    # never the urgency, so this reads worst_cvss and not the no-fix count.
+    vuln_cvss = _num(site.get("vuln_worst_cvss"))
+    if vuln_cvss is not None and vuln_cvss >= VULN_CRIT_CVSS:
+        add(crit, "vuln_critical",
+            "A known vulnerability rated %.1f is present" % vuln_cvss)
+
     # --- WARN ---------------------------------------------------------------
     core = site.get("wp_core_update")
     if core not in (None, "up-to-date", "n/a", UNKNOWN):
@@ -452,6 +483,21 @@ def evaluate(site, today=None):
     plugins = _num(site.get("plugin_updates"))
     if plugins is not None and plugins >= PLUGIN_WARN_COUNT:
         add(warn, "plugin_backlog", "%d plugin updates pending" % plugins)
+
+    # A vulnerability with NO patch. Nothing to schedule: the choice is replace
+    # the component, restrict who can reach it, or accept it.
+    #
+    # `vuln_affected` -- the findings that DO have a patch -- is deliberately
+    # not scored here. Measured 2026-08-31 it was 381 findings over 67 of 68
+    # sites, so a rule on it could never discriminate, and it is already
+    # counted by `plugin_backlog` above: the fix for both is the same update.
+    # Scoring it would report one backlog twice and colour the fleet on a
+    # routine update cycle. A fact that is true of every site ranks nothing.
+    vuln_nofix = _num(site.get("vuln_nofix"))
+    if vuln_nofix:
+        add(warn, "vuln_no_fix",
+            "%d known vulnerabilit%s with no fix available"
+            % (vuln_nofix, "y" if vuln_nofix == 1 else "ies"))
 
 
 
