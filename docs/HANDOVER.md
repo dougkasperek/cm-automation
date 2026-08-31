@@ -184,11 +184,16 @@ challenges the portal API)", resolved 2026-08-25 when the challenge turned out
 to be ours, and that the publish-side coverage-drop guard does not yet exist --
 it does, in `scripts/publish-dashboard.sh`.
 
-**A stale copy of this repo sits in iCloud.** *Cowork Automation Portfolio/
-cm-automation*: 44 files, every one dated 2026-08-18, no `.git`, 264 commits
-behind. Delete it before handover. This project has been burned twice by a
-second copy nobody was looking at -- the gitignored `ci/github-actions/` mirror
-and the project-memory note above.
+**~~A stale copy of this repo sits in iCloud.~~ Deleted 2026-08-31.**
+*Cowork Automation Portfolio/cm-automation*: 44 files, every one dated
+2026-08-18, no `.git`, 264 commits behind. Checked before deleting: ten files
+were not in the repo's object store, and all ten were disposable -- two
+`__pycache__` artifacts and eight `reports/` files from scans that **are** in
+the ledger (`health-2026-08-16_1725`, `health-2026-08-17_0726`,
+`email-dns-2026-08-17_1545`). Moved to `~/.Trash`, not shredded, if anyone
+wants to check that reasoning. This project has been burned twice by a second
+copy nobody was looking at -- the gitignored `ci/github-actions/` mirror and
+the project-memory note above.
 
 **A Google service-account key is loose in that same iCloud folder**
 (`cm-agent-integrations-*.json`). Not part of the transfer, but it is a
@@ -198,14 +203,16 @@ credential in a synced directory and this is the moment to deal with it.
 
 ## 8. Housekeeping in the repo itself
 
-```bash
-cd ~/dev/cm-automation && git worktree remove .claude/worktrees/xenodochial-yalow-3aa7b7 && git branch -d claude/xenodochial-yalow-3aa7b7
-```
+**Done 2026-08-31:** the leftover `claude/xenodochial-yalow-3aa7b7` branch and
+its worktree under `.claude/worktrees/` are removed. `git worktree remove`
+refused it for holding modified and untracked files, which was worth stopping
+for: it carried the CVSS banding work in `scripts/fleet-vuln.py` and two new
+test files. All of it had already landed on `main` -- the test files byte
+identical, `BANDS`/`UNKNOWN_BAND`/`band()` present in
+`scripts/fleet-vuln.py:580`, and every line it added to `CLAUDE.md` present
+there too. Verified before forcing, not after.
 
-That branch is merged into `main` with no unique commits (checked with
-`git branch --merged main`); the worktree is a leftover session artifact.
-
-`_scratch/` is **tracked** -- 24 files including four full redesign concepts and
+**Still open.** `_scratch/` is **tracked** -- 24 files including four full redesign concepts and
 a model dump. It is the record of why the v3 page looks the way it does, which
 is worth keeping, but it is the largest source of "what is this?" for a new
 reader. Either move it under `docs/` with a README, or say in `README.md` that
