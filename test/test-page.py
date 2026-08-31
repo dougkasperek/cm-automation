@@ -155,5 +155,60 @@ _legacy = RD.render(m)
 check("render() still produces the previous page", "<table id=fleet>" in _legacy)
 check("...and it is not what --out writes", "<table id=fleet>" not in html)
 
+
+# ---------------------------------------------------------------------------
+# THE VULNERABILITY VERDICT IS KEYED ON CHANGE, NOT ON THE WORST SCORE
+# ---------------------------------------------------------------------------
+# Measured 2026-08-31: eight critical findings, median age 86 days and the
+# oldest 857. The page said "Act today" over all of them, which it would have
+# said every day for over two years. That is not an alert, it is the page's
+# permanent state -- the same defect as the first draft of this page, pointed
+# the other way. Both directions are wrong.
+_V = m["vulnerabilities"]
+
+# A first run has no earlier run to compare against, and on it EVERYTHING is
+# new to us while none of it is new to the world. Calling that "act today"
+# would put a red banner over advisories published years ago.
+_no_base = RD.build_vulnerabilities([], [], set(), TODAY, [], None)
+check("with no baseline, the page knows it cannot compare",
+      _no_base["has_baseline"] is False)
+_rows = [{"site_id": "a.com", "slug": "x", "cve": "CVE-1", "cvss": 9.8,
+          "rating": "Critical", "patched": True, "fix_version": "2",
+          "title": "t", "published": "2024-01-01", "version": "1"}]
+_first = RD.build_vulnerabilities(_rows, [], set(), TODAY, [], None)
+check("...so nothing is marked new on a first run",
+      not any(g["new_since_last"] for g in _first["findings"]),
+      str([g["new_since_last"] for g in _first["findings"]]))
+_seen = RD.build_vulnerabilities(_rows, [], set(), TODAY, _rows, "prev-run")
+check("a finding present in the previous run is not new",
+      not any(g["new_since_last"] for g in _seen["findings"]))
+_fresh = RD.build_vulnerabilities(_rows, [], set(), TODAY, [], "prev-run")
+check("a finding absent from the previous run IS new",
+      all(g["new_since_last"] for g in _fresh["findings"]))
+
+# Age is the thing that separates findings sharing a score. An unknown age must
+# not become 0, which would sort as the newest row and read as disclosed today.
+check("age is measured in days from the published date",
+      _first["findings"][0]["age_days"] == (TODAY - datetime.date(2024, 1, 1)).days,
+      str(_first["findings"][0]["age_days"]))
+_undated = RD.build_vulnerabilities(
+    [dict(_rows[0], published=None)], [], set(), TODAY, [], None)
+check("an unknown age is None, never 0",
+      _undated["findings"][0]["age_days"] is None,
+      str(_undated["findings"][0]["age_days"]))
+
+# The rendered verdict. "Act today" is reserved for something that CHANGED.
+_html_standing = RD.render_vulnerabilities(
+    dict(m, vulnerabilities=RD.build_vulnerabilities(
+        _rows, [], {"a.com"}, TODAY, _rows, "prev-run")))
+check("a standing critical does NOT say act today",
+      "Act today" not in _html_standing, "said act today over nothing new")
+check("...it names how long it has gone unpatched instead",
+      "gone unpatched" in _html_standing and "days" in _html_standing)
+_html_new = RD.render_vulnerabilities(
+    dict(m, vulnerabilities=RD.build_vulnerabilities(
+        _rows, [], {"a.com"}, TODAY, [], "prev-run")))
+check("a NEW critical does say act today", "Act today" in _html_new)
+
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

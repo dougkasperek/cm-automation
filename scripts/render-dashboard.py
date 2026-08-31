@@ -427,6 +427,14 @@ def build_model(history_dir, inventory_path, today):
                   if src == "vuln-intel"]
     vuln_rows = sum((L.load_findings(history_dir, rid) or []
                      for rid in sorted(_vuln_runs)), [])
+    # The run BEFORE the latest one, so "new since the last check" is measured
+    # rather than assumed. On the first run there is no baseline and nothing
+    # may be called new -- everything would qualify, which would put a red
+    # "act today" over advisories the world has known about for two years.
+    _vuln_all = sorted({r["run_id"] for r in L.load_findings(history_dir)})
+    _vuln_prev = _vuln_all[-2] if len(_vuln_all) >= 2 else None
+    vuln_prev_rows = (L.load_findings(history_dir, _vuln_prev) or []
+                      if _vuln_prev else [])
     vuln_matched = set(s["site_id"] for s in sites
                        if s.get("vuln_checked") is True)
     if component_sites:
@@ -482,7 +490,9 @@ def build_model(history_dir, inventory_path, today):
         "sites": sites, "coverage": coverage, "inventory_count": len(inv),
         "components": build_components(comp_rows, sites, inventoried,
                                        component_sites),
-        "vulnerabilities": build_vulnerabilities(vuln_rows, sites, vuln_matched),
+        "vulnerabilities": build_vulnerabilities(
+            vuln_rows, sites, vuln_matched, today,
+            vuln_prev_rows, _vuln_prev),
         "unreconciled": unreconciled, "health": health,
         "coverage_changes": coverage_changes,
         # The latest run of a source measured fewer sites than the run before
@@ -566,7 +576,23 @@ EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               "gating_cookieless_names", "gating_cold_count")
 
 
-def build_vulnerabilities(rows, sites, matched):
+def _age_days(published, today):
+    """Days since an advisory was published. None if either date is missing.
+
+    None is reported as "age unknown", never as 0 -- a zero would sort as the
+    newest finding on the page and read as disclosed today.
+    """
+    if not published or not today:
+        return None
+    try:
+        d = datetime.date(*[int(x) for x in str(published)[:10].split("-")])
+    except Exception:                                          # noqa: BLE001
+        return None
+    return (today - d).days
+
+
+def build_vulnerabilities(rows, sites, matched, today=None,
+                          prev_rows=None, prev_run=None):
     """Findings grouped by COMPONENT, plus the fleet counts the page leads on.
 
     Component-major for the same reason build_components is: the fleet table
@@ -597,11 +623,28 @@ def build_vulnerabilities(rows, sites, matched):
                            "version": r.get("version")})
         if r.get("version"):
             g["versions"].add(str(r.get("version")))
+    # (slug, cve, site) seen in the PREVIOUS run. A finding absent from this
+    # set is new to us; with no previous run the set is None and NOTHING is
+    # called new, because on a first run everything would be -- which would put
+    # an "act today" over advisories published two years ago.
+    seen_before = (None if prev_run is None else
+                   {((r.get("slug") or "").lower(), r.get("cve"), r["site_id"])
+                    for r in (prev_rows or [])})
+
     out = []
     for g in by.values():
         g["sites"].sort(key=lambda x: x["site_id"])
         g["versions"] = sorted(g["versions"])
         g["site_count"] = len({x["site_id"] for x in g["sites"]})
+        # HOW LONG THE WORLD HAS KNOWN. "Critical, open 857 days" is a
+        # different and more useful sentence than "critical": it names a
+        # patching backlog rather than an emergency, and a page that says
+        # "act today" every day for two years is not an alert.
+        g["age_days"] = _age_days(g.get("published"), today)
+        g["new_since_last"] = (
+            False if seen_before is None else
+            any((g["slug"], g["cve"], x["site_id"]) not in seen_before
+                for x in g["sites"]))
         out.append(g)
     # No fix first, then by blast radius, then by score. A component nobody can
     # update out of is the only thing on this page that is not a scheduling
@@ -624,6 +667,12 @@ def build_vulnerabilities(rows, sites, matched):
         "affected_sites": sorted({x["site_id"] for g in out for x in g["sites"]}),
         # UNKNOWN, never 0.0 -- a zero here would render as a measured severity.
         "worst_cvss": max(scores) if scores else None,
+        "critical": [g for g in out if isinstance(g["cvss"], (int, float))
+                     and g["cvss"] >= 9.0],
+        # Whether a comparison was possible at all. None means no earlier run,
+        # and the page must say it cannot tell rather than imply nothing is new.
+        "has_baseline": prev_run is not None,
+        "prev_run": prev_run,
         "matched_sites": sorted(matched),
         # Sites this source could not look at. NOT clean, and named so the page
         # can say which.
@@ -2998,14 +3047,28 @@ VULN_JS = r"""
   var DATA = JSON.parse(document.getElementById('vuln-data').textContent);
   var tb = document.querySelector('.vt tbody');
   var hr = document.querySelector('.vt thead tr');
+  /* DEFAULT IS SEVERITY, with age as the tiebreak. Sorting the whole table by
+     age put a 9.5-year-old MEDIUM above a 4-day-old CRITICAL, which is the
+     opposite of the reader's question. Age was added to separate findings that
+     SHARE a score, so it belongs in the tiebreak and in its own sortable
+     column, not as the primary key. Caught by reading the rendered table. */
   var key = 'cvss', dir = -1, open = {};
   var GET = {
     slug: function (g) { return g.slug; },
     ver: function (g) { return (g.versions || []).join(','); },
     cvss: function (g) { return typeof g.cvss === 'number' ? g.cvss : -1; },
     fix: function (g) { return g.patched === false ? 0 : 1; },
-    since: function (g) { return g.published || ''; }
+    /* -1 for an unknown age, so it sorts to the BOTTOM of a longest-first
+       list rather than to the top where it would read as disclosed today. */
+    age: function (g) { return typeof g.age_days === 'number' ? g.age_days : -1; }
   };
+  function ageText(g) {
+    if (typeof g.age_days !== 'number') { return 'unknown'; }
+    var d = g.age_days;
+    if (d < 60) { return d + ' days'; }
+    if (d < 730) { return Math.round(d / 30) + ' months'; }
+    return (d / 365).toFixed(1) + ' years';
+  }
   function esc(t) {
     return String(t == null ? '' : t)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -3023,17 +3086,26 @@ VULN_JS = r"""
   }
   function render() {
     var rows = DATA.slice().sort(function (a, b) {
-      /* A critical never sorts out of the top: sorting is for scanning the
-         tail and must not hide the row that needs action today. */
-      var ac = (typeof a.cvss === 'number' && a.cvss >= 9) ? 0 : 1;
-      var bc = (typeof b.cvss === 'number' && b.cvss >= 9) ? 0 : 1;
-      if (ac !== bc) { return ac - bc; }
+      /* A finding NEW since the last check never sorts out of the top. It was
+         the criticals that were pinned here until 2026-08-31, and that was
+         wrong for the same reason the old headline was: six of the eight
+         criticals had been outstanding for months, so pinning them pinned the
+         backlog and buried the two that had just appeared. What changed is
+         what a reader cannot already know. */
+      var an = a.new_since_last ? 0 : 1;
+      var bn = b.new_since_last ? 0 : 1;
+      if (an !== bn) { return an - bn; }
       var x = GET[key](a), y = GET[key](b);
       var n = (typeof x === 'number') ? x - y : String(x).localeCompare(String(y));
-      return (n || (b.site_count - a.site_count)) * dir;
+      /* Oldest first among equals: eight findings at 9.8 are indistinguishable
+         by score, and how long we have carried one is the thing that ranks it. */
+      var tie = (GET.age(b) - GET.age(a)) || (b.site_count - a.site_count);
+      return (n * dir) || tie;
     });
     tb.innerHTML = rows.map(function (g, i) {
-      var isc = (typeof g.cvss === 'number' && g.cvss >= 9);
+      /* The stripe marks what is NEW, not what scores highest. A page that
+         paints every 9.8 red says the same thing every render for years. */
+      var isc = !!g.new_since_last;
       return '<tr' + (isc ? ' class="isc"' : '') + '>'
         + '<td><span class="vslug">' + esc(g.slug) + '</span>'
         + '<span class="vwhat">' + esc(g.title) + '</span>'
@@ -3046,7 +3118,8 @@ VULN_JS = r"""
         + '<span class="lbl">' + esc(g.rating || 'unrated') + '</span>'
         + '<span class="num">' + (typeof g.cvss === 'number' ? g.cvss.toFixed(1) : '') + '</span></span></td>'
         + '<td class="vwho">' + (g.patched === false ? 'none available' : 'update') + '</td>'
-        + '<td class="vsince">' + esc(g.published) + '</td>'
+        + '<td class="vsince">' + ageText(g)
+        + '<em>' + (g.new_since_last ? 'new this run' : esc(g.published)) + '</em></td>'
         + '</tr>';
     }).join('');
     Array.prototype.forEach.call(hr.children, function (th) {
@@ -3093,7 +3166,11 @@ def render_vulnerabilities(m):
     n_matched = len(v["matched_sites"])
     n_unmatched = len(v["unmatched_sites"])
     worst = v["worst_cvss"]
-    crit = isinstance(worst, (int, float)) and worst >= 9.0
+    crits = v["critical"]
+    crit_sites = {x["site_id"] for g in crits for x in g["sites"]}
+    fresh = [g for g in crits if g["new_since_last"]]
+    ages = [g["age_days"] for g in crits if g["age_days"] is not None]
+    oldest = max(ages) if ages else None
     installs = len(m["components"]["catalogue"]) if m.get("components") else 0
 
     o = []
@@ -3121,15 +3198,34 @@ def render_vulnerabilities(m):
         A('<div class="vd"><h2 style="color:var(--ink)">Nothing has been '
           'matched yet.</h2><p>The Wordfence source is registered and has not '
           'produced a run. This is an absence, not a clean result.</p></div>')
-    elif crit:
-        A('<div class="vd crit"><h2>Act today. A critical vulnerability is '
-          'present on %d site(s).</h2>'
-          '<p>The most serious finding rates <b>%.1f out of 10</b>. '
-          '%d finding(s) close with a normal plugin update; %d have no update '
-          'available and need a decision.</p></div>'
-          % (len({x["site_id"] for g in v["findings"]
-                  if isinstance(g["cvss"], (int, float)) and g["cvss"] >= 9.0
-                  for x in g["sites"]}), worst, v["n_fixable"], v["n_nofix"]))
+    elif fresh:
+        # NEW since the last check. This is the only state that earns "today":
+        # something changed, and a reader who acted yesterday would not know.
+        A('<div class="vd crit"><h2>Act today. %d critical finding(s) are new '
+          'since the last check.</h2>'
+          '<p>%s. A patch exists for each, so this is an update rather than a '
+          'decision. %d further critical finding(s) were already '
+          'outstanding.</p></div>'
+          % (len(fresh),
+             "; ".join("<b>%s</b> (%s)" % (html.escape(g["slug"]), g["cve"])
+                       for g in fresh[:4]),
+             len(crits) - len(fresh)))
+    elif crits:
+        # STANDING, and nothing new. Saying "act today" here would have said it
+        # every day for %d days, which is not an alert but the page's permanent
+        # state -- and the reason the first draft of this page was rewritten.
+        # Duration is the finding: it names a patching backlog, not an
+        # emergency, and that is both true and more likely to move someone.
+        A('<div class="vd crit"><h2>%d critical finding(s) have gone '
+          'unpatched%s.</h2>'
+          '<p>None is new since the last check. Every one has a patch '
+          'available and has had for %s. %d finding(s) in total close with a '
+          'normal plugin update; %d have no update available and need a '
+          'decision.</p></div>'
+          % (len(crits),
+             "" if oldest is None else ", the oldest for <b>%d days</b>" % oldest,
+             "some time" if oldest is None else "as long as %d days" % oldest,
+             v["n_fixable"], v["n_nofix"]))
     elif v["n_nofix"]:
         A('<div class="vd"><h2>Nothing here needs urgent attention.</h2>'
           '<p><b>%d</b> component(s) on <b>%d</b> site(s) have a known problem '
@@ -3153,20 +3249,31 @@ def render_vulnerabilities(m):
     # the best possible result, so a site nothing looked at must not be silent.
     A('<div class="bad" title="No component inventory exists, so these could '
       'not be matched at all."><b>%d</b>not checked</div>' % n_unmatched)
+    if v["has_baseline"]:
+        A('<div class="%s"><b>%d</b>new since the last check</div>'
+          % ("bad" if fresh else "", len(fresh)))
+    else:
+        # No earlier run to compare against. Saying "0 new" would be a claim
+        # this page cannot support, and on a first run everything is new to us
+        # while none of it is new to the world.
+        A('<div>no baseline yet &mdash; first run of this source</div>')
     A("</div>")
 
     # --- THE TABLE --------------------------------------------------------
     if v["findings"]:
         A('<h3 style="font-size:14.5px;margin:0 0 3px">Findings, worst first</h3>')
         A('<p class="quiet" style="margin:0 0 11px;font-size:12.5px;max-width:72ch">'
-          'Components with no update available are listed first: there is no '
-          'version to upgrade to, so each is a choice — replace it, restrict '
-          'who can reach it, or accept it. The rest are ordinary plugin updates '
-          'that happen to close a published advisory.</p>')
+          'Sorted worst first, and among findings that share a score, by how '
+          'long the advisory has been public. '
+          'Findings that share a score are indistinguishable by it; age is what '
+          'separates one disclosed last week from one carried for years. New '
+          'findings are marked. Anything with no update available is a choice '
+          'rather than a task — replace it, restrict who can reach it, or '
+          'accept it.</p>')
         A('<div class="vt"><table><thead><tr>')
         for key, label in (("slug", "Component and sites"), ("ver", "Version"),
                            ("cvss", "Severity"), ("fix", "Fix"),
-                           ("since", "Reported")):
+                           ("age", "Open for")):
             A('<th%s><button type="button" data-k="%s">%s'
               '<span class="ar">&#9660;</span></button></th>'
               % (' aria-sort="descending"' if key == "cvss" else "", key, label))
