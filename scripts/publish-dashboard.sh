@@ -229,6 +229,7 @@ python3 "$SCRIPT_DIR/render-dashboard.py" \
   --out "$WORK/dashboard.html" \
   --components-out "$WORK/components.html" \
   --consent-out "$WORK/consent.html" \
+  --vuln-out "$WORK/vulnerabilities.html" \
   --emit-data "$WORK/latest.json" \
   --strict || { err "render failed; nothing published"; exit 1; }
 
@@ -248,6 +249,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   log "  page: $WORK/dashboard.html"
   log "  components: $WORK/components.html"
   log "  consent: $WORK/consent.html"
+  log "  vulnerabilities: $WORK/vulnerabilities.html"
   log "  data: $WORK/latest.json"
   log ""
   log "Open the page and read it before publishing for real."
@@ -261,7 +263,8 @@ rc=0
 # would point at a 404 for however long the two were out of step -- the same
 # shape as the ledger moving while the dashboard did not.
 for pair in "dashboard.html:text/html" "components.html:text/html" \
-            "consent.html:text/html" "latest.json:application/json"; do
+            "consent.html:text/html" "vulnerabilities.html:text/html" \
+            "latest.json:application/json"; do
   name="${pair%%:*}"
   ctype="${pair##*:}"
   key="${R2_PREFIX}${name}"

@@ -394,6 +394,33 @@ const COLS = [
       if (s.f.components_checked === false) return W('failed');
       return A(s.f.components_checked);
     }, title: 'Whether a plugin, mu-plugin and theme list exists for this site. Zero rows and "runs nothing" are different answers.' },
+  { group: 'WordPress', key: 'vuln', label: 'Vulnerable', href: '/vulnerabilities', cov: cov('Known vulnerabilities'), covLabel: 'matched', cell: s => {
+      /* Absence FIRST. A site with no component inventory cannot be matched at
+         all, and on this axis "no findings" is the best possible result -- so
+         an unmatched site rendered as a green 0 would read as the cleanest
+         site on the fleet. 17 of 85 were unmatchable on 2026-08-31. */
+      /* TWO different absences, and both must carry a WORD. `vuln_checked`
+         false is a measured fact -- the matcher ran and this site has no
+         component inventory to match -- so kind() calls it a value and
+         ABSENT_LABEL has no entry for it; A(false) with no text renders an
+         EMPTY cell, which is the worst of the three since it reads as
+         nothing to report. Found by reading the rendered column, where most
+         of the fleet came out blank. (Avoid writing a digit followed by the
+         word site in this file even in a comment: the typed-count guard in
+         test-page.py scans quoted spans and cannot tell the two apart.) */
+      if (s.f.vuln_checked === false) return A(null, 'not checked');
+      if (s.f.vuln_checked !== true) return A(s.f.vuln_checked);
+      if (reason(s, 'health', 'vuln_critical')) return C(String(s.f.vuln_worst_cvss));
+      if (reason(s, 'health', 'vuln_no_fix')) return W(String(s.f.vuln_nofix) + ' no fix');
+      /* Findings that a normal update closes are NOT a warning here: they are
+         the plugin backlog in the column two along, and colouring them twice
+         would report one backlog as two problems. */
+      if (isMeasured(s.f.vuln_affected) && s.f.vuln_affected > 0)
+        return I(String(s.f.vuln_affected) + ' fixable');
+      /* "0 known", never "clear". Wordfence not having published an advisory
+         is not evidence a component is sound. */
+      return G('0 known');
+    }, title: 'Known vulnerabilities from the Wordfence feed, matched against the installed component versions. Red = something critical or with no fix; blue = findings a normal update closes, already counted as the plugin backlog. See /vulnerabilities.' },
   { group: 'Consent', key: 'loaded', label: 'Page loaded', cov: cov('Cookie consent'), covLabel: 'domains', cell: s => {
       if (s.f.consent_scan_ok === true) return G('HTTP ' + s.f.consent_http_status);
       if (s.f.consent_scan_ok === false) return { state: 'abs', text: 'HTTP ' + (s.f.consent_http_status ?? '?') };
@@ -508,7 +535,12 @@ function draw() {
         ? h('a', { href: '/consent', title: 'Consent detail: what fires on load, what still fires after Reject All, who manages each site' }, g.name)
         : g.name))),
     h('tr', { class: 'cols' }, h('th', { class: 'site' }, 'Site', h('span', { class: 'cov' }, rows.length + ' of ' + SITES.length)),
-      ...cols.map(c => h('th', { title: c.title || '' }, c.label, c.cov ? h('span', { class: 'cov' + (c.cov[0] < c.cov[1] ? ' short' : '') }, c.cov[0] + ' of ' + c.cov[1] + (c.covLabel ? ' ' + c.covLabel : '')) : h('span', { class: 'cov' }, c.axis ? 'scored' : '')))));
+      // A column may carry its own route. The Consent GROUP links out because
+      // all three of its columns share one page; Vulnerable is one column
+      // inside WordPress, so the link belongs on the column and linking the
+      // whole group would point four unrelated columns at it.
+      ...cols.map(c => h('th', { title: c.title || '' },
+        c.href ? h('a', { href: c.href }, c.label) : c.label, c.cov ? h('span', { class: 'cov' + (c.cov[0] < c.cov[1] ? ' short' : '') }, c.cov[0] + ' of ' + c.cov[1] + (c.covLabel ? ' ' + c.covLabel : '')) : h('span', { class: 'cov' }, c.axis ? 'scored' : '')))));
   const tbody = h('tbody');
   for (const L of LANE_ORDER) {
     const rs = rows.filter(s => lane(s) === L).sort((a, b) => a.id.localeCompare(b.id));
@@ -894,7 +926,7 @@ $('#app').append(h('div', { class: 'wrap' },
         '): the instrument changed, not the fleet.') : null)),
   h('footer', { class: 'foot' },
     h('p', {}, 'Health counts: ' + D.counts.CRIT + ' critical · ' + D.counts.WARN + ' warning · ' + D.counts.OK + ' OK · ' + D.counts.SKIP + ' skip · ' + D.counts.FROZEN + ' frozen, ' + D.excluded_sites.length + ' excluded by ruling (' + D.excluded_sites.join(', ') + '). Consent: ' + D.axes.consent.WARN + ' warning · ' + D.axes.consent.OK + ' OK · ' + D.axes.consent.UNKNOWN + ' unknown.'),
-    h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. ', h('a', { href: '/api/fleet-scan' }, 'JSON feed'), ' · ', h('a', { href: '/components' }, 'component catalogue'), ' · ', h('a', { href: '/consent' }, 'consent'), '. Read-only: nothing on this page changes a site.'))));
+    h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. ', h('a', { href: '/api/fleet-scan' }, 'JSON feed'), ' · ', h('a', { href: '/components' }, 'component catalogue'), ' · ', h('a', { href: '/consent' }, 'consent'), ' · ', h('a', { href: '/vulnerabilities' }, 'vulnerabilities'), '. Read-only: nothing on this page changes a site.'))));
 readUrl();
 draw();
 if (new URLSearchParams(location.search).get('view') === 'schedule') setView('schedule');

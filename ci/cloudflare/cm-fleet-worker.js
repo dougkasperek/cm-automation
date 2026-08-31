@@ -99,6 +99,18 @@ export default {
       return serve(env, PREFIX + "consent.html", "text/html; charset=utf-8");
     }
 
+    // The vulnerability page. Added 2026-08-31 IN THE SAME CHANGE as the
+    // publisher upload and the exposure test, because the consent page
+    // shipped uploaded and unreachable when those three were split up: R2 had
+    // the file, the fleet page linked to it, and this Worker 404'd it.
+    //
+    // Adding a route here changes NOTHING until someone runs `wrangler
+    // deploy` from ci/cloudflare. On 2026-08-20 an audit found the deployed
+    // Worker a full day behind this file.
+    if (path === "/vulnerabilities" || path === "/vulnerabilities.html") {
+      return serve(env, PREFIX + "vulnerabilities.html", "text/html; charset=utf-8");
+    }
+
     return new Response("Not found", { status: 404, headers: SEC });
   },
 };

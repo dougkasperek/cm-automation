@@ -528,6 +528,13 @@ EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               # know which is which, which is the point.
               "nexcess_site_id", "nexcess_unix_username", "nexcess_state",
               "nexcess_php_version", "nexcess_app_version",
+              # Wordfence matching. Added here and not only to PAGE_FACTS, so
+              # the JSON feed carries what the page shows -- the comment below
+              # about consent is this same omission, and it shipped once.
+              # `vuln_checked` is load-bearing: without it the column cannot
+              # tell a site with no findings from one nothing looked at, and
+              # renders both as clean.
+              "vuln_checked", "vuln_affected", "vuln_nofix", "vuln_worst_cvss",
               # Consent facts. Omitted on the day the sweep landed, which meant
               # the PAGE showed 34 no-tooling and 28 leaking sites while the
               # feed next to it carried no consent data at all. The docstring
