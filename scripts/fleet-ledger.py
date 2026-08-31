@@ -249,6 +249,30 @@ GATING_OBSERVED = (
     "gating_cold_count",
 )
 
+# Wordfence matching. SCALARS ONLY: the per-finding detail (which component,
+# which CVE, which version) goes to history/vulnerabilities.jsonl under the
+# same run_id, for the same reason components.jsonl exists -- this ledger diffs
+# scalar facts, and a list of findings per site would either be diffed
+# element-wise, making every routine advisory fleet news, or stored as a blob
+# nothing can query.
+#
+# `vuln_affected` and `vuln_nofix` are kept APART on purpose. 381 of the 395
+# findings measured 2026-08-31 close with a normal plugin update and are
+# already counted by the plugin backlog; only the 14 with no patch are a
+# decision. One combined count would make a routine update cycle look like a
+# security event, and a page that opens on the scariest true number is the
+# bug table's failure with the sign flipped.
+#
+# The feed's own age is deliberately NOT a per-site fact. It is identical on
+# every row, so it would rank nothing and would churn the diff on every run.
+# It belongs to the RUN.
+VULN_OBSERVED = (
+    "vuln_checked",
+    "vuln_affected",
+    "vuln_nofix",
+    "vuln_worst_cvss",
+)
+
 
 # `cmpScripts` from the scan file is deliberately NOT a ledger fact. It is
 # evidence for interpreting `consent_banner_vendor` -- it tells "no CMP" apart
@@ -597,6 +621,7 @@ FACT_FAMILIES = {
     "email-dns": EMAIL_OBSERVED,
     "nexcess": NEXCESS_OBSERVED,
     "consent": CONSENT_OBSERVED,
+    "vuln-intel": VULN_OBSERVED,
 }
 for _a in sorted(FACT_FAMILIES):
     for _b in sorted(FACT_FAMILIES):
@@ -647,6 +672,12 @@ MEASURED = {
     # DKIM needs a selector to be known, so it is the email fact that
     # distinguishes "looked" from "could not look".
     "email-dns": lambda r: r.get("dkim_present") is True,
+    # The site's components were matched against the feed. A site with NO
+    # component inventory cannot be matched at all -- 17 of 85 on 2026-08-31 --
+    # and must not count as measured, because "no findings" is the best
+    # possible result on this axis and an unmatched site would otherwise read
+    # as the cleanest one on the fleet. Same trap as consent-gating above.
+    "vuln-intel": lambda r: r.get("vuln_checked") is True,
 }
 
 # The FACT each source's coverage turns on, as a name rather than a predicate.
@@ -677,7 +708,7 @@ MEASURED = {
 # that single event lands as ~46 TRANSITION rows of fleet news, which is
 # precisely what `wp_checked` did on the first full-mode run.
 COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok", "consent_http_status",
-                  "components_checked", "gating_tested")
+                  "components_checked", "gating_tested", "vuln_checked")
 
 # Which DIRECTION a move in one of those flags went. True means coverage was
 # gained; False means it went dark.
@@ -699,6 +730,7 @@ COVERAGE_DIRECTION = {
     "gating_tested":       lambda before, after: after is True,
     "consent_scan_ok":     lambda before, after: after is True,
     "components_checked":  lambda before, after: after is True,
+    "vuln_checked":        lambda before, after: after is True,
     # The sweep saw the site only on a 2xx. Anything else is an error page,
     # which is the whole reason `ok` was redefined to require one.
     "consent_http_status": lambda before, after: (isinstance(after, int)

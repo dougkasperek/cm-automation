@@ -1020,11 +1020,20 @@ check("no coverage line reports a move without a direction",
 # The guard that stops this recurring for source number five. Every source
 # whose coverage is decided by ONE named fact must have that fact treated as
 # coverage by classify(), or its next outage becomes fleet news again.
-_COVERAGE_FLAGS = ("wp_checked", "consent_scan_ok")
-_unclassified = [f for f in _COVERAGE_FLAGS
+# READ THE REGISTRY, do not restate it. This tuple was hardcoded as
+# ("wp_checked", "consent_scan_ok") until 2026-08-31 -- two of what were by
+# then FIVE flags -- so `components_checked`, `gating_tested` and every flag
+# added after them were never checked here at all, while fleet-ledger.py's own
+# comment said "test-ledger.py asserts every name in this tuple classifies as
+# COVERAGE". A test that restates the thing it is testing stops testing it the
+# moment the thing grows. Same family as the diagnose-wp-calls.sh mirror.
+_unclassified = [f for f in L.COVERAGE_FLAGS
                  if L.classify("s", f, True, False, {}, {}, TODAY) != "COVERAGE"]
 check("every named coverage flag is classified as coverage",
       not _unclassified, str(_unclassified))
+# ...and the loop must actually have flags to iterate, or it passes vacuously.
+check("the coverage-flag registry is not empty",
+      len(L.COVERAGE_FLAGS) >= 6, str(L.COVERAGE_FLAGS))
 
 
 # ---------------------------------------------------------------------------
