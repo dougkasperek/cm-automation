@@ -235,37 +235,38 @@ returned the code.)
 
 ---
 
-## House style: the chrome is [removed]'s, the severity colours are not
+## House style: the chrome is shared, the severity colours are not
 
 **Adopted 2026-08-23** so the company's apps read as one product. Taken from
-`[removed]/src/form.html`: the paper (`#efefea`), the purple-cast ink
+the shared house style: the paper (`#efefea`), the purple-cast ink
 (`#241e31`), the hairlines (`#d9d8d0`), the strong ink (`#1c122d`), the
 Helvetica Neue type stack at 14px/1.5, the mono stack at 11.5px, uppercase
-letterspaced 800-weight labels, and **square corners everywhere** — [removed]
+letterspaced 800-weight labels, and **square corners everywhere** — the source
 declares `border-radius` exactly twice and both are `0`. The only round thing
 left here is the state dot, because it is a dot.
 
-**The severity colours are deliberately NOT [removed]'s.** `good`, `bad` and
+**The severity colours are deliberately NOT from it.** `good`, `bad` and
 `info` were validated for colourblind separation, and the obvious green-and-
-amber pair was rejected at protan delta-E 3.8 — which is why WARN is blue.
-[removed]'s `--good #0E7A55` and `--red #B4392F` have not been through that test,
-and in [removed] colour is decorative while here it carries the finding. **Do not
-unify these two sets by eye.** `test-ledger.py` asserts both halves: that the
-chrome matches and that the severity hues are still ours.
+amber pair was rejected at protan delta-E 3.8 — which is why WARN is blue. The
+house `#0E7A55` green and `#B4392F` red have not been through that test, and
+there colour is decorative while here it carries the finding. **Do not unify
+these two sets by eye.** `test-ledger.py` asserts both halves: that the chrome
+matches and that the severity hues are still ours.
 
 **This page is light only.** There was a dark variant and it was removed the
-same day: [removed] ships light only, so a dark mode here was the one place the
-two apps could not look alike, and it was a second palette to keep in step
-with a second set of contrast ratios to re-measure whenever a colour moved.
-The page therefore does not consult `prefers-color-scheme` at all, and
+same day: the house style ships light only, so a dark mode here was the one
+place the apps could not look alike, and it was a second palette to keep in
+step with a second set of contrast ratios to re-measure whenever a colour
+moved. The page therefore does not consult `prefers-color-scheme` at all, and
 `body{background}` is load-bearing rather than decorative — without it the
 page inherits the host's ground and renders this ink on someone else's black.
 
-`--strong` is [removed]'s `--navy`, renamed for its ROLE rather than its hue.
+`--strong` is the house style's structural dark, renamed for its ROLE rather
+than its hue.
 
-**Chips were the one place the two systems could not simply merge.** [removed]'s
+**Chips were the one place the two systems could not simply merge.** The house
 `.pill` is solid navy with white text. Filling ours the same way puts white on
-the validated green at 2.8:1. So the chip keeps its tint, takes [removed]'s
+the validated green at 2.8:1. So the chip keeps its tint, takes the house
 uppercase 800-weight typography and square corner, and the LABEL is mixed
 toward `--ink` for contrast while the DOT keeps the exact validated hue — a
 swatch carries no text and has no ratio to meet. Measured after the change:

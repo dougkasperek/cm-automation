@@ -52,21 +52,22 @@ _spec.loader.exec_module(L)
 SEV = L.SEV
 
 # Validated status palette. Do NOT swap these for brand colours without re-running
-# scripts/validate_palette.js in the dataviz skill: the deck's own severity green
-# and amber fail colourblind separation at protan delta-E 3.8.
+# scripts/validate_palette.js in the dataviz skill: the obvious brand green and
+# amber fail colourblind separation at protan delta-E 3.8.
 PALETTE = {
-    # Chrome from [removed] (src/form.html) so the company's apps read as one
-    # product: its paper, ink, hairlines and strong ink, not approximated.
+    # Paper, ink, hairlines and strong ink come from the company's shared house
+    # style, copied exactly rather than approximated so the apps read as one
+    # product.
     #
-    # THE SEVERITY COLOURS ARE OURS AND DO NOT COME FROM SOWGEN. good/bad/info
+    # THE SEVERITY COLOURS ARE OURS AND COME FROM NO HOUSE STYLE. good/bad/info
     # were validated for colourblind separation -- the obvious green+amber pair
-    # was REJECTED at protan delta-E 3.8, which is why WARN is blue here.
-    # [removed]'s --good #0E7A55 / --red #B4392F have not been through that, and
-    # in [removed] colour is decorative while here it carries the finding. Do not
+    # was REJECTED at protan delta-E 3.8, which is why WARN is blue here. The
+    # house green #0E7A55 and red #B4392F have not been through that test, and
+    # there colour is decorative while here it carries the finding. Do not
     # unify these two sets by eye.
     #
-    # `strong` is [removed]'s --navy, named for its ROLE rather than its hue: it
-    # is the structural dark, and in dark mode it has to become light. A token
+    # `strong` is the house style's structural dark, named for its ROLE rather
+    # than its hue: in dark mode it would have to become light, and a token
     # called "navy" that renders pale is how a palette starts lying.
     "light": {"good": "#1baf7a", "bad": "#eb6834", "info": "#2a78d6", "muted": "#8d9199",
               "surface": "#efefea", "card": "#ffffff", "panel2": "#f6f6f1",
@@ -76,9 +77,9 @@ PALETTE = {
 
 # LIGHT ONLY, from 2026-08-23. There was a dark counterpart and it is gone.
 #
-# [removed] ships light only, so a dark mode here was the one place the two apps
-# could not look alike -- and it was a second palette to keep in step, with a
-# second set of contrast ratios to re-measure every time a colour moved.
+# The house style ships light only, so a dark mode here was the one place the
+# apps could not look alike -- and it was a second palette to keep in step, with
+# a second set of contrast ratios to re-measure every time a colour moved.
 #
 # The page therefore paints its own ground explicitly and does not consult
 # prefers-color-scheme at all. That is deliberate rather than an omission: a
@@ -902,9 +903,10 @@ def css():
     out.append("}")
     out.append("""
 *{box-sizing:border-box}
-/* Type stack, sizes and the square-cornered, uppercase-label treatment are
-   [removed]'s, so the two apps read as one product. Radius is 0 throughout
-   there; the only thing kept round here is the state dot, which is a dot. */
+/* Type stack, sizes and the square-cornered, uppercase-label treatment come
+   from the company's shared house style, so the apps read as one product.
+   Radius is 0 throughout there; the only thing kept round here is the state
+   dot, which is a dot. */
 /* `background` here is load-bearing, not decoration: this page declares no
    dark variant, so without an explicit ground it would inherit the host's and
    render this ink on someone else's black. */

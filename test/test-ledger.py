@@ -1698,11 +1698,10 @@ check("a non-production row says it is excluded from the counts",
 # which says they arrive on their own. Nothing implements them: no chart code,
 # no threshold, no check. It also argued a line would be "points pretending to
 # be a trend" while printing a run count of 27.
-# House style, borrowed from [removed] so the company's apps read as one product:
-# its paper, ink, hairlines, type stack and square corners. Radius is 0
-# throughout there; the state dot is the one thing kept round, because it is a
-# dot.
-check("the shared chrome matches [removed]: paper, strong ink, square corners",
+# The company's shared house style, so its apps read as one product: paper,
+# ink, hairlines, type stack and square corners. Radius is 0 throughout there;
+# the state dot is the one thing kept round, because it is a dot.
+check("the shared chrome matches the house style: paper, strong ink, square corners",
       "#efefea" in _page and "--strong:#1c122d" in _page.replace(" ", "")
       and "border-radius:0" in _page)
 check("...and nothing is left rounded except the state dot",
@@ -1710,11 +1709,11 @@ check("...and nothing is left rounded except the state dot",
       == _page.count("border-radius:50%"),
       "unexpected non-zero radius in the stylesheet")
 
-# The severity hues are NOT [removed]'s. They were validated for colourblind
-# separation and the obvious green+amber pair was rejected; [removed]'s
-# --good #0E7A55 / --red #B4392F have not been through that, and there colour
-# is decorative while here it carries the finding.
-# Light only, matching [removed]. A dark variant was a second palette to keep in
+# The severity hues come from NO house style. They were validated for
+# colourblind separation and the obvious green+amber pair was rejected; the
+# house green #0E7A55 and red #B4392F have not been through that, and there
+# colour is decorative while here it carries the finding.
+# Light only, matching the house style. A dark variant was a second palette to keep in
 # step and a second set of ratios to re-measure. The explicit body background
 # is what stops the page inheriting a dark host ground once the media query is
 # gone -- without it this ink renders on someone else's black.
@@ -1723,7 +1722,7 @@ check("the page declares no dark variant",
 check("...and paints its own ground, so it cannot inherit a dark one",
       "background:var(--surface)" in _page.replace(" ", " "))
 
-check("the severity palette stays ours, not [removed]'s",
+check("the severity palette stays ours, not the house style's",
       "#1baf7a" in _page and "#eb6834" in _page and "#2a78d6" in _page
       and "#0e7a55" not in _page.lower() and "#b4392f" not in _page.lower())
 
