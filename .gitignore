@@ -33,3 +33,6 @@ node_modules/
 # Files Claude retired but cannot delete: the device bridge refuses rm, so they
 # are moved here and a person clears the folder. Never committed.
 _to_delete/
+
+# Wordfence feed cache. 147 MB, rate-limited, never committed.
+.feed-cache/

@@ -249,12 +249,19 @@ or "no vulnerable component" reads as clean on a site nobody inventoried.
    two full-feed requests **nine seconds apart** returned
    `429 API key limit exceeded, try again later` on the second.
 
-   That one data point says two requests nine seconds apart is over the
-   line. **It does not establish 30 minutes**, and writing it up as though
-   it did would be the same error as the figure it replaces. What it does
-   settle is the design: **fetch once per run and cache**, which is what
-   `fleet-vuln.py fetch --out` exists for. Back off on 429; email
-   `wfi-support@wordfence.com` if a higher limit is ever needed.
+   **Three data points now, all 2026-08-30:** 9 seconds apart refused,
+   **22.5 minutes refused**, 36.5 minutes allowed. So the window is between
+   22.5 and 36.5 minutes -- consistent with the write-ups' "1 per 30 minutes"
+   and still not proof of it. **The bracket is the honest statement**;
+   writing 30 minutes because it now looks likely would be the same error as
+   the figure it replaced.
+
+   The design follows from the bracket, not from a number: **one fetch per
+   run**, cached between runs on an hourly key, and `--allow-stale` so a
+   second dispatch inside the window reports on the copy it already has. Run
+   33315975286 failed for exactly this, 22 minutes after a good one. Every
+   command prints the feed's age before any number derived from it, because a
+   cached feed with no stated age is another row in the table above.
 
    Still true: key required, **free** for personal and commercial use, and
    the disclosure-to-patch window was 36 hours for Pods, so a poll every few

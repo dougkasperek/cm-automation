@@ -26,12 +26,18 @@ read 2026-08-30. Three facts in VULN-INTEL-REVIEW.md are wrong against it and
 are corrected here rather than repeated:
 
   - The rate limit is NOT "1 per 30 minutes". The vendor states no number, only
-    a 429 when requesting too often. MEASURED 2026-08-30: two full-feed
-    requests NINE SECONDS APART returned
-    `429 API key limit exceeded, try again later` on the second. That is one
-    data point and it establishes only that two requests nine seconds apart is
-    over the line -- it does NOT establish the 30-minute figure, and nothing
-    here should be written as though it does.
+    a 429 when requesting too often. MEASURED 2026-08-30 across three runs:
+
+        9 seconds apart   -> 429 refused
+        22.5 minutes      -> 429 refused
+        36.5 minutes      -> 200 allowed
+
+    So the window is somewhere BETWEEN 22.5 and 36.5 minutes. That is
+    consistent with the "1 per 30 minutes" figure the write-ups gave and still
+    does not prove it; the honest statement is the bracket, not a number.
+    The consequence is what matters: one fetch per run, cached between runs,
+    and `--allow-stale` so a re-run inside the window reports on the copy it
+    has rather than failing.
   - The feed size is NOT "~120 MB". MEASURED 2026-08-30: **153,806,638 bytes
     decoded, 39,455 records**, of which 11,823 have `patched=false`.
 
@@ -65,6 +71,7 @@ READ-ONLY. Only GET is ever issued.
 """
 
 import argparse
+import datetime
 import gzip
 import io
 import json
@@ -227,6 +234,60 @@ def fetch(feed, key, timeout=180):
         return UNREACHABLE, "%s: %s" % (type(e).__name__, e), None, b""
 
 
+def _meta_path(path):
+    return path + ".meta.json"
+
+
+def write_meta(path, feed, raw, records):
+    """When was this feed pulled, and what was in it?
+
+    A cached feed with no age is the same shape as every row in CLAUDE.md's
+    table: a value that looks current because nothing says otherwise. Every
+    command that reads a cached file prints this.
+    """
+    meta = {
+        "fetched_at": datetime.datetime.now(datetime.timezone.utc)
+                              .strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "feed": feed,
+        "bytes": len(raw),
+        "records": records,
+    }
+    with open(_meta_path(path), "w", encoding="utf-8") as fh:
+        json.dump(meta, fh, indent=1)
+        fh.write("\n")
+    return meta
+
+
+def feed_age(path):
+    """(fetched_at, minutes_old) for a cached feed, or (None, None).
+
+    None is reported as "age unknown", never as fresh.
+    """
+    mp = _meta_path(path)
+    if not os.path.exists(mp):
+        return None, None
+    try:
+        m = json.load(open(mp, encoding="utf-8"))
+        t = datetime.datetime.strptime(m["fetched_at"], "%Y-%m-%dT%H:%M:%SZ")
+        t = t.replace(tzinfo=datetime.timezone.utc)
+    except Exception:                                      # noqa: BLE001
+        return None, None
+    delta = datetime.datetime.now(datetime.timezone.utc) - t
+    return m["fetched_at"], int(delta.total_seconds() // 60)
+
+
+def announce_age(path):
+    """Print how old a cached feed is, before any number derived from it."""
+    when, mins = feed_age(path)
+    if when is None:
+        print("  FEED AGE UNKNOWN. %s has no .meta.json beside it, so nothing"
+              % os.path.basename(path))
+        print("  below can be dated. Treat it as possibly stale.")
+    else:
+        print("  Feed pulled %s (%d minute(s) ago)." % (when, mins))
+    print()
+
+
 def read_feed(args):
     """The feed bytes, from a file if given and otherwise from the network.
 
@@ -318,6 +379,8 @@ def probe(args):
                     if sw.get("patched") is False)
 
     print("%-13s %s  HTTP %s" % (OK, args.feed, status))
+    if getattr(args, "feed_file", None):
+        announce_age(args.feed_file)
     print("  %s bytes decoded, %s vulnerability records" % (len(raw), len(d)))
     print("  %s distinct slugs in the feed; %s records have patched=false"
           % (len(feed_slugs), unpatched))
@@ -399,6 +462,23 @@ def fetch_cmd(args):
         print("FAIL  WF_KEY is not set in the environment.")
         return 2
     verdict, detail, status, raw = fetch(args.feed, key)
+
+    if verdict == RATE_LIMITED and args.allow_stale and os.path.exists(args.out):
+        # Deliberate, announced fallback -- NOT a swallowed error. The limit is
+        # measured at somewhere between 22.5 and 36.5 minutes (2026-08-30), so
+        # a second run inside that window would otherwise fail outright with a
+        # perfectly good feed already on disk. Every downstream command prints
+        # the age, and only 429 is eligible: a 401 or a bad body still fails.
+        when, mins = feed_age(args.out)
+        print("rate-limited  %s  HTTP 429 -- REUSING THE CACHED FEED" % args.feed)
+        if when is None:
+            print("  Its age is UNKNOWN (no .meta.json). Everything derived from")
+            print("  it below may be stale, and nothing here can tell you.")
+        else:
+            print("  Cached copy was pulled %s, %d minute(s) ago." % (when, mins))
+        print("  This is --allow-stale. Without it this step fails.")
+        return 0
+
     if verdict != OK:
         report_failure(verdict, detail, status, args.feed)
         return 1
@@ -411,6 +491,7 @@ def fetch_cmd(args):
         return 1
     with open(args.out, "wb") as fh:
         fh.write(raw)
+    write_meta(args.out, args.feed, raw, len(d))
     print("wrote %s  (%s bytes, %s records, %s feed)"
           % (args.out, len(raw), len(d), args.feed))
     return 0
@@ -506,6 +587,8 @@ def match(args):
     print("MATCHED %d installs on %d sites against %d feed records"
           % (len(rows), len(sites), len(feed)))
     print()
+    if getattr(args, "feed_file", None):
+        announce_age(args.feed_file)
     print("  affected            %4d finding(s) over %d site(s)"
           % (len(hits), len(hit_sites)))
     print("    a fix exists      %4d finding(s) over %d site(s)"
@@ -577,6 +660,9 @@ def main(argv=None):
     ft = sub.add_parser("fetch", help="pull the feed once and cache it to disk")
     ft.add_argument("--feed", choices=FEEDS, default="production")
     ft.add_argument("--out", required=True)
+    ft.add_argument("--allow-stale", dest="allow_stale", action="store_true",
+                    help="on 429 ONLY, keep an existing cached feed and carry "
+                         "on, printing its age. Any other failure still fails.")
     ft.set_defaults(fn=fetch_cmd)
 
     pr = sub.add_parser("probe", help="does the key work, and what is in the feed?")

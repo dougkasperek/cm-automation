@@ -154,6 +154,72 @@ else:
     check("the real catalogue and Pods fixture are present", False,
           "%s / %s" % (CAT, PODS))
 
+# --- the feed cache: age is always stated, and only 429 is forgiven -------
+# Added after run 33315975286 failed on a 429 twenty-two minutes after a
+# successful one. --allow-stale exists so a re-run reports on the copy it has;
+# it must NOT become a way for an auth failure to pass.
+import tempfile                                            # noqa: E402
+
+
+class _Args(object):
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+
+_tmp = tempfile.mkdtemp()
+_feed = os.path.join(_tmp, "wf-feed.json")
+open(_feed, "wb").write(b'{"a":{"id":"a","software":[]}}')
+
+check("a feed with no sidecar reports its age as UNKNOWN, not as fresh",
+      fv.feed_age(_feed) == (None, None), str(fv.feed_age(_feed)))
+fv.write_meta(_feed, "production", b"x" * 10, 1)
+_when, _mins = fv.feed_age(_feed)
+check("once written, the sidecar dates the feed", _when is not None and _mins == 0,
+      "%s / %s" % (_when, _mins))
+
+_orig_fetch = fv.fetch
+try:
+    os.environ["WF_KEY"] = "test-key-not-real"
+
+    # A SUCCESSFUL fetch must leave the feed dateable. Asserted through
+    # fetch_cmd, not by calling write_meta directly: the first cut of this file
+    # tested the helper, so deleting the call from fetch_cmd passed all 28
+    # checks. A test that cannot see the wiring is not testing the wiring.
+    _fresh = os.path.join(_tmp, "fresh.json")
+    _body = b'{"z":{"id":"z","title":"t","software":[{"slug":"s"}]}}'
+    fv.fetch = lambda feed, key, timeout=180: (fv.OK, None, 200, _body)
+    check("a successful fetch writes the feed",
+          fv.fetch_cmd(_Args(feed="production", out=_fresh, allow_stale=False)) == 0
+          and os.path.exists(_fresh))
+    check("...and leaves it dateable, so nothing downstream is undated",
+          fv.feed_age(_fresh) != (None, None), str(fv.feed_age(_fresh)))
+
+    fv.fetch = lambda feed, key, timeout=180: (fv.RATE_LIMITED, "limit", 429, b"")
+    check("429 with --allow-stale and a cached feed carries on",
+          fv.fetch_cmd(_Args(feed="production", out=_feed, allow_stale=True)) == 0)
+    check("...and the cached feed is left intact, not truncated",
+          os.path.getsize(_feed) > 0)
+    check("429 WITHOUT --allow-stale still fails",
+          fv.fetch_cmd(_Args(feed="production", out=_feed, allow_stale=False)) == 1)
+
+    _missing = os.path.join(_tmp, "absent.json")
+    check("429 with --allow-stale but NO cached feed still fails",
+          fv.fetch_cmd(_Args(feed="production", out=_missing, allow_stale=True)) == 1)
+
+    # The guard that matters. A rejected key must never be smoothed over by a
+    # flag that exists for rate limits.
+    fv.fetch = lambda feed, key, timeout=180: (fv.UNAUTHORISED, "nope", 401, b"")
+    check("401 is NOT forgiven by --allow-stale, even with a cached feed",
+          fv.fetch_cmd(_Args(feed="production", out=_feed, allow_stale=True)) == 1)
+
+    fv.fetch = lambda feed, key, timeout=180: (fv.FORBIDDEN, "edge", 403, b"")
+    check("403 is NOT forgiven by --allow-stale either",
+          fv.fetch_cmd(_Args(feed="production", out=_feed, allow_stale=True)) == 1)
+finally:
+    fv.fetch = _orig_fetch
+    import shutil
+    shutil.rmtree(_tmp, ignore_errors=True)
+
 print()
 print("%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

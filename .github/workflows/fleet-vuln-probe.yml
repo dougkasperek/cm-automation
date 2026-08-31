@@ -61,6 +61,10 @@ on:
         description: "How many intersecting slugs to print."
         type: string
         default: "40"
+      allow_stale:
+        description: "On 429 only, reuse the cached feed rather than failing. Its age is printed above every number either way."
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -89,6 +93,28 @@ jobs:
             || { echo "::error::history/components.jsonl is missing. It is the component catalogue and must not be gitignored."; exit 1; }
           python3 -c "import json,sys;n=sum(1 for _ in open('history/components.jsonl'));print('catalogue OK: %d rows' % n);sys.exit(1 if n==0 else 0)"
 
+      # The feed is rate-limited at somewhere between 22.5 and 36.5 minutes,
+      # measured 2026-08-30 across three runs: 9 seconds refused, 22.5 minutes
+      # refused, 36.5 minutes allowed. So a second dispatch inside that window
+      # cannot fetch at all, and run 33315975286 failed for exactly that.
+      #
+      # Caching it means a re-run reports on the copy it already has instead of
+      # failing outright. The key rolls hourly and the restore-key lets an older
+      # copy come back -- which is only safe because every command prints the
+      # feed's age before any number derived from it. A cached feed with no
+      # stated age would be another row in CLAUDE.md's table.
+      - name: Work out the cache bucket
+        id: bucket
+        run: echo "value=$(date -u +%Y-%m-%d-%H)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the cached feed
+        uses: actions/cache@v4
+        with:
+          path: .feed-cache
+          key: wf-feed-${{ inputs.feed }}-${{ steps.bucket.outputs.value }}
+          restore-keys: |
+            wf-feed-${{ inputs.feed }}-
+
       - name: Confirm the key is present
         env:
           WF_KEY: ${{ secrets.WF_KEY }}
@@ -110,9 +136,11 @@ jobs:
         env:
           WF_KEY: ${{ secrets.WF_KEY }}
         run: |
+          mkdir -p .feed-cache
           python3 scripts/fleet-vuln.py fetch \
             --feed "${{ inputs.feed }}" \
-            --out "$RUNNER_TEMP/wf-feed.json"
+            ${{ inputs.allow_stale && '--allow-stale' || '' }} \
+            --out ".feed-cache/wf-feed.json"
 
       - name: Probe the feed
         # Reads the cached file. Passing no --feed-file would fetch again and
@@ -120,7 +148,7 @@ jobs:
         run: |
           python3 scripts/fleet-vuln.py probe \
             --feed "${{ inputs.feed }}" \
-            --feed-file "$RUNNER_TEMP/wf-feed.json" \
+            --feed-file ".feed-cache/wf-feed.json" \
             --components history/components.jsonl \
             --show "${{ inputs.show }}"
 
@@ -135,7 +163,7 @@ jobs:
         run: |
           python3 scripts/fleet-vuln.py match \
             --feed "${{ inputs.feed }}" \
-            --feed-file "$RUNNER_TEMP/wf-feed.json" \
+            --feed-file ".feed-cache/wf-feed.json" \
             --components history/components.jsonl \
             --show "${{ inputs.show }}"
 
@@ -155,7 +183,7 @@ jobs:
           mkdir -p out
           python3 scripts/fleet-vuln.py fixture \
             --feed "${{ inputs.feed }}" \
-            --feed-file "$RUNNER_TEMP/wf-feed.json" \
+            --feed-file ".feed-cache/wf-feed.json" \
             --slug "${{ inputs.fixture_slug }}" \
             --out "out/wf-${{ inputs.fixture_slug }}-${{ inputs.feed }}.json"
 
