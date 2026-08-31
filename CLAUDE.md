@@ -129,9 +129,23 @@ explanation. The repo moved to `~/dev/cm-automation` (see
 `docs/DO-THIS-NEXT.md`) and the premise went with it. Checked before lifting:
 repeated `git status` runs from a Claude session leave no lock behind.
 
-Claude may now run `add`, `commit` and `status`. **Still not `push`** — that is
-outward-facing and stays a human action. If a lock ever does appear, `mv` it:
+Claude may now run `add`, `commit`, `status` **and `push`**. If a lock ever
+does appear, `mv` it:
 `mkdir -p _to_delete && mv .git/index.lock _to_delete/`, then say so.
+
+**`push` was a human action until 2026-08-31, and Doug lifted it.** The
+reason it was held back was that pushing is outward-facing. It is outward
+only as far as this repo's own `main`, which is private and which CI already
+writes to on every scan — `persist-ledger.sh` has been committing and pushing
+ledger updates from Actions since 2026-08-19, so "no automated push" had
+already stopped being true; the rule only ever bound the session, not the
+system. **Everything else about pushing stands.** Push what has been
+committed deliberately, never as a way to skip a review; do not force-push;
+do not push a branch other than the one asked for; and the test suites and a
+rendered page still gate a commit, exactly as before. Deploying is a separate
+act and is NOT covered: `wrangler deploy` remains a human action, because a
+Worker change is visible to everyone with the URL and cannot be reverted by
+a later commit.
 
 **Half the premise came back on 2026-08-29, and it is worse than one lock.**
 The repo is still on local disk, but a Claude session reaching it through the
