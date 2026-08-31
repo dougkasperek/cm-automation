@@ -31,7 +31,8 @@ Everything below is for working in the repo.
 | `docs/DATA-MODEL.md` | the inventory + ledger the dashboard reads. Start here for anything data-shaped |
 | `docs/DASHBOARD-V2.md` | the dashboard: what it leads with, why two renderers, the palette rules |
 | `docs/SSH-KEY-SETUP.md` | **turning on full mode.** The runner key, and why ed25519 will not work |
-| `docs/GIT-SETUP.md` | moving this repo into GitHub, and the one open CI decision |
+| `docs/HANDOVER.md` | **moving this repo and the dashboard to the clevermethod org.** What transfers, what does not, and in what order |
+| `docs/GIT-SETUP.md` | how this repo was first put on GitHub. History; see HANDOVER.md for the move |
 | `docs/RUNBOOK.md` | the Pantheon health check: severity model, running it, failure modes |
 | `docs/SECRETS.md` | secret inventory and the Keeper research |
 | `docs/DASHBOARD.md` | the live local dashboard and the hosting question |
