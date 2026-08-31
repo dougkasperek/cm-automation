@@ -109,7 +109,11 @@ function lane(s) {
 }
 const LANE = {
   person:       { word: 'Needs a person',      sub: 'a measured finding that a person acts on now' },
-  unestablished:{ word: 'Not established',     sub: 'looked at, but the maintenance question has no answer yet' },
+  /* PLAIN WORDS. Doug, 2026-08-31, reading the card: "this section/title is
+     confusing, it introduces MAINTENANCE QUESTION, what is that to a new
+     user?" Both halves were this page's own vocabulary. Say what was and
+     was not read instead of naming an abstraction. */
+  unestablished:{ word: 'Nothing measured yet', sub: 'a scan reached the site but read nothing about its upkeep: no backup age, no plugin or theme count' },
   schedule:     { word: 'Needs scheduling',    sub: 'a maintenance backlog; the same work on many sites' },
   decide:       { word: 'Needs a ruling',      sub: 'nothing to run until someone decides' },
   clear:        { word: 'Nothing pending',     sub: 'measured, nothing outstanding on either axis' },
@@ -146,8 +150,8 @@ const GROUPS = [
     sub: 'a measured finding that a person acts on now: health critical, a tag that fires after a rejection, or no SPF' },
   { key: 'planning', word: 'Planning and decisions', lanes: ['schedule', 'decide'],
     sub: 'measured, and waiting on a person rather than a scan. Needs scheduling is a maintenance backlog, the same work on many sites; Needs a ruling has nothing to run until someone decides' },
-  { key: 'unknown',  word: 'Not established',       lanes: ['unestablished'],
-    sub: 'looked at, but the maintenance question has no answer yet. An absence, never a pass, and never counted as a backlog' },
+  { key: 'unknown',  word: 'Nothing measured yet',  lanes: ['unestablished'],
+    sub: 'a scan reached the site but read nothing about its upkeep: no backup age, no plugin or theme count. An absence, never a pass, and never counted as a backlog' },
   { key: 'clear',    word: 'Nothing pending',       lanes: ['clear'],
     sub: 'measured, nothing outstanding on either axis: health and consent both' },
 ];
@@ -664,6 +668,14 @@ function coverageDropPhrase(r) {
 
 function banner() {
   const person = SITES.filter(s => lane(s) === 'person');
+  /* A site whose health status CROSSED into CRIT on this run. Read off the
+     change rows the ledger already computed, so the page adds no history of
+     its own. With no change rows there is nothing to compare and the headline
+     says nothing about newness rather than claiming "none". */
+  const becameCrit = new Set(D.changes
+    .filter(c => c.fact === 'status' && c.after === 'CRIT')
+    .map(c => c.site));
+  const personNew = person.filter(s => becameCrit.has(s.id));
   const regress = D.coverage_regressions || [];
   const runs = sweepLine();
   const oldest = runs.reduce((a, b) => (a[1].observed_at < b[1].observed_at ? a : b));
@@ -697,7 +709,35 @@ function banner() {
     sub = 'Coverage fell since the previous run (' + regress.map(coverageDropPhrase).join('; ') + '). A scan that saw fewer sites is not a fleet that got better; nothing here is green until it is explained.'
       + (person.length ? ' On what WAS measured, ' + person.length + ' site' + (person.length === 1 ? '' : 's') + ' need' + (person.length === 1 ? 's' : '') + ' a person: ' + person.map(s => s.id).join(', ') + '.' : '');
   } else if (person.length) {
-    state = 'red'; head = person.length + ' site' + (person.length === 1 ? '' : 's') + ' need' + (person.length === 1 ? 's' : '') + ' a person';
+    state = 'red';
+    /* WHAT CHANGED, NOT JUST WHAT IS STANDING. Measured 2026-08-31: the
+       vulnerability rules roughly tripled this lane, and the CRITs that did it
+       sit on advisories with a MEDIAN AGE OF 86 DAYS, the oldest 857. A
+       red headline counting sites that need a person, over a months-old backlog
+       is the same defect the vulnerability page was rewritten for: a page that
+       would have said the same thing every day for two years is not an alert,
+       it is the page's permanent state.
+       The severity is right -- a site running a two-year-old unpatched RCE IS
+       critical, and demoting it by age would be worse. What was wrong is the
+       framing, so the headline now separates the two. */
+    /* THE HEADLINE DOES NOT REPEAT THE CARD. Doug, 2026-08-31: "let the card
+       do its job, no need to repeat it as a banner" -- the head printed the
+       lane count and the word, directly above a card printing the same count
+       and the same word. The card owns the count; the headline owns the
+       thing no card can say, which is what is DIFFERENT since the last look.
+       The names stay in the sub: a test asserts every id in the lane appears
+       in the banner prose, added after an earlier check claimed to verify
+       names and never tested one. */
+    head = personNew.length
+      ? personNew.length + ' site' + (personNew.length === 1 ? '' : 's')
+        + ' newly need' + (personNew.length === 1 ? 's' : '') + ' a person'
+      /* NOT "no new problems": that sat as reassuring copy inside a RED block,
+         and the colour and the words contradicted each other before a reader
+         got as far as the names. The clause after the dash is what justifies
+         the red without restating the card's number. */
+      : D.changes.length
+        ? 'Nothing new since the last run \u2014 the sites below still need a person'
+      : 'Sites need a person';
     /* NO "everything else is a backlog (N sites), a ruling, or unmeasured (M
         sites)" HERE. The lane strip is inside this banner now and says it
         better: it counts the rulings rather than saying "a ruling", and it
@@ -709,7 +749,11 @@ function banner() {
         in "needs a person", and not app.eastauroracc.com, which is not. Two
         figures that agree by coincidence are the ones nobody catches.
         The green branch keeps its sentence -- see below. */
-    sub = person.map(s => s.id).join(', ') + '. Based ' + basis + '.';
+    sub = (personNew.length
+        ? 'New: ' + personNew.map(s => s.id).join(', ') + '. Also outstanding: '
+          + person.filter(s => !becameCrit.has(s.id)).map(s => s.id).join(', ')
+        : person.map(s => s.id).join(', '))
+      + '. Based ' + basis + '.';
   } else {
     state = 'green'; head = 'Nothing needs a person';
     /* THIS SENTENCE STAYS, unlike the red branch's. In the red state the
@@ -747,7 +791,10 @@ function banner() {
        so a first version that rendered it in there broke a correct check.
        The DOM says what the copy says. */
     coverageLine(),
-    h('p', { class: 'bn-rule' }, 'Green requires: 0 sites in "needs a person" (health critical, a consent banner that leaks, or no SPF) and no coverage regression since the previous run. A source that did not run or saw fewer sites reads "can\'t say", never green.'));
+    /* ONE CLAUSE. It was 45 words of definition under a block that already
+       defines every lane inside it. What a reader needs is the bar, not a
+       restatement of the lane predicates two inches above. */
+    h('p', { class: 'bn-rule' }, 'Green requires an empty "needs a person" lane and no drop in coverage.'));
 }
 /* THE DEFINITION IS PART OF THE CARD, not a tooltip and not a fold.
    These words are the page's own vocabulary -- "Not established" and "Needs a
@@ -786,16 +833,32 @@ function coverageLine() {
   }
   const parts = LANE_ORDER.filter(L => by[L]).map(L => by[L].length + ' in ' + LANE[L].word);
   if (offRoster) parts.push(offRoster + ' not in the table');
+  /* ONE FOOTNOTE, NOT THREE. Doug, 2026-08-31: "too much repeating, can these
+     be consolidated?" -- three grey paragraphs sat under the cards saying
+     different things in the same voice. The two aside LANES join this line
+     rather than becoming a card: they keep the `lanes-aside` class and their
+     `b` counts because test-page.mjs sums `.gc-hd .n, .lanes-aside b` against
+     the fleet size, and this count is deliberately NOT in that sum -- it cuts
+     across the lanes rather than being one. */
   return h('p', { class: 'cov-line' },
+    h('span', { class: 'lanes-aside' }, ...ASIDE_LANES.map((L, i) => [
+      i ? h('span', { class: 'sep' }, '\u00b7') : null,
+      h('button', { 'data-lanes': L, onclick: () => pick([L]) },
+        h('b', {}, laneCounts[L]), ' ' + LANE[L].word),
+      h('span', { class: 'aside-sub' }, ' \u2014 ' + LANE[L].sub)]).flat().filter(Boolean)),
+    h('span', { class: 'sep' }, '\u00b7'),
     h('b', {}, ids.length), ' with no health evidence',
-    h('span', { class: 'aside-sub' }, ' \u2014 a scan reached the site, but no backup age and no plugin or theme count. '
+    h('span', { class: 'aside-sub' }, ' \u2014 no backup age and no plugin or theme count. '
       + (ids.length ? 'Cuts across the lanes rather than being one: ' + parts.join(', ') + '.'
                     : 'Nothing is in this state.')));
 }
 
+/* Module scope: coverageLine() renders the aside-lane chips now, and they are
+   clickable filters like every other lane chip. */
+function pick(ls) { laneFilter = sameFilter(ls) ? [] : ls; draw(); syncUrl(); }
+
 function lanes() {
   const n = ls => ls.reduce((a, L) => a + laneCounts[L], 0);
-  const pick = ls => { laneFilter = sameFilter(ls) ? [] : ls; draw(); syncUrl(); };
   return h('div', { class: 'lanes' },
     h('ul', { class: 'grp-cards' }, ...GROUPS.map(g => h('li', { class: 'gc gc-' + g.key },
       h('button', { class: 'gc-hd', 'data-lanes': g.lanes.join(','), onclick: () => pick(g.lanes) },
@@ -813,11 +876,7 @@ function lanes() {
     /* NOT A CARD, and NOT "not scored" -- see GROUPS. Both of these are
        measured outcomes: SKIP and FROZEN are severity statuses, and an
        excluded site is scored and then left out of the fleet totals. */
-    h('p', { class: 'lanes-aside' }, ...ASIDE_LANES.map((L, i) => [
-      i ? h('span', { class: 'sep' }, '\u00b7') : null,
-      h('button', { 'data-lanes': L, onclick: () => pick([L]) },
-        h('b', {}, laneCounts[L]), ' ' + LANE[L].word),
-      h('span', { class: 'aside-sub' }, ' \u2014 ' + LANE[L].sub)]).flat().filter(Boolean)));
+    );
 }
 
 const sweep = sweepLine();

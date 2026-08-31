@@ -113,7 +113,13 @@ console.log('\n-- the lane vocabulary is defined where it is used --');
 // this page invents is displayed, and a visible definition is displayed WITH
 // it -- in its card, or on the aside line. Where it lives is not the contract.
 const laneDefs = await page.evaluate(() => Object.entries(LANE).map(([key, L]) => {
-  const strip = document.querySelector('.lanes');
+  // THE WHOLE BANNER BLOCK, not just `.lanes`. The guarantee stated above is
+  // that every lane word is displayed with a visible definition, and that
+  // "where it lives is not the contract" -- but this scoped to `.lanes` and so
+  // encoded a location anyway. The aside line moved into `.cov-line` on
+  // 2026-08-31, a sibling inside the same banner, and three checks failed on a
+  // page that still satisfied the guarantee.
+  const strip = document.querySelector('.banner');
   // The container that displays this lane's word: a card, or the aside line.
   const host = [...strip.querySelectorAll('.gc, .lanes-aside')]
     .find(e => e.textContent.includes(L.word));
@@ -156,7 +162,7 @@ check('a card holding several lanes defines each of them in its gloss',
 // scheduled, defined, or ruled on", about sites where nothing is known.
 check('the "Not established" lane is not grouped with scheduling or rulings',
       await page.evaluate(() => {
-        const c = [...document.querySelectorAll('.gc')].find(x => x.textContent.includes('Not established'));
+        const c = document.querySelector('.gc-unknown');
         return !!c && !/Needs scheduling|Needs a ruling/.test(c.textContent);
       }));
 // AND NOTHING CALLS A SCORED SITE UNSCORED. SKIP and FROZEN are severity
@@ -204,10 +210,22 @@ const personN = await page.$eval('.lanes li:first-child .n', e => +e.textContent
 // 79 where a laptop reaches 78 -- the banner correctly went can't-say with 4
 // sites in the lane and a CORRECT page failed. The can't-say branch names them
 // too, in its own clause, and the check below already covers that case.
-check('a red banner states the needs-a-person count',
-      banner.cls.includes('banner-red') ? banner.prose.includes(personN + ' site')
-      : banner.cls.includes('banner-cant') ? true
-      : personN === 0, personN + ' in lane');
+// THE HEADLINE SAYS WHAT CHANGED, NOT WHAT THE CARD ALREADY SAYS. It used to
+// assert the count appeared in the prose, which is what Doug objected to on
+// 2026-08-31: "11 sites need a person" sat directly above a card reading
+// "11 Needs a person". The count belongs to the card. What the banner owns is
+// the thing no card can say -- whether any of it is NEW since the last look --
+// because a red headline over a months-old backlog is an alert that never
+// changes, which is the defect the vulnerability page was rewritten for.
+check('a red banner says whether anything is new since the last run',
+      !banner.cls.includes('banner-red')
+      || /newly need|Nothing new since the last run/.test(banner.prose),
+      banner.prose.slice(0, 120));
+// ...and it must not simply restate the tile's number as its headline.
+check('...without repeating the lane count as the headline',
+      !banner.cls.includes('banner-red')
+      || !new RegExp('^\\s*' + personN + ' sites? need a person').test(banner.prose),
+      banner.prose.slice(0, 60));
 // ...AND ACTUALLY NAMES THEM. The check above is titled "names exactly the
 // needs-a-person sites" and never tested a name: the headline already reads
 // "4 sites need a person", so `includes(personN + ' site')` passes with the

@@ -136,7 +136,12 @@ check("no severity threshold is written into the page script",
       "7.0.2" not in js and "BACKUP_CRIT_DAYS" not in js and "PLUGIN_WARN_COUNT" not in js
       and "D.severity_rules" in js)
 check("the page never assigns a status", not re.search(r"\.status\s*=\s*['\"]", js))
-check("the banner's green predicate is printed beside the banner", "Green requires:" in js)
+# The bar for green must be stated beside the banner. Asserted on the phrase
+# rather than on "Green requires:" with its colon -- the sentence was cut from
+# 45 words to one clause on 2026-08-31 and the colon went with it, which is a
+# test pinned to punctuation rather than to the guarantee.
+check("the banner's green predicate is printed beside the banner",
+      "Green requires" in js)
 check("a coverage regression makes the banner 'can't say', not green",
       "coverage_regressions" in js and "Can't say" in js)
 check("the page never says 'all good'", "all good" not in html.lower())
