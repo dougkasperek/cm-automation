@@ -65,6 +65,18 @@ on:
         description: "On 429 only, reuse the cached feed rather than failing. Its age is printed above every number either way."
         type: boolean
         default: true
+      persist_ledger:
+        description: "Ingest this run's findings into the append-only ledger."
+        type: boolean
+        default: true
+      publish_dashboard:
+        description: "Publish. A ledger that moves while the page does not is worse than not publishing: the page looks current."
+        type: boolean
+        default: true
+      allow_coverage_drop:
+        description: "This run measured fewer sites than the last and that is expected. Both guards need it; telling one leaves the publish refusing anyway."
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -75,6 +87,8 @@ jobs:
   vuln-probe:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      stamp: ${{ steps.stamp.outputs.value }}
 
     steps:
       - uses: actions/checkout@v4
@@ -82,6 +96,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Stamp this run
+        id: stamp
+        # The run id the ledger keys on. Generated once here and passed
+        # forward, never recomputed downstream: two stamps would be two runs.
+        run: echo "value=$(date -u +%Y-%m-%d_%H%M)" >> "$GITHUB_OUTPUT"
 
       - name: Confirm the component catalogue is committed
         # The catalogue IS the thing the feed is matched against. Without it
@@ -161,11 +181,22 @@ jobs:
         # No WF_KEY here on purpose, same as the fixture step: without it this
         # step CANNOT fetch, so the double-fetch bug cannot return.
         run: |
+          mkdir -p out/reports
           python3 scripts/fleet-vuln.py match \
             --feed "${{ inputs.feed }}" \
             --feed-file ".feed-cache/wf-feed.json" \
             --components history/components.jsonl \
+            --inventory data/fleet-inventory.json \
+            --report "out/reports/fleet-vuln-intel-${{ steps.stamp.outputs.value }}.json" \
             --show "${{ inputs.show }}"
+
+      - name: Upload the report for the ledger
+        uses: actions/upload-artifact@v4
+        with:
+          name: fleet-vuln-intel-${{ steps.stamp.outputs.value }}
+          path: out/reports/
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Extract the fixture
         if: ${{ inputs.fixture_slug != '' }}
@@ -195,3 +226,74 @@ jobs:
           path: out/
           if-no-files-found: error
           retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Ingest. Step 4 of CLAUDE.md's "adding a workflow" checklist, which the
+  # gating sweep skipped for a week: it was in the suite, its data came off a
+  # laptop, and nothing said so because the data looked no different.
+  # ---------------------------------------------------------------------------
+  persist-ledger:
+    name: Ingest into the ledger
+    needs: vuln-probe
+    if: >-
+      always()
+      && inputs.persist_ledger
+      && needs.vuln-probe.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    # SAME GROUP as every other ledger writer, so two sources can never write
+    # observations.jsonl at once. `queue: max` because GitHub keeps only ONE
+    # run pending per group by default and a newly queued run CANCELS the one
+    # already waiting -- silently, with no failed run and nothing on any page.
+    concurrency:
+      group: fleet-ledger-write
+      queue: max
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download this run's report
+        uses: actions/download-artifact@v4
+        with:
+          name: fleet-vuln-intel-${{ needs.vuln-probe.outputs.stamp }}
+          path: /tmp/ci-reports
+
+      - name: Ingest, render and push
+        env:
+          # persist-ledger.sh prints the drop either way; this only decides the
+          # exit code, and therefore whether publish is allowed to run. It must
+          # reach BOTH guards -- telling one leaves the publish refusing anyway.
+          FLEET_ALLOW_COVERAGE_DROP: ${{ inputs.allow_coverage_drop && '1' || '0' }}
+        run: ./scripts/persist-ledger.sh /tmp/ci-reports "Wordfence vulnerability match"
+
+  # ---------------------------------------------------------------------------
+  # Publish. A workflow that writes to the ledger MUST also publish: until
+  # 2026-08-19 only Pantheon did, and three sources moved the ledger while
+  # fleet.thudstaff.com rendered older data. Nobody sees a stale page and
+  # knows it is stale.
+  #
+  # NOTE the /vulnerabilities route this page needs is inert until someone
+  # runs `wrangler deploy` from ci/cloudflare. Publishing uploads the file;
+  # it does not create the route.
+  # ---------------------------------------------------------------------------
+  publish-dashboard:
+    name: Publish dashboard
+    needs: persist-ledger
+    if: >-
+      always()
+      && inputs.publish_dashboard
+      && needs.persist-ledger.result == 'success'
+    uses: ./.github/workflows/_publish-dashboard.yml
+    secrets: inherit
+    with:
+      allow_coverage_drop: ${{ inputs.allow_coverage_drop }}
+      label: "Wordfence vulnerability match"

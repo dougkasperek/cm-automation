@@ -40,6 +40,8 @@ Run: ./test/test-workflows.py
 import glob
 import io
 import os
+import re
+import subprocess
 import sys
 
 try:
@@ -268,6 +270,58 @@ _gs = io.open(os.path.join(ROOT, "scripts", "consent", "run-gating-sweep.mjs"),
 check("...and the sweep aborts on it, rather than one INCONCLUSIVE row per site",
       "err.code === 3" in _gs,
       "run-gating-sweep.mjs does not act on the tester's headed abort")
+
+# ---------------------------------------------------------------------------
+# EVERY COMMITTED PAGE MUST BE RE-RENDERED, DIFFED AND STAGED
+# ---------------------------------------------------------------------------
+# consent.html has been a tracked file since 2026-08-27 and persist-ledger.sh
+# never re-rendered it, so the committed review copy went stale on every ledger
+# write -- the exact failure the comment above that render block describes,
+# reintroduced by the page added days after it was written. Found 2026-08-31
+# while adding a fourth page, which would have been the third occurrence.
+#
+# The three lists must be identical. Rendering a page the diff does not check
+# leaves it uncommitted; diffing one that is not staged means the run reports a
+# change it then throws away.
+_rend = (set(re.findall(r"--(?:components|consent|vuln)-out (\S+)", persist))
+         | set(re.findall(r"--out (fleet\.html)", persist)))
+
+
+def _paths(pat):
+    m = re.search(pat, persist, re.S)
+    return set(x for x in m.group(1).replace("\\\n", " ").split()
+               if x not in ("\\", "history/"))
+
+
+_diffed = _paths(r"git diff --quiet -- ([^;]+);")
+_staged = _paths(r"git add ([^\n]+\n(?:\s+\S+\n)?)")
+check("persist-ledger.sh renders more than one page", len(_rend) >= 2, str(_rend))
+check("every page it renders is also diffed",
+      _rend == _diffed, "rendered %s, diffed %s" % (sorted(_rend), sorted(_diffed)))
+check("every page it diffs is also staged",
+      _diffed == _staged, "diffed %s, staged %s" % (sorted(_diffed), sorted(_staged)))
+# A tracked page nobody re-renders is a stale review copy by construction.
+_tracked = set(subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True,
+                              text=True).stdout.split())
+_html = {f for f in _tracked if f.endswith(".html") and "/" not in f}
+# Two committed pages are DEAD, not stale, and are named rather than excluded
+# by a pattern so a NEW unrendered page still fails this check:
+#   health.html          nothing in the repo writes it at all
+#   fleet-dashboard.html render-fleet-dashboard.py (v1)'s default --out. v1
+#                        feeds the live LOCAL view that fills in while a scan
+#                        runs; its output is not published and not refreshed.
+# Both were committed by the initial import on 2026-08-18 and have not been
+# touched since. They should be deleted; until they are, this list keeps the
+# check sharp instead of the check being dropped.
+_DEAD_PAGES = {"health.html", "fleet-dashboard.html"}
+check("every committed top-level page is re-rendered by persist-ledger.sh",
+      (_html - _DEAD_PAGES) <= _rend,
+      "committed but never re-rendered: %s" % sorted(_html - _DEAD_PAGES - _rend))
+# ...and the exclusions must still exist, or they are silently protecting
+# nothing while looking like a considered decision.
+check("the dead-page list names only files that are actually committed",
+      _DEAD_PAGES <= _html, str(sorted(_DEAD_PAGES - _html)))
+
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

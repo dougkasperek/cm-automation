@@ -85,16 +85,28 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   # saying so. publish-dashboard.sh re-renders both, so the LIVE page was
   # right and only the review copy in the repo was stale, which is the
   # familiar shape: the copy that loses is the one nobody is looking at.
+  #
+  # ALL FOUR, and it was two until 2026-08-31. consent.html has been a TRACKED
+  # file since 2026-08-27 and was never re-rendered here, so the committed
+  # review copy went stale on every ledger write -- precisely the failure the
+  # paragraph above describes, still live for the page added right after it
+  # was written. vulnerabilities.html would have been the third occurrence.
+  # test-workflows.py now asserts the rendered, diffed and staged lists are
+  # identical, and that every committed page appears in them.
   python3 scripts/render-dashboard.py --out fleet.html \
-    --components-out components.html
+    --components-out components.html \
+    --consent-out consent.html \
+    --vuln-out vulnerabilities.html
 
-  if git diff --quiet -- history/ fleet.html components.html; then
+  if git diff --quiet -- history/ fleet.html components.html consent.html \
+      vulnerabilities.html; then
     echo "ledger already current at origin/${BRANCH}; nothing to push"
     pushed="skipped"
     break
   fi
 
-  git add history/ fleet.html components.html
+  git add history/ fleet.html components.html consent.html \
+    vulnerabilities.html
   git commit --quiet -m "Ledger: ${LABEL}" \
     -m "Ingested by ${GITHUB_WORKFLOW:-local} run ${GITHUB_RUN_NUMBER:-0}." \
     -m "${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-.}/actions/runs/${GITHUB_RUN_ID:-0}"
