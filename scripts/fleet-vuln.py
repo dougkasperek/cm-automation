@@ -629,12 +629,15 @@ def inventory_ids(path):
     if not path or not os.path.exists(path):
         return set()
     inv = json.load(open(path, encoding="utf-8"))
-    out = set()
-    for s in inv.get("sites", []):
-        sid = s.get("host_site_name") or s.get("domain")
-        if sid:
-            out.add(sid)
-    return out
+    # `site_id`, NOT host_site_name-or-domain. Those are JOIN KEYS the ledger
+    # maps FROM; site_id is what it maps TO, and it is what components.jsonl
+    # already stores, so both halves of this report speak one identifier.
+    # Emitting machine names produced 88 sites against an inventory of 85 --
+    # every matched site appeared twice, once under each name. Caught by
+    # ingest's "every row resolves to the inventory" guard, which is the only
+    # reason it is a comment here and not mis-keyed rows in an append-only
+    # ledger. Same failure as the Nexcess nxcli-domain join.
+    return {s["site_id"] for s in inv.get("sites", []) if s.get("site_id")}
 
 
 def match(args):

@@ -417,6 +417,23 @@ def build_model(history_dir, inventory_path, today):
                          (len(inventoried & set(s["site_id"] for s in component_sites)),
                           len(component_sites))))
 
+    # Wordfence matching. Denominator is the INVENTORY of sites a component
+    # inventory exists for, never the finding rows: an empty vulnerabilities
+    # ledger and a clean fleet produce the same zero, and only one is good
+    # news. Present from the day the source was registered, so the line reads
+    # "0 of N" honestly before the first run rather than not appearing -- the
+    # Nexcess block three sections down is here for exactly that reason.
+    _vuln_runs = [r["run_id"] for (src, _k), r in latest_by_cohort.items()
+                  if src == "vuln-intel"]
+    vuln_rows = sum((L.load_findings(history_dir, rid) or []
+                     for rid in sorted(_vuln_runs)), [])
+    vuln_matched = set(s["site_id"] for s in sites
+                       if s.get("vuln_checked") is True)
+    if component_sites:
+        coverage.append(("Known vulnerabilities (Wordfence, matched to installs)",
+                         (len(vuln_matched & set(s["site_id"] for s in component_sites)),
+                          len(component_sites))))
+
     # THE SENDING DOMAIN, MEASURED ON THE SITE. Added 2026-08-26.
     #
     # SPF, DKIM and DMARC are all queried at the sending domain, and that value
@@ -465,6 +482,7 @@ def build_model(history_dir, inventory_path, today):
         "sites": sites, "coverage": coverage, "inventory_count": len(inv),
         "components": build_components(comp_rows, sites, inventoried,
                                        component_sites),
+        "vulnerabilities": build_vulnerabilities(vuln_rows, sites, vuln_matched),
         "unreconciled": unreconciled, "health": health,
         "coverage_changes": coverage_changes,
         # The latest run of a source measured fewer sites than the run before
@@ -539,6 +557,73 @@ EMIT_FACTS = ("host", "plan", "framework", "env", "php_version", "wp_version",
               "gating_tested", "gating_still_firing",
               "gating_still_firing_names", "gating_stopped_names",
               "gating_cookieless_names", "gating_cold_count")
+
+
+def build_vulnerabilities(rows, sites, matched):
+    """Findings grouped by COMPONENT, plus the fleet counts the page leads on.
+
+    Component-major for the same reason build_components is: the fleet table
+    already answers "how many findings on this site" with a count. The question
+    a count cannot answer is which component, at what version, on which sites,
+    and whether an update closes it -- eight components over eleven sites on
+    2026-08-31, which is eight conversations rather than fourteen.
+
+    `unmatched` is carried explicitly. A site with no component inventory
+    cannot be matched at all, and on this axis "no findings" is the best
+    possible result, so a site missing from these rows must never render as
+    clean. It is the same absence the hatched tokens exist for.
+    """
+    host = {s["site_id"]: (s.get("host") or "") for s in sites}
+    by = {}
+    for r in rows:
+        slug = (r.get("slug") or "").lower()
+        if not slug:
+            continue
+        cve = r.get("cve")
+        g = by.setdefault((slug, cve), {
+            "slug": slug, "cve": cve, "cvss": r.get("cvss"),
+            "rating": r.get("rating"), "patched": r.get("patched"),
+            "fix_version": r.get("fix_version"), "title": r.get("title"),
+            "published": r.get("published"), "sites": [], "versions": set(),
+        })
+        g["sites"].append({"site_id": r["site_id"], "host": host.get(r["site_id"], ""),
+                           "version": r.get("version")})
+        if r.get("version"):
+            g["versions"].add(str(r.get("version")))
+    out = []
+    for g in by.values():
+        g["sites"].sort(key=lambda x: x["site_id"])
+        g["versions"] = sorted(g["versions"])
+        g["site_count"] = len({x["site_id"] for x in g["sites"]})
+        out.append(g)
+    # No fix first, then by blast radius, then by score. A component nobody can
+    # update out of is the only thing on this page that is not a scheduling
+    # question.
+    out.sort(key=lambda g: (g["patched"] is not False, -g["site_count"],
+                            -(g["cvss"] or 0), g["slug"]))
+
+    nofix = [g for g in out if g["patched"] is False]
+    fixable = [g for g in out if g["patched"] is not False]
+    scores = [g["cvss"] for g in out if isinstance(g["cvss"], (int, float))]
+    return {
+        "findings": out,
+        "nofix": nofix,
+        "fixable": fixable,
+        # Findings, not components: one component on four sites is four.
+        "n_findings": sum(g["site_count"] for g in out),
+        "n_nofix": sum(g["site_count"] for g in nofix),
+        "n_fixable": sum(g["site_count"] for g in fixable),
+        "nofix_sites": sorted({x["site_id"] for g in nofix for x in g["sites"]}),
+        "affected_sites": sorted({x["site_id"] for g in out for x in g["sites"]}),
+        # UNKNOWN, never 0.0 -- a zero here would render as a measured severity.
+        "worst_cvss": max(scores) if scores else None,
+        "matched_sites": sorted(matched),
+        # Sites this source could not look at. NOT clean, and named so the page
+        # can say which.
+        "unmatched_sites": sorted(s["site_id"] for s in sites
+                                  if s.get("host") in COMPONENT_HOSTS
+                                  and s["site_id"] not in matched),
+    }
 
 
 def build_components(rows, sites, inventoried, expected_sites):
@@ -2825,6 +2910,290 @@ COMPONENT_JS = """<script>
 </script>"""
 
 
+VULN_CSS = """
+/* The vulnerability page. Tokens and classes come from page.css; this adds
+   only what that stylesheet has no shape for. Two stylesheets is two answers
+   about what a warning looks like. */
+.vd { border-left: 4px solid var(--good); padding: 2px 0 2px 15px; margin: 0 0 14px; }
+.vd.crit { border-left-color: var(--crit); }
+.vd h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em;
+  text-wrap: balance; max-width: 40ch; color: var(--good-ink); }
+.vd.crit h2 { color: var(--crit); }
+.vd p { margin: 7px 0 0; font-size: 13.5px; color: var(--ink2); max-width: 72ch; }
+.vd p b { color: var(--ink); font-family: var(--font-mono); font-weight: 600; }
+.vstrip { display: flex; flex-wrap: wrap; gap: 4px 26px; font-size: 12.5px;
+  color: var(--ink2); padding: 10px 0 0 19px; margin: 0 0 26px;
+  border-top: 1px solid var(--line); }
+.vstrip div { white-space: nowrap; }
+.vstrip b { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 16px; font-weight: 500; color: var(--ink); margin-right: 5px; }
+.vstrip .ok b { color: var(--good-ink); }
+.vstrip .look b { color: var(--warn-ink); }
+.vstrip .bad b { color: var(--crit); }
+.vt { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px;
+  background: var(--surface); }
+.vt table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.vt th { padding: 0; border-bottom: 1px solid var(--line);
+  background: var(--surface2); white-space: nowrap; }
+.vt th button { width: 100%; display: flex; align-items: center; gap: 5px;
+  border: 0; background: none; padding: 7px 11px; font: inherit; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink2);
+  font-weight: 600; cursor: pointer; text-align: left; }
+.vt th button:hover { color: var(--ink); }
+.vt th[aria-sort] button { color: var(--accent); }
+.vt th button .ar { font-size: 9px; opacity: 0; }
+.vt th[aria-sort] button .ar { opacity: 1; }
+.vt td { padding: 10px 11px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.vt tr:last-child td { border-bottom: 0; }
+.vt tr.isc td { background: color-mix(in srgb, var(--crit) 7%, transparent); }
+.vt tr.isc td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
+.vslug { font-family: var(--font-mono); font-weight: 500; word-break: break-all; }
+.vwhat { display: block; color: var(--ink2); font-size: 11.5px; margin-top: 2px;
+  max-width: 46ch; }
+.vfix { display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 600;
+  color: var(--crit); border: 1px solid var(--crit); border-radius: 2px;
+  padding: 1px 7px; background: color-mix(in srgb,var(--crit) 10%,transparent); }
+.vsites { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
+.vsites span { font-family: var(--font-mono); font-size: 11px; color: var(--ink);
+  background: var(--surface2); border: 1px solid var(--line); border-radius: 2px;
+  padding: 1px 6px; white-space: nowrap; }
+.vsites button { border: 0; background: none; padding: 0; font: inherit;
+  font-size: 11px; color: var(--accent); cursor: pointer; text-decoration: underline;
+  text-underline-offset: 2px; white-space: nowrap; }
+.vcve { display: block; font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--ink2); margin-top: 6px; }
+.vver { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vsev { white-space: nowrap; }
+.vsev .lbl { font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--ink2); }
+.vsev .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  color: var(--ink2); font-size: 11.5px; margin-left: 5px; }
+.vsev.Medium .lbl, .vsev.High .lbl { color: var(--warn-ink); }
+.vsev.Critical .lbl { color: var(--crit); }
+.vwho { font-size: 11.5px; color: var(--ink2); }
+.vsince { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  white-space: nowrap; font-size: 11.5px; }
+.vnote { border-top: 1px solid var(--line); padding-top: 13px; margin-top: 26px; }
+.vnote h3 { font-size: 12px; color: var(--ink2); text-transform: uppercase;
+  letter-spacing: 0.07em; margin: 0 0 8px; }
+.vnote ul { margin: 0; padding-left: 17px; font-size: 12.5px; color: var(--ink2); }
+.vnote li { margin: 6px 0; max-width: 78ch; }
+.vnote b { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-weight: 500; color: var(--ink); }
+"""
+
+
+VULN_JS = r"""
+/* Sorting only. This file decides no severity and holds no threshold -- it
+   renders what severity.py and fleet-vuln.py already decided, the same
+   contract page.js has. */
+(function () {
+  var DATA = JSON.parse(document.getElementById('vuln-data').textContent);
+  var tb = document.querySelector('.vt tbody');
+  var hr = document.querySelector('.vt thead tr');
+  var key = 'cvss', dir = -1, open = {};
+  var GET = {
+    slug: function (g) { return g.slug; },
+    ver: function (g) { return (g.versions || []).join(','); },
+    cvss: function (g) { return typeof g.cvss === 'number' ? g.cvss : -1; },
+    fix: function (g) { return g.patched === false ? 0 : 1; },
+    since: function (g) { return g.published || ''; }
+  };
+  function esc(t) {
+    return String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function sites(g, i) {
+    /* 66 chips is not a table row. Collapse past six and SAY how many are
+       hidden -- a silent truncation reads as "only these six". */
+    var LIM = 6, all = g.sites || [], shown = open[i] ? all : all.slice(0, LIM);
+    var h = shown.map(function (x) { return '<span>' + esc(x.site_id) + '</span>'; }).join('');
+    if (all.length > LIM) {
+      h += '<button type="button" data-x="' + i + '">'
+        + (open[i] ? 'show fewer' : 'and ' + (all.length - LIM) + ' more') + '</button>';
+    }
+    return '<div class="vsites">' + h + '</div>';
+  }
+  function render() {
+    var rows = DATA.slice().sort(function (a, b) {
+      /* A critical never sorts out of the top: sorting is for scanning the
+         tail and must not hide the row that needs action today. */
+      var ac = (typeof a.cvss === 'number' && a.cvss >= 9) ? 0 : 1;
+      var bc = (typeof b.cvss === 'number' && b.cvss >= 9) ? 0 : 1;
+      if (ac !== bc) { return ac - bc; }
+      var x = GET[key](a), y = GET[key](b);
+      var n = (typeof x === 'number') ? x - y : String(x).localeCompare(String(y));
+      return (n || (b.site_count - a.site_count)) * dir;
+    });
+    tb.innerHTML = rows.map(function (g, i) {
+      var isc = (typeof g.cvss === 'number' && g.cvss >= 9);
+      return '<tr' + (isc ? ' class="isc"' : '') + '>'
+        + '<td><span class="vslug">' + esc(g.slug) + '</span>'
+        + '<span class="vwhat">' + esc(g.title) + '</span>'
+        + (g.patched === false ? ''
+           : '<span class="vfix">Update to ' + esc(g.fix_version) + '</span>')
+        + sites(g, i)
+        + '<span class="vcve">' + esc(g.cve) + '</span></td>'
+        + '<td class="vver">' + esc((g.versions || []).join(', ')) + '</td>'
+        + '<td><span class="vsev ' + esc(g.rating || '') + '">'
+        + '<span class="lbl">' + esc(g.rating || 'unrated') + '</span>'
+        + '<span class="num">' + (typeof g.cvss === 'number' ? g.cvss.toFixed(1) : '') + '</span></span></td>'
+        + '<td class="vwho">' + (g.patched === false ? 'none available' : 'update') + '</td>'
+        + '<td class="vsince">' + esc(g.published) + '</td>'
+        + '</tr>';
+    }).join('');
+    Array.prototype.forEach.call(hr.children, function (th) {
+      var b = th.querySelector('button');
+      if (b.dataset.k === key) { th.setAttribute('aria-sort', dir < 0 ? 'descending' : 'ascending'); }
+      else { th.removeAttribute('aria-sort'); }
+      b.querySelector('.ar').innerHTML = (b.dataset.k === key && dir > 0) ? '&#9650;' : '&#9660;';
+    });
+  }
+  hr.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-k]'); if (!b) { return; }
+    if (b.dataset.k === key) { dir = -dir; }
+    else { key = b.dataset.k; dir = (key === 'cvss' || key === 'since') ? -1 : 1; }
+    open = {}; render();
+  });
+  tb.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-x]'); if (!b) { return; }
+    open[b.dataset.x] = !open[b.dataset.x]; render();
+  });
+  render();
+})();
+"""
+
+
+def render_vulnerabilities(m):
+    """The vulnerability page: which components have a known hole, and who runs them.
+
+    A SEPARATE PAGE, agreed 2026-08-31, for the reason the consent and
+    component pages are: the fleet matrix is one row per SITE and findings are
+    per component per site. The matrix carries a count and links here.
+
+    THE PAGE LEADS WITH THE VERDICT, not the worst number. The first draft
+    opened on `14` in red under "no fix exists" and Doug's word for it was
+    "induced panic" -- measured, every one of those fourteen was MEDIUM or
+    below. Opening on the scariest true number is this repo's cardinal bug with
+    the sign flipped, and both directions are defects. The verdict is also
+    SCOPED: it speaks for vulnerabilities and says nothing about maintenance,
+    where this fleet is not fine.
+    """
+    with open(os.path.join(PAGE_DIR, "page.css"), encoding="utf-8") as fh:
+        css_text = fh.read()
+
+    v = m["vulnerabilities"]
+    n_matched = len(v["matched_sites"])
+    n_unmatched = len(v["unmatched_sites"])
+    worst = v["worst_cvss"]
+    crit = isinstance(worst, (int, float)) and worst >= 9.0
+    installs = len(m["components"]["catalogue"]) if m.get("components") else 0
+
+    o = []
+    A = o.append
+    A("<!doctype html>")
+    A('<html lang="en">')
+    A("<head>")
+    A('<meta charset="utf-8">')
+    A('<meta name="viewport" content="width=device-width,initial-scale=1">')
+    A('<meta name="color-scheme" content="light dark">')
+    A("<title>clevermethod fleet: vulnerabilities</title>")
+    A("<style>%s%s</style>" % (css_text, VULN_CSS))
+    A("</head><body>")
+    A('<div class="wrap">')
+    A('<header class="top"><div><h1>Plugin vulnerabilities'
+      '<small>%d site(s) matched &middot; %d distinct component(s) &middot; '
+      'Wordfence, read-only</small></h1>'
+      '<p class="thesis">Every plugin, mu-plugin and theme we can see, checked '
+      'against Wordfence’s published advisories. '
+      '<a href="/">Back to the fleet page</a>.</p></div></header>'
+      % (n_matched, installs))
+
+    # --- THE VERDICT ------------------------------------------------------
+    if not v["matched_sites"]:
+        A('<div class="vd"><h2 style="color:var(--ink)">Nothing has been '
+          'matched yet.</h2><p>The Wordfence source is registered and has not '
+          'produced a run. This is an absence, not a clean result.</p></div>')
+    elif crit:
+        A('<div class="vd crit"><h2>Act today. A critical vulnerability is '
+          'present on %d site(s).</h2>'
+          '<p>The most serious finding rates <b>%.1f out of 10</b>. '
+          '%d finding(s) close with a normal plugin update; %d have no update '
+          'available and need a decision.</p></div>'
+          % (len({x["site_id"] for g in v["findings"]
+                  if isinstance(g["cvss"], (int, float)) and g["cvss"] >= 9.0
+                  for x in g["sites"]}), worst, v["n_fixable"], v["n_nofix"]))
+    elif v["n_nofix"]:
+        A('<div class="vd"><h2>Nothing here needs urgent attention.</h2>'
+          '<p><b>%d</b> component(s) on <b>%d</b> site(s) have a known problem '
+          'with no update available. The most serious rates <b>%s out of 10</b> '
+          '— nothing is critical. Everything else Wordfence flagged, '
+          '<b>%d</b> finding(s), is closed by a normal plugin update.</p></div>'
+          % (len(v["nofix"]), len(v["nofix_sites"]),
+             ("%.1f" % worst) if isinstance(worst, (int, float)) else "unknown",
+             v["n_fixable"]))
+    else:
+        A('<div class="vd"><h2>No component has an unfixable vulnerability.</h2>'
+          '<p>Everything Wordfence flagged — <b>%d</b> finding(s) — is '
+          'closed by a normal plugin update. This is a statement about known '
+          'advisories only.</p></div>' % v["n_fixable"])
+
+    A('<div class="vstrip">')
+    A('<div class="ok"><b>%d</b>closed by updating</div>' % v["n_fixable"])
+    A('<div class="look"><b>%d</b>need a decision</div>' % len(v["nofix"]))
+    A('<div><b>%d</b>site(s) affected</div>' % len(v["affected_sites"]))
+    # NEVER omitted, and never phrased as a pass. On this axis "no findings" is
+    # the best possible result, so a site nothing looked at must not be silent.
+    A('<div class="bad" title="No component inventory exists, so these could '
+      'not be matched at all."><b>%d</b>not checked</div>' % n_unmatched)
+    A("</div>")
+
+    # --- THE TABLE --------------------------------------------------------
+    if v["findings"]:
+        A('<h3 style="font-size:14.5px;margin:0 0 3px">Findings, worst first</h3>')
+        A('<p class="quiet" style="margin:0 0 11px;font-size:12.5px;max-width:72ch">'
+          'Components with no update available are listed first: there is no '
+          'version to upgrade to, so each is a choice — replace it, restrict '
+          'who can reach it, or accept it. The rest are ordinary plugin updates '
+          'that happen to close a published advisory.</p>')
+        A('<div class="vt"><table><thead><tr>')
+        for key, label in (("slug", "Component and sites"), ("ver", "Version"),
+                           ("cvss", "Severity"), ("fix", "Fix"),
+                           ("since", "Reported")):
+            A('<th%s><button type="button" data-k="%s">%s'
+              '<span class="ar">&#9660;</span></button></th>'
+              % (' aria-sort="descending"' if key == "cvss" else "", key, label))
+        A("</tr></thead><tbody>")
+        A("</tbody></table></div>")
+        A('<script id="vuln-data" type="application/json">%s</script>'
+          % json.dumps([{k: (sorted(x) if isinstance(x, set) else x)
+                         for k, x in g.items()} for g in v["findings"]]))
+        A("<script>%s</script>" % VULN_JS)
+    else:
+        A('<p class="quiet">No finding to list.</p>')
+
+    # --- WHAT THIS DOES NOT SAY -------------------------------------------
+    A('<div class="vnote"><h3>Worth knowing</h3><ul>')
+    if n_unmatched:
+        A('<li><b>%d</b> site(s) could not be checked: no plugin list exists '
+          'for them, so they are in no number on this page. Unchecked, not '
+          'clear. %s</li>'
+          % (n_unmatched, ", ".join("<code>%s</code>" % x
+                                    for x in v["unmatched_sites"][:12])))
+    A('<li>Wordfence never having published an advisory for a component is not '
+      'evidence the component is sound. For a widely used plugin it is '
+      'meaningful; for code written for one client, it mostly means no outside '
+      'researcher has looked at it.</li>')
+    A('<li>Versions come from the component inventory the health scan wrote, '
+      'so anything installed or updated since that scan is not reflected '
+      'here.</li>')
+    A("</ul></div>")
+    A('<p class="foot">Read-only. Wordfence Intelligence V3, matched against '
+      '<a href="/components">the component catalogue</a>.</p>')
+    A("</div></body></html>")
+    return "\n".join(o)
+
+
 def render_consent(m):
     """The consent page: one question, all the evidence for it.
 
@@ -3570,6 +3939,11 @@ def main():
                     help="write the consent page here. Its own page because "
                          "the gating results are per tracker per pass, which "
                          "does not fit one row per site.")
+    ap.add_argument("--vuln-out", metavar="PATH",
+                    help="write the vulnerability page here. Its route must "
+                         "exist in the Worker or it is uploaded and "
+                         "unreachable, which looks exactly like never having "
+                         "been rendered.")
     ap.add_argument("--components-out", metavar="PATH",
                     help="also render the component catalogue to PATH. The "
                          "fleet table's plugin count links to it, so publishing "
@@ -3634,6 +4008,15 @@ def main():
     if _unruled:
         print("  %d of %d site(s) have no production ruling at all"
               % (_unruled, len(m["sites"])))
+
+    if a.vuln_out:
+        with open(a.vuln_out, "w") as fh:
+            fh.write(render_vulnerabilities(m))
+        _v = m["vulnerabilities"]
+        print("  vulnerabilities -> %s (%d finding(s) over %d site(s); "
+              "%d site(s) NOT checked)"
+              % (a.vuln_out, _v["n_findings"], len(_v["affected_sites"]),
+                 len(_v["unmatched_sites"])))
 
     # Severity looked up an inventory record and did not find one. That means a
     # `production: false` ruling would have been silently ignored, which is the

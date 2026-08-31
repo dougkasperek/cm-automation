@@ -670,6 +670,16 @@ def _vuln_finding_rows(payload, by_domain):
                 "version": f.get("version"),
                 "cve": f.get("cve") or f.get("vuln_id"),
                 "cvss": f.get("cvss"),
+                # Wordfence's OWN band word. Carried rather than derived from
+                # the score at render time: the vendor classifies its own
+                # advisories, and a bare 6.4 means nothing to a reader who does
+                # not know the CVSS bands. Dropped from the first cut of this
+                # adapter, which was written before the fixture was read -- the
+                # page then showed "unrated" on all 13 rows, found by looking
+                # at the rendered page rather than at the code.
+                "rating": f.get("rating"),
+                # The vendor's own sentence for what to do about it.
+                "remediation": f.get("remediation"),
                 # `patched` is the whole fixable/no-fix split. False means no
                 # release closes it, which is a decision rather than an update.
                 "patched": f.get("patched"),
@@ -1084,6 +1094,31 @@ def ingest(reports_dir, history_dir, inventory=None):
         "unresolved_count": sum(len(v) for v in unresolved_by_run.values()),
         "coverage_drops": coverage_drops,
     }
+
+
+def load_findings(history_dir, run_id=None):
+    """Vulnerability finding rows, optionally narrowed to one run.
+
+    An ABSENT file returns [] and that is NOT "this fleet has no known
+    vulnerabilities". vulnerabilities.jsonl does not exist until the first
+    matched run is ingested, and a site that was matched and found clean also
+    produces no rows. Callers must state coverage from the observation rows'
+    `vuln_checked`, never by counting these -- an empty file and a clean fleet
+    are indistinguishable here, and only one of them is good news.
+    """
+    path = os.path.join(history_dir, "vulnerabilities.jsonl")
+    if not os.path.exists(path):
+        return []
+    rows = []
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            if run_id is None or r.get("run_id") == run_id:
+                rows.append(r)
+    return rows
 
 
 def load_components(history_dir, run_id=None):
