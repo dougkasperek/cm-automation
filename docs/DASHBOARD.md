@@ -111,8 +111,8 @@ can tell a fleet change from a rules change.
 
 ## Standing it up on Cloudflare
 
-Existing account resources this reuses: the `dash-data` R2 bucket. It does not
-touch `[removed]` or the `[removed]` Worker.
+Existing account resources this reuses: the `dash-data` R2 bucket. It creates
+nothing else and touches no other Worker on the account.
 
 **1. Create the Worker.**
 
@@ -127,10 +127,10 @@ added 2026-08-19: this document had said "use wrangler, not hand-pasting" since
 it was written, while no wrangler config existed, so the instruction could not
 be followed.
 
-This account has two deploy habits and this Worker follows the better one:
-`[removed]`'s Worker is pasted into the Cloudflare dashboard by hand, `[removed]`
-deploys with wrangler. Hand-pasting means the deployed version can silently
-drift from the version in git, which has already bitten this account once.
+This Worker deploys with wrangler, never by hand-pasting into the Cloudflare
+dashboard. Hand-pasting means the deployed version can silently drift from the
+version in git, which has already bitten this account once -- see "Why the
+write route went" below, where production kept a route the repo had removed.
 
 `main` resolves relative to the toml, which is why the command has a `cd` in it.
 
@@ -162,7 +162,8 @@ Access login.
 
 Verify in the dashboard after deploying: Workers & Pages -> cm-fleet ->
 Domains. Both the Production and Preview `workers.dev` toggles must be off.
-**Checked 2026-08-20: off on all five Workers on this account.**
+**Checked 2026-08-20: off, and re-checked on every push by
+`./scripts/check-worker-exposure.py`.**
 
 **5. Put it behind Access.** See the next section for what is actually
 configured today.
@@ -355,112 +356,31 @@ missing scope reads as "you cannot do this" and the operation works anyway.
 
 ## Access: what is configured
 
-**This section is the record.** It used to live in project memory as
-`fleet_cloudflare_access.md`; that file does not exist and probably never did.
-See `CLAUDE.md` for why measured state belongs here instead.
+`fleet.thudstaff.com` sits behind a Cloudflare Access application. Anonymous
+requests get a 302 to an Access login; nothing reaches the Worker without
+clearing it, and `workers_dev` is off so there is no second door.
 
-### Re-measured 2026-08-23, from outside, with no Cloudflare session
+`./scripts/check-worker-exposure.py` proves both halves on every push, without
+credentials -- it is an outside-in check that sees exactly what an anonymous
+visitor sees. **It answers AUTHENTICATION only.** Whether a person who has
+signed in should be able to open this page is authorisation, decided by the
+Access policy, and this repo does not read policies: that tooling and its
+expectations file were removed on 2026-08-31 because the expectations named
+individuals and applications outside this project's scope.
 
-| what | how it was checked | result |
-|---|---|---|
-| Every hostname is gated | unauthenticated `curl -I` to each of the five | all 302 to `doug-kasperek.cloudflareaccess.com` |
-| They are separate applications | the `kid` in each redirect | five distinct app keys, one per hostname |
-| No `workers.dev` back door | `GET /accounts/{id}/workers/scripts/{name}/subdomain` | `enabled: false` on all five, `previews_enabled: false` too |
+**What that means in practice.** If you need to know who can currently open
+`fleet.thudstaff.com`, read the policy in the Cloudflare Zero Trust dashboard.
+Do not infer it from anything in this repo.
 
-A visitor authorised for one hostname is therefore **not** authorised for the
-others: Access issues an identity session, and each application re-evaluates its
-own policy against that identity. With `workers.dev` off everywhere there is no
-unauthenticated path to Worker content that skips Access.
+Two properties worth carrying into any future change:
 
-### The Access API will lie to you about this
+- **A policy can admit someone without naming them.** `email_domain`,
+  `everyone` and `ip` rules all do. A list of individual emails sitting beside
+  one reads as exclusive while granting the opposite, so "I read the member
+  list" is not the same as "I know who can get in".
+- **An unrecognised rule type is UNKNOWN, never DENIED.** A rule the tooling
+  cannot parse is a rule it cannot clear anyone against.
 
-`GET /accounts/{id}/access/apps` with the wrangler OAuth token returns
-**`success: true` and an empty list**. There are five applications; the live 302s
-above prove it. The token simply carries no Zero Trust scope, and the API
-answers with an absence rather than a 403.
-
-This is the project's signature bug wearing a new hat -- a confident-looking
-value standing in for "nobody could look". Anything that reads Access config
-programmatically must distinguish "zero applications" from "not permitted to
-enumerate applications", and the only honest way to check gating from a token
-without Zero Trust scope is to request the hostname and look for the redirect.
-
-### What is NOT machine-verified here
-
-**Policy membership.** Who is on `fleet viewers` versus `[removed]` cannot be read
-without a token carrying Zero Trust scope, so the lists below are the
-2026-08-20 dashboard reading, re-confirmed by Doug in the dashboard on
-2026-08-23 but never measured by code. Treat them as a written claim.
-
-The risk that membership guards against: if any application's include rule is a
-**domain-wide** selector (`Emails ending in @clevermethod.com`, or the
-`all-cm-emails` reusable policy below) rather than a named list, then anyone
-added to the fleet page also clears whichever applications share that rule.
-Adding a viewer and widening access to the deck would be the same action, in
-different screens.
-
-**To add several viewers at once**, build a list rather than editing the policy:
-Zero Trust -> Reusable components -> Lists -> Create manual list, type *User
-email addresses*, CSV upload (one entry per line, 1,000 entries on Standard
-plans, file under 2 MB), then reference it from the policy with the **in list**
-operator. Keep any such list referenced by **one** policy; a list is only a set
-of values, and all of its containment comes from what points at it.
-
-### The 2026-08-20 dashboard reading
-
-**Corrected 2026-08-24 against the API.** The `cmcom` row below said its policy
-was `[removed]`; it is `cmcom-viewers`. Read off a dashboard by eye in August and
-never checked until `check-access-policies.py` enumerated the policies for the
-first time. Membership on it is the same three people, so nothing was wrong
-about who can get in, but the table named the wrong object.
-
-**Also measured that day, and the reassuring part:** every ALLOW policy on this
-account admits people by **named individual**. There is no `email_domain`,
-`everyone` or `ip` rule anywhere. Those admit people without listing them, and
-a name list sitting beside one reads as exclusive while granting the opposite.
-That failure mode is absent here, and it is now asserted rather than assumed.
-
-All five Workers on this account have a custom hostname, an Access application,
-and `workers.dev` disabled.
-
-| Worker | hostname | Access application | policy |
-|---|---|---|---|
-| cm-fleet | fleet.thudstaff.com | fleet | `fleet viewers` |
-| [removed] | [removed] | dash | `[removed]` |
-| [removed] | [removed] | cm | `[removed]` |
-| [removed] | [removed] | cm SOWgen | `[removed]` |
-| [removed] | [removed] | cmcom | `cmcom-viewers` |
-
-- `fleet viewers` -- doug.kasperek, [removed], [removed],
-  [removed], [removed].
-- `[removed]` -- doug.kasperek, [removed], [removed]. This is the deck's
-  policy, and it is correct that the fleet dashboard does **not** reuse it: the
-  deck holds [removed], [removed] and the [removed], and the
-  developers who need the fleet page must not be added to it.
-- Every policy's action is `Allow`. **There are no Bypass policies and no Access
-  service tokens**, which is what makes the header check in `[removed]` safe --
-  see below.
-- The R2 bucket `dash-data` has no custom domain and its Public Development URL
-  is disabled, so R2 is not a way around Access either.
-
-A reusable policy named `all-cm-emails` exists and is attached to zero
-applications. If you want the fleet page visible to everyone at clevermethod,
-that is the rule to attach; the page holds no client-confidential data, only
-your own fleet's inventory.
-
-**Why `workers.dev` staying off is load-bearing beyond this Worker.** `[removed]`
-authenticates its `/api/save` endpoint solely on the
-`Cf-Access-Authenticated-User-Email` header. That header is only trustworthy on
-a hostname where Access is the *only* route in -- on a `workers.dev` URL a
-client can simply send the header itself. `[removed]/wrangler.toml` does not pin
-`workers_dev = false`, so a future `wrangler deploy` of it can re-open that
-door.
-
-**Do not create an Access service token for CI.** Nothing in this suite needs
-one any more; the publish path talks to the R2 API and never touches the
-hostname.
-
----
 ---
 
 ## Which Cloudflare account, and what it can do
@@ -473,8 +393,10 @@ wrangler OAuth login (`doug.kasperek@clevermethod.com`).
 | Doug.kasperek@clevermethod.com's Account | `8ae22197…2e11` | Super Administrator -- All Privileges |
 | clevermethod, Inc. | `856635b4…4d52` | Zone Versioning Read, Billing, **Administrator Read Only** |
 
-Everything in this suite -- all five Workers, the `dash-data` bucket, the
-`thudstaff.com` zone and every Access application -- is in the **first** account.
+Everything in this suite -- the `cm-fleet` Worker, the `dash-data` bucket, the
+`thudstaff.com` zone and the fleet Access application -- is in the **first**
+account, which is personal. The account hosts unrelated Workers that are not
+this project's concern; see `docs/HANDOVER.md`.
 
 **Moving the dashboard to `fleet.clevermethod.net` is not a route change.**
 `clevermethod.net` is a Cloudflare zone, but in the second account, and
@@ -495,21 +417,18 @@ Inc., which means a new R2 bucket, a new API token and new GitHub secrets.
    **Cloudflare Zero Trust** granted by a Super Administrator on that account.
 
 **Access policies do not transfer.** Applications and policies belong to a Zero
-Trust organisation, which is per-account, so `fleet viewers` gets rebuilt
+Trust organisation, which is per-account, so the fleet policy gets rebuilt
 against whatever IdP clevermethod, Inc. uses. The login hostname changes with
-it: today every one of the five applications sends users to
-`doug-kasperek.cloudflareaccess.com`, which reads as a personal side project
-rather than company infrastructure. Renaming the team domain is account-wide and
-would move all five logins at once, so it is better done as part of the move
-than twice.
+it: today it sends users to `doug-kasperek.cloudflareaccess.com`, which reads as
+a personal side project rather than company infrastructure. Renaming the team
+domain is account-wide, so it is better done as part of the move than twice.
 
 **And the strongest argument for moving is now evidenced rather than
 asserted: access here is a hand-maintained list of email addresses, and it has
 already drifted.**
 
-Measured 2026-08-25, the first time anyone enumerated it. `[removed]` held
-access to an application and appeared in no document: not
-`docs/DASHBOARD.md`, not `data/access-expectations.json`, not the workbook.
+Measured 2026-08-25, the first time anyone enumerated it. Someone held access
+to an application and appeared in no document describing who could reach it.
 Nothing was wrong with the grant, most likely. What was wrong is that nobody
 could have told you it existed.
 
@@ -519,15 +438,17 @@ with per-application email lists produces over time:
 - **No directory behind it.** Membership is typed in per application. There is
   no group to add someone to and no group to remove them from.
 - **Offboarding is manual and invisible.** Nobody leaving the company is
-  removed from five separate policies by any process that exists today. The
-  only way to notice is to enumerate, which nothing did until this week.
+  removed from these policies by any process that exists today. The only way
+  to notice is to enumerate, which nothing did until this week.
 - **The audit has no owner.** It is one person's account, so there is no
   security review that would ever look at it.
 
-`check-access-policies.py --expect` now detects the drift, and detection is
-worth having. It is not the same as access following the directory. On the
-company account with the company IdP, `fleet viewers` becomes a group and
-membership is a consequence of employment rather than of somebody remembering.
+Detection was built for this and is worth having, but it is not the same as
+access following the directory. On the company account with the company IdP,
+the fleet policy becomes a group and membership is a consequence of employment
+rather than of somebody remembering. **That is the strongest argument for
+completing the Cloudflare move**, and it is the one to put to whoever has to
+grant the permissions.
 
 **So the move is not only about the hostname reading as a side project.** It is
 about who is accountable for the answer to "who can open this", and today the

@@ -225,35 +225,32 @@ and never "what does the deployed code say". This file named
 
 **Access protects hostnames, never `*.workers.dev`. Since 2026-08-24 this is
 CHECKED, not asserted:** `./scripts/check-worker-exposure.py` fetches all five
-workers.dev URLs and all five hostnames anonymously and fails unless every
-Worker is refused at the edge and every hostname bounces to Access. It needs no
-credentials, so it runs on every push. Measured clear on 2026-08-24.
+workers.dev URL and the `fleet.thudstaff.com` hostname anonymously and fails
+unless the Worker is refused at the edge and the hostname bounces to Access. It
+needs no credentials, so it runs on every push. Measured clear on 2026-08-31.
 
-**That check answers AUTHENTICATION only.** Whether a logged-in person can
-reach a DIFFERENT hostname by editing the subdomain is authorisation, decided
-by that application's own policy, and `check-access-policies.py` is what reads
-it. **A policy can admit someone without naming them** -- `email_domain`,
-`everyone`, `ip` -- which is precisely the thing a human reading a list of
-email rules will miss, and why "ask them to try it and report back" is not a
-control. An unrecognised rule type reports UNKNOWN and never DENIED: a rule the
-code cannot parse is a rule it cannot clear anyone against.
+**Narrowed to `cm-fleet` on 2026-08-31**, when the repo moved to the
+clevermethod org. The account hosts unrelated Workers that are not this
+project's to check, and after the Cloudflare migration they will not be in the
+same account at all. `test-worker-exposure.py` asserts the map holds nothing
+else, so re-adding one is a red test.
 
-It needs a **read-only** token the wrangler OAuth login is not: Access: Apps
-and Policies (Read) plus Access: Organizations, Identity Providers, Groups
-(Read). Without Zero Trust scope the endpoint answers `success: true` with an
-empty list, so the script treats zero applications as a scope problem rather
-than as an empty account. `data/access-expectations.json` holds the intended
-answer per person and CI fails on a difference in EITHER direction.
+**That check answers AUTHENTICATION only.** Whether a person who has signed in
+should be able to open this page is authorisation, decided by the Access
+policy. **This repo no longer reads policies:** `check-access-policies.py` and
+`data/access-expectations.json` were removed on 2026-08-31 because the
+expectations file named individuals and applications outside this project's
+scope. To learn who can open `fleet.thudstaff.com`, read the policy in the Zero
+Trust dashboard; do not infer it from anything here.
 
-The check exists because **`[removed]` cannot be pinned in config and that is a
-deliberate decision, not an oversight.** It is dashboard-managed; its bindings
-(`DECK` -> R2 `[removed]`, `DECK_DB` -> D1 `[removed]`) and six
-secrets live on the Worker, and a config declaring an incomplete set would drop
-one on the next deploy. You cannot pin a dashboard-managed Worker from a repo.
-You can notice within minutes when it opens. **Detection, where prevention is
-the riskier operation.**
+Two properties survive the removal and matter to any future change. **A policy
+can admit someone without naming them** -- `email_domain`, `everyone`, `ip` --
+which is precisely the thing a human reading a list of email rules will miss,
+and why "ask them to try it and report back" is not a control. And an
+unrecognised rule type is UNKNOWN, never DENIED: a rule the code cannot parse
+is a rule it cannot clear anyone against.
 
-Every OTHER Worker must still pin
+`cm-fleet` must pin
 `workers_dev = false` in its own config, not just have the toggle off in the
 dashboard, because wrangler defaults it to TRUE when the key is absent and the
 next deploy silently re-opens it. **And `workers_dev` is a TOP-LEVEL key: it
@@ -339,7 +336,7 @@ do not add a total.
 | `312 distinct components` | 310. `Divi-Child` and `Divi-child` are one theme on 41 sites, `PDFEmbedder-premium` and `pdfembedder-premium` one plugin on 12. WP-CLI reports the DIRECTORY name and the casing differs per site, so the catalogue keyed on the raw slug split both. The count was the small half: Wordfence publishes LOWERCASE slugs, so a case-sensitive CVE match on `pdfembedder-premium` would have hit 2 sites and missed 11, in the exact plugin family the catalogue was built for. Found because Matt said "there's no way it's right" and it got measured |
 | `13 sites run PDFEmbedder-premium` | 12. `hoffmanscheese` carries it twice, `3.2` inactive beside `5.1.4` active. The catalogue counted ROWS as sites. Inactive still means files on disk |
 | the wrangler OAuth token has no R2 scope, so publishing will probably fail | it publishes fine. `whoami` lists 29 scopes and no R2, yet `r2 object put` and `get --remote` both succeed. The inverse of the row below: there a missing scope read as "nothing is there", here it read as "you cannot do this". A scope listing predicts neither. Run the command |
-| the expectations file says who can reach what | it says who can reach what **among the people already written in it**. `[removed]` had access to `[removed]` and was invisible to the check, because nobody had listed her. It answered "does this person reach only what they should" and never "who else has a key", which is the more dangerous question. It now enumerates every email named in every allow policy and reports any the file omits — and reports separately that an `email_domain` or `everyone` rule makes enumeration **impossible**, so an empty list is never mistaken for nobody |
+| the expectations file says who can reach what | it says who can reach what **among the people already written in it**. Someone with real access was invisible to the check, because nobody had listed them. It answered "does this person reach only what they should" and never "who else has a key", which is the more dangerous question. It now enumerates every email named in every allow policy and reports any the file omits — and reports separately that an `email_domain` or `everyone` rule makes enumeration **impossible**, so an empty list is never mistaken for nobody |
 | `_comment` cannot reach the four applications it is expected to | `_comment` is not a person. The expectations file used a `_`-prefixed key for commentary, and the loader evaluated every key as an email, so a JSON comment was scored against five Access policies and then had its own prose joined into an "EXPECTED ACCESS MISSING" line. Found on the first real run, by looking at the output |
 | `count: 0` for the `clevermethod.net` zone | the zone exists and is active. The token is scoped to one account and the zone is in another. Same endpoint, same shape: not permitted to see it reads exactly like it is not there |
 | `components: []` on a site | every WP-CLI call had failed. Its database is not installed, so each DB-backed call exits 1, and a `${pj:-[]}` default turned four failures into "we inventoried it and it runs nothing". Caught by running the mock, 2026-08-23 |
@@ -732,8 +729,6 @@ node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"  # needs 
     --components-out components.html                                  # both pages
 ./scripts/nexcess-ssh-targets.py --history ./history                   # who does the SSH scan connect to, and as whom?
 ./scripts/check-worker-exposure.py                                    # is any Worker reachable without Access?
-./scripts/check-access-policies.py --who someone@clevermethod.com     # which apps can this person open?
-./scripts/check-access-policies.py --expect data/access-expectations.json
 ./scripts/publish-dashboard.sh --dry-run                              # preview
 ./scripts/serve-dashboard.py --dir ./reports --open                   # live view
 ```
@@ -777,7 +772,6 @@ python3 test/test-consent-rulings.py  # 17   offline, no network
 python3 test/test-nexcess-ssh.py      # 43   offline, no key
 python3 test/test-worker-exposure.py  # 48   offline, no network
 python3 test/test-workflows.py        # 67   offline; the CI concurrency contract
-python3 test/test-access-policies.py  # 46   offline, no token
 python3 test/test-ledger.py       # 319
 python3 test/test-severity.py     # 166
 python3 test/test-page.py         #  35   offline; the page's model is the feed's, never "all good"
@@ -815,7 +809,6 @@ python3 test/test-consent-rulings.py  # 17   offline, no network
 python3 test/test-nexcess-ssh.py      # 43   offline, no key
 python3 test/test-worker-exposure.py  # 48   offline, no network
 python3 test/test-workflows.py        # 67   offline; the CI concurrency contract
-python3 test/test-access-policies.py  # 46   offline, no token
 python3 test/test-ledger.py       # 319
 python3 test/test-severity.py     # 166
 python3 test/test-page.py         #  35   offline; the page's model is the feed's, never "all good"

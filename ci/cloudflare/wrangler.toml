@@ -4,7 +4,7 @@
 # hand-pasting" since the file was created, but no wrangler config existed, so
 # the instruction could not be followed. Hand-pasting is how a deployed Worker
 # silently drifts from the version in git, which has already bitten this
-# account once (see the [removed] habit).
+# account once.
 #
 # Deploy from this directory:
 #

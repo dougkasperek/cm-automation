@@ -1,15 +1,14 @@
-# Is any Worker on this account reachable without Cloudflare Access?
+# Is the cm-fleet Worker reachable without Cloudflare Access?
 #
 # Cloudflare Access cannot protect a *.workers.dev URL, so a Worker behind
 # Access on its custom domain is still served, unauthenticated, on its
-# workers.dev URL. [removed] served its client list, staff emails and pricing that
-# way on 2026-07-28.
+# workers.dev URL. A Worker on this platform has served a private client list
+# publicly that way, which is why this runs on every push.
 #
-# Four of the five Workers pin `workers_dev = false` in a config. `[removed]`
-# cannot: it is dashboard-managed by an explicit decision, so its toggle is held
-# by nothing but a manual click. This job is DETECTION rather than prevention.
-# You cannot pin a dashboard-managed Worker from a repo. You can notice when it
-# opens.
+# cm-fleet pins `workers_dev = false` in ci/cloudflare/wrangler.toml. That pin
+# is necessary and not sufficient: wrangler defaults the key to TRUE when it is
+# absent, and TOML makes it a property of the preceding table if it sits below
+# one. So the config states the intent and this job measures the result.
 #
 # NEEDS NO SECRETS. It is an outside-in check on purpose: it sees exactly what
 # an anonymous visitor sees, which is the only view that answers the question.

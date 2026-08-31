@@ -98,12 +98,32 @@ print("-" * 67)
 print("the target map")
 print("-" * 67)
 
-ok(len(cwe.WORKERS) == 5,
-   "all five Workers on the account are covered")
-ok("[removed]" in cwe.WORKERS,
-   "[removed] is covered: it is the one with no config pinning its toggle")
-ok("[removed]" in cwe.WORKERS,
-   "[removed] is covered: its /api/save trusts a client-suppliable header")
+# NOT `len(cwe.WORKERS) == 5`, which is what this said until 2026-08-31. That
+# is the fleet-count anti-pattern CLAUDE.md warns about, and it broke the day
+# the map was correctly narrowed. Assert the property: this repo owns cm-fleet
+# and checks cm-fleet.
+ok("cm-fleet" in cwe.WORKERS,
+   "cm-fleet is covered: it is the Worker this repo owns")
+
+# The map was narrowed when the repo moved to the clevermethod org. Unrelated
+# Workers on the same account are not this project's to check, and after the
+# Cloudflare migration they are not even in the same account. This asserts the
+# narrowing holds, so re-adding one is a red test rather than a quiet leak of
+# what else exists.
+ok(not (set(cwe.WORKERS) - {"cm-fleet"}),
+   "the map holds no Worker this repo does not own")
+
+# A single target cannot produce a collision, so shared_access_apps() returns
+# {} -- which reads identically to "checked, and clean". main() must say the
+# check was INAPPLICABLE instead of printing it as a pass. Verified to fail by
+# deleting the guard.
+ok(cwe.shared_access_apps([{"hostname": "fleet.thudstaff.com",
+                            "access_app": "a7da487e"}]) == {},
+   "one target yields no collision, which is why a bare pass would mislead")
+_cwe_src = open(os.path.join(HERE, "..", "scripts",
+                             "check-worker-exposure.py")).read()
+ok("len(rows) < 2" in _cwe_src and "inapplicable" in _cwe_src,
+   "main() declares the shared-application check inapplicable, not passed")
 ok(all("." in h for h in cwe.WORKERS.values()),
    "every Worker maps to a real hostname")
 ok(cwe.SUBDOMAIN.endswith(".workers.dev"),

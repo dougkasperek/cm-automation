@@ -22,17 +22,21 @@ project -- that is `README.md`, then `CLAUDE.md`.
 
 ## 2. What is NOT being handed over, and must not be swept along
 
-**The other four Workers on the same Cloudflare account.** Measured 2026-08-24
-and recorded in `docs/DASHBOARD.md`: `cm-fleet`, `[removed]`, `[removed]`, `[removed]`
-and `[removed]` share one account, one zone (`thudstaff.com`) and one Access
-login domain. Only `cm-fleet` is part of this handover.
+**Other Workers on the same Cloudflare account.** The account hosts unrelated
+applications that share one zone (`thudstaff.com`) and one Access login domain.
+**Only `cm-fleet` is part of this handover**, and some of the others are on a
+deliberately separate Access policy so that the people who need the fleet
+dashboard cannot open them by editing the subdomain.
 
-`[removed]` in particular holds [removed], [removed] and the ownership
-discussion. It is deliberately on a different Access policy (`[removed]`) from the
-fleet page (`fleet viewers`) so that the developers who need the dashboard
-cannot reach it by editing the subdomain. **Any Cloudflare work done during this
-handover must preserve that separation**, and `scripts/check-access-policies.py`
-with `data/access-expectations.json` is what proves it still holds.
+**Any Cloudflare work done during this handover must preserve that
+separation.** Verifying it needs the Access policy tooling, which was removed
+from this repo on 2026-08-31 along with its expectations file -- both named
+applications and individuals outside this project's scope. They are kept
+outside the repo; ask Doug.
+
+This repo's own perimeter check, `scripts/check-worker-exposure.py`, was
+narrowed to `cm-fleet` the same day. It proves no stranger can reach the fleet
+page. It says nothing about the rest of the account, by design.
 
 **The marketing work.** It is not in this repo and never has been. Verified
 2026-08-31: all 142 tracked files are fleet work. The partner deck, service

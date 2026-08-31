@@ -8,23 +8,16 @@ attach to hostnames in a zone you control, and workers.dev is not one. So a
 Worker sitting behind Access on its custom domain is still served,
 unauthenticated, on its workers.dev URL to anyone who knows it.
 
-That is not hypothetical here. On 2026-07-28 `[removed]` served its client list,
-staff emails and pricing publicly from a workers.dev URL nobody knew was on.
+That is not hypothetical. A Worker on this platform has served a private
+client list publicly from a workers.dev URL nobody knew was on.
 
-Four of the five Workers pin `workers_dev = false` in a config. `[removed]` does
-not and deliberately cannot: it is dashboard-managed, its bindings and secrets
-live on the Worker, and a config declaring an incomplete set would drop one on
-the next deploy. Its toggle is held by nothing but a manual click in the
-dashboard.
-
-So this is DETECTION, not prevention. You cannot pin a dashboard-managed
-Worker from a repo. You can notice within minutes when it opens.
-
-It matters most for `[removed]` and `[removed]`, because neither has authentication
-of its own worth the name. `[removed]` gates `analytics.html` and `/api/stats` on
-`Cf-Access-Authenticated-User-Email` starting with "doug", and `/api/harvest`
-and `/api/asana` check nothing. That header is trustworthy ONLY while Access is
-the sole route in. On a workers.dev URL the client simply sends it.
+`cm-fleet` pins `workers_dev = false` in `ci/cloudflare/wrangler.toml`, and
+that pin is necessary rather than sufficient: wrangler defaults the key to TRUE
+when it is absent, and it must sit ABOVE the first `[table]` header or TOML
+makes it a property of that table instead. It sat below `[[routes]]` for a day
+once and had therefore never been applied at all. So this is DETECTION as well
+as prevention -- the config states the intent and this check measures the
+result.
 
 WHAT IT CHECKS
 --------------
@@ -103,14 +96,18 @@ SUBDOMAIN = "doug-kasperek.workers.dev"
 CONTROL_NAME = "cm-automation-negative-control-do-not-create"
 
 # Worker script name -> the custom hostname it is meant to be reached on.
-# Adding a Worker to this account means adding it here. A Worker absent from
-# this map is not checked, and nothing will tell you.
+#
+# THIS REPO OWNS ONE WORKER. Narrowed to `cm-fleet` on 2026-08-31, when the
+# repo moved to the clevermethod org: the account also hosts unrelated Workers
+# that are not this project's to check, and after the Cloudflare migration they
+# will not even be in the same account. Checking a Worker you do not own
+# produces a finding nobody in this repo can act on.
+#
+# Adding a Worker THIS PROJECT owns means adding it here. A Worker absent from
+# this map is not checked, and nothing will tell you. Use `--targets` to point
+# the same harness at any other set without editing this file.
 WORKERS = {
-    "[removed]":       "[removed]",
-    "[removed]":       "[removed]",
-    "cm-fleet":      "fleet.thudstaff.com",
-    "[removed]":        "[removed]",
-    "[removed]": "[removed]",
+    "cm-fleet": "fleet.thudstaff.com",
 }
 
 TIMEOUT = 15
@@ -260,11 +257,14 @@ def run():
 def shared_access_apps(rows):
     """Hostnames that hand off to the SAME Access application.
 
-    One application is one policy. On THIS account that is a regression by
-    definition: `fleet viewers` deliberately does not reuse the deck's policy,
-    because the deck holds [removed] and [removed] and the developers
-    who need the fleet page must not be able to open it. Two hostnames sharing
-    an application would silently merge those audiences.
+    One application is one policy, so two hostnames sharing an application
+    silently merge their audiences: whoever can open one can open the other.
+    Where hostnames are meant to have different viewers, that is a regression
+    by definition.
+
+    With a single target this cannot fire. main() says so explicitly rather
+    than printing a pass -- a check that cannot fail must never be reported as
+    one, which is the bug this repo keeps making.
 
     That is an assumption about this account, not a universal truth, which is
     why `--allow-shared-access-app` exists. Elsewhere one application across
@@ -402,13 +402,20 @@ def main():
         print("  account would instead print CLEAR, and nothing here can tell.")
         return 2
 
-    print("Clear. No Worker is reachable without Access, and each hostname")
-    print("hands off to a distinct Access application.")
+    print("Clear. No Worker is reachable without Access.")
+    if len(rows) < 2:
+        # Say it rather than let a vacuous pass read as a verified one.
+        print()
+        print("The shared-application check did NOT run: it compares hostnames")
+        print("against each other and there is only one target. It is not a")
+        print("pass, it is inapplicable.")
+    else:
+        print("Each hostname hands off to a distinct Access application.")
     print()
     print("NOT checked, and not checkable without credentials: WHO is in each")
-    print("policy. Distinct applications make separate audiences possible; they")
-    print("do not prove the membership lists differ. The only real test is a")
-    print("person who should be denied trying the URL.")
+    print("policy. A distinct application makes a separate audience POSSIBLE;")
+    print("it does not prove the membership list is what you think. The only")
+    print("real test is a person who should be denied trying the URL.")
     return 0
 
 
