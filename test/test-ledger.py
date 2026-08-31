@@ -2339,7 +2339,9 @@ _VREP = {
         {"domain": "a.com", "matched": True, "affected": 3, "nofix": 1,
          "worst_cvss": 5.3,
          "findings": [{"slug": "Wp-Google-Analytics-Events", "version": "2.8.2",
-                       "cve": "CVE-2025-63009", "cvss": 5.3, "rating": "Medium", "patched": False,
+                       "cve": "CVE-2025-63009",
+                       "cve_link": "https://www.cve.org/CVERecord?id=CVE-2025-63009",
+                       "cvss": 5.3, "rating": "Medium", "patched": False,
                        "published": "2025-12-04", "title": "t"}]},
         {"domain": "b.com", "matched": True, "affected": 0, "nofix": 0,
          "worst_cvss": None, "findings": []},
@@ -2384,10 +2386,11 @@ check("the fixable/no-fix split is carried on the finding row",
 # score was there, the word was not. Found by looking at the rendered page.
 check("every field the page renders survives ingest",
       all(k in _vfind[0] for k in
-          ("slug", "version", "cve", "cvss", "rating", "patched",
+          ("slug", "version", "cve", "cve_link", "cvss", "rating", "patched",
            "fix_version", "title", "published")),
-      str(sorted(set(("slug", "version", "cve", "cvss", "rating", "patched",
-                      "fix_version", "title", "published")) - set(_vfind[0]))))
+      str(sorted(set(("slug", "version", "cve", "cve_link", "cvss", "rating",
+                      "patched", "fix_version", "title", "published"))
+                 - set(_vfind[0]))))
 
 # Every source needs all four registries, and ingest raises on a missing one
 # rather than guessing -- which is how the missing RUN_MODE entry was found.

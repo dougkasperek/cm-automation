@@ -270,6 +270,20 @@ check("...and the finding count matches the findings listed",
       "%s vs %s" % (_pby["a.com"]["affected"], len(_pby["a.com"]["findings"])))
 
 _f = _pby["a.com"]["findings"][0]
+# THE VENDOR'S OWN URL. 15 of the 17 real Pods records carry cve_link and the
+# other 2 carry no cve at all, so a URL built from the id would 404 on exactly
+# those two. Absent means the page renders plain text, never a dead link.
+_linked = [x for x in _pby["a.com"]["findings"] if x.get("cve_link")]
+_unlinked = [x for x in _pby["a.com"]["findings"] if not x.get("cve_link")]
+check("findings carry the CVE link the feed published",
+      _linked and all(x["cve_link"].startswith("https://") for x in _linked),
+      str(len(_linked)))
+check("...and the check is not vacuous: some records have no link",
+      len(_unlinked) > 0, "every record had a link")
+check("a record with no CVE gets no link rather than a constructed one",
+      all(not str(x["cve"]).startswith("CVE-") for x in _unlinked),
+      str([x["cve"] for x in _unlinked]))
+
 check("a finding carries the vendor's own rating word, not one we derived",
       _f["rating"] in ("Low", "Medium", "High", "Critical"), str(_f["rating"]))
 # patched_versions is a LIST -- a plugin often patches several branches at

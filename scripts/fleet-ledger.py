@@ -669,6 +669,10 @@ def _vuln_finding_rows(payload, by_domain):
                 "slug": (f.get("slug") or "").lower(),
                 "version": f.get("version"),
                 "cve": f.get("cve") or f.get("vuln_id"),
+                # Carried, not rebuilt at render time. `rating` was dropped by
+                # the first cut of this adapter and the page showed "unrated"
+                # on every row; a link is the same shape of loss, quieter.
+                "cve_link": f.get("cve_link"),
                 "cvss": f.get("cvss"),
                 # Wordfence's OWN band word. Carried rather than derived from
                 # the score at render time: the vendor classifies its own

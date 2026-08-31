@@ -929,7 +929,17 @@ $('#app').append(h('div', { class: 'wrap' },
    backlog by the decision instead of the site." An abstract of a page, at the
    top of the page, is three more copies to keep true. test-page.mjs asserts
    header.top carries no paragraph. */
-      h('h1', {}, 'clevermethod fleet', h('small', {}, 'read-only'))),
+      h('h1', {}, 'clevermethod fleet', h('small', {}, 'read-only')),
+      /* THE OTHER PAGES, AT THE TOP. Doug, 2026-08-31: they were in the
+         footer, below a table of 85 rows, which is not where a reader looks
+         for "where else can I go". The Consent column header and the
+         Vulnerable column header still link out too -- those are the route
+         from the question, this is the route from the page. */
+      h('nav', { class: 'topnav' },
+        h('a', { href: '/components' }, 'Components'),
+        h('a', { href: '/consent' }, 'Consent'),
+        h('a', { href: '/vulnerabilities' }, 'Vulnerabilities'),
+        h('a', { href: '/api/fleet-scan' }, 'JSON feed'))),
     h('div', { class: 'sweep' }, ...sweep.map(([name, r]) => h('div', { class: ageDays(r.observed_at) > 1 ? 'stale' : '' }, name + ' ', h('b', {}, fmtEastern(r.observed_at)), ' ' + (r.deep_scanned ?? '?') + '/' + r.site_count)))),
   banner(),
   tabs,
@@ -985,7 +995,10 @@ $('#app').append(h('div', { class: 'wrap' },
         '): the instrument changed, not the fleet.') : null)),
   h('footer', { class: 'foot' },
     h('p', {}, 'Health counts: ' + D.counts.CRIT + ' critical · ' + D.counts.WARN + ' warning · ' + D.counts.OK + ' OK · ' + D.counts.SKIP + ' skip · ' + D.counts.FROZEN + ' frozen, ' + D.excluded_sites.length + ' excluded by ruling (' + D.excluded_sites.join(', ') + '). Consent: ' + D.axes.consent.WARN + ' warning · ' + D.axes.consent.OK + ' OK · ' + D.axes.consent.UNKNOWN + ' unknown.'),
-    h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. ', h('a', { href: '/api/fleet-scan' }, 'JSON feed'), ' · ', h('a', { href: '/components' }, 'component catalogue'), ' · ', h('a', { href: '/consent' }, 'consent'), ' · ', h('a', { href: '/vulnerabilities' }, 'vulnerabilities'), '. Read-only: nothing on this page changes a site.'))));
+    /* The route list moved to the masthead on 2026-08-31 and is NOT repeated
+       here: a reader who has reached the footer has passed the nav twice. What
+       stays is provenance, which belongs at the end. */
+    h('p', {}, 'Times are the ledger\'s UTC stamps shown as Eastern (' + D.tz_note + '). Generated ' + D.generated + ' from a ' + D.all_runs.length + '-run ledger. Read-only: nothing on this page changes a site.'))));
 readUrl();
 draw();
 if (new URLSearchParams(location.search).get('view') === 'schedule') setView('schedule');

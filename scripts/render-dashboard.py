@@ -614,7 +614,8 @@ def build_vulnerabilities(rows, sites, matched, today=None,
             continue
         cve = r.get("cve")
         g = by.setdefault((slug, cve), {
-            "slug": slug, "cve": cve, "cvss": r.get("cvss"),
+            "slug": slug, "cve": cve, "cve_link": r.get("cve_link"),
+            "cvss": r.get("cvss"),
             "rating": r.get("rating"), "patched": r.get("patched"),
             "fix_version": r.get("fix_version"), "title": r.get("title"),
             "published": r.get("published"), "sites": [], "versions": set(),
@@ -3018,6 +3019,9 @@ VULN_CSS = """
   text-underline-offset: 2px; white-space: nowrap; }
 .vcve { display: block; font-family: var(--font-mono); font-size: 10.5px;
   color: var(--ink2); margin-top: 6px; }
+.vcve a { color: var(--accent); text-decoration: underline;
+  text-decoration-color: var(--line); text-underline-offset: 2px; }
+.vcve a:hover { text-decoration-color: var(--accent); }
 .vver { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .vsev { white-space: nowrap; }
 .vsev .lbl { font-size: 11px; font-weight: 600; text-transform: uppercase;
@@ -3112,7 +3116,15 @@ VULN_JS = r"""
         + (g.patched === false ? ''
            : '<span class="vfix">Update to ' + esc(g.fix_version) + '</span>')
         + sites(g, i)
-        + '<span class="vcve">' + esc(g.cve) + '</span></td>'
+        + '<span class="vcve">'
+        + (g.cve_link
+           ? '<a href="' + esc(g.cve_link) + '" target="_blank" rel="noopener noreferrer">'
+             + esc(g.cve) + '</a>'
+           /* No link when the feed published none -- two of the 17 real Pods
+              records have no cve at all, and a constructed cve.org URL would
+              404. Plain text, never a dead link. */
+           : esc(g.cve))
+        + '</span></td>'
         + '<td class="vver">' + esc((g.versions || []).join(', ')) + '</td>'
         + '<td><span class="vsev ' + esc(g.rating || '') + '">'
         + '<span class="lbl">' + esc(g.rating || 'unrated') + '</span>'

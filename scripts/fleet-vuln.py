@@ -743,6 +743,11 @@ def build_report(rows, idx, feed, inventory_ids=None, feed_meta=None):
                 "slug": r["slug"],
                 "version": r["version"],
                 "cve": rec.get("cve") or vid,
+                # THE VENDOR'S OWN URL, never one built from the id. Two of the
+                # 17 real Pods records carry no cve at all, so a constructed
+                # cve.org link would 404 for them; a record with a cve always
+                # has this field. Absent means the page renders plain text.
+                "cve_link": rec.get("cve_link"),
                 "cvss": score,
                 # DERIVED from the score, not read from `cvss.rating`. The
                 # scanner feed publishes no rating at all, and this page showed

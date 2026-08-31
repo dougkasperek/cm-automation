@@ -484,6 +484,24 @@ await page.waitForTimeout(200);
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 check('the body does not scroll sideways at 375px', overflow <= 0, overflow + 'px');
 
+console.log('\n-- routes to the other pages --');
+// AT THE TOP, NOT THE FOOTER. Doug, 2026-08-31: the routes to the other pages
+// sat below a table of 85 rows, which is not where a reader looks for "where
+// else can I go". Asserted as a property -- every page the fleet links to is
+// reachable from the masthead -- rather than as a list of four hrefs, which
+// would need editing every time a page is added.
+const nav = await page.$$eval('.topnav a', as => as.map(a => new URL(a.href).pathname));
+for (const p of ['/components', '/consent', '/vulnerabilities']) {
+  check('the masthead links to ' + p, nav.includes(p), JSON.stringify(nav));
+}
+// ...and the footer does not repeat them. A reader who reached the footer has
+// passed the nav twice; what stays down there is provenance.
+const footLinks = await page.$$eval('.foot a', as => as.map(a => new URL(a.href).pathname))
+  .catch(() => []);
+check('the footer does not repeat the route list',
+      !footLinks.some(p => ['/components', '/consent', '/vulnerabilities'].includes(p)),
+      JSON.stringify(footLinks));
+
 await browser.close();
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
