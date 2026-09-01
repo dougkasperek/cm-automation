@@ -228,7 +228,7 @@ third-party script before moving it into GTM). That output exists today in
 
 Nothing here is built. Each is sized against what it buys.
 
-1. ~~**Send the Pantheon allowlist request**~~ **WITHDRAWN 2026-08-22 — wrong
+1. ~~**Send the Pantheon allowlist request**~~ **WITHDRAWN 2026-08-22: wrong
    vendor.** The 403s are a Cloudflare bot challenge on the clients' own
    zones, measured from response headers; the request never reached Pantheon.
    The identifying-User-Agent idea is withdrawn with it and inverted: against

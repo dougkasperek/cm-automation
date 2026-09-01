@@ -593,7 +593,7 @@ def build_html(table, states, kind, title, sub, detail_col, stamp, src_name, liv
     banner = ""
     if flagged:
         items = "".join(
-            f"<br><br><b>{html.escape(r['site'])}</b> &mdash; "
+            f"<br><br><b>{html.escape(r['site'])}</b>: "
             f"{html.escape(known_bad_note(r['site'], r.get('notes_full') or '') or '')}"
             for r in flagged
         )

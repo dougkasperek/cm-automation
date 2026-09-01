@@ -42,14 +42,14 @@ first would discard the run that discovered the problem.
 
 **Both post-push alarms follow that rule, and the second one nearly did not.**
 The coverage-drop guard added 2026-08-20 makes `ingest` exit 1. The script runs
-under `set -e`, so a bare call to it died *at ingest* — before add, commit and
+under `set -e`, so a bare call to it died *at ingest*: before add, commit and
 push, and without retrying. On an ephemeral runner that means the degraded run
 which raised the alarm was the one run guaranteed never to reach the ledger,
 and the ledger cannot be regenerated. Ingest is therefore called with
 `--allow-coverage-drop`, and the drop is reported at the bottom of the script
 alongside the unresolved-site alarm. **The publish job is gated on this job
 succeeding**, so a drop still stops `fleet.thudstaff.com` being replaced by a
-worse view — it no longer costs the observations to do it. Any future guard
+worse view. It no longer costs the observations to do it. Any future guard
 added to `ingest` has to enter the same way: store first, exit code last.
 
 **Conflicts are avoided, not resolved.** Two appends to one JSONL rebase badly.
@@ -58,7 +58,7 @@ onto it. `ingest` is idempotent on `run_id`, so this is always safe and cannot
 duplicate a run. Three attempts, then it fails loudly.
 
 **A separate job, for two reasons.** Only it needs `contents: write`, and only
-it takes the `fleet-ledger-write` concurrency lock — a lock on the scan job
+it takes the `fleet-ledger-write` concurrency lock: a lock on the scan job
 would queue a 45-minute run behind a 25-second one. The lock name is shared by
 both workflows, so the Pantheon scan and the email check cannot race.
 
@@ -67,7 +67,7 @@ design when `fail_on_crit` is on, and those observations are exactly the ones
 worth keeping.
 
 **`fleet.html` is committed alongside the ledger.** The renderer is
-deterministic — same ledger in, byte-identical HTML out — so this produces no
+deterministic, same ledger in, byte-identical HTML out, so this produces no
 churn, and it is what keeps the committed page and the committed ledger from
 disagreeing again.
 

@@ -115,7 +115,7 @@ run had to correct in the first cut:
   `sender_email` is the `From:` header, which is what DMARC aligns against. On
   the site measured they are the same address.
 - **`hostname` is the empty string on an API transport.** actioncarting sends
-  via `transport_type: mailgun_api` — Mailgun over HTTP, no SMTP relay at all.
+  via `transport_type: mailgun_api`: Mailgun over HTTP, no SMTP relay at all.
   jq's `//` falls back on null and false but **not** on `""`, so a naive
   `.hostname // .host` returns the empty string and the fact would have read
   `unknown` about a site that answered plainly. Hence `n/a` for the host and
@@ -123,7 +123,7 @@ run had to correct in the first cut:
 
 **Why it exists.** SPF, DKIM and DMARC are all queried at the *sending domain*,
 and nothing in DNS reveals where a WordPress site was configured to send from,
-so that value has always been a **ruling** — a person typed it into the audit
+so that value has always been a **ruling**: a person typed it into the audit
 workbook. A wrong one does not fail loudly: it queries `_dmarc.` at a host
 nobody sends from and returns a confident PASS about the wrong domain. Six
 sites have no ruling at all.
@@ -131,7 +131,7 @@ sites have no ruling at all.
 **Stored beside the ruling, never over it.** That is the `nexcess_php_version`
 precedent: one name per way of knowing, so a disagreement is a fact rather than
 a silent resolution in favour of whichever was written last. The dashboard
-reports a disagreement as a finding and says what it means — that every SPF,
+reports a disagreement as a finding and says what it means. That every SPF,
 DKIM and DMARC cell on that row is an answer about the wrong domain.
 
 **Six answers, and they must stay six.** (`n/a` on the relay host joined them
@@ -152,7 +152,7 @@ measured.
 It writes all three as the literal `n/a`. Reading post-smtp there needs a
 seventh command on a credential that can write to 22 client sites, and that
 command list is a reviewed security control. Without the explicit `n/a` the
-keys would be absent, and an absent deep-scan fact reads as `unknown` — so 21
+keys would be absent, and an absent deep-scan fact reads as `unknown`, so 21
 Nexcess sites would report a mailer that had defeated us when nothing had
 asked. `test/test-nexcess-ssh.py` asserts both emit paths carry the literal,
 and asserts `option get` does *not* appear in that scanner.
@@ -254,7 +254,7 @@ unification specifically.
 **`wp_version` is now an observed, deep-only fact.** It is the version the site
 reports for itself, read with `wp core version` over SSH. It is not
 `wp_core_update`, which reports the version *available* and reads `"up-to-date"`
-when there is none — a value that is identical on a fleet on 7.0.2 and a fleet
+when there is none: a value that is identical on a fleet on 7.0.2 and a fleet
 on anything else. The workbook claims 7.0.2 on all 78 sites, so without the
 installed version there was nothing to compare the claim against.
 
@@ -267,6 +267,6 @@ tool used: machine names from Pantheon, domains from the email check. One site,
 two histories, and an 84-site fleet rendering as 130 rows. Nothing failed and
 nothing warned.
 
-The store is append-only, so this could not be corrected in place — it had to be
+The store is append-only, so this could not be corrected in place. It had to be
 rebuilt from `reports/`, which worked only because those files still existed on
 one laptop. Three guards now stand in front of it, listed in `docs/CI-LEDGER.md`.

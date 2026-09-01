@@ -121,4 +121,4 @@ both still exist.
 | `jq` parse failures | new noise line not covered by `strip_noise` | add the pattern to `strip_noise` in `lib/common.sh` and add a mock case |
 | Run hangs despite timeouts | a grandchild `ssh` not reaped by the poll-kill helper | the job-level `timeout-minutes` is the backstop; investigate the site manually |
 | A site's env reads absent but you know it exists | `ERROR`, not `SKIP` - treat as unknown | rerun that site alone with `--sites` |
-| A site reads `plugin_updates: 0` / `wp_core_update: up-to-date` and you doubt it | the WP-CLI call may have failed; the scanner records the clean value either way (item 22) | `./scripts/diagnose-wp-calls.sh SITE` — it keeps the stderr the scan discards and says MEASURED or FABRICATED per call |
+| A site reads `plugin_updates: 0` / `wp_core_update: up-to-date` and you doubt it | the WP-CLI call may have failed; the scanner records the clean value either way (item 22) | `./scripts/diagnose-wp-calls.sh SITE`. It keeps the stderr the scan discards and says MEASURED or FABRICATED per call |

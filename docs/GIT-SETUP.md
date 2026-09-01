@@ -118,7 +118,7 @@ index.lock: File exists* until Doug clears it by hand:
 rm -f ~/dev/cm-automation/.git/index.lock
 ```
 
-Read-only git is fine and useful — `status`, `log`, `show`, `diff`, `ls-files`.
+Read-only git is fine and useful: `status`, `log`, `show`, `diff`, `ls-files`.
 `git show <rev>:<path>` in particular is how the pre-repair ledger was recovered
 for comparison without touching the working tree.
 

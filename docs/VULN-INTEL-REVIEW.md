@@ -357,7 +357,7 @@ credential.
 | **4** | **MATCH ON LOWERCASE SLUG. Non-negotiable, and it is why the catalogue merges casings at render time.** Wordfence publishes lowercase slugs; WP-CLI reports the on-disk directory name, which differs per site. A case-sensitive match of `pdfembedder-premium` hits 2 of our 12 sites. Also: match on SITES not installs, since a site can carry the component twice. Matcher + `version_compare` comparator + severity codes (`component_known_vulnerable` CRIT/WARN, `component_vulnerable_no_patch`). Tests: the six Pods ranges, an unbounded range, a non-numeric version, a slug not in the feed. Render and look. | 3 | ~1 day |
 | **5** | **Teams, not Asana. Changed by the 2026-08-24 meeting.** Matt asked for *"an email or a Teams message dropped into a channel we can all see"*, and Victoria has already started a **critical notifications channel**. A new CRIT component finding on a production site posts there. Asana task creation stays on the list as a later step, because the meeting also said the validation is a human step and a ticket should follow the human, not precede them. **Talk to Victoria before building: her channel may already define the message shape.** | 4 | smaller than the Asana item |
 | **6** | Nexcess SSH inventory, when the key question is answered. Same rows, different transport. Coverage 48 → 69. | Nexcess | separate phase |
-| — | Webhooks | never, unless polling proves too slow | — |
+|  | Webhooks | never, unless polling proves too slow |  |
 
 Effort totals roughly three days of build to step 4, on top of the
 already-queued publish, coverage guard and token work.

@@ -40,7 +40,7 @@ the rendered DOM.
 Pantheon`, `68 of 75 inventoried`, `71 of 79 loaded`, read from the same
 coverage lines the JSON feed publishes.
 
-There was a census bar under each header too, until 2026-08-29 — a stacked bar
+There was a census bar under each header too, until 2026-08-29: a stacked bar
 showing how the whole fleet answered that question. It went in the subtraction
 pass. It was computed over all 85 sites and never followed the filter, and its
 only legend was a `title=` tooltip plus one clause in a footer 3,800px below
@@ -63,7 +63,7 @@ headers carry the lane word and its count only.
 
 Doug's concept, 2026-08-29: group the seven lanes into cards with the lane
 counts as chips beneath, rather than seven equal tiles. Built. **Four things in
-the concept as drawn were wrong and are not in the build** — two are in
+the concept as drawn were wrong and are not in the build**: two are in
 CLAUDE.md's bug table because they are the canonical failure, and these are the
 rest, recorded here because they are copy rules for anyone editing this block:
 
@@ -74,11 +74,11 @@ rest, recorded here because they are copy rules for anyone editing this block:
   entire job of printing a predicate.
 - **One name per lane.** The concept called the same set "require human
   attention" in the headline, "Action required" on the card and "needs a
-  person" in the predicate — three names in one block, for a page whose lanes
+  person" in the predicate: three names in one block, for a page whose lanes
   are its own invented vocabulary. The build uses "Needs a person" everywhere,
   which is also what the matrix group headers say.
 - **"Nothing pending" means both axes.** The concept read "Measured
-  successfully; no maintenance action is currently outstanding" — dropping
+  successfully; no maintenance action is currently outstanding": dropping
   "on either axis" and naming only maintenance, on a page whose severity model
   is per-axis and where a site can be clear on health and WARN on consent.
 - **A chip is vocabulary too.** `41 Needs scheduling · 17 Needs a ruling` as
@@ -90,7 +90,7 @@ rest, recorded here because they are copy rules for anyone editing this block:
 stacked boxes both summarising the same fleet, and the banner's prose restated
 the strip in numbers that were **not the strip's**: "a backlog (42 sites)" over
 a `Needs scheduling` tile of 41, and "unmeasured (11 sites)" over a
-`Not established` tile of 11 — the same figure over a different set of sites,
+`Not established` tile of 11: the same figure over a different set of sites,
 which is the version nobody catches. The red state now names who needs a person
 and stops; the seven lane counts say the rest.
 
@@ -140,7 +140,7 @@ them. They live in two places:
   `nobody here yet (workbook import 2026-08-18)`;
 - **the totals section below the matrix**, which counts claims against what the
   component inventory can see and names the sites where a claim has no matching
-  plugin — the only rows anyone acts on.
+  plugin: the only rows anyone acts on.
 
 **They were also four matrix columns behind a checkbox until 2026-08-29.** That
 made three copies of one thing, and the weakest of the three cost a paragraph
@@ -152,7 +152,7 @@ this" fact is stated beside each claim instead of in prose 3,000px away.
 Removed on Doug's instruction in the 2026-08-29 subtraction pass, having been
 left in on 2026-08-27 ("lets leave it for now"). `test-page.mjs` asserts the
 matrix carries no workbook column group AND that the drawer carries the claims
-instead — both directions, so the cut cannot be half-undone.
+instead. Both directions, so the cut cannot be half-undone.
 
 ## How it is built
 

@@ -1,7 +1,7 @@
 # Nexcess support: the questions that block automation
 
 Two questions, both blocking, both needing a person at Nexcess rather than more
-code here. Send them together — they are the same conversation.
+code here. Send them together. They are the same conversation.
 
 Account: clevermethod, Inc. Nexcess account ID 82607. 21 Managed WordPress
 sites.
@@ -15,11 +15,11 @@ sites.
 > is at the end of this file. Everything below is kept as the record.
 >
 > **STATUS: SENT 2026-08-22. ANSWERED 2026-08-24.** Both questions went in as
-> one ticket and Nexcess replied on 2026-08-24. **Question 2 is settled — see
+> one ticket and Nexcess replied on 2026-08-24. **Question 2 is settled. See
 > "The reply" immediately below.** Question 1 is not: the reply asks us to do
 > the one thing this file already recorded as ruled out. This file is now a
 > record of what was asked, what came back, and what still needs answering.
-> **Do not re-send the original ticket** — reply on the existing thread,
+> **Do not re-send the original ticket**: reply on the existing thread,
 > `thread::sJecUJQ2cS6EeEacWJKo2D0::`, using the draft at the bottom.
 
 ---
@@ -27,7 +27,7 @@ sites.
 ## The reply, 2026-08-24
 
 **The reply is archived verbatim at
-`docs/correspondence/2026-08-24-nexcess-in-ssh-and-api-challenge.md`** — read
+`docs/correspondence/2026-08-24-nexcess-in-ssh-and-api-challenge.md`**. Read
 it there rather than trusting the summary below. Ticket
 `thread::sJecUJQ2cS6EeEacWJKo2D0::`, Muhamed M. Captured from
 `liquidWeb-AP-question-response-08242026.md` in the Cowork Automation Portfolio
@@ -37,7 +37,7 @@ folder; the archived body was verified byte-identical to that original.
 |---|---|---|
 | Exempt `/api/v1/*` from the bot challenge | Not addressed. Instead: set a browser User-Agent, taken from `navigator.userAgent` | **no** |
 | Is there a different hostname for programmatic access? | Not addressed. Linked the `api-token` docs, which still write `$PORTAL_API_URL` without defining it | **no** |
-| Documented client requirements — UA, allowlisted IP, header? | Only the browser-UA suggestion. No IP allowlist or header named | **partly** — see below |
+| Documented client requirements, UA, allowlisted IP, header? | Only the browser-UA suggestion. No IP allowlist or header named | **partly**, see below |
 | Does one user-level SSH key reach every Managed WordPress site? | **Yes.** Keys are managed at the user/account level. One key reaches every site that user is authorised for, **including sites added later**. No per-site key needed | **yes** |
 | Can we have a read-only SSH user? | **No.** Not supported on Managed WordPress or Nexcess Cloud. SSH users have read *and* write on the site filesystem. Restricting to `wp core version` / `wp plugin list` is not possible. Bare-metal dedicated is the only path they offered, via Sales | **yes** |
 
@@ -56,7 +56,7 @@ NEXCESS_PORTAL_API_TOKEN=<deliberately invalid> ./scripts/fleet-nexcess.py probe
 Both runs: `https://portal.nexcess.net/api` → HTTP 403, `Just a moment...`,
 edge bot challenge. The conventional `Chrome/140.0.0.0` desktop string is
 challenged **identically** to `cm-automation/fleet-nexcess (read-only)`. The
-token was deliberately invalid in both, and that is the point — the challenge
+token was deliberately invalid in both, and that is the point: the challenge
 is served before the token is read, so no credential is needed to reproduce
 this and none was used.
 
@@ -75,7 +75,7 @@ a case of us not having tried hard enough with headers.
 
 They linked `github.com/nexcess/nexcess-api-docs/tree/master/api-token`. Read
 2026-08-24. Every example there is written against `$PORTAL_API_URL` and the
-repository defines it nowhere — no root `README.md` exists, and the
+repository defines it nowhere, no root `README.md` exists, and the
 `authentication/` folder holds only passphrase helpers. The link restates the
 gap we reported rather than closing it, so the "what is the right base URL for
 automation" question stands.
@@ -83,7 +83,7 @@ automation" question stands.
 ### Independent corroboration of the SSH answer
 
 `ssh-key/add.md` in that same repository documents `POST /v1/ssh-key` with
-exactly two parameters, `name` and `key`, and **no site parameter** — the
+exactly two parameters, `name` and `key`, and **no site parameter**: the
 resource is user-scoped by construction. That is a second, documentary line of
 evidence for the account-level answer, arrived at separately from support's
 statement.
@@ -93,8 +93,8 @@ statement.
 The six sub-questions in section 19 of `NEXCESS-ARCHITECTURE.md` were not all
 covered. Still open after this reply:
 
-- **Propagation lag** — is a newly added key usable immediately on all sites?
-- **Revocation timing** — when a user loses access to a site, is key access
+- **Propagation lag**. Is a newly added key usable immediately on all sites?
+- **Revocation timing**. When a user loses access to a site, is key access
   removed immediately?
 - **Can a user-level key be scoped to selected sites?** They said one key
   reaches everything the user may reach. They did not say whether it can be
@@ -116,7 +116,7 @@ to reach the API instead of a Cloudflare managed challenge.
 
 Support's first question is usually "is this still happening?", so this block
 is dated and reproducible. Every request below carried a deliberately invalid
-token — the challenge is served before the token is read, so no credential is
+token: the challenge is served before the token is read, so no credential is
 needed to reproduce this, and none was used.
 
 | base URL | result |
@@ -136,7 +136,7 @@ Two facts from the same pass:
   and a conventional `Chrome/140` desktop string received byte-identical
   challenges.
 - **Not a single bad edge node.** The two requests were answered by different
-  Cloudflare PoPs — `cf-ray` ending `-EWR` and `-ORD`. This is policy, not a
+  Cloudflare PoPs: `cf-ray` ending `-EWR` and `-ORD`. This is policy, not a
   misbehaving cache.
 
 Both HTTP clients were re-tested from one source IP: Python `urllib` and
@@ -154,7 +154,7 @@ that specific check before arguing the point.
 ### Draft message
 
 > We use a Nexcess Client Portal API token to run a read-only inventory of our
-> Managed WordPress sites — `GET /v1/site` and `GET /v1/site/{id}`, nothing
+> Managed WordPress sites: `GET /v1/site` and `GET /v1/site/{id}`, nothing
 > else, no writes.
 >
 > Requests from a scripted HTTP client to
@@ -162,7 +162,7 @@ that specific check before arguing the point.
 > challenge page (`<title>Just a moment...</title>`, HTTP 403) rather than an
 > API response. The same URL from a logged-in browser returns
 > `{"message":"Unauthorized"}` as expected, so the endpoint is correct and
-> reachable — the challenge is served at the edge, before the request reaches
+> reachable: the challenge is served at the edge, before the request reaches
 > the application, which means our token is never evaluated.
 >
 > We have ruled out the obvious client-side causes. The challenge is served
@@ -185,8 +185,8 @@ that specific check before arguing the point.
 >    `$PORTAL_API_URL` without defining it, so we established
 >    `https://portal.nexcess.net/api` by observing the portal's own traffic. If
 >    that is the wrong base URL for automation, please tell us the right one.
-> 3. Are there documented requirements for API clients — a required
->    User-Agent, an allowlisted source IP, an additional header — that we are
+> 3. Are there documented requirements for API clients: a required
+>    User-Agent, an allowlisted source IP, an additional header. That we are
 >    missing?
 
 ### Why this matters, if they ask
@@ -200,15 +200,15 @@ answer that for the whole estate in a single read-only pass.
 
 | claim | status |
 |---|---|
-| `https://portal.nexcess.net/api` is the base URL | **established** — the portal SPA calls `/api/v1/user/self` there; a browser gets `{"message":"Unauthorized"}` from `/api/v1/site` |
+| `https://portal.nexcess.net/api` is the base URL | **established**: the portal SPA calls `/api/v1/user/self` there; a browser gets `{"message":"Unauthorized"}` from `/api/v1/site` |
 | `api.nexcess.net` | does not resolve |
 | `sites-portal.nexcess.com/api` | the portal web UI, returns the SPA's HTML |
-| the challenge is a User-Agent problem | **ruled out** — a conventional desktop UA is challenged identically |
-| the challenge is a TLS-fingerprint problem we can change | **ruled out** — Python `urllib` and `curl`/OpenSSL are challenged identically |
-| the challenge is our IP | **unlikely** — a browser on the same IP is served normally |
-| the token is bad | **ruled out** — the challenge is served before the token is read |
-| a single misbehaving edge node | **ruled out** 2026-08-22 — two Cloudflare PoPs (`-EWR`, `-ORD`) challenge identically |
-| the challenge has since cleared | **no** — re-verified live 2026-08-22, still `cf-mitigated: challenge` |
+| the challenge is a User-Agent problem | **ruled out**: a conventional desktop UA is challenged identically |
+| the challenge is a TLS-fingerprint problem we can change | **ruled out**: Python `urllib` and `curl`/OpenSSL are challenged identically |
+| the challenge is our IP | **unlikely**: a browser on the same IP is served normally |
+| the token is bad | **ruled out**: the challenge is served before the token is read |
+| a single misbehaving edge node | **ruled out** 2026-08-22: two Cloudflare PoPs (`-EWR`, `-ORD`) challenge identically |
+| the challenge has since cleared | **no**: re-verified live 2026-08-22, still `cf-mitigated: challenge` |
 | `api.liquidweb.com/v2` is an alternative host | **reachable, but the wrong API.** Suggested by Victoria 2026-08-25 and worth the test. It answers a scripted request with plain `401 Unauthorized`, `Server: nginx`, `WWW-Authenticate: LW-Basic`, **no Cloudflare and no challenge**, and it distinguishes `Authorization required` (no credential) from `Authorization denied` (a bad one), which is the diagnostic the Nexcess portal never allowed. But its documentation at `api.liquidweb.com/docs`, 422k characters, mentions **nexcess zero times** and **managed wordpress zero times**. Its groups are Account, Authentication, Metal, Network, Server, Utilities: Liquid Web infrastructure, not Nexcess Managed WordPress |
 
 **The Liquid Web result is documentation evidence, not a response, and that is
@@ -311,8 +311,8 @@ counts for these 21 sites.
 > user or account level.
 >
 > If we add one SSH public key at the user level, does it authorise
-> connections to every Managed WordPress site that user can reach — including
-> sites created later — or does each site need its key added separately?
+> connections to every Managed WordPress site that user can reach, including
+> sites created later, or does each site need its key added separately?
 >
 > Related: is there any way to create a read-only SSH user? We want an
 > automation identity that can run `wp core version` and `wp plugin list` and
@@ -324,7 +324,7 @@ counts for these 21 sites.
 - **Yes, one key reaches all:** one credential, one GitHub secret, one
   workflow. Build it.
 - **No, per site:** 21 credentials and a different architecture. Do not build
-  fleet-wide SSH until this is answered — see `docs/NEXCESS.md`.
+  fleet-wide SSH until this is answered. See `docs/NEXCESS.md`.
 
 The read-only question matters separately. If no read-only user exists, the
 scanning identity holds a write-capable credential no matter how carefully the
@@ -426,7 +426,7 @@ soon as anyone edits a word before hitting send.
 Then the API is unusable by any automated client and Phase 1 stays blocked
 permanently. **That is survivable now, because the SSH answer landed.** The
 account-level key makes the Phase 2 SSH scan buildable, and SSH returns
-strictly more than the control plane does — backup ages and plugin counts,
+strictly more than the control plane does: backup ages and plugin counts,
 which `GET /v1/site/{id}` never had. The API's remaining unique value is site
 *enumeration*: which sites the account actually contains, and the per-site Unix
 username that the SSH scan needs as its join key. Both can come from the portal

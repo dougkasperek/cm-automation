@@ -1,7 +1,7 @@
 # Nexcess / Liquid Web CI and Automation Architecture Notes
 
 > **Provenance: Doug's research, imported 2026-08-19. NOT verified by this
-> repo.** Every "Verify" marker below is genuinely unverified — no Nexcess API
+> repo.** Every "Verify" marker below is genuinely unverified, no Nexcess API
 > call and no Nexcess SSH connection has been made from this codebase. Treat the
 > endpoints, field names and the SSH key-propagation model as claims to test,
 > not as facts to build on. Section 17 Phase 1 is the first thing to actually
@@ -110,7 +110,7 @@ the reply itself is archived verbatim at
 
 **This is a standing consequence, not a solved item.** Any Nexcess SSH scan
 holds a write-capable credential regardless of how carefully the workflow
-behaves. The repo's hard boundary — this tool never changes a client site — is
+behaves. The repo's hard boundary, this tool never changes a client site, is
 enforced by the commands the workflow runs, and by nothing the host provides.
 
 ### Important distinction
@@ -144,7 +144,7 @@ GitHub Actions should potentially be able to store **one Nexcess automation priv
 
 That would avoid maintaining an individual password or private key for every Nexcess site.
 
-### CONFIRMED 2026-08-24 — one key reaches every site
+### CONFIRMED 2026-08-24: one key reaches every site
 
 **The central point is answered.** Nexcess support, 2026-08-24:
 
@@ -169,7 +169,7 @@ Answered by that reply:
 
 - ~~Does the key automatically propagate to all existing Managed WordPress sites?~~ **Yes.**
 - ~~Does it automatically apply to newly created sites?~~ **Yes, explicitly.**
-- Does propagation depend on the user's team permissions? **Partly** — the key reaches what "the user is authorized to access", so authorisation is the boundary. The mechanics of changing that authorisation were not described.
+- Does propagation depend on the user's team permissions? **Partly**: the key reaches what "the user is authorized to access", so authorisation is the boundary. The mechanics of changing that authorisation were not described.
 
 Still unanswered, and **do not read the confirmation above as covering these**:
 
@@ -862,7 +862,7 @@ was either not covered or was never sent, and is marked accordingly.
 3. When site/team access is removed from that user, is SSH access using that key removed immediately? **asked, not answered**
 4. Can a user-level SSH key be limited to selected sites? **asked, not answered**
 **Items 5–12 were never sent.** The 2026-08-22 ticket carried only the two
-blocking questions, deliberately — a twelve-part list invites one paragraph
+blocking questions, deliberately: a twelve-part list invites one paragraph
 answering none of it. They remain worth asking once the API is reachable, at
 which point most of 6–10 become measurable rather than askable.
 

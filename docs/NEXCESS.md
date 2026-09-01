@@ -21,14 +21,14 @@ calls returns HTTP 403 `cf-mitigated: challenge` to a script.
 **Status, 2026-08-24 (SUPERSEDED): this workflow (Phase 1) was BLOCKED.**
 The API is at `https://portal.nexcess.net/api`. That host answers a browser
 with JSON and answers this client with a Cloudflare challenge, so the token is
-never read. User-Agent, TLS stack and IP have all been ruled out — see the
+never read. User-Agent, TLS stack and IP have all been ruled out. See the
 table below, and re-verified live 2026-08-24 after support suggested a browser
 User-Agent. A reply is drafted in `docs/NEXCESS-SUPPORT.md`.
 
 **But the project is no longer blocked, because Phase 2 is.** The same
 2026-08-24 reply confirmed that one account-level SSH key reaches every Managed
 WordPress site, existing and future. That was the open question gating the SSH
-deep scan, and the SSH scan is the more valuable of the two — see "Phase 2: the
+deep scan, and the SSH scan is the more valuable of the two. See "Phase 2: the
 gate is open" below. There is no further Phase 1 code to write until Nexcess
 answers; there is now Phase 2 code to write.
 
@@ -44,7 +44,7 @@ here has executed against.
 | Which sites does the Nexcess account actually contain? | yes |
 | Do those sites match `data/fleet-inventory.json`? | yes |
 | What PHP version is each on? | yes, per the control plane |
-| What WordPress version is each on — the wp2shell question | yes, per the control plane |
+| What WordPress version is each on: the wp2shell question | yes, per the control plane |
 | What is the per-site SSH username (the Phase 2 join key)? | yes |
 | How old is the newest database backup? | **no** |
 | How many plugin and theme updates are pending? | **no** |
@@ -57,7 +57,7 @@ the moment a health scan supplies the missing facts. See `docs/SEVERITY.md`.
 
 The control plane and WP-CLI answer the same two questions by different means,
 and the control plane's answer is the weaker of the two. So they are stored
-under different names — `nexcess_app_version` and `nexcess_php_version`, never
+under different names: `nexcess_app_version` and `nexcess_php_version`, never
 `wp_version` and `php_version`.
 
 Storing them under one name means whichever ran last wins and any disagreement
@@ -66,9 +66,9 @@ disappears. Storing them apart makes the disagreement a fact:
 
 The dashboard shows three tiers and labels each one:
 
-- plain text — read off the site by WP-CLI
-- *per host* — reported by the hosting control plane
-- *claimed* — typed into the audit workbook, never verified
+- plain text. Read off the site by WP-CLI
+- *per host*: reported by the hosting control plane
+- *claimed*: typed into the audit workbook, never verified
 
 ## The base URL
 
@@ -76,7 +76,7 @@ The dashboard shows three tiers and labels each one:
 https://portal.nexcess.net/api
 ```
 
-**Established 2026-08-19. Not from documentation** — no Nexcess page anywhere
+**Established 2026-08-19. Not from documentation**, no Nexcess page anywhere
 defines `$PORTAL_API_URL`. Checked: the API docs repo, the API-token help page,
 the portal guide, the Elasticsearch page. Every one uses the bare variable.
 
@@ -92,7 +92,7 @@ performance.getEntriesByType('resource')
 which returned `https://portal.nexcess.net/api/v1/user/self` and
 `/api/v1/client/self`. Confirmed by requesting
 `https://portal.nexcess.net/api/v1/site` in the browser: it returns
-`{"message":"Unauthorized"}` — JSON from the application, not a challenge page
+`{"message":"Unauthorized"}`: JSON from the application, not a challenge page
 and not a 404.
 
 **This recipe generalises.** When a vendor documents an API against an
@@ -105,13 +105,13 @@ network traffic rather than guessing hostnames.
 
 | client | response |
 |---|---|
-| logged-in browser | `{"message":"Unauthorized"}` — JSON, from the application |
-| `scripts/fleet-nexcess.py` | `<title>Just a moment...</title>` — Cloudflare managed challenge |
+| logged-in browser | `{"message":"Unauthorized"}`: JSON, from the application |
+| `scripts/fleet-nexcess.py` | `<title>Just a moment...</title>`: Cloudflare managed challenge |
 
 The challenge is served by the edge, so **the request never reaches the
 application and the token is never read.** Rotating or rescoping the token
 cannot change it. This tool reported that response as "the token was rejected"
-and was wrong — see CLAUDE.md's table.
+and was wrong. See CLAUDE.md's table.
 
 `probe` now checks for a challenge *before* any status branch, because a
 challenge can arrive with 200, 403 or 503 and means the same thing every time.
@@ -130,7 +130,7 @@ challenge can arrive with 200, 403 or 503 and means the same thing every time.
 | default User-Agent, Python `urllib` | challenged |
 | conventional desktop User-Agent | challenged |
 | `curl` / OpenSSL, different TLS stack | challenged |
-| logged-in browser, same IP | **`{"message":"Unauthorized"}` — served normally** |
+| logged-in browser, same IP | **`{"message":"Unauthorized"}`: served normally** |
 
 Two independent HTTP clients with different TLS stacks are challenged from the
 same source IP on which a browser succeeds. That rules out User-Agent, TLS
@@ -146,8 +146,8 @@ drafted ticket, carrying this table so nobody re-treads it.
 
 One optional data point, if a second opinion is wanted before sending: run the
 CI workflow with `probe_only: true`. A GitHub runner is a different source
-network. Expect the same result — a browser and curl differing on one IP points
-at the challenge cookie, not the network — but it costs one click and makes the
+network. Expect the same result: a browser and curl differing on one IP points
+at the challenge cookie, not the network, but it costs one click and makes the
 ticket harder to deflect.
 
 The scanner still has **no default base URL constant**. `probe` re-confirms it
@@ -194,7 +194,7 @@ the reconciliation section of the report before ingesting the first run.
 > **Corrected 2026-08-23.** This line described `ci/github-actions/`, a
 > gitignored mirror that was deleted on 2026-08-22 after the two copies
 > diverged. `.github/workflows/` is the only copy. Do not recreate a
-> second one — see the hard boundary in `CLAUDE.md`.
+> second one. See the hard boundary in `CLAUDE.md`.
 
 because the file bridge cannot write there. **Diff the two before telling
 anyone to run it.**
@@ -203,7 +203,7 @@ Manual dispatch only, and `persist_ledger` defaults to **off** for this
 workflow while the other two default to on. Same reason: the first runs get
 looked at as artifacts before any of it becomes permanent history.
 
-Secrets: `NEXCESS_PORTAL_API_TOKEN`. The base URL is not a secret — pass it as
+Secrets: `NEXCESS_PORTAL_API_TOKEN`. The base URL is not a secret: pass it as
 the `api_base` input, or set `NEXCESS_PORTAL_API_URL` if you prefer.
 
 **Run `probe_only: true` in CI before anything else.** A GitHub runner has a
@@ -240,7 +240,7 @@ later**. Nexcess support, 2026-08-24; full reply in `docs/NEXCESS-SUPPORT.md`,
 recorded against the claims it settles in section 3 of
 `NEXCESS-ARCHITECTURE.md`.
 
-So it is one credential for 21 sites, one GitHub secret, one workflow — the
+So it is one credential for 21 sites, one GitHub secret, one workflow: the
 "true" branch of what this section used to ask. Fleet-wide SSH may now be
 built on that assumption.
 
@@ -255,7 +255,7 @@ Consequence, unchanged in substance but now a fact rather than a guess: a scan
 that only runs `wp core version` still holds a write-capable credential.
 Dedicated automation identity, never an employee key, private key only in
 GitHub secrets. The read-only boundary is enforced by the commands the
-workflow runs and by nothing the host provides — which makes the command list
+workflow runs and by nothing the host provides, which makes the command list
 in the workflow a security control, not just a scan definition.
 
 ### What the reply did not answer
@@ -273,7 +273,7 @@ and is still challenged identically. A reply is drafted in
 `docs/NEXCESS-SUPPORT.md`.
 
 **Phase 1 is no longer on the critical path.** SSH returns strictly more than
-the control plane does — it is the only source of backup age and plugin
+the control plane does. It is the only source of backup age and plugin
 counts, which `GET /v1/site/{id}` never had. What the API uniquely provides is
 enumeration: which sites the account contains, and the per-site `unix_username`
 that the SSH scan needs as its join key. For 21 sites both can be read out of

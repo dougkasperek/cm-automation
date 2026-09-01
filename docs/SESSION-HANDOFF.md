@@ -8,7 +8,7 @@ written down.
 
 ---
 
-## PICK UP HERE — 2026-08-29, evening: two more cuts, and a correction
+## PICK UP HERE: 2026-08-29, evening: two more cuts, and a correction
 
 ### The correction first
 
@@ -48,7 +48,7 @@ the run if an object cannot be pulled back; **no sha256 comparison against R2
 was made by this session.** If that matters later, the 2026-08-28 precedent is
 `wrangler r2 object get --remote` on each of the four keys and `shasum -a 256`
 on the pair. Rendering on a new day dirties `fleet.html`
-and `components.html` by one line — the embedded `"generated"` date — and
+and `components.html` by one line, the embedded `"generated"` date, and
 nothing else; the fleet counts were byte-identical to the committed artifact.
 
 ### What came off
@@ -56,8 +56,8 @@ nothing else; the fleet counts were byte-identical to the committed artifact.
 **The masthead's `p.thesis`.** `One row per site, one column per question.
 Hatched is unmeasured. Schedule tab: the same evidence arranged by decision.`
 Each clause is stated lower down, beside the thing it describes and in a form
-that follows the data — the tools row's live `85 rows · 16 questions`, the
-key's `not measured — an absence, never a pass`, and the Schedule panel's
+that follows the data: the tools row's live `85 rows · 16 questions`, the
+key's `not measured: an absence, never a pass`, and the Schedule panel's
 `This tab arranges the backlog by the decision instead of the site`. All three
 were checked on the rendered page, not in the source, before the cut.
 
@@ -69,14 +69,14 @@ were checked on the rendered page, not in the source, before the cut.
 rulings and the coverage gaps stay in the matrix; this tab is the maintenance
 calendar." Two clauses restated paragraph 1. **The third was false**, and that
 was found by reading the rendered Schedule column for site ids rather than by
-reading the copy: three of the four needs-a-person sites are on that tab —
+reading the copy: three of the four needs-a-person sites are on that tab,
 `iroquoisfence.com` as a backlog decision of its own, `hoffmanscheese` and
 `runtalnorthamerica.com` inside batched components' install lists. Paragraph 1
 of the same panel said the first of those explicitly. It now reads:
 
 > Rulings and coverage gaps are not scheduled here; they stay in the matrix.
 
-Rulings and coverage gaps really are absent from the tab — the six decisions
+Rulings and coverage gaps really are absent from the tab: the six decisions
 are all drift and maintenance. Naming an absence is the one thing these passes
 do not cut.
 
@@ -87,7 +87,7 @@ something else first and are listed here too`. The plural was hardcoded, and
 the count has been 1 every day the page has existed, so that sentence was
 ungrammatical on every render anyone has seen. The inline version also
 recomputed its filter three times in one sentence, and at a count of 0 would
-have rendered an empty parenthesis — a branch that had never run.
+have rendered an empty parenthesis: a branch that had never run.
 
 `backlogScheduled` and `backlogElsewhere` are named once in `AGG` now, and the
 paragraph is built by `schedIntro()`, which has the zero branch and agrees its
@@ -101,7 +101,7 @@ verbs with the count it just printed.
 | page height | 4400px | 4377px |
 | chrome words | 320 | **301** |
 
-**Then the coverage line put 25px and 38 words back** — see the section below.
+**Then the coverage line put 25px and 38 words back**. See the section below.
 The day ended at **732px / 339 words** against **730px / 320** at its start.
 
 **These are NOT comparable to the 697px in the block below.** That figure was
@@ -148,7 +148,7 @@ severity, page.py, score-scan and consent-rulings were re-run after it).
 
 **The other four could not run through the device bridge and Doug ran them on
 the mac the same evening. All green:** email-dns 65, wp-calls 48,
-gating-leak 14, gating-window 20 — the counts CLAUDE.md's testing table already
+gating-leak 14, gating-window 20: the counts CLAUDE.md's testing table already
 carried, so none had drifted.
 
 ```bash
@@ -160,8 +160,8 @@ node test/test-gating-window.mjs    # needs Chromium
 ```
 
 **17 of 17 suites pass as of 2026-08-29 evening.** The bridge VM cannot install
-a browser — `npx playwright install` is refused with `403 Connection blocked by
-network allowlist` — so a session working through the bridge runs 13 and has to
+a browser: `npx playwright install` is refused with `403 Connection blocked by
+network allowlist`, so a session working through the bridge runs 13 and has to
 hand these four to a person. That split is in CLAUDE.md's testing section.
 
 ### Later the same evening: the health-coverage count is on the page
@@ -170,20 +170,20 @@ hand these four to a person. That split is in CLAUDE.md's testing section.
 health-coverage count "the number printed under the fleet-health card" and
 "what progress looks like". There is no fleet-health card on the v3 page. Its
 only fleet-level appearance was inside the GREEN banner sentence, and this
-fleet has never been green — so the project's own measure of progress has been
+fleet has never been green, so the project's own measure of progress has been
 invisible since the redesign. Found by searching the rendered text of both
 tabs, not the source. Per site it was in the drawer the whole time
 (`coverage_partial`, "Seen only by the consent sweep"); nothing totalled it.
 
 It now renders in **every** state, in the banner block, as:
 
-> **11** with no health evidence — a scan reached the site, but no backup age
+> **11** with no health evidence: a scan reached the site, but no backup age
 > and no plugin or theme count. Cuts across the lanes rather than being one:
 > 1 in Needs a person, 10 in Not established.
 
 The split is computed, not asserted, and it is there to stop the count being
 read as the `Not established` chip beside it. Measured this session: in the red
-state both are 11 over **different sets** — the lane holds
+state both are 11 over **different sets**: the lane holds
 `app.eastauroracc.com` and not `elderwoodipa.com`, the count the reverse. In
 the green state they are **11 and 12**.
 
@@ -207,7 +207,7 @@ data row, 301 → **339** chrome words, same script and browser as the earlier
 measurement. That is 2px above where the day started, and 38 words spent on a
 number that was previously on no page at all. If you want it shorter, the
 sentence that can go is the definition ("a scan reached the site, but no backup
-age and no plugin or theme count") — but that makes it a bare number, which is
+age and no plugin or theme count"), but that makes it a bare number, which is
 what the four cards existed to stop.
 
 `test-page.mjs` is **68 → 71**. Three more checks, each verified to fail
@@ -233,7 +233,7 @@ against the page as it stood before this pass.
   re-pointed at the new page, or the copy is consciously dropped from the
   product. That is a decision about what the new page should say, not a
   cleanup. Give it its own session.
-- ~~**The green-state residual.**~~ **DONE 2026-08-29, evening — see the
+- ~~**The green-state residual.**~~ **DONE 2026-08-29, evening. See the
   coverage-line section above.** Measuring it first changed the fix: the
   backlog pair agreed on the day's data (42 and 42, by coincidence, still from
   different sources) and the coverage pair was the one that visibly disagreed
@@ -256,11 +256,11 @@ open fleet.html
 
 ---
 
-## Previously — 2026-08-29, morning: three passes on the page (superseded above)
+## Previously: 2026-08-29, morning: three passes on the page (superseded above)
 
 **Three commits, none pushed.** `HEAD` is `cc28ac7`; `origin/main` is still on
 `29a650f`, checked with `git ls-remote` rather than inferred. Working tree
-clean. **Nothing has been published** — `publish-dashboard.sh` has not run.
+clean. **Nothing has been published**: `publish-dashboard.sh` has not run.
 
     cc28ac7  Four cards over the seven lanes, minus two false groupings
     a646c9d  Merge the banner and the lane strip into one block
@@ -286,7 +286,7 @@ Superseded by the evening block at the top of this file, which measures the
 same page with a committed script rather than by hand.
 
 **The last two rows go the wrong way and that is deliberate.** The merge cost
-7px in borders and the cards cost 36px in definitions — including two the
+7px in borders and the cards cost 36px in definitions, including two the
 concept had dropped. Do not "reclaim" that by shortening a card gloss; those
 words are the fix for a bug in the bug table. An earlier version of this
 measurement claimed the merge made things WORSE, because it counted the lane
@@ -297,10 +297,10 @@ strip twice once it moved inside the banner.
 | cut | why it was safe |
 |---|---|
 | the banner's `(Pantheon health 48/52, Nexcess health 21/22, …)` | the same `sweepLine()` runs render in the strip 40px above it, with timestamps and a stale marker the banner has no room for |
-| the audit-workbook checkbox and its four columns, and the Workbook paragraph in the key | the drawer shows SIX claims per site with a `Confirmed by` cell reading `nobody here yet (workbook import 2026-08-18)` — the thing the paragraph said in prose, said beside the claim. The totals section below the matrix names the sites where a claim has no matching plugin |
+| the audit-workbook checkbox and its four columns, and the Workbook paragraph in the key | the drawer shows SIX claims per site with a `Confirmed by` cell reading `nobody here yet (workbook import 2026-08-18)`: the thing the paragraph said in prose, said beside the claim. The totals section below the matrix names the sites where a claim has no matching plugin |
 | two of the three `85 sites · 16 questions` | the survivor is the tools-row count, the only one that follows the filter |
 | "Rows are grouped by what happens next…" | it described a layout you can see: the group headers are in the table, the AXES group is labelled |
-| the lane gloss inside the matrix group headers | the same words render on the tiles, ~600px up. The tiles keep them — `test-page.mjs` pins them rendered and unfolded, and the 2026-08-28 comment above them now says so |
+| the lane gloss inside the matrix group headers | the same words render on the tiles, ~600px up. The tiles keep them: `test-page.mjs` pins them rendered and unfolded, and the 2026-08-28 comment above them now says so |
 | the census bar row, with the footer clause that was its only legend | computed over all 85 sites, never followed the filter, explained by a `title=` tooltip and one sentence 3,800px below it. Its column denominator and its 85 cells all stay |
 
 Nothing that names an absence was touched: the hatch, `n/a`, `no API`,
@@ -310,15 +310,15 @@ not 'nothing pending'".
 
 ### Pass one: two things went wrong doing it, both in the bug table now
 
-1. **`test-page.mjs` renders nothing — it opens `./fleet.html`, a committed
+1. **`test-page.mjs` renders nothing. It opens `./fleet.html`, a committed
    artifact.** Two runs reported "47 passed" against a page rendered before the
    edits, in the same voice as a real pass. CI had the same hole: its step had
    no render before it, so any change to `page.js` without a re-render passed
    green. `offline-tests.yml` renders first now. Locally the sequence is
    `./scripts/render-dashboard.py --out fleet.html && node test/test-page.mjs`.
 2. **The first version of the new banner check was vacuous.** It trimmed each
-   sweep line at the first digit, producing `Pantheon health Aug` — a string
-   that appears nowhere — so it passed against a banner with the duplication
+   sweep line at the first digit, producing `Pantheon health Aug`: a string
+   that appears nowhere, so it passed against a banner with the duplication
    put back. Found by running the negative control, not by reading it.
 
 **Every new check was verified to fail** by re-adding the thing it forbids and
@@ -326,7 +326,7 @@ watching it go red. `test-page.mjs` is 47 → 55.
 
 ### Pass two: the banner and the lane strip merged into one block
 
-Doug, looking at the two stacked boxes: *"can we combine these?"* Yes — and it
+Doug, looking at the two stacked boxes: *"can we combine these?"* Yes, and it
 turned out to be a correctness fix, not a layout one. **The banner's prose was
 printing numbers that were not the tiles beneath it**: "a backlog (42 sites)"
 over a `Needs scheduling` tile of 41, and "unmeasured (11 sites)" over a
@@ -348,15 +348,15 @@ the banner.
 
 **One residual, seen in the green render and left alone.** The green sentence's
 backlog count comes from `backlogOnly` and the tile below it from the
-`schedule` lane, so in that state they can differ — the synthetic green render
+`schedule` lane, so in that state they can differ: the synthetic green render
 showed 42 in the sentence and 44 on the tile. Fixing it means changing wording
 that `test-page.mjs` pins as the "not an all-clear" guarantee, which is not a
 thing to do casually. Decide it deliberately.
 
 **Still true after pass three**, now against the `Needs scheduling` chip inside
 the Planning card rather than a tile. It is the last surviving instance of the
-thing pass two existed to remove — a prose number beside a lane count from a
-different source — and the only reason it survived is that the guard pins the
+thing pass two existed to remove: a prose number beside a lane count from a
+different source, and the only reason it survived is that the guard pins the
 sentence. **It appears in the GREEN state only**, which this fleet has never
 been in, so nobody has seen it on a real page.
 
@@ -369,7 +369,7 @@ reading the label:
 
 - `Not scored` held `4 Not measurable` and `1 Excluded by ruling`. **All five
   are scored.** SKIP and FROZEN are severity statuses, and `excluded` means
-  scored and not counted — `cm-whitelabel` was **CRIT with three findings** the
+  scored and not counted: `cm-whitelabel` was **CRIT with three findings** the
   day a card said the tool could produce no result for it. They are a quiet
   line under the cards now, worded as what they are.
 - `Planning / decision pending` held `11 Not established` beside the backlog
@@ -386,8 +386,8 @@ the same set was called three different names in one block. The build uses
 
 **The cards cost height, and the definitions are why.** 697px before the first
 data row, against 654px for the seven tiles and 759px at the start of the
-session. The cards carry fuller definitions than the tiles did — including the
-two the concept dropped — so they are wordier on purpose: 285 chrome words
+session. The cards carry fuller definitions than the tiles did, including the
+two the concept dropped, so they are wordier on purpose: 285 chrome words
 against 250. Net against where the session started, still 62px and 46 words
 better.
 
@@ -396,7 +396,7 @@ block counted seven `.lanes li` and read a `.lane-sub` out of each, which
 describes the markup of 2026-08-28 and broke entirely on a change that kept the
 guarantee intact. It now asserts the property: **every lane word this page
 invents is displayed, and a visible definition is displayed with it**, wherever
-that lives. Plus three new guards, each verified to fail — a card holding
+that lives. Plus three new guards, each verified to fail: a card holding
 several lanes must define each in its gloss, "Not established" must not be
 grouped with scheduling or rulings, and nothing may call a scored site unscored.
 
@@ -405,12 +405,12 @@ grouped with scheduling or rulings, and nothing may call a scored site unscored.
 - **The thesis line.** `One row per site, one column per question. Hatched is
   unmeasured. Schedule tab: the same evidence arranged by decision.` All three
   clauses are stated better lower down: the tools-row count, the key's
-  `not measured — an absence, never a pass`, and the Schedule tab's own
+  `not measured: an absence, never a pass`, and the Schedule tab's own
   sub-label. Not cut because Doug did not pick it; it is the obvious next one.
 - **The Evidence tab now has no sub-label while Schedule has one.** They are
   the same height and it renders fine, but it is lopsided. Restoring a label
   means re-adding a third copy of the count, so the alternative is to cut
-  Schedule's — which would remove the only preview of what is behind that tab.
+  Schedule's, which would remove the only preview of what is behind that tab.
   Left alone deliberately.
 - **`render()` and `--legacy-out`.** Handoff candidate 3, untouched. CLAUDE.md
   says retire after one published cycle; that cycle passed days ago, and
@@ -431,8 +431,8 @@ has not run, and pushing is a human action.
 ./scripts/render-dashboard.py --out fleet.html --components-out components.html
 ```
 
-**Render BEFORE testing, every time.** `test-page.mjs` renders nothing — it
-opens `./fleet.html`, a committed artifact — so running it on a page.js edit
+**Render BEFORE testing, every time.** `test-page.mjs` renders nothing. It
+opens `./fleet.html`, a committed artifact, so running it on a page.js edit
 without this step tests the last commit's page and reports a pass. It cost two
 false "47 passed" this session and CI had the same hole.
 
@@ -446,7 +446,7 @@ Then the offline suites, all of which run in CI on every push:
 for t in test/test-*.py; do echo "== $t"; python3 "$t"; done
 ```
 
-To look at the page rather than the HTML — which is how most of the bug table
+To look at the page rather than the HTML, which is how most of the bug table
 was found, and is step 2 of the definition of done:
 
 ```bash
@@ -455,13 +455,13 @@ open fleet.html
 
 ---
 
-## Previously — 2026-08-28, afternoon: the v3 re-run is DONE, ingested and published
+## Previously: 2026-08-28, afternoon: the v3 re-run is DONE, ingested and published
 
 **Nothing in this repo is waiting on code right now.** State verified this
 afternoon rather than read off this file, which is the point of the paragraph
 below:
 
-- Gating v3 ran twice this morning — `2026-08-28_1212` (concurrency 3) and
+- Gating v3 ran twice this morning: `2026-08-28_1212` (concurrency 3) and
   `2026-08-28_1322` (concurrency 1, after an hour's cooldown). Identical
   results. Both are in the ledger.
 - The four artifacts in R2 (`fleet/dashboard.html`, `components.html`,
@@ -483,12 +483,12 @@ in the bug table: correct the morning it stops being true.
 **18 of 27 tested. 0 still firing. 14 sending cookieless `gcs=G100` pings.**
 
 The only thing that fires on any tested site after a real Reject All is a GA4
-`collect` at `gcs=G100` — the cookieless consent-mode ping, which is the
+`collect` at `gcs=G100`: the cookieless consent-mode ping, which is the
 correct denied behaviour and is exactly what Nick said should be there.
 
 Nine inconclusive, two causes, both diagnosed:
 - **4 have no clickable Reject control** (3 known, plus `hoosierfeeder.com`,
-  new to the roster — it loaded for the first time in the 08-28 cold sweep
+  new to the roster. It loaded for the first time in the 08-28 cold sweep
   after HTTP 403 in every earlier run).
 - **5 draw a Cloudflare "Just a moment" challenge on the SECOND navigation.**
   Measured on `breakstones.com` with headers and body read. v2's reload drew
@@ -499,18 +499,18 @@ Nine inconclusive, two causes, both diagnosed:
 labels are `cold load, no consent state`, `real click on Reject All`, and
 `OneTrust set to all-denied`. Only the middle one is the v3 measurement. A
 substring match on "denied" silently selects the synthetic pass and gives 19
-G100 sites instead of 14 — done accidentally this afternoon, caught by the
+G100 sites instead of 14: done accidentally this afternoon, caught by the
 count disagreeing with the commit message.
 
 ### Open, and NOT blocked on anyone
 
 **`interstatewaste.com`'s two passes disagree, and the disagreement is
-EXPLAINED — it is not a defect.** I wrote it up as a test defect first and that
+EXPLAINED. It is not a defect.** I wrote it up as a test defect first and that
 was wrong; the correction is here rather than removed because the reasoning is
 the useful part.
 
-In run 1322 the synthetic all-denied pass records `gcs=G111` — consent GRANTED
-— with DoubleClick and GA4 firing, while the real click pass on the same site
+In run 1322 the synthetic all-denied pass records `gcs=G111`: consent GRANTED
+with DoubleClick and GA4 firing, while the real click pass on the same site
 in the same run records the correct `G100`. The rule in this file says two
 passes disagreeing about one site is a defect in the test. It is the right
 rule and it is what caught the Clarity finding. It does not apply here:
@@ -523,7 +523,7 @@ rule and it is what caught the Clarity finding. It does not apply here:
   above the pass it runs: **a cookie present at load never UPDATES**, so a
   consent signal pushed on OneTrust's update event never fires. On an opt-out
   site the Google default is granted, so Google stays at G111. A real click
-  produces the update, and G100 appears — which is exactly what the click pass
+  produces the update, and G100 appears, which is exactly what the click pass
   measures.
 - The click pass is definitive, the verdict is taken from it, the site reads
   GATED, and **that is correct**.
@@ -534,7 +534,7 @@ it wrong, because `C0001` (or group `1`) is Strictly Necessary and is ALWAYS
 sites unless it excludes the necessary group.
 
 **The real gap is smaller and is mine to fix.** `optanon_groups_after_load` is
-captured on all three passes and read on ONE — the cold pass, as
+captured on all three passes and read on ONE: the cold pass, as
 `consent_groups_default`. Nothing reads it on the DENIED pass, which is the
 pass it was captured to guard. The code comment says the test "must say so
 rather than reporting 'not gated'"; nothing says so. If OneTrust ever did
@@ -543,13 +543,13 @@ record that the pass had proved nothing. A captured fact with an unkept
 promise, which is this repo's signature bug pointed at its own instrument.
 
 **And a second unknown, found measuring the first.** Six sites answer with a
-NUMERIC group schema (`1:1,2:0,4:0` — breakstones, crackerbarrel, knudsen,
+NUMERIC group schema (`1:1,2:0,4:0`: breakstones, crackerbarrel, knudsen,
 kraftnaturalcheese, scottishcheddarcheese, valbresocheese) while the cookie we
 write uses `C0001..C0005`. OneTrust replaced our cookie with its own. Whether
 it honoured our denial or fell back to a denied DEFAULT cannot be told from
 what is recorded, so on those six the synthetic pass may be measuring the
-site's default rather than our denial. It does not affect any verdict — the
-click pass does that — but it should be recorded as unknown rather than read
+site's default rather than our denial. It does not affect any verdict: the
+click pass does that, but it should be recorded as unknown rather than read
 as a successful denial.
 
 ### DECIDED 2026-08-28: the page renders the last GOOD run per source
@@ -558,8 +558,8 @@ as a successful denial.
 it wants its own session.
 
 **The problem it solves, measured today rather than imagined.** A consent
-coverage drop — 71 of 79 from a runner against 78 from a laptop, because 7
-sites refuse GitHub IPs — blocked every publish from every workflow. Fresh
+coverage drop: 71 of 79 from a runner against 78 from a laptop, because 7
+sites refuse GitHub IPs: blocked every publish from every workflow. Fresh
 Pantheon, Nexcess and email data could not reach the page because ONE source
 saw less from a different vantage point. There are only two answers today:
 publish the worse data, or publish nothing.
@@ -572,7 +572,7 @@ What it buys, in order of value:
 
 1. **A failed scan stops being an emergency.** Today a degraded run blocks the
    whole page, so every failure is urgent and the only remedy is a full
-   re-run — which cost two Nexcess SSH runs and two consent sweeps on
+   re-run, which cost two Nexcess SSH runs and two consent sweeps on
    2026-08-28 alone. A contained failure is fixed when someone gets to it.
 2. **A stable reference for debugging.** The page's state currently depends on
    whether the newest run happened to be good. With a fallback, "what the page
@@ -594,7 +594,7 @@ What it buys, in order of value:
   UNMEASURED, not keep showing week-old numbers as though they were today's.
 
 **SCOPE BOUNDARY, agreed and worth holding.** This fixes the publish coupling
-and the common case, including `app.eastauroracc.com` — that scan measured 1
+and the common case, including `app.eastauroracc.com`. That scan measured 1
 of 22, so it IS a coverage drop and the fallback catches it.
 
 It does **not** fix the general `unknown`-overwrite question. A scan that
@@ -608,7 +608,7 @@ unless it bites in practice.
 
 **Every place that groups runs will need this**, and CLAUDE.md records that the
 last cohort change had to be fixed in four places before the warning stopped
-firing — `previous_run_of_same_source`, `coverage_regressions`, ingest's
+firing: `previous_run_of_same_source`, `coverage_regressions`, ingest's
 `last_by_source`, and the renderer. Grep for all of them first.
 
 ### Next, in order
@@ -657,13 +657,13 @@ firing — `previous_run_of_same_source`, `coverage_regressions`, ingest's
    `consent_gating_leak`, consent axis, WARN, routed to "needs a person"
    because a visitor who explicitly refused and is tracked anyway is the
    strongest consent finding available. **0 sites leak**, measured. Untested
-   is an info line on 9 sites, never a WARN — a rule firing on all of them
+   is an info line on 9 sites, never a WARN: a rule firing on all of them
    ranks nothing, which is the `upstream_pending` mistake.
 
    **Nothing was waiting on Nick, and this file said it was for a day.** The
    standard was settled in `docs/CONSENT.md` from the first sweep and
    implemented in two scripts. Doug spotted it: "I thought this was all asked
-   and answered previously." It was. Checked before writing this time —
+   and answered previously." It was. Checked before writing this time,
    `git log -S` confirms no gating severity code has ever existed, so nothing
    was lost or reverted either.
 
@@ -672,7 +672,7 @@ firing — `previous_run_of_same_source`, `coverage_regressions`, ingest's
 
 ---
 
-## Previously — 2026-08-28, morning: the gating window was wrong AGAIN, fixed as v3
+## Previously: 2026-08-28, morning: the gating window was wrong AGAIN, fixed as v3
 
 **The correction to Nick has NOT been sent, and that is now correct twice
 over.** An outside review of the whole repo ran today (delivered to Doug as a
@@ -681,8 +681,8 @@ its most urgent finding was in the gating test we fixed yesterday:
 
 **v2's window erased the load it exists to measure.** The 2026-08-27 fix
 cleared the request counters after `page.reload({waitUntil:'load'})` resolved.
-The load event fires AFTER the fresh page's load-phase requests — where GA4
-pageview hits normally fire — so everything the consent-denied page did while
+The load event fires AFTER the fresh page's load-phase requests. Where GA4
+pageview hits normally fire, so everything the consent-denied page did while
 loading was recorded and then wiped. "Nothing fires after rejection" is the
 best possible result, and the instrument manufactured it: run 2159's "0 of 23
 still fire" is unmeasured, and the bug-table sentence "ZERO requests on all
@@ -693,13 +693,13 @@ window). Both are corrected in place.
 a FRESH one on the same context: the rejection cookie persists, the listener
 exists before the first request, the window is the measured page's lifetime.
 No clear whose ordering can be wrong a third time. It is the shape the
-synthetic-cookie pass always had — which is also why Nick being right about
+synthetic-cookie pass always had, which is also why Nick being right about
 the trigger still stands: that pass was never mis-windowed.
 
 - `test/test-gating-window.mjs` (new, 10 checks) drives both boundaries
   against a local fixture: a load-phase request IS measured, the old page's
   post-click beacon is NOT. **Verified to fail against v2 before v3 existed**
-  (the two load-phase checks failed, the exclusion passed — exactly the
+  (the two load-phase checks failed, the exclusion passed: exactly the
   defect).
 - `test-consent.py` is 124: two new greps refuse the known regression shapes.
 - The sweep's `method` string changed with the window, deliberately: the
@@ -725,8 +725,8 @@ the trigger still stands: that pass was never mis-windowed.
    behaviour becoming visible, not a regression. Then ingest, render, read
    the consent page.
 2. **Then send Nick the correction**, quoting v3 numbers only. His second
-   objection — that a compliant site should still send cookieless pings and
-   our report showed none — was v2's defect showing; the re-run should
+   objection. That a compliant site should still send cookieless pings and
+   our report showed none. Was v2's defect showing; the re-run should
    finally answer it properly.
 3. Everything in the 2026-08-27 block below still stands otherwise: B1 blocked
    on content, B6 open, no gating severity codes until Nick answers.
@@ -755,7 +755,7 @@ most urgent item; five more landed the same day, one commit each:
    both states. Pages re-rendered and committed.
 5. **CI now runs every offline suite on every push**
    (`.github/workflows/offline-tests.yml`, incl. both Chromium suites), and
-   test-email-dns.py stops pinning the fleet at 78 — it asserts the scan
+   test-email-dns.py stops pinning the fleet at 78. It asserts the scan
    covers its roster instead.
 6. **build-fleet-inventory.py refuses an existing --out.** A rerun per its
    own Usage block would have silently erased every hand ruling in the
@@ -767,11 +767,11 @@ domains (their consent rows describe lactalisusa.com, not themselves).
 
 ---
 
-## Previously — 2026-08-27, end of day: everything is pushed, published and deployed
+## Previously: 2026-08-27, end of day: everything is pushed, published and deployed
 
 `HEAD` and `origin/main` are both `1af5401`. All four pages are live and were
 verified by reading them back from R2 and from the deployed Worker, not by
-trusting a success message. **The Worker was redeployed today** — the first
+trusting a success message. **The Worker was redeployed today**: the first
 time in this project's history that a route was added, so it is worth knowing
 that `wrangler deploy` from `ci/cloudflare` is a human action and the file
 means nothing until it runs.
@@ -784,7 +784,7 @@ Live: `/` (evidence matrix), `/components`, **`/consent` (new)**,
 The dashboard used to report `interstatewaste.com` as leaking four trackers.
 It is opt-out outside California, working exactly as designed, and the agency's
 own OneTrust audit records it compliant. **The sweep observed correctly and the
-rule drew a conclusion the observation could not support** — the cold load
+rule drew a conclusion the observation could not support**: the cold load
 cannot tell a correctly configured opt-out site from an ungated one, because
 both produce an identical result.
 
@@ -805,7 +805,7 @@ Four things fixed that, in order:
 4. **Its own page**, `/consent`, on the dashboard's chrome, with an ours-only
    toggle.
 
-### The finding that was not one — read this before trusting the gating sweep
+### The finding that was not one. Read this before trusting the gating sweep
 
 The sweep reported **MS Clarity still firing after Reject All** on
 `actioncarting.com` and `interstatewaste.com`. It was raised with Nick Federico
@@ -814,19 +814,19 @@ right.**
 
 `test-gating.mjs` cleared its request counters BEFORE the post-rejection
 reload, merging the window where the ALREADY-OPEN page finishes its work with
-the window that actually answers the question — a fresh consent-denied load.
+the window that actually answers the question: a fresh consent-denied load.
 Clarity flushes its session buffer on consent change, and those beacons were
 attributed to a tag ignoring consent.
 
 ~~Fixed, and re-run fleet-wide: **0 of 23 tested sites still fire after Reject
 All.**~~ **That number is a v2 measurement and is unmeasured.** The window it
-was taken through erased the load it existed to measure — see the 08-28 block
+was taken through erased the load it existed to measure. See the 08-28 block
 at the top. The v3 answer is **0 of 18**, and the difference is not 5 sites
 getting worse: 5 of yesterday's 23 now draw a Cloudflare challenge on the
 second navigation and are honestly inconclusive rather than dishonestly clean.
 
 **The lesson, because it is more useful than the fix.** The instrument's own
-two passes disagreed about the same site — the synthetic-cookie pass had Google
+two passes disagreed about the same site: the synthetic-cookie pass had Google
 correct at `gcs=G100` and Clarity stopped, the click pass had Google absent and
 Clarity firing. That contradiction was in the output before the message was
 sent. Two passes of one test disagreeing about one site is a defect in the
@@ -864,7 +864,7 @@ outside and was the more informative half of his reply.
 
 ---
 
-## Previously — 2026-08-27, evening: the new page is built, not pushed, not published
+## Previously: 2026-08-27, evening: the new page is built, not pushed, not published
 
 **`render-dashboard.py --out` now writes the evidence-matrix page.** Doug chose
 it from three rendered concepts and said "ship it". Everything below the
@@ -894,7 +894,7 @@ What was done, in `docs/DASHBOARD-V3.md` and CLAUDE.md "The page, since
    `./scripts/publish-dashboard.sh`.
 3. Read https://fleet.thudstaff.com on a phone and a laptop.
 4. Decide whether `test/test-page.mjs` goes in the publish job (Chromium
-   download on the runner) — see DASHBOARD-V3.md "Not done".
+   download on the runner). See DASHBOARD-V3.md "Not done".
 5. After one published cycle, retire `render()`, `--legacy-out`, and the
    `RD.render(...)` assertions in `test-ledger.py`.
 

@@ -86,7 +86,7 @@ python3 test/test-email-dns.py
 ```
 
 **You should see:** `43 passed, 0 failed` and then `45 passed, 0 failed`.
-(Those were the counts on 2026-08-23. They are 317 and 65 as of 2026-08-28 —
+(Those were the counts on 2026-08-23. They are 317 and 65 as of 2026-08-28,
 another reason not to follow this part as written. The current list of suites
 is in CLAUDE.md under "Testing".)
 
@@ -129,7 +129,7 @@ clevermethod Mailgun setup is incomplete.
 **Skip this step. It was completed on 2026-08-22 and the commands below would
 now fail.** `ci/github-actions/` no longer exists; all five workflow files live
 in `.github/workflows/`, which is the only copy and is edited directly. See the
-hard boundary in `CLAUDE.md` — do not recreate a mirror.
+hard boundary in `CLAUDE.md`. Do not recreate a mirror.
 
 The original step said the files were "parked in `ci/github-actions/` because
 the Claude file bridge is not allowed to write into `.github/`". That
@@ -268,7 +268,7 @@ above:
    critical WordPress vulnerability, the remediation record is blank for every
    Nexcess site. Someone should confirm they are clean and write it down.
    *(2026-08-24: the SSH deep scan that would answer this automatically is no
-   longer gated — Nexcess confirmed one account-level key reaches all 21 sites.
+   longer gated: Nexcess confirmed one account-level key reaches all 21 sites.
    It still has to be built, so this stays a human task for now. See
    `docs/NEXCESS.md`, "Phase 2: the gate is open".)*
 2. ~~**hoffmanscheese and hoosierfeeder.com.**~~ **Half closed 2026-09-01.**
@@ -403,7 +403,7 @@ Two things in the original entry were wrong and are corrected in place below:
   the component catalogue rather than the host column.
 
   **The sites with no recorded sending domain are, with one exception, the
-  sites with no SMTP plugin.** That is not a coincidence — the workbook cell
+  sites with no SMTP plugin.** That is not a coincidence: the workbook cell
   is blank because there was nothing to write in it. `lactalisamericangroup`,
   `lactalisheritagedairy`, `lactalisyogurtusa`, `midwestyogurt` and
   `eamusicfest` run no mailer at all: they send through PHP `mail()` or the
@@ -422,7 +422,7 @@ Two things in the original entry were wrong and are corrected in place below:
 
 `wp option get postman_options --format=json`, gated on post-smtp appearing in
 the plugin list the scan already fetched, so a site without it costs no extra
-call. Three facts — `smtp_plugin_seen`, `smtp_from_domain`, `smtp_relay_host` —
+call. Three facts: `smtp_plugin_seen`, `smtp_from_domain`, `smtp_relay_host`,
 documented in `docs/DATA-MODEL.md` section 2a. The option key is tried under
 several spellings and records `unknown` when none match, because **it has never
 been verified against a live site**: `terminus` is not authenticated on this
@@ -435,20 +435,20 @@ way to settle it on one real site before trusting a fleet-wide number.
 **security control**, reviewed and approved by Doug on 2026-08-25, because
 Nexcess issues no read-only SSH user and the credential can write to 22 client
 sites. Adding a seventh command invalidates that approval, and nothing on the
-host would stop the change — there is no permission error to hit.
+host would stop the change. There is no permission error to hit.
 
 The command to add is the same read: `wp option get postman_options
 --format=json`. It reads one WordPress option and writes nothing.
 
 **Measured 2026-08-26, what the Nexcess half is actually worth:** 20 of the 21
-Nexcess sites run post-smtp, so it takes the measurement from 39 sites to 59 —
+Nexcess sites run post-smtp, so it takes the measurement from 39 sites to 59,
 **a third of the achievable coverage**. It adds 19 workbook claims to
 cross-check. And it closes `hitsfoundation.org`, **the only one of the six
 blanks any version of this feature can close.**
 
 So the half that needed no approval closes no blanks, and the one blank within
 reach is behind the approval. **Re-review it, record the new approval in the
-script header, then add it** — not the other way round.
+script header, then add it**, not the other way round.
 
 ---
 
@@ -505,7 +505,7 @@ mockups and the forked renderer that carried them are deleted: a second copy of
 the thing that publishes is a place for the two to disagree.
 
 Applied: four exception tiles that each filter the table, a change feed grouped
-by site, coverage stated as `48 checked · 4 not checked — of 52`, one sweep
+by site, coverage stated as `48 checked · 4 not checked: of 52`, one sweep
 line under the masthead, folded methodology with qualification kept inline, and
 two columns that had been printing a bare `unknown`.
 
@@ -587,7 +587,7 @@ this fleet has never counted.
 **Correction, 2026-08-28: the withdrawal stands, its measurement does not.**
 The "instrumented properly" re-run below was made with a window that opened
 AFTER the load event, erasing everything the consent-denied page fired while
-loading — so "zero requests" and "0 of 23 still fire" were manufactured by the
+loading, so "zero requests" and "0 of 23 still fire" were manufactured by the
 instrument, not measured, and 3 sites recorded `gcs=G100` pings even through
 that window. Nick being right about the trigger rests on the synthetic-cookie
 pass, which was always windowed correctly, so the withdrawal's conclusion
@@ -596,7 +596,7 @@ holds. The fleet-wide numbers do not; re-run the gating sweep (window v3,
 last row.
 
 This item claimed `onetrust-audit.xlsx` and the gating scan disagreed about
-`interstatewaste.com` — the workbook recording "Scripts Fire w/ Respect to
+`interstatewaste.com`: the workbook recording "Scripts Fire w/ Respect to
 Consent: Yes" while the scan reported MS Clarity still firing after Reject All.
 The fleet-wide run then found the same on `actioncarting.com`, which shares the
 Interstate Waste rule, and it was raised with Nick Federico on Teams.
@@ -611,7 +611,7 @@ reload, merging two windows that mean different things:
 
 Clarity is a session recorder; it flushes on consent change. Those beacons were
 recorded as "still firing after Reject All". Measured with the two windows
-separated, the post-reload window has **zero requests** — nothing fires at all.
+separated, the post-reload window has **zero requests**. Nothing fires at all.
 
 Re-run fleet-wide after the fix: **0 of 23 tested sites still fire.** The
 finding does not exist.
@@ -620,9 +620,9 @@ finding does not exist.
 passes disagreed about the same site: the synthetic-cookie pass showed Google
 correct at `gcs=G100` and Clarity stopped; the click pass showed Google absent
 entirely and Clarity firing. Two passes of one instrument contradicting each
-other is a defect in the instrument. Nick's second objection — that Google
+other is a defect in the instrument. Nick's second objection. That Google
 should still send cookieless pings when you reject, and our report showed none
-— was that same bug seen from the outside, and it was the more informative half
+was that same bug seen from the outside, and it was the more informative half
 of his reply.
 
 **Doug owes Nick a correction.** The wrong finding was sent under our name.
@@ -647,7 +647,7 @@ reach it.
 
 ---
 
-## B1. `maintenance_contract` — is a backlog our job or their decision?
+## B1. `maintenance_contract`. Is a backlog our job or their decision?
 
 **Victoria:** *"all of this security/version stuff does lead into the question
 of how to handle this for clients who aren't paying for maintenance. does it
@@ -688,7 +688,7 @@ render and do nothing.
 **Blocked on:** a list of which clients pay for maintenance. Books, Harvest, or
 somebody typing it once.
 
-## B2. `pci` — a per-site PHP floor
+## B2. `pci`: a per-site PHP floor
 
 **Victoria:** *"if we have a site that has PCI as a factor (like
 woodmarkpharmacy) then that might force the PHP version requirement to 'as new
@@ -737,7 +737,7 @@ person with git. An edit form means auth, an audit trail, and a way to tell a
 scan-derived fact from a typed one. Worth doing deliberately; not worth
 sliding into.
 
-## B5. CLOSED 2026-08-27 — the Lactalis sites are not ours, and the map is right
+## B5. CLOSED 2026-08-27: the Lactalis sites are not ours, and the map is right
 
 The consent page marks 14 sites as running consent tooling clevermethod does
 not manage. Eleven of them are Lactalis brands on OneTrust, all with zero

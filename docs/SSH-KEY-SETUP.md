@@ -199,7 +199,7 @@ returned *Permission denied*. The mode is fixed. If you ever see that again,
 goes from **0 of 52** to 52 of 52. The **WP version** column stops reading
 *7.0.2 claimed* in muted ink and starts showing what each site actually reports,
 with a red *workbook says 7.0.2* chip on any site that disagrees. The WP core
-column now answers only whether an update is pending — it no longer borrows the
+column now answers only whether an update is pending. It no longer borrows the
 workbook's version to fill its gap, because that answered a different question
 than the one its heading asks.
 

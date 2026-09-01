@@ -5,7 +5,7 @@ Copy everything below the line into a new session.
 ---
 
 You are a senior UI/UX designer. I want a **complete redesign** of the
-`fleet.thudstaff.com` dashboard — not an improvement pass on what exists.
+`fleet.thudstaff.com` dashboard, not an improvement pass on what exists.
 
 Start by understanding the system and the data. Then design what this data
 should actually look like, from scratch.
@@ -15,7 +15,7 @@ should actually look like, from scratch.
 `cm-automation` is read-only monitoring for 85 client WordPress sites across
 six hosting providers. Four independent scanners write measurements into an
 append-only ledger. A renderer reads the ledger and produces two static HTML
-pages. Nothing in this system ever changes a client site — it only reports.
+pages. Nothing in this system ever changes a client site. It only reports.
 
 The dashboard replaced a manual audit spreadsheet. Its readers are the agency
 team who maintain these sites and the account people who talk to the clients
@@ -24,27 +24,27 @@ about them.
 ## Read these first, in this order
 
 **The system:**
-- `CLAUDE.md` — project overview. Read it for what the system *is* and what the
+- `CLAUDE.md`: project overview. Read it for what the system *is* and what the
   data *means*. See the section below about which parts to treat as binding.
-- `docs/DATA-MODEL.md` — the three-layer model: inventory, ledger, components.
+- `docs/DATA-MODEL.md`: the three-layer model: inventory, ledger, components.
   This one matters most. Get this right or the design will misrepresent things.
-- `docs/SEVERITY.md` — how a site gets a status, what the axes are, and why
+- `docs/SEVERITY.md`. How a site gets a status, what the axes are, and why
   "unknown" is deliberately never folded into a yes or a no.
 
 **The current implementation:**
-- `scripts/render-dashboard.py` — 3,092 lines, the renderer that produces both
+- `scripts/render-dashboard.py`: 3,092 lines, the renderer that produces both
   pages. This is what you are replacing.
-- `fleet.html` — 174KB, 11 sections, the current main page.
-- `components.html` — 605KB, the plugin/theme catalogue.
+- `fleet.html`: 174KB, 11 sections, the current main page.
+- `components.html`: 605KB, the plugin/theme catalogue.
 
-**The data itself — read the actual records, not just the schema:**
-- `data/fleet-inventory.json` — 85 sites, hand-maintained, holds ownership,
+**The data itself. Read the actual records, not just the schema:**
+- `data/fleet-inventory.json`: 85 sites, hand-maintained, holds ownership,
   the production flag, and the workbook's historical claims.
-- `history/observations.jsonl` — 2,340 rows, one per tool per site per run,
+- `history/observations.jsonl`: 2,340 rows, one per tool per site per run,
   43 runs.
-- `history/components.jsonl` — 11,178 rows, one per installed plugin,
+- `history/components.jsonl`: 11,178 rows, one per installed plugin,
   mu-plugin and theme per site.
-- `history/runs.jsonl` — run metadata.
+- `history/runs.jsonl`: run metadata.
 
 **Prior design thinking, as context and not as instruction:**
 - `docs/DASHBOARD-V2.md`, `docs/DESIGN-BRIEF.md`, `docs/DESIGN-REVISIT.md`,
@@ -68,8 +68,8 @@ Four sources, each answering a different question:
 | `nexcess` | provider control-plane inventory | 22 sites |
 
 Two independent scoring axes, so a site has a status on each:
-- **health** — is this site being maintained (14 severity codes)
-- **consent** — does it leak trackers before consent (2 codes)
+- **health**. Is this site being maintained (14 severity codes)
+- **consent**: does it leak trackers before consent (2 codes)
 
 Six states: `CRIT`, `WARN`, `OK`, `UNKNOWN`, `SKIP`, `FROZEN`.
 
@@ -99,7 +99,7 @@ rather than one that was designed. **Treat all of it as disposable:**
 
 If a prior decision was right, you will arrive at it yourself. Do not preserve
 anything because the repo says so. Where you deliberately reverse a recorded
-decision, say which one and why — briefly, once, not as an apology.
+decision, say which one and why: briefly, once, not as an apology.
 
 ## What you should not do
 
@@ -111,7 +111,7 @@ when the DNS lookup timed out; 23 sites reported clean when the scanner got
 403 block pages. `CLAUDE.md` has a table of about forty of these.
 
 So: design freely, but do not let the page assert something the data does not
-support. Specifically —
+support. Specifically,
 
 - An unmeasured value must never render as a good one. Absence needs a visual
   treatment that cannot be mistaken for a measurement.
@@ -122,7 +122,7 @@ support. Specifically —
   data. If a record does not say why, the page says nobody has established why.
 
 That is a data-accuracy requirement, not a design limitation. How you express
-it visually is entirely yours, and the current treatment is not a good answer —
+it visually is entirely yours, and the current treatment is not a good answer,
 it is mostly prose paragraphs apologising for the numbers above them.
 
 ## Get the real data first
@@ -146,7 +146,7 @@ That gives you a 178KB JSON file containing:
 | `severity_rules` | the thresholds, so the page can explain itself |
 | `no_health_evidence` | the 11 sites nothing has established health for |
 
-Component data is separate and not in that export — read
+Component data is separate and not in that export. Read
 `history/components.jsonl` directly (11,178 rows, 362 distinct components
 across 68 sites).
 
@@ -157,21 +157,21 @@ JSON in your artifact so it is self-contained.
 ## What I want back
 
 **Two or three rendered concepts, as artifacts I can open and click.** Not one
-proposal, and not fragments — each concept should be a complete, working page
+proposal, and not fragments. Each concept should be a complete, working page
 built from the real data.
 
 Give me genuinely different directions, not three coats of paint on one
 layout. Each should take a **different stance on the central problem** (see
 below). I want to compare approaches, so make them actually differ in
 structure, hierarchy and what they choose to lead with. If a direction turns
-out to be wrong once you build it, say so and show it anyway — a concept that
+out to be wrong once you build it, say so and show it anyway: a concept that
 fails for a clear reason is useful.
 
 Alongside the concepts:
 
 1. **A short critique of the current dashboard.** What is structurally wrong,
    not a list of nitpicks. Lead with the single biggest problem.
-2. **A design rationale per concept** — who it serves, what it puts in the
+2. **A design rationale per concept**. Who it serves, what it puts in the
    first five seconds, what it defers, and what it deliberately gives up.
 3. **A recommendation.** Which one you would ship and why.
 
@@ -187,7 +187,7 @@ and scratch files. Do not push and do not publish.
 The fleet currently scores **2 CRIT, 53 WARN, 25 OK, 3 SKIP, 1 FROZEN.**
 
 Two thirds of it is amber, and 40 of those 53 warnings are a pending WordPress
-update or a plugin backlog — real maintenance work, no emergency, largely the
+update or a plugin backlog: real maintenance work, no emergency, largely the
 same on every site. The current page renders that as 53 near-identical warning
 rows, which tells a reader nothing about where to start.
 

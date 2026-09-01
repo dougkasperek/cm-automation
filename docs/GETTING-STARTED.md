@@ -1,7 +1,7 @@
 # Reading the fleet page
 
 `fleet.thudstaff.com` shows how 84 client sites across 6 hosts are actually
-doing — backups, WordPress versions, tracker leakage, mail authentication. It
+doing: backups, WordPress versions, tracker leakage, mail authentication. It
 replaces the audit spreadsheet. Everything on it was measured by a script, not
 typed by a person.
 
@@ -18,7 +18,7 @@ somewhere else, so you can click anything on the page without consequence.
 ## Three cards, three separate questions
 
 A site has a status on each **independently**. A site can be well maintained and
-still leak trackers — there is no single overall grade.
+still leak trackers. There is no single overall grade.
 
 | card | question | now |
 |---|---|---|
@@ -26,7 +26,7 @@ still leak trackers — there is no single overall grade.
 | Cookie consent | Does the homepage fire trackers before anyone consents? | 48 WARN, 21 OK, 10 UNKNOWN |
 | Email DNS | Can this domain send mail that authenticates? | SPF 72/78, DKIM 70/78, DMARC 78/78 |
 
-Consent is never CRIT by design — CRIT stays a security tier so it remains a
+Consent is never CRIT by design: CRIT stays a security tier so it remains a
 list somebody works through. Those are technical observations, not legal
 conclusions. Email DNS is scored per *domain*, not per site, so it has no column
 in the table at the bottom of the page.
@@ -62,7 +62,7 @@ as much as the coverage behind it.
 
 ## Why almost everything is WARN
 
-Because **32 sites have been looked at but have no health evidence at all** — no
+Because **32 sites have been looked at but have no health evidence at all**, no
 backup age, no plugin count, no theme count. They score WARN for that reason
 alone, not because anything is known to be wrong.
 
@@ -90,7 +90,7 @@ that matters when a vulnerability is announced for one.
 - The plugin count on the fleet table links straight to that site's list.
 
 **Two things to read carefully.** When you filter to one site, the *Sites*,
-*Versions* and *Pending* columns still describe the whole fleet — the page says
+*Versions* and *Pending* columns still describe the whole fleet: the page says
 so, and the site's own version is in the *On this site* column. And it covers
 47 of 53 Pantheon sites and none of the 31 on other hosts, so a component
 showing three sites means three of the sites we can see.
@@ -110,21 +110,21 @@ deactivated is not the same as being removed.
 | Email DNS | Aug 22, 9:08 PM | 78 of 78 |
 | Nexcess estate | never run | 0 of 21 |
 
-Nexcess is built but blocked — the host's API sits behind a bot challenge. It is
+Nexcess is built but blocked: the host's API sits behind a bot challenge. It is
 listed anyway, reading zero, because a source that is silently missing looks
 identical to one that found nothing.
 
 ## Where a person is actually needed
 
-- **Needs a decision** — 5 sites with no owner and no ruling on whether they
+- **Needs a decision**: 5 sites with no owner and no ruling on whether they
   count as production. They are treated as production until someone decides,
   because guessing the other way once hid the worst-maintained site on the fleet.
-- **Sites that do not reconcile** — sites in one source but not another. Every
+- **Sites that do not reconcile**: sites in one source but not another. Every
   one of those disagreements has been worth looking at.
-- **What changed** — the short list since each tool last ran. The section to
+- **What changed**: the short list since each tool last ran. The section to
   read if you only read one.
 
 ---
 
 Access is per person. If the page asks you to sign in and then says you are not
-authorised, you need adding to the list — ask Doug.
+authorised, you need adding to the list. Ask Doug.

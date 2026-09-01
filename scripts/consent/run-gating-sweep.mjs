@@ -141,7 +141,7 @@ async function worker() {
     results.push(r);
     done += 1;
     const v = (r.verdict || '').split(':')[0];
-    console.error(`  [${done}/${roster.length}] ${d} — ${v}`);
+    console.error(`  [${done}/${roster.length}] ${d}: ${v}`);
   }
 }
 

@@ -18,7 +18,7 @@ two claims that clients and other agencies routinely conflate:
 
 - **Correctness** is mechanical and testable, and clevermethod guarantees it:
   does the consent tooling do what it was configured to do?
-- **Posture** is policy — how aggressive to be inside the discretionary band —
+- **Posture** is policy. How aggressive to be inside the discretionary band,
   and the **client owns it**.
 
 A tool that quietly upgrades "two trackers fired before consent" into "this
@@ -47,7 +47,7 @@ Three more reasons it has to be independent:
   than direct observation, and gets its own fact names so a disagreement stays
   visible instead of one silently overwriting the other.
 
-OneTrust still has a place later — cookie inventory and categorisation per
+OneTrust still has a place later: cookie inventory and categorisation per
 site, which is configuration data the wire does not give us. Additive source,
 not the correctness check.
 
@@ -77,7 +77,7 @@ behind Cloudflare has not been established** and that is written into the
 inventory's reconciliation note exactly that way.
 
 Roster today: **78 scannable domains.** Six inventory entries are Pantheon
-machine names with no domain and are reported as skipped, with the reason —
+machine names with no domain and are reported as skipped, with the reason,
 a site missing from a coverage sweep with no explanation is indistinguishable
 from a site that passed.
 
@@ -106,8 +106,8 @@ sweep is not one anybody notices.
 
 ## Severity
 
-**WARN, not CRIT.** Doug's ruling, 2026-08-19: CRIT stays a security tier — act
-now, unpatched RCE, no backup, PHP past end of support — so the CRIT count
+**WARN, not CRIT.** Doug's ruling, 2026-08-19: CRIT stays a security tier: act
+now, unpatched RCE, no backup, PHP past end of support, so the CRIT count
 remains a short list somebody works through. A consent gap is real and it is a
 client conversation.
 
@@ -124,7 +124,7 @@ would flag every site that got it right, which is backwards.
 **A page that would not load scores nothing**, and says so in an info line:
 *"its consent posture is unmeasured, not clean."* Plenty of sites refuse
 headless clients, and a rule that fires on all of them is a WARN floor under
-the fleet for a reason identical everywhere — the exact mistake
+the fleet for a reason identical everywhere: the exact mistake
 `upstream_pending` was making before the severity rebuild.
 
 ## The first real sweep, 2026-08-19, and what it caught in this tool
@@ -132,8 +132,8 @@ the fleet for a reason identical everywhere — the exact mistake
 78 eligible, 77 navigated, **and the first classification was wrong about 23 of
 them.**
 
-`ok` meant "page.goto did not throw". Twenty-three sites answered **HTTP 403** —
-a WAF refusing the headless client — and a block page contains no consent banner
+`ok` meant "page.goto did not throw". Twenty-three sites answered **HTTP 403**,
+a WAF refusing the headless client, and a block page contains no consent banner
 and fires no trackers. All 23 were classified as having nothing to fix. **Thirty
 per cent of the fleet reported clean on the evidence of an error page.**
 
@@ -166,7 +166,7 @@ The three where tooling is present and trackers fire anyway are the Zehnder
 shape and the highest-value rows on the page: `blockclub.co`,
 `hoosierfeeder.com`, `pfannenbergusa.com`. Two of the three were detected by
 the generic banner heuristic rather than a named vendor, which means a
-hand-rolled banner — the worst combination, because it looks like consent is
+hand-rolled banner: the worst combination, because it looks like consent is
 being collected and nothing is waiting for it.
 
 Trackers seen: GA4 28, DoubleClick 12, MS Clarity 6, LinkedIn Insight 2, Bing
@@ -187,8 +187,8 @@ headless era and is kept because it is how the wrong answer was reached.
 reading response headers, which nobody had done: all 20 blocked CM Pantheon
 sites answer `server: cloudflare` with `cf-mitigated: challenge`. Zero reach
 Pantheon, so Pantheon has nothing to allowlist. Being Cloudflare-fronted is not
-itself the trigger — `celticindustrialservices.com` is behind Cloudflare,
-returns 200, and shows a Pantheon `x-styx-req-id` — so this is per-zone bot
+itself the trigger: `celticindustrialservices.com` is behind Cloudflare,
+returns 200, and shows a Pantheon `x-styx-req-id`, so this is per-zone bot
 settings. Those zones use at least four different DNS providers (Cloudflare,
 Network Solutions, managed-ip, MediaTemple), so there is no one account and no
 one owner. See `docs/SESSION-HANDOFF.md`, "The 403s".
@@ -202,7 +202,7 @@ element mentioning cookies, and eight cookies already set. The absence is real.
 
 `cmpScripts` in the scan output settles it at fleet scale: **31 of the 34
 no-tooling sites loaded no consent-related script at all**, and the three
-matches were false positives — `js.cookie.min.js` is a cookie-reading helper
+matches were false positives: `js.cookie.min.js` is a cookie-reading helper
 that ships inside WooCommerce, and the third was a tracking pixel with
 "Capture" in its URL. The pattern has been tightened so a bare `cookie` no
 longer matches. **A diagnostic that produces false positives is worse than no
@@ -225,8 +225,8 @@ know this site's health."* Those were the same number only by accident, while
 health was the only scan there was, and every source added to the suite breaks
 that coincidence again.
 
-The dashboard now states health coverage on its own line — *"N site(s) have
-been looked at but have NO health evidence"* — and `no_health_evidence` is a
+The dashboard now states health coverage on its own line: *"N site(s) have
+been looked at but have NO health evidence"*, and `no_health_evidence` is a
 first-class array in the JSON feed. Watch that number, not UNKNOWN.
 
 **This is the third time a render caught something no test would have.** Do not
@@ -279,7 +279,7 @@ thing the sweep produces.**
 
 - 23 of ~78 of these sites already answer HTTP 403 to a headless browser. More
   concurrency makes a WAF likelier to read the sweep as a crawl and block more
-  of them, and **a blocked site is UNMEASURED** — it leaves the numbers
+  of them, and **a blocked site is UNMEASURED**. It leaves the numbers
   entirely rather than showing up as a finding.
 - Memory is not the constraint. Each unit is a headless Chrome at ~300MB; a
   GitHub `ubuntu-latest` runner (4 vCPU / 16GB) would take 8 comfortably.
@@ -300,7 +300,7 @@ direction that reads as an all-clear.
 > **Corrected 2026-08-23.** This line described `ci/github-actions/`, a
 > gitignored mirror that was deleted on 2026-08-22 after the two copies
 > diverged. `.github/workflows/` is the only copy. Do not recreate a
-> second one — see the hard boundary in `CLAUDE.md`.
+> second one. See the hard boundary in `CLAUDE.md`.
 
 because the file bridge cannot write there. **Diff the two before telling
 anyone to run it.**
@@ -313,7 +313,7 @@ conversation teaches people to ignore the build.
 It calls the shared `_publish-dashboard.yml` after persisting, so the ledger and
 `fleet.thudstaff.com` move together. That was added 2026-08-19 when the first
 ingest revealed that three of four workflows updated the ledger and left the
-live page showing older data — a stale dashboard that looks current is worse
+live page showing older data: a stale dashboard that looks current is worse
 than an obviously missing one.
 
 
@@ -395,15 +395,15 @@ node scripts/consent/run-sweep.mjs --stamp "$(date -u +%Y-%m-%d_%H%M)"
 Headed needs a display. On a laptop that means visible browser windows for the
 duration of the run.
 
-**CI runs headed too, since 2026-08-22.** `fleet-consent.yml` installs `xvfb` —
-a virtual screen — and runs the sweep under `xvfb-run -a`. No `--headless`
+**CI runs headed too, since 2026-08-22.** `fleet-consent.yml` installs `xvfb`,
+a virtual screen, and runs the sweep under `xvfb-run -a`. No `--headless`
 anywhere.
 
 ### How CI can ship a browser change nobody ran on a runner first
 
 **Asking for headed is not the same as getting it.** If xvfb were missing, or
 `DISPLAY` unset, or a runner image changed, the browser could come up headless
-and every number would be an undercount wearing a `chromium-headed` label — this
+and every number would be an undercount wearing a `chromium-headed` label. This
 project's signature bug, in our own handwriting.
 
 So the browser is asked what it actually is. A headless Chromium reports
@@ -415,7 +415,7 @@ disagree, before a single row reaches the ledger.
 Two smaller things that had to be true for that guard to work:
 
 - The Sweep step sets `set -eo pipefail`. It did not before, so the pipeline's
-  exit code was `tee`'s and *any* failure of the sweep — including this abort —
+  exit code was `tee`'s and *any* failure of the sweep, including this abort,
   would have passed the step.
 - `xvfb-run --help` is checked at install time, so a missing package fails on
   the install step with a readable message rather than deep inside the sweep.

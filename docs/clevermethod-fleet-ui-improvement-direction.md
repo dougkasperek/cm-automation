@@ -194,7 +194,7 @@ group those changes into one site-level event.
 
 Example:
 
-### example.com — 3 changes
+### example.com: 3 changes
 
 - WordPress 7.0.4 → 7.1
 - Core update available → up to date

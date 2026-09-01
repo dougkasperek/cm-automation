@@ -124,12 +124,12 @@ below.
 
 | rule | constant |
 |---|---|
-| a WordPress core update is pending | — |
+| a WordPress core update is pending |  |
 | 10 or more plugin updates pending | `PLUGIN_WARN_COUNT = 10` |
 | last backup 8 to 30 days old | `BACKUP_WARN_DAYS = 7` |
-| deep scan ran but the version could not be read | — |
-| no scan ever established the WordPress status | — |
-| the deep scan could not establish the core-update or plugin status | — |
+| deep scan ran but the version could not be read |  |
+| no scan ever established the WordPress status |  |
+| the deep scan could not establish the core-update or plugin status |  |
 
 ### Informational: recorded, displayed, never scored
 
@@ -144,7 +144,7 @@ below.
 ### Non-states
 
 `FROZEN`, `SKIP` (the health scan reached the site, there is no environment to
-measure) and `UNKNOWN` (**no health scan has ever reached this site** — all 32
+measure) and `UNKNOWN` (**no health scan has ever reached this site**: all 32
 Nexcess and outlier-host sites today).
 
 ---
@@ -187,7 +187,7 @@ Tri-state, in `data/fleet-inventory.json`, set by a human:
 of the numbers means a site stops being watched because nobody classified it.
 
 **Do not infer this from the Pantheon plan.** Keying off `plan == "Sandbox"`
-would have excluded `hoffmanscheese` — 721 days without a backup, and one of
+would have excluded `hoffmanscheese`: 721 days without a backup, and one of
 only two real CRITs in the fleet. Plan is a billing attribute.
 
 Today exactly one site is `false`: `cm-whitelabel`, ruled a temp non-public
@@ -195,7 +195,7 @@ site by Doug on 2026-08-19.
 
 ### The review queue
 
-`needs_review()` is **not** `production is None` — that is all 84 sites, and a
+`needs_review()` is **not** `production is None`. That is all 84 sites, and a
 queue containing everything gets ignored.
 
 A site in the manual audit workbook has been through a human pass already.
@@ -230,7 +230,7 @@ core update CRIT while the dashboard calls it WARN. Its exit code 2 also still
 gates CI on that old definition.
 
 Fixing it means giving `severity.py` a CLI mode the shell script shells out to,
-and it **changes CI failure behaviour** — under the new model a pending core
+and it **changes CI failure behaviour**: under the new model a pending core
 update would stop failing the build. That is probably correct and it is not a
 call to make silently. Left for a decision.
 
@@ -253,7 +253,7 @@ dated). Every regression above is asserted by name:
 
 The ledger assertions run against the **committed** ledger in `history/`,
 pinned to a **named** run. Never against `reports/`, which is gitignored, and
-never positionally — see the note in `test/test-ledger.py` about cohort runs.
+never positionally. See the note in `test/test-ledger.py` about cohort runs.
 
 
 ---
@@ -264,34 +264,34 @@ The Nexcess adapter answers PHP and WordPress version from the hosting control
 plane rather than from WP-CLI. Those readings are stored under their own fact
 names (`nexcess_php_version`, `nexcess_app_version`) and scored by four rules.
 
-**`wp_below_floor` from `nexcess_app_version`** — CRIT, and only when no WP-CLI
+**`wp_below_floor` from `nexcess_app_version`**: CRIT, and only when no WP-CLI
 reading exists. Scoring CRIT on control-plane evidence is deliberate. Below the
 wp2shell floor is the highest-value finding this project has, the remediation
 column is blank for all 21 Nexcess sites, and being wrong in this direction
 produces a site to go and check. Being wrong in the other direction produces a
 green row over an unauthenticated RCE.
 
-**`php_eol` from `nexcess_php_version`** — CRIT. Same `PHP_SECURITY_EOL` table,
+**`php_eol` from `nexcess_php_version`**: CRIT. Same `PHP_SECURITY_EOL` table,
 same function. Used only when the health scan has no PHP version, never merged
 with it.
 
-**`nexcess_app_version_unknown`** — WARN. The API answered for the site but said
+**`nexcess_app_version_unknown`**: WARN. The API answered for the site but said
 nothing about the application. Without this rule such a site scores on PHP
 alone and can reach OK, which prints green over a site whose wp2shell status is
 exactly as unknown as it was before the scan ran.
 
-**`coverage_partial`** — WARN. Control-plane discovery gives no backup age, no
+**`coverage_partial`**: WARN. Control-plane discovery gives no backup age, no
 plugin count and no theme count, and those are the facts that make a Pantheon
 OK mean anything. So a Nexcess site cannot reach OK on discovery evidence. The
 rule is conditioned on the site having Nexcess facts and NO health facts, so it
 retires itself the moment an SSH scan supplies them.
 
-**`wp_unestablished`** — WARN. Added 2026-08-23, and it is not a Nexcess rule;
+**`wp_unestablished`**: WARN. Added 2026-08-23, and it is not a Nexcess rule;
 it is listed here because it is the third sibling of the two above. Nothing
 established this site's WordPress status, and no scan tried.
 
 An api-only health run reaches every site's control plane over the Pantheon API
-and reads no WordPress at all — no version, no core-update state, no plugin
+and reads no WordPress at all, no version, no core-update state, no plugin
 count. It fell between the two guards meant to catch that:
 `wp_version_unknown` requires `wp_checked is True`, meaning a deep scan ran and
 failed, and in api-only `wp_checked` is False; `coverage_partial` requires that
@@ -305,7 +305,7 @@ observed"*. Three parts of one page, two of them right. The full run 38 minutes
 later put it back to 7 OK, which is how it stayed invisible: the bug only shows
 in the window between an api-only run and the next full one.
 
-The rule is about the ABSENCE, not the mode that caused it — a site whose
+The rule is about the ABSENCE, not the mode that caused it: a site whose
 WordPress status was never established cannot be OK, whichever mode failed to
 establish it. api-only remains the supported no-SSH fallback, so this recurs
 every time it runs.
@@ -314,12 +314,12 @@ every time it runs.
 because there the WordPress question is not a question and a rule true of every
 one of them would rank nothing. An unrecorded framework warns.
 
-**`wp_update_status_unknown`** — WARN. Added 2026-08-23, hours after
+**`wp_update_status_unknown`**: WARN. Added 2026-08-23, hours after
 `wp_unestablished`, because that rule tested the wrong fact.
 
 `morrison-chs` answered `wp core version` (7.0.4) and then failed the three
 calls that need the database. Its version was known and its update status was
-not, so `wp_unestablished` — which fires on a missing VERSION — stayed silent
+not, so `wp_unestablished`, which fires on a missing VERSION, stayed silent
 and the site read OK with core, plugin and theme all unknown.
 
 The version is not what makes an OK mean anything; "nothing is pending" is. So
@@ -330,11 +330,11 @@ Kept separate from `wp_unestablished` because the remedies differ:
 `wp_unestablished` means run a full scan, this one means find out why WP-CLI
 refused on this site.
 
-**`wp_version_disagreement`** — WARN. WP-CLI and the control plane reporting
+**`wp_version_disagreement`**: WARN. WP-CLI and the control plane reporting
 different versions is a finding, not a tie to break. The WP-CLI reading is what
 scores, so a stale control-plane number cannot manufacture a CRIT.
 
 `nexcess_state` is recorded and scores nothing. Its value set has never been
-observed from this codebase — "stable" is the only value the vendor docs show —
+observed from this codebase: "stable" is the only value the vendor docs show,
 and a rule written against a guessed enum either never fires or fires on
 everything. Write the rule after a live run shows what the field contains.

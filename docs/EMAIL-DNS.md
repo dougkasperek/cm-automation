@@ -224,7 +224,7 @@ some networks and answers instantly from others, including GitHub's, while its
 > **Corrected 2026-08-23.** This line described `ci/github-actions/`, a
 > gitignored mirror that was deleted on 2026-08-22 after the two copies
 > diverged. `.github/workflows/` is the only copy. Do not recreate a
-> second one — see the hard boundary in `CLAUDE.md`.
+> second one. See the hard boundary in `CLAUDE.md`.
 
 | `requirements.txt` | dnspython |
 

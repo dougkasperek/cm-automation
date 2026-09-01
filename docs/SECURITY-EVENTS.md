@@ -6,7 +6,7 @@ SharePoint at `/sites/Projects/Shared Documents/General/`, last modified
 2026-08-20 21:10 UTC.
 
 **Why this file exists.** The event log was the only part of the workbook that
-had never been extracted — `extract-audit-workbook.py` reads the `Sites` and
+had never been extracted: `extract-audit-workbook.py` reads the `Sites` and
 `Security Plugins` sheets and nothing else. Three incidents, one of them still
 open, existed in exactly one place: a spreadsheet that had already silently
 changed shape underneath our importer. It is in git now.
@@ -31,7 +31,7 @@ this becomes the same stale snapshot the workbook already is.
 | **References** | none recorded |
 
 `packagedesignsupply.com` presented a malicious reCAPTCHA to Windows users. One
-of two admin accounts was compromised — which one is unclear — and the attacker
+of two admin accounts was compromised, which one is unclear, and the attacker
 used it to add malicious code to the site.
 
 **The investigation found that almost all clevermethod admin accounts used the
@@ -51,7 +51,7 @@ come from: `keeper_password`, `single_cm_user`, `wp_2fa`, `activity_log`,
 
 ---
 
-## 2. wp2shell — unauthenticated RCE in WordPress core
+## 2. wp2shell: unauthenticated RCE in WordPress core
 
 | | |
 |---|---|
@@ -64,9 +64,9 @@ A critical vulnerability allowing an unauthenticated attacker to take control of
 an affected site. It combines two flaws into remote code execution, so an
 attacker could create administrator accounts or install malicious code:
 
-- **CVE-2026-63030** — route confusion in the WordPress REST API batch endpoint,
+- **CVE-2026-63030**: route confusion in the WordPress REST API batch endpoint,
   `/wp-json/batch/v1`
-- **CVE-2026-60137** — SQL injection in the `WP_Query` author parameter layer
+- **CVE-2026-60137**: SQL injection in the `WP_Query` author parameter layer
 
 Remediation recorded:
 
@@ -92,7 +92,7 @@ the version the site is ON rather than whether an update is pending.
 
 ---
 
-## 3. Pods plugin — privilege escalation, CVE-2026-19598
+## 3. Pods plugin: privilege escalation, CVE-2026-19598
 
 | | |
 |---|---|
@@ -109,7 +109,7 @@ the PHP error log and returns false instead of terminating the request. Every
 guard is therefore ineffective.
 
 An unauthenticated attacker can escalate to Administrator, or overwrite the
-password of any user account including the site owner's — complete site
+password of any user account including the site owner's: complete site
 takeover.
 
 Remediation recorded:
@@ -134,13 +134,13 @@ Doug, 2026-08-23: caught early and believed resolved; the team meets on it
 ### Two open questions on this incident
 
 **The outstanding-issues tab does not exist.** The `Remediation Complete?` cell
-points at it. The workbook has five sheets — `Sites`, `Security Plugins`,
-`Security Event Log`, `Effected Sites 8-20`, `Pods sites` — and none of them is
+points at it. The workbook has five sheets: `Sites`, `Security Plugins`,
+`Security Event Log`, `Effected Sites 8-20`, `Pods sites`, and none of them is
 it. Either it was never created or it was deleted.
 
 **The two site lists disagree, and neither is wrong.** `Effected Sites 8-20`
 holds 17 sites; `Pods sites` holds 32 with their versions. They are answering
-different questions — probably "affected" versus "has Pods installed" — but the
+different questions, probably "affected" versus "has Pods installed", but the
 sheets do not say which is which. Anyone building on this needs to settle it.
 
 ### The two lists, reconciled against the fleet inventory
@@ -149,7 +149,7 @@ Checked 2026-08-23. **All 32 rows in `Pods sites` resolve to a site in
 `data/fleet-inventory.json`.**
 
 Of the 17 in `Effected Sites 8-20`, sixteen resolve. One does not:
-`live-gm-root.pantheonsite.io` — the Pantheon platform hostname for `gm-root`,
+`live-gm-root.pantheonsite.io`: the Pantheon platform hostname for `gm-root`,
 which is in the inventory as `gmroot.com`. A naming variant, not a missing site.
 
 **`Effected Sites 8-20` (17)**
@@ -190,14 +190,14 @@ That was wrong twice over and is corrected here rather than quietly deleted:
   `pantheon-fleet-healthcheck.sh` calls `wp plugin list --update=available`,
   which returns only plugins with an update PENDING. A site sitting on Pods
   3.3.9 with nothing newer released would not appear. The question needs
-  `wp plugin list` without that flag — a different call, which is what step 0
+  `wp plugin list` without that flag: a different call, which is what step 0
   of `docs/VULN-INTEL-REVIEW.md` describes and which is not built.
 
 **What step 0 would actually buy, measured 2026-08-23 against
 `health-2026-08-23_1321`:** 29 of the 32 sites the workbook listed for this
 incident. The three it would miss are `clevermethod-forward` and
 `pfannenbergsales` (SKIP, no live environment to scan) and `elmanyhistory.org`
-(not on Pantheon). Fleet-wide the ceiling is **48 of 84** — the 21 Nexcess and
+(not on Pantheon). Fleet-wide the ceiling is **48 of 84**: the 21 Nexcess and
 10 outlier-host sites have no deep scan at all, so their component inventory
 stays manual until those transports exist.
 
@@ -247,7 +247,7 @@ a second one beside it.
 
 The remaining unsettled parts of the original block:
 
-The dashboard is read-only — `CLAUDE.md`, first hard boundary — so it can
+The dashboard is read-only, `CLAUDE.md`, first hard boundary, so it can
 display an incident record but cannot collect one. Collection is an edit to a
 file in this repo, or it is somewhere else entirely. That is a product decision.
 

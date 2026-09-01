@@ -64,8 +64,8 @@ markdown digest, which reads as *no plugin updates pending*. `"n/a"` is honest;
 
 Consequence: **ten sites currently render green OK with three of eight fact
 fields never observed.** That is the same class of defect as the known-bad
-banner bug already fixed on the dashboard — a display asserting more confidence
-than the data supports — and it is worse here because it is in the stored data,
+banner bug already fixed on the dashboard: a display asserting more confidence
+than the data supports, and it is worse here because it is in the stored data,
 so every downstream consumer inherits it.
 
 This was found by a unit test, not by reading. The prototype's ledger now
@@ -82,7 +82,7 @@ the pipeline. Two things fall out of that:
   fleet are non-production: 3 uninitialized, 1 frozen, 2 with ancient backups.
   All 46 paid-plan sites have a 0-day-old backup. So the highest severity tier
   in the entire fleet currently produces **zero production-actionable
-  findings** — and it will keep producing two forever, which is precisely how a
+  findings**, and it will keep producing two forever, which is precisely how a
   real missing backup gets ignored later.
 - **"hoffmanscheese looks client-named."** That guess appears in three
   documents. It is only necessary because nothing knows whether hoffmanscheese
@@ -99,13 +99,13 @@ It pays for itself immediately:
 - **It resolves 52-vs-54 permanently and structurally.** Inventory is the
   authority, the scan is the observation, and disagreement between them is
   itself a finding. A site in Pantheon but absent from inventory is an
-  `INVENTORY`-class change — the highest tier in the prototype. Today that
+  `INVENTORY`-class change: the highest tier in the prototype. Today that
   discrepancy is a note in a memory file that a human has to remember to chase.
 - Asana routing gets an assignee, which is otherwise unanswerable (brief 5C).
 
 ### 4. The most important fact in the data scores zero
 
-**PHP 8.2 leaves security support on 31 December 2026 — 136 days out — and 46
+**PHP 8.2 leaves security support on 31 December 2026, 136 days out, and 46
 of 52 sites are on it.** Separately, `runtalnorthamerica` (Performance Medium,
 a paying client) is on PHP 8.1, which is already past end of security support
 and receiving no patches at all.
@@ -120,7 +120,7 @@ fleet-wide deadline with a fixed date.
 
 This is not an alert. Nothing is broken today and nothing will be broken
 tomorrow. It is a **planning** output, and the reporting model has no such
-category — which is the real lesson: a model with only pass/fail per site cannot
+category, which is the real lesson: a model with only pass/fail per site cannot
 express the most valuable thing the scan already knows.
 
 ### 5. Cadence has to follow volatility, and volatility is near zero
@@ -128,7 +128,7 @@ express the most valuable thing the scan already knows.
 Two runs, 14 hours apart, 52 sites: **one integer changed.** The prototype's
 diff confirms it and, more usefully, 13 assertions confirm the differ catches
 new sites, vanished sites, resolved upstreams, threshold crossings both
-directions, coverage changes and rule changes — so the quiet answer is a real
+directions, coverage changes and rule changes, so the quiet answer is a real
 measurement, not a broken comparison.
 
 A daily digest against this fleet is 364 emails a year saying nothing. Cadence
@@ -175,7 +175,7 @@ every row that nobody checked, and no mention of December.
 
 ## Answering the brief's open questions
 
-### A. Reporting model — answered by the change classes
+### A. Reporting model: answered by the change classes
 
 Five classes, in descending order of how much a human should care. This is the
 core proposal and it is implemented:
@@ -197,10 +197,10 @@ and conflating the two sends people chasing a ghost.
 **Should `upstream_pending` be WARN?** No. It should be its own axis. Replace
 one status per site with four independent ones:
 
-- **RISK** — no usable backup, EOL PHP, WP core update pending. Exposure.
-- **DRIFT** — upstream commits, plugin/theme updates. Debt.
-- **COVERAGE** — what was not observed. Confidence.
-- **LIFECYCLE** — plan, frozen, uninitialized, production flag. Does it count.
+- **RISK**, no usable backup, EOL PHP, WP core update pending. Exposure.
+- **DRIFT**: upstream commits, plugin/theme updates. Debt.
+- **COVERAGE**. What was not observed. Confidence.
+- **LIFECYCLE**: plan, frozen, uninitialized, production flag. Does it count.
 
 A site then has a risk tier *and* a drift state, and the 36-vs-38 information
 loss disappears. This is the one settled decision worth reopening, because the
@@ -211,7 +211,7 @@ prototype does. "Both on Sandbox, which gets no automatic nightly backup, so
 decide whether these are production" is actionable. Hiding it is how a real
 missing backup gets lost.
 
-### B. Persistence — append-only JSONL on disk, in git
+### B. Persistence: append-only JSONL on disk, in git
 
 Recommendation, and the prototype implements it: `history/observations.jsonl`
 plus `history/runs.jsonl`. One line per site per run.
@@ -237,7 +237,7 @@ Grain: per-site-per-run, because it supports both questions ("this site's
 history" and "this run's snapshot") and per-run-only supports one. Retention:
 keep everything; 35 MB over five years makes deletion a non-question.
 
-### C. Exception routing — the change classes *are* the routing rule
+### C. Exception routing: the change classes *are* the routing rule
 
 This needed no new design. Duplicate suppression, called out in the brief as the
 hard part, falls out for free:
@@ -249,7 +249,7 @@ hard part, falls out for free:
 - Assignee comes from `fleet-inventory.json`. Without inventory this question
   has no answer, which is another argument for finding 3.
 
-### D. Scope — one library, several entry points
+### D. Scope: one library, several entry points
 
 `wpstatistics-fleet-scan.sh` shares the fleet and the cadence, so it ingests
 into the same ledger and its findings join the same digest.
@@ -260,7 +260,7 @@ one is Python with a service-account credential. **Separate workflow, shared
 `lib/`.** Forcing them into one workflow buys nothing and couples two release
 cadences.
 
-### E. Execution authority — the ladder now has a measurable gate
+### E. Execution authority: the ladder now has a measurable gate
 
 The rungs were already documented. What was missing was what unlocks each one,
 and the ledger supplies it: **a rung unlocks when the ledger shows N consecutive
@@ -268,12 +268,12 @@ runs where the diff predicted the change correctly.** Trust becomes a measured
 quantity rather than a feeling. That is not possible without history, which is
 another reason B comes before E.
 
-### F. Platform and secrets — unchanged, and deliberately still open
+### F. Platform and secrets: unchanged, and deliberately still open
 
 Nothing here changes Matt's GitHub-vs-Azure call, which is the point of the
 thin-wrapper rule. Keeper still stays out of phase 1.
 
-### G. Surfacing — the dashboard should show the diff, not just the snapshot
+### G. Surfacing: the dashboard should show the diff, not just the snapshot
 
 The live local server needs nothing and already works. What it should gain is
 the delta view: "last changed 14h ago, one field" is more useful at a glance
@@ -293,7 +293,7 @@ instead of one label.
 **Mild expansion, not a break: the portability contract.** The scanner stays
 bash because it shells out to Terminus. The ledger is Python stdlib, following
 the precedent `render-fleet-dashboard.py` already set. No pip, no services, no
-`date -d`, runs on macOS and Linux unchanged — the contract's *intent* is
+`date -d`, runs on macOS and Linux unchanged: the contract's *intent* is
 intact.
 
 ---
@@ -318,10 +318,10 @@ decision, or a secret.
 
 ## Prototype status
 
-`scripts/fleet-ledger.py` — ingest / diff / digest / timeline. Stdlib only,
+`scripts/fleet-ledger.py`: ingest / diff / digest / timeline. Stdlib only,
 append-only, idempotent. Working against both real runs.
 
-`test/test-ledger.py` — 43 assertions, all passing. Deliberately includes 13
+`test/test-ledger.py`: 43 assertions, all passing. Deliberately includes 13
 that prove the differ *catches* changes, because a change detector that reports
 "nothing" is worthless until shown to be capable of reporting something.
 
