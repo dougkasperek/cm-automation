@@ -1770,8 +1770,14 @@ check("...and the ruling queue is named for what it is",
 
 # COVERAGE: what is NOT checked is the operational number, and an exception
 # count with no denominator cannot be sized, so both halves are printed.
+# The denominator is asserted by its CLASS, not by the punctuation that
+# happened to precede it. This pinned "&mdash; of " and went red on 2026-09-01
+# when the em dash was taken out of the dashboard copy, which changed nothing
+# about whether the number is stated.
 check("coverage states checked, not-checked AND the denominator",
-      "checked" in _page and "not checked" in _page and "&mdash; of " in _page)
+      "checked" in _page and "not checked" in _page
+      and _re4.search(r'class=covof>\s*of \d+', _page) is not None,
+      "the coverage denominator is not stated")
 check("...and full coverage says so rather than showing a zero",
       "none missing" in _page)
 # The old form must be gone, or two vocabularies describe one number.
@@ -1848,8 +1854,13 @@ _ew, _hw = _card_words(_page, "Email DNS"), _card_words(_page, "Fleet health")
 check("the email card no longer carries more copy than fleet health",
       _ew is not None and _hw is not None and _ew <= _hw + 10,
       "email %s words, health %s words" % (_ew, _hw))
+# Matched the exact words "never a pass" until 2026-09-01, when that phrasing
+# was taken out of the dashboard copy. The qualification is what matters, not
+# the sentence it was written in, so this now matches any wording that still
+# says an all-UNKNOWN column is not a pass.
 check("...and it keeps the one qualification a reader needs",
-      "have no sending domain recorded" in _page and "never a pass" in _page)
+      "have no sending domain recorded" in _page and "not a pass" in _page,
+      "the email card no longer says an unmeasured column is not a pass")
 
 def _text(page):
     """The page as a reader sees it, tags removed.
@@ -2452,6 +2463,21 @@ _unack = L.coverage_regressions(_drop_pair(False))
 _ack = L.coverage_regressions(_drop_pair(True))
 check("an unacknowledged drop is still reported",
       len(_unack) == 1 and _unack[0]["expected"] is False, str(_unack))
+# THE TWO FLAGS ARE NOT THE SAME FLAG, and reading one as the other was a bug
+# on 2026-09-01. persist-ledger.sh passes --allow-coverage-drop on EVERY run so
+# a degraded run is stored rather than dying under `set -e`; it says nothing
+# about whether anyone looked. Stamping the run from it marked every drop as
+# expected, including one CI had just failed with FLEET_ALLOW_COVERAGE_DROP=0.
+_ing = open(os.path.join(HERE, "..", "scripts", "fleet-ledger.py")).read()
+check("ingest takes a separate flag for a person's judgement",
+      "--coverage-drop-expected" in _ing
+      and "drop_expected=a.coverage_drop_expected" in _ing,
+      "the stamp is still driven by --allow-coverage-drop")
+_persist = open(os.path.join(HERE, "..", "scripts", "persist-ledger.sh")).read()
+check("...and persist-ledger passes it only when the dispatch asked for it",
+      'FLEET_ALLOW_COVERAGE_DROP:-0}" = "1"' in _persist
+      and "EXPECTED_FLAG=\"--coverage-drop-expected\"" in _persist,
+      "the expected flag is not gated on the dispatch input")
 # NOT filtered out. An acknowledgement that removed the record would turn the
 # flag into a way of hiding a regression, and the page must still say coverage
 # fell and by how much.

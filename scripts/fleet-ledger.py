@@ -2151,6 +2151,17 @@ def main():
                          "whatever key each tool uses, so a site observed by "
                          "two tools gets two histories. Escape hatch for "
                          "tests; not for real data.")
+    # NOT the same flag as --allow-coverage-drop, and conflating them was a
+    # bug on 2026-09-01. persist-ledger.sh passes --allow-coverage-drop on
+    # EVERY run, unconditionally, so that a degraded run is still stored rather
+    # than dying under `set -e` before it reaches the ledger. It means "store
+    # this and do not abort". It does not mean anyone looked at the drop.
+    # Stamping the run from it marked every drop as expected, including one CI
+    # had just failed with FLEET_ALLOW_COVERAGE_DROP=0.
+    ap.add_argument("--coverage-drop-expected", action="store_true",
+                    help="record on the run that a PERSON expected this drop. "
+                         "Separate from --allow-coverage-drop, which only says "
+                         "to store the run and not abort.")
     ap.add_argument("--allow-coverage-drop", action="store_true",
                     help="ingest a run that measured FEWER sites than the "
                          "previous run of the same source without failing. "
@@ -2173,7 +2184,7 @@ def main():
     if a.command == "ingest":
         res = ingest(a.reports, a.history,
                      inventory=None if a.no_inventory else a.inventory,
-                     drop_expected=a.allow_coverage_drop)
+                     drop_expected=a.coverage_drop_expected)
         print(
             "ingested %d run(s), %d observation(s); %d run(s) already present -> %s"
             % (res["runs_added"], res["observations_added"], res["runs_skipped"], res["ledger"])

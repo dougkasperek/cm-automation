@@ -254,7 +254,20 @@ check('the lane strip is inside the banner, not a second box below it',
       await page.$eval('.lanes', e => !!e.closest('.banner')));
 check('...and the predicate still sits under both',
       await page.$eval('.bn-rule', e => !!e.closest('.banner')));
-check('a coverage regression forces can\'t-say', model.coverage_regressions.length === 0 || banner.cls.includes('banner-cant'));
+// UNEXPECTED regressions only, since 2026-09-01. A drop a person acknowledged
+// when the run was ingested is marked `expected` and deliberately does not hold
+// the page at can't-say, because the flag that acknowledged it used to reach
+// the publisher and never the page. It must still be SAID, which the next check
+// covers: an acknowledgement that made a regression invisible would be a way of
+// hiding one.
+const regUnexpected = model.coverage_regressions.filter(r => !r.expected);
+const regExpected = model.coverage_regressions.filter(r => r.expected);
+check('an unexpected coverage regression forces can\'t-say',
+      regUnexpected.length === 0 || banner.cls.includes('banner-cant'),
+      JSON.stringify(regUnexpected.map(r => r.run_id)));
+check('an acknowledged one is still stated on the page',
+      regExpected.length === 0 || bodyText.includes('fewer site'),
+      'an expected drop was dropped silently');
 
 // THE BANNER DOES NOT RESTATE THE SWEEP STRIP. Until 2026-08-29 its basis
 // clause appended the per-source coverage fractions -- the same sweepLine()

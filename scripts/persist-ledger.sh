@@ -76,8 +76,19 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   # bottom of this file decide the exit code. Without it, `set -e` kills the
   # script here and the run is lost. The drop is not being ignored; it is
   # being reported after the data is safe.
+  # TWO DIFFERENT FLAGS, and they were conflated on 2026-09-01.
+  # --allow-coverage-drop is passed on every run and means "store this run and
+  # do not abort". --coverage-drop-expected records that a PERSON looked at the
+  # drop and expected it, and is passed only when the dispatch said so. Reading
+  # the first as the second stamped every drop as expected, including one this
+  # script had just failed.
+  EXPECTED_FLAG=""
+  if [ "${FLEET_ALLOW_COVERAGE_DROP:-0}" = "1" ]; then
+    EXPECTED_FLAG="--coverage-drop-expected"
+  fi
   python3 scripts/fleet-ledger.py ingest --reports "$REPORTS" \
-    --allow-coverage-drop 2>&1 | tee "$INGEST_LOG"
+    --allow-coverage-drop $EXPECTED_FLAG \
+    2>&1 | tee "$INGEST_LOG"
   # BOTH pages, not just fleet.html. Until 2026-08-26 this rendered only
   # fleet.html, so the committed components.html was whatever a person last
   # ran by hand -- one health run behind after 2026-08-25, showing a component

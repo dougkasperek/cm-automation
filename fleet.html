@@ -499,7 +499,7 @@ function factRow(label, v, fmt, note, absentWord) {
 function yesno(v) { return v === true ? 'yes' : v === false ? 'no' : String(v); }
 function renderSite(s) {
   const L = lane(s);
-  const ruling = s.production === true ? 'production (ruled)' : s.production === false ? 'not production (ruled)' : 'no ruling — counts as production';
+  const ruling = s.production === true ? 'production (ruled)' : s.production === false ? 'not production (ruled)' : 'no ruling, counts as production';
   const nx = s.host === 'CM Nexcess';
   const pending = s.pending || [];
   const wrap = h('div', { class: 'site-detail' },
@@ -509,9 +509,9 @@ function renderSite(s) {
       h('div', { class: 'sd-meta' }, [s.host, s.hsn && s.hsn !== s.id ? 'machine name ' + s.hsn : null, ruling, s.in_workbook ? 'in the audit workbook' : 'not in the workbook'].filter(Boolean).join(' · ')),
     ),
     h('div', { class: 'sd-axes' },
-      h('div', { class: 'ax' }, h('div', { class: 'axl' }, 'Health — is it maintained?'), chip(s.health.status),
+      h('div', { class: 'ax' }, h('div', { class: 'axl' }, 'Health: is it maintained?'), chip(s.health.status),
         h('ul', {}, ...(s.health.reasons.length ? s.health.reasons.map(r => h('li', {}, r.text, h('code', { class: 'rc' }, ' ' + r.code))) : [h('li', { class: 'quiet' }, s.health.status === 'OK' ? 'Nothing pending on what was measured.' : 'No reason recorded.')]))),
-      h('div', { class: 'ax' }, h('div', { class: 'axl' }, 'Consent — does it leak trackers?'), chip(s.consent.status),
+      h('div', { class: 'ax' }, h('div', { class: 'axl' }, 'Consent: does it leak trackers?'), chip(s.consent.status),
         h('ul', {}, ...(s.consent.reasons.length ? s.consent.reasons.map(r => h('li', {}, r.text, h('code', { class: 'rc' }, ' ' + r.code))) : [h('li', { class: 'quiet' }, s.consent.status === 'OK' ? 'No tracker fired before consent on the homepage.' : s.consent.status === 'UNKNOWN' ? (s.f.consent_scan_ok == null ? 'Not in the consent sweep: no domain the sweep could load. Unmeasured, not clean.' : 'The sweep did not load the page (HTTP ' + (s.f.consent_http_status ?? 'unknown') + '). Unmeasured, not clean.') : 'Not measured.')]))),
       h('div', { class: 'ax' }, h('div', { class: 'axl' }, 'What happens next'), h('span', { class: 'lane lane-' + L }, LANE[L].word), h('p', { class: 'quiet' }, LANE[L].sub)),
     ),
@@ -788,7 +788,7 @@ const GLY = { crit: '■', warn: '▲', good: '●', info: '·', plan: '◔', ab
 function cellEl(col, s) {
   if (col.axis) return h('td', { class: 'ax' }, chip(s[col.axis].status));
   const r = col.cell(s);
-  return h('td', { class: 'c s-' + r.state, title: col.label + ': ' + r.text + (r.state === 'abs' ? ' — not measured' : r.state === 'na' ? ' — not measurable here' : '') }, r.state in GLY && GLY[r.state] ? h('span', { class: 'g' }, GLY[r.state]) : null, h('span', { class: 't' }, r.text));
+  return h('td', { class: 'c s-' + r.state, title: col.label + ': ' + r.text + (r.state === 'abs' ? ', not measured' : r.state === 'na' ? ', not measurable here' : '') }, r.state in GLY && GLY[r.state] ? h('span', { class: 'g' }, GLY[r.state]) : null, h('span', { class: 't' }, r.text));
 }
 /* THE CENSUS BAR ROW IS GONE. Removed 2026-08-29.
    A seven-segment stacked bar under every column header, computed over the
@@ -1054,7 +1054,7 @@ function banner() {
          got as far as the names. The clause after the dash is what justifies
          the red without restating the card's number. */
       : D.changes.length
-        ? 'Nothing new since the last run \u2014 the sites below still need a person'
+        ? 'Nothing new since the last run. The sites below still need a person'
       : 'Sites need a person';
     /* NO "everything else is a backlog (N sites), a ruling, or unmeasured (M
         sites)" HERE. The lane strip is inside this banner now and says it
@@ -1167,10 +1167,10 @@ function coverageLine() {
       i ? h('span', { class: 'sep' }, '\u00b7') : null,
       h('button', { 'data-lanes': L, onclick: () => pick([L]) },
         h('b', {}, laneCounts[L]), ' ' + LANE[L].word),
-      h('span', { class: 'aside-sub' }, ' \u2014 ' + LANE[L].sub)]).flat().filter(Boolean)),
+      h('span', { class: 'aside-sub' }, ': ' + LANE[L].sub)]).flat().filter(Boolean)),
     h('span', { class: 'sep' }, '\u00b7'),
     h('b', {}, ids.length), ' with no health evidence',
-    h('span', { class: 'aside-sub' }, ' \u2014 no backup age and no plugin or theme count. '
+    h('span', { class: 'aside-sub' }, ': no backup age and no plugin or theme count. '
       + (ids.length ? 'Cuts across the lanes rather than being one: ' + parts.join(', ') + '.'
                     : 'Nothing is in this state.')),
     /* An acknowledged coverage drop, stated with its numbers. It does not
@@ -1179,7 +1179,7 @@ function coverageLine() {
         ? [h('span', { class: 'sep' }, '\u00b7'),
            h('b', {}, expectedDrops.reduce((n, r) => n + r.lost, 0)),
            ' fewer site' + (expectedDrops.reduce((n, r) => n + r.lost, 0) === 1 ? '' : 's') + ' measured',
-           h('span', { class: 'aside-sub' }, ' \u2014 ' + expectedDrops.map(coverageDropPhrase).join('; ')
+           h('span', { class: 'aside-sub' }, ': ' + expectedDrops.map(coverageDropPhrase).join('; ')
              + ', recorded as expected when the run was ingested. Not a scan that lost sight of them.')]
         : []));
 }
@@ -1279,7 +1279,7 @@ $('#app').append(h('div', { class: 'wrap' },
   h('ul', { class: 'key' },
     h('li', {}, h('span', { class: 'c s-crit cell' }, '■'), 'critical / risk'), h('li', {}, h('span', { class: 'c s-warn cell' }, '▲'), 'warning: schedule or decide'),
     h('li', {}, h('span', { class: 'c s-plan cell' }, '◔'), 'planning, dated'), h('li', {}, h('span', { class: 'c s-good cell' }, '●'), 'measured, nothing pending'),
-    h('li', {}, h('span', { class: 'c s-info cell' }, '·'), 'measured, recorded, not scored'), h('li', {}, h('span', { class: 'c s-abs cell' }), 'not measured — an absence, never a pass'),
+    h('li', {}, h('span', { class: 'c s-info cell' }, '·'), 'measured, recorded, not scored'), h('li', {}, h('span', { class: 'c s-abs cell' }), 'not measured, so not shown as clean'),
     h('li', {}, h('span', { class: 'c s-na cell' }, 'n/a'), 'not measurable on this host')),
   mwrap),
   h('div', { class: 'view view-schedule', id: 'view-schedule', hidden: true },
@@ -1290,7 +1290,7 @@ $('#app').append(h('div', { class: 'wrap' },
         h('p', {}, schedIntro()),
         h('p', {}, 'Counts carry the set they are counted over. "Of ' + D.components.sites_inventoried.length + ' inventoried sites" is not the fleet: ' + D.components.sites_missing.length + ' Pantheon and Nexcess sites have no component list, and ' + (SITES.length - D.components.expected.length) + ' sites are on hosts no inventory reaches.'),
         h('p', {}, 'The arrow beside a count is movement since the previous run of the same tool, from the ledger\'s own baseline. "No baseline" means the instrument changed and no honest comparison exists.'),
-        h('p', {}, h('a', { href: '/components' }, 'Full component catalogue'), ' — every plugin, mu-plugin and theme, with the sites that run each.'),
+        h('p', {}, h('a', { href: '/components' }, 'Full component catalogue'), ': every plugin, mu-plugin and theme, with the sites that run each.'),
         /* WHAT IS NOT ON THIS TAB, and nothing else. This paragraph read
            "Nothing here is an emergency. The N sites that need a person
            today, the rulings and the coverage gaps stay in the matrix; this

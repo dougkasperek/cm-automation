@@ -1253,10 +1253,10 @@ def chip(text, tone, title=None):
 # ONE SHORT SENTENCE PER KIND. These have to read on their own beside a
 # coloured pill; the folded block under the table carries the long form.
 AXIS_GLOSS = {
-    "RISK":     "a client is exposed now — act",
-    "COVERAGE": "a scan could not see it — an absence, not a verdict",
-    "PLANNING": "a fixed, fleet-wide deadline — the date is the finding",
-    "DRIFT":    "a maintenance backlog — no incident, but it grows on its own",
+    "RISK":     "a client is exposed now, and someone should act",
+    "COVERAGE": "a scan could not see it, so there is no verdict either way",
+    "PLANNING": "a fixed, fleet-wide deadline. The date is the finding",
+    "DRIFT":    "a maintenance backlog. No incident, but it grows on its own",
 }
 
 
@@ -1518,7 +1518,7 @@ def coverage_section(A, m, e):
             text = ('<a href="/components">%s</a>' % text)
         A('<div class="cov %s"><div style="color:var(--ink)">%s</div>'
           '<div class=n><b>%d</b> checked &middot; %s '
-          '<span class=covof>&mdash; of %d</span></div>'
+          '<span class=covof>of %d</span></div>'
           '<div class="m meter"><i style="width:%.1f%%"></i></div></div>'
           % (tone, text, known,
              ('<span class=covnone>none missing</span>' if not gap
@@ -1671,7 +1671,7 @@ def render(m):
         A('<p class=sub style="margin:-4px 0 10px">Grouped by cause rather '
           'than by site, because one decision usually covers the whole group. '
           '<b>Since the previous run</b> compares against the last run of the '
-          'same tool taken with the same instrument &mdash; where there is no '
+          'same tool taken with the same instrument. Where there is no '
           'such run, no direction is drawn rather than one being guessed.</p>')
         A('<div class="card tablewrap"><table id=topissues>'
           "<tr><th>Issue</th><th>Kind</th><th class=num>Sites</th>"
@@ -1716,20 +1716,20 @@ def render(m):
         A('<details class=method style="margin:8px 0 0">'
           "<summary>More on the kinds, and two words that mean something else "
           "further down this page</summary><div>")
-        A("<p><b>RISK</b> &mdash; a client is exposed now, and it is not "
+        A("<p><b>RISK</b>: a client is exposed now, and it is not "
           "waiting on anything. This is the column to act on.</p>")
-        A("<p><b>COVERAGE</b> &mdash; a scan could not see the site. It says "
+        A("<p><b>COVERAGE</b>: a scan could not see the site. It says "
           "nothing about the site itself, only about what this tool "
           "established. An absence, reported as one.</p>")
-        A("<p><b>PLANNING</b> &mdash; a fixed, fleet-wide deadline. Nothing is "
+        A("<p><b>PLANNING</b>: a fixed, fleet-wide deadline. Nothing is "
           "wrong today; the date is the finding.</p>")
-        A("<p><b>DRIFT</b> &mdash; a maintenance backlog. Real work, no "
+        A("<p><b>DRIFT</b>: a maintenance backlog. Real work, no "
           "incident, and it gets worse on its own if nobody schedules it. "
           "Pending updates and unmerged upstream commits live here.</p>")
         A('<p class=quiet><b>Two of these words are reused further down the '
           "page and do not mean the same thing there.</b> In the change feed, "
           "DRIFT means a counter moved on a finding that was already open "
-          "&mdash; routine, not news &mdash; and COVERAGE means the scanner "
+          ", which is routine rather than news, and COVERAGE means the scanner "
           "started or stopped seeing a site between runs. Here they describe "
           "what KIND of problem a finding is; there they describe what KIND of "
           "change happened.</p>")
@@ -1862,7 +1862,7 @@ def render(m):
              "<b>CRIT</b> means act now: no database backup inside the "
              "threshold, a WordPress version below the security floor, or a "
              "core update waiting. <b>WARN</b> means schedule it. <b>OK</b> "
-             "means nothing is pending that needs a person &mdash; it is not "
+             "means nothing is pending that needs a person. It is not "
              "a statement that the site is healthy, because a site can reach "
              "OK on evidence this tool cannot gather.",
              "A rule never fires on an unknown value. That is deliberate: a "
@@ -1925,7 +1925,7 @@ def render(m):
              "number is never high and may be low.",
              "A site behind a bot challenge returns a block page rather than "
              "the homepage. That is recorded as UNKNOWN, never as a clean "
-             "result &mdash; 23 sites once read &ldquo;no banner, no "
+             "result. 23 sites once read &ldquo;no banner, no "
              "trackers&rdquo; when what they had returned was HTTP 403.",
              "These are <b>observations, not compliance verdicts</b>. The "
              "words compliant and non-compliant do not appear in this "
@@ -2075,7 +2075,7 @@ def render(m):
     A('<div class=wfdetail>'
       '<span class=wfrow><b>%d</b> open cause(s), listed under Still open</span>'
       '<span class=wfrow><b>%d</b> site(s) have no sending domain recorded, so '
-      'every column reads UNKNOWN &mdash; never a pass</span>'
+      'every column reads UNKNOWN, which is not a pass</span>'
       '<span class=wfrow><b>%d</b> site(s) are outside this check and have no '
       'row in it</span>%s</div>'
       % (len(email_causes), _no_sending, _out_of_scope,
@@ -2102,7 +2102,7 @@ def render(m):
         "checks.",
         "<b>DKIM cannot be discovered.</b> A selector has to be known before "
         "it can be verified, so an unverified DKIM row means the selector is "
-        "unknown &mdash; not that DKIM is absent. The two readings are "
+        "unknown, not that DKIM is absent. The two readings are "
         "opposite, and the column says which one it is showing.",
         ("The sending domain is a <b>ruling</b>. On %s the From: address is "
          "now measured off the site itself, from post-smtp's own "
@@ -2172,7 +2172,7 @@ def render(m):
                   if st in ("SKIP", "FROZEN", "UNKNOWN")]
 
     A('<div class=keygroup><div class=keylab>Site health'
-      '<span class=quiet> &mdash; a verdict on the site</span></div>'
+      '<span class=quiet>: a verdict on the site</span></div>'
       '<div class=kpis>')
     for st in _verdict:
         A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
@@ -2183,7 +2183,7 @@ def render(m):
 
     if _nomeasure:   # always, now; kept so a future ORDER change cannot crash
         A('<div class=keygroup><div class=keylab>Not measurable'
-          '<span class=quiet> &mdash; no verdict was reached, and that is not '
+          '<span class=quiet>: no verdict was reached, and that is not '
           'a mild one</span></div><div class=kpis>')
         for st in _nomeasure:
             A('<div class=kpi><div class=lab>%s</div><div class=val>%s</div>'
@@ -2193,7 +2193,7 @@ def render(m):
         A("</div></div>")
 
     A('<div class=keygroup><div class=keylab>Finding kind'
-      '<span class=quiet> &mdash; what sort of problem, in the tables above'
+      '<span class=quiet>: what sort of problem, in the tables above'
       '</span></div>')
     A(axis_legend(counts=False))
     A("</div></div>")
@@ -2391,7 +2391,7 @@ def render(m):
             cs = _grouped[site]
             quiet_only = site in _quiet_sites
             A('<div class="chgsite%s">' % (" quietonly" if quiet_only else ""))
-            A('<div class=chghead><code>%s</code> <span class=quiet>&mdash; '
+            A('<div class=chghead><code>%s</code> <span class=quiet>'
               '%d fact(s)%s</span></div>'
               % (e(site), len(cs),
                  ", all routine counter movement" if quiet_only else ""))
@@ -2416,7 +2416,7 @@ def render(m):
         if _quiet_sites:
             _qf = sum(len(_grouped[k]) for k in _quiet_sites)
             A('<details class=quietfold><summary>%d site(s), %d fact(s) '
-              '&mdash; routine counter movement only, no threshold crossed'
+              'routine counter movement only, no threshold crossed'
               '</summary><div>' % (len(_quiet_sites), _qf))
             for site in sorted(_quiet_sites):
                 _render_site(site)
@@ -2445,8 +2445,8 @@ def render(m):
             A("<tr><td><code>%s</code></td><td class=num>%s</td>"
               "<td class=num>%s</td><td><details><summary>%d site(s)</summary>"
               '<div class=quiet style="margin-top:6px">%s</div></details></td></tr>'
-              % (e(g["fact"]), e(g["gained"]) if g["gained"] else "—",
-                 e(g["lost"]) if g["lost"] else "—",
+              % (e(g["fact"]), e(g["gained"]) if g["gained"] else "none",
+                 e(g["lost"]) if g["lost"] else "none",
                  len(g["sites"]), e(", ".join(g["sites"]))))
         A("</table></div></div>")
 
@@ -2683,7 +2683,7 @@ def render(m):
         ax = (s.get("severity") or {}).get("axes", {}).get("consent") or {}
         st = ax.get("status")
         if not st:
-            return '<span class=quiet>&mdash;</span>'
+            return '<span class=quiet>not swept</span>'
         cell = chip(st, STATE_TONE.get(st, "muted"))
         if st == "UNKNOWN":
             code = s.get("consent_http_status")
@@ -2740,7 +2740,7 @@ def render(m):
 
     for s in m["sites"]:
         st = s.get("status")
-        state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>—</span>'
+        state = chip(st, STATE_TONE.get(st, "muted")) if st else '<span class=quiet>not scored</span>'
         cst = ((s.get("severity") or {}).get("axes", {})
                .get("consent") or {}).get("status") or ""
         nohealth = "1" if any(
@@ -2769,7 +2769,7 @@ def render(m):
              e(s["site_id"]),
              ('<br><span class=quiet style="font-size:11.5px">not production, '
               'excluded from the counts above</span>' if excluded else ""),
-             e(s.get("host") or "—"), state, consent_cell(s),
+             e(s.get("host") or "unknown"), state, consent_cell(s),
              observed(s.get("php_version"), s.get("nexcess_php_version")),
              backup(s.get("db_backup_age_days")),
              upstream_cell(s),
@@ -3363,14 +3363,14 @@ def render_vulnerabilities(m):
         A('<div class="vd"><h2>Nothing here needs urgent attention.</h2>'
           '<p><b>%d</b> component(s) on <b>%d</b> site(s) have a known problem '
           'with no update available. The most serious rates <b>%s out of 10</b> '
-          '— nothing is critical. Everything else Wordfence flagged, '
+          'and nothing is critical. Everything else Wordfence flagged, '
           '<b>%d</b> finding(s), is closed by a normal plugin update.</p></div>'
           % (len(v["nofix"]), len(v["nofix_sites"]),
              ("%.1f" % worst) if isinstance(worst, (int, float)) else "unknown",
              v["n_fixable"]))
     else:
         A('<div class="vd"><h2>No component has an unfixable vulnerability.</h2>'
-          '<p>Everything Wordfence flagged — <b>%d</b> finding(s) — is '
+          '<p>All <b>%d</b> finding(s) Wordfence flagged are '
           'closed by a normal plugin update. This is a statement about known '
           'advisories only.</p></div>' % v["n_fixable"])
 
@@ -3389,7 +3389,7 @@ def render_vulnerabilities(m):
         # No earlier run to compare against. Saying "0 new" would be a claim
         # this page cannot support, and on a first run everything is new to us
         # while none of it is new to the world.
-        A('<div>no baseline yet &mdash; first run of this source</div>')
+        A('<div>no baseline yet, first run of this source</div>')
     A("</div>")
 
     # --- THE TABLE --------------------------------------------------------
@@ -3401,7 +3401,7 @@ def render_vulnerabilities(m):
           'Findings that share a score are indistinguishable by it; age is what '
           'separates one disclosed last week from one carried for years. New '
           'findings are marked. Anything with no update available is a choice '
-          'rather than a task — replace it, restrict who can reach it, or '
+          'rather than a task. Replace it, restrict who can reach it, or '
           'accept it.</p>')
         A('<div class="vt"><table><thead><tr>')
         for key, label in (("slug", "Component"),
@@ -3434,7 +3434,7 @@ def render_vulnerabilities(m):
     if v.get("excluded_findings"):
         A('<li><b>%d</b> finding(s) on %d site(s) ruled out of scope are not '
           'counted or listed above: %s. That is a human ruling in the '
-          'inventory (<code>production: false</code>), not a measurement — the '
+          'inventory (<code>production: false</code>) rather than a measurement. The '
           'scan still sees them, and the fleet page still shows their rows.'
           '</li>'
           % (v["excluded_findings"], len(v["excluded_sites"]),
@@ -3558,7 +3558,7 @@ def render_consent(m):
             A('<p class="mono sl">%s</p>'
               % ", ".join(e(x["site_id"]) for x in rows_))
         elif rows_:
-            A('<p class="mono sl">%s <span class="quiet">and %d more &mdash; '
+            A('<p class="mono sl">%s <span class="quiet">and %d more, '
               'all of them in the table below</span></p>'
               % (", ".join(e(x["site_id"]) for x in rows_[:6]), len(rows_) - 6))
         A("</section>")
@@ -3581,7 +3581,7 @@ def render_consent(m):
         why = ((" %d of these run a generic banner with no Reject control "
                 "the test knows how to find." % len(generic)) if generic else "")
         A('<p class="notice"><b>%d site(s) could not be tested for gating.</b> '
-          'Not clean &mdash; unread.%s <span class="mono">%s'
+          'Not clean, unread.%s <span class="mono">%s'
           '</span></p>' % (len(untested), why,
                            ", ".join(e(x["site_id"]) for x in untested)))
 
@@ -3620,10 +3620,10 @@ def render_consent(m):
             # for an absence. It must not read as a quiet pass.
             after = '<span class="chip st-UNKNOWN">not tested</span>'
         else:
-            after = '<span class="quiet">&mdash;</span>'
+            after = '<span class="quiet">not recorded</span>'
         ck = x.get("gating_cookieless_names")
         ck_s = (e(ck) if ck not in (None, "none", L.UNKNOWN)
-                else '<span class="quiet">&mdash;</span>')
+                else '<span class="quiet">not recorded</span>')
         A('<tr data-ours="%s"><td class="mono">%s</td><td>%s</td><td>%s</td>'
           '<td>%s</td><td class="num mono">%s</td><td>%s</td>'
           '<td class="quiet">%s</td></tr>'

@@ -398,7 +398,7 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 <div class=""><b>0</b>new since the last check</div>
 </div>
 <h3 style="font-size:14.5px;margin:0 0 3px">Findings, worst first</h3>
-<p class="quiet" style="margin:0 0 11px;font-size:12.5px;max-width:72ch">Sorted worst first, and among findings that share a score, by how long the advisory has been public. Findings that share a score are indistinguishable by it; age is what separates one disclosed last week from one carried for years. New findings are marked. Anything with no update available is a choice rather than a task — replace it, restrict who can reach it, or accept it.</p>
+<p class="quiet" style="margin:0 0 11px;font-size:12.5px;max-width:72ch">Sorted worst first, and among findings that share a score, by how long the advisory has been public. Findings that share a score are indistinguishable by it; age is what separates one disclosed last week from one carried for years. New findings are marked. Anything with no update available is a choice rather than a task. Replace it, restrict who can reach it, or accept it.</p>
 <div class="vt"><table><thead><tr>
 <th><button type="button" data-k="slug">Component<span class="ar">&#9660;</span></button></th>
 <th><button type="button" data-k="ver">Installed versions, and where<span class="ar">&#9660;</span></button></th>
@@ -570,7 +570,7 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 </script>
 <div class="vnote"><h3>Worth knowing</h3><ul>
 <li><b>7</b> site(s) could not be checked: no plugin list exists for them, so they are in no number on this page. Unchecked, not clear. <code>app.eastauroracc.com</code>, <code>clevermethod-forward</code>, <code>cm-whitelabel</code>, <code>hoosierfeeder.com</code>, <code>moorseville-nc</code>, <code>nc-moorseville</code>, <code>pfannenbergsales</code></li>
-<li><b>70</b> finding(s) on 1 site(s) ruled out of scope are not counted or listed above: <code>hoffmanscheese</code>. That is a human ruling in the inventory (<code>production: false</code>), not a measurement — the scan still sees them, and the fleet page still shows their rows.</li>
+<li><b>70</b> finding(s) on 1 site(s) ruled out of scope are not counted or listed above: <code>hoffmanscheese</code>. That is a human ruling in the inventory (<code>production: false</code>) rather than a measurement. The scan still sees them, and the fleet page still shows their rows.</li>
 <li>Wordfence never having published an advisory for a component is not evidence the component is sound. For a widely used plugin it is meaningful; for code written for one client, it mostly means no outside researcher has looked at it.</li>
 <li>Versions come from the component inventory the health scan wrote, so anything installed or updated since that scan is not reflected here.</li>
 </ul></div>
