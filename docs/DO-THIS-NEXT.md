@@ -12,7 +12,19 @@ worth being able to see, so the next person can tell it was retired on purpose
 rather than lost.
 
 **The live backlog starts at "What is left after this"**, and the open items
-are B1, B2, B3, B4 and B6. B5 is closed.
+are B1, B2, B3, B4, B6 and B7. B5 is closed.
+
+> **ONE-TIME, on the next Pantheon run only.** Three Sandbox sites were deleted
+> on 2026-09-01, so that run measures 47 where the last measured 48 and the
+> coverage guard will refuse to ingest or publish. Pass `allow_coverage_drop`
+> once; after it lands, 47 is the baseline and later runs are clean.
+>
+> ```bash
+> gh workflow run pantheon-fleet-healthcheck.yml -f run_mode=full -f target_env=live -f fail_on_crit=false -f persist_ledger=true -f publish_dashboard=true -f allow_coverage_drop=true
+> ```
+>
+> Nothing is wrong. The guard cannot tell a deletion from a lost site, which is
+> B7.
 
 ---
 
@@ -264,9 +276,12 @@ above:
    longer gated — Nexcess confirmed one account-level key reaches all 21 sites.
    It still has to be built, so this stays a human task for now. See
    `docs/NEXCESS.md`, "Phase 2: the gate is open".)*
-2. **hoffmanscheese and hoosierfeeder.com.** One is on Pantheon but in nobody's
-   audit. The other is in the audit but Pantheon does not return it. Both are
-   five-minute answers from whoever knows the fleet.
+2. ~~**hoffmanscheese and hoosierfeeder.com.**~~ **Half closed 2026-09-01.**
+   `hoffmanscheese` was a temp site and Doug deleted it from Pantheon; it is
+   ruled `production: false` and its inventory row is kept deliberately (see
+   B7). **`hoosierfeeder.com` is still open**: it is in the audit and Pantheon
+   does not return it, which is a five-minute answer from whoever knows the
+   fleet.
 3. **shuman-plastics.com and dynapurge.com** on Flywheel are running PHP 7.4,
    which stopped receiving security patches in November 2022. That is a client
    conversation, since the hosting is theirs.
@@ -763,3 +778,40 @@ list grows as clients onboard -- so it is guaranteed to drift. The page should
 carry the provenance and the date. Small, and it is this project's signature
 bug otherwise.
 
+
+---
+
+## B7. A site that leaves the fleet has nowhere to go
+
+**Opened 2026-09-01.** There is no state meaning "this site is gone". The two
+consequences were measured, not reasoned about:
+
+- **A deleted site renders forever.** Simulating the next Pantheon run with
+  three deleted sites absent, all 85 still render -- `hoffmanscheese` still
+  CRIT, on data from the last scan that saw it, which nothing will refresh.
+- **A decommission looks exactly like a failed scan.** 48 measured becomes 47,
+  and `coverage_regressions` trips on any drop in the same mode, so ingest and
+  publish both refuse until someone passes `allow_coverage_drop`.
+
+Deleting the inventory record is NOT the fix: the ledger is append-only and
+holds rows under those `site_id`s, so removing the record orphans them and
+`--strict` refuses. That guard is right -- it is the mis-keying bug that once
+rendered an 84-site fleet as 130 rows.
+
+The fix is a `retired` ruling beside `production`, so the guard can drop those
+sites from the denominator rather than report a loss, and the page can render
+them as retired rather than as a CRIT that never improves. Like `production`
+it is a ruling and not a measurement: no scan can tell a deleted site from an
+unreachable one.
+
+Two traps, both already paid for elsewhere in this repo:
+
+- **It is not `production: false`.** That means "not a production site", and
+  `cm-whitelabel` uses it correctly while still existing. Folding the two loses
+  the distinction the moment anyone asks which of these sites still run.
+- **A retired site must not read as clean.** Not a green cell, not an absence.
+  Its last known state was a real measurement and the reason it stopped is a
+  ruling. Unknown is a value.
+
+Full write-up, including the one-time workaround, in `docs/HANDOVER.md`
+section 9.

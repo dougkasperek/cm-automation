@@ -224,7 +224,58 @@ it is an archive.
 
 ---
 
-## 9. Open, and honestly unverified
+## 9. A site that leaves the fleet has nowhere to go
+
+**Found 2026-09-01, by measuring rather than reasoning.** Three Pantheon
+Sandbox sites were deleted from the host that day. There is no state in this
+repo that means "gone", and the two consequences both point the wrong way.
+
+**A deleted site renders forever.** Simulated the next Pantheon run with the
+three absent: all **85 sites still render**. `hoffmanscheese` still shows
+**CRIT**, `moorseville-nc` SKIP, `nc-moorseville` FROZEN -- carrying whatever
+the last scan that saw them recorded, permanently, because nothing will ever
+refresh it. They are out of the fleet totals, so no headline number is wrong;
+what is wrong is a row that looks measured and can never change.
+
+Deleting the inventory record is not the fix. The ledger is append-only and
+holds observations under those `site_id`s, so removing the record makes them
+**orphans** -- the renderer says so and `--strict` refuses. That is the
+signature of the mis-keying bug that once rendered an 84-site fleet as 130
+rows, and it is the right guard. The rows were kept on purpose.
+
+**And a decommission looks exactly like a failed scan.** The last Pantheon run
+measured **48 of 52**; the next measures **47 of 49**. `coverage_regressions`
+trips on any drop in the same mode -- the test is `c >= p` or nothing -- so
+`persist-ledger.sh` refuses at ingest and `publish-dashboard.sh` refuses at
+publish. Correct behaviour: the guard cannot tell "we deleted three sites" from
+"the scan lost three sites", and it exists because two bad consent runs once
+replaced a good one on the live page for a day.
+
+**The one-time workaround**, needed on the next Pantheon dispatch only. After
+that run lands, 47 is the baseline and later runs are clean:
+
+```bash
+gh workflow run pantheon-fleet-healthcheck.yml -f run_mode=full -f target_env=live -f fail_on_crit=false -f persist_ledger=true -f publish_dashboard=true -f allow_coverage_drop=true
+```
+
+**The real fix is a `retired` ruling**, alongside `production`. It would let
+the guard drop those sites from the denominator instead of reporting a loss,
+and let the page render them as retired rather than as a CRIT that never
+improves. It is a ruling, not a measurement -- no scan can tell a deleted site
+from an unreachable one, which is the whole reason `production` is a human
+field too.
+
+Two traps for whoever builds it, both already paid for elsewhere in this repo:
+
+- **It is not `production: false`.** That means "not a production site", and
+  `cm-whitelabel` uses it correctly while still existing. Folding the two
+  loses the distinction the moment anyone asks which of these sites are still
+  running.
+- **A retired site must not read as clean.** Whatever the page shows, it must
+  not be a green cell or an absence: the site's last known state was a real
+  measurement and the reason it stopped is a ruling. Unknown is a value.
+
+## 10. Open, and honestly unverified
 
 - **Whether the R2 bucket contents are backed up anywhere.** The pages are
   regenerable from the ledger, so this is low stakes, but nobody has said it out
