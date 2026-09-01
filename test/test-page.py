@@ -215,5 +215,52 @@ _html_new = RD.render_vulnerabilities(
         _rows, [], {"a.com"}, TODAY, [], "prev-run")))
 check("a NEW critical does say act today", "Act today" in _html_new)
 
+# ---------------------------------------------------------------------------
+# The version cell carries its sites, 2026-09-01
+# ---------------------------------------------------------------------------
+# Until this date the page had a "Component and sites" column listing site
+# names and a "Version" column listing "3.14, 4.23.4, 4.24.1, ..." beside it.
+# 60 of 163 findings span more than one version -- divi is 62 sites over 12 --
+# so for those the reader could not tell which site ran which. Reported by the
+# dev team.
+_multi = [
+    {"site_id": "a.com", "slug": "x", "cve": "CVE-9", "cvss": 6.4,
+     "rating": "Medium", "patched": True, "fix_version": "5",
+     "title": "t", "published": "2024-01-01", "version": "4.1"},
+    {"site_id": "b.com", "slug": "x", "cve": "CVE-9", "cvss": 6.4,
+     "rating": "Medium", "patched": True, "fix_version": "5",
+     "title": "t", "published": "2024-01-01", "version": "4.2"},
+    # No version recorded. It must stay a distinct group and say so in words:
+    # a blank beside two real numbers reads as "same as above".
+    {"site_id": "c.com", "slug": "x", "cve": "CVE-9", "cvss": 6.4,
+     "rating": "Medium", "patched": True, "fix_version": "5",
+     "title": "t", "published": "2024-01-01", "version": None},
+]
+_mv = RD.build_vulnerabilities(_multi, [], set(), TODAY, [], None)
+_g = _mv["findings"][0]
+# The cell is built in the browser from this, so the per-site version is the
+# whole contract. A group carrying only a de-duplicated version LIST cannot be
+# rendered against sites at all.
+check("every affected site carries the version it runs",
+      all("version" in x for x in _g["sites"]),
+      str(_g["sites"]))
+check("...and the versions are the ones each site actually runs",
+      {x["site_id"]: x["version"] for x in _g["sites"]}
+      == {"a.com": "4.1", "b.com": "4.2", "c.com": None},
+      str(_g["sites"]))
+check("a site with no recorded version is kept, not dropped",
+      len(_g["sites"]) == 3 and any(x["version"] is None for x in _g["sites"]),
+      str(_g["sites"]))
+
+# The renderer emits the grouping function and no longer flattens the versions
+# into one comma string. Asserted against the source because the cell itself is
+# built client-side; the DOM behaviour was checked by hand on the rendered page.
+check("the version cell is grouped, not a flat joined list",
+      "function versions(g, i)" in RD.VULN_JS
+      and "(g.versions || []).join(', ')" not in RD.VULN_JS,
+      "VULN_JS still joins versions into one string")
+check("...and an absent version renders as words, never a blank",
+      "version not recorded" in RD.VULN_JS)
+
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

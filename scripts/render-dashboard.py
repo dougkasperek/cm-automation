@@ -3012,11 +3012,27 @@ VULN_CSS = """
 .vfix { display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 600;
   color: var(--crit); border: 1px solid var(--crit); border-radius: 2px;
   padding: 1px 7px; background: color-mix(in srgb,var(--crit) 10%,transparent); }
-.vsites { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
-.vsites span { font-family: var(--font-mono); font-size: 11px; color: var(--ink);
+.vn { display: block; margin-top: 7px; font-size: 11.5px; color: var(--ink2); }
+/* One block per installed version, each carrying the sites that run it. The
+   two used to be separate columns -- a list of site names beside a list of
+   version numbers -- and 60 of 163 findings span more than one version, so
+   for those the reader could not tell which site was on which. Divi is the
+   worst: 62 sites over 12 versions. Reported by the dev team. */
+.vgrp { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: baseline;
+  padding: 4px 0; border-top: 1px solid var(--line); }
+.vgrp:first-child { border-top: 0; padding-top: 0; }
+.vgrp > b { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+  color: var(--ink); }
+.vgrp > b.vunk { font-weight: 500; color: var(--ink2); font-style: italic;
+  font-family: var(--font-body); }
+.vgn { font-size: 10.5px; color: var(--ink2); white-space: nowrap; }
+.vgs { display: flex; flex-wrap: wrap; gap: 3px; flex-basis: 100%; }
+.vgs span { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink);
   background: var(--surface2); border: 1px solid var(--line); border-radius: 2px;
-  padding: 1px 6px; white-space: nowrap; }
-.vsites button { border: 0; background: none; padding: 0; font: inherit;
+  padding: 0 5px; white-space: nowrap; }
+.vgs em { font-size: 10.5px; color: var(--ink2); font-style: normal;
+  align-self: center; }
+.vmore { border: 0; background: none; padding: 0; margin-top: 6px; font: inherit;
   font-size: 11px; color: var(--accent); cursor: pointer; text-decoration: underline;
   text-underline-offset: 2px; white-space: nowrap; }
 .vcve { display: block; font-family: var(--font-mono); font-size: 10.5px;
@@ -3024,7 +3040,7 @@ VULN_CSS = """
 .vcve a { color: var(--accent); text-decoration: underline;
   text-decoration-color: var(--line); text-underline-offset: 2px; }
 .vcve a:hover { text-decoration-color: var(--accent); }
-.vver { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vver { font-variant-numeric: tabular-nums; min-width: 22ch; }
 .vsev { white-space: nowrap; }
 .vsev .lbl { font-size: 11px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.04em; color: var(--ink2); }
@@ -3035,6 +3051,12 @@ VULN_CSS = """
 .vwho { font-size: 11.5px; color: var(--ink2); }
 .vsince { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   white-space: nowrap; font-size: 11.5px; }
+/* The publication date sits UNDER the age, not welded to the end of it. The
+   `em` had no display rule, so the cell rendered "18 days2026-08-14" as one
+   run-on string. Pre-existing; found on 2026-09-01 by looking at the page
+   after changing the column beside it. */
+.vsince em { display: block; margin-top: 2px; font-style: normal;
+  color: var(--ink2); font-size: 10.5px; }
 .vnote { border-top: 1px solid var(--line); padding-top: 13px; margin-top: 26px; }
 .vnote h3 { font-size: 12px; color: var(--ink2); text-transform: uppercase;
   letter-spacing: 0.07em; margin: 0 0 8px; }
@@ -3079,16 +3101,54 @@ VULN_JS = r"""
     return String(t == null ? '' : t)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
-  function sites(g, i) {
-    /* 66 chips is not a table row. Collapse past six and SAY how many are
-       hidden -- a silent truncation reads as "only these six". */
-    var LIM = 6, all = g.sites || [], shown = open[i] ? all : all.slice(0, LIM);
-    var h = shown.map(function (x) { return '<span>' + esc(x.site_id) + '</span>'; }).join('');
-    if (all.length > LIM) {
-      h += '<button type="button" data-x="' + i + '">'
-        + (open[i] ? 'show fewer' : 'and ' + (all.length - LIM) + ' more') + '</button>';
+  /* Installed versions, each carrying the sites that run it.
+     Until 2026-09-01 the site names and the version numbers were separate
+     columns -- a list of names beside "3.14, 4.23.4, 4.24.1, ..." -- and 60 of
+     163 findings span more than one version, so for those the reader could not
+     tell which site ran which. Divi is the worst at 62 sites over 12 versions.
+     Reported by the dev team. */
+  function versions(g, i) {
+    var byv = {}, order = [];
+    (g.sites || []).forEach(function (x) {
+      /* An absent version is NOT a version string. It gets its own group and
+         says so in words, because a blank beside five real numbers reads as
+         "same as above". */
+      var v = (x.version == null || x.version === '') ? null : String(x.version);
+      var k = v === null ? '\u0000' : v;
+      if (!byv[k]) { byv[k] = { ver: v, sites: [] }; order.push(k); }
+      byv[k].sites.push(x.site_id);
+    });
+    /* Ordered by how many sites run it, because "where is the bulk" is the
+       update-planning question. Deliberately NOT by version order: the real
+       comparator is vercmp in fleet-vuln.py, replayed against 2,602 answers
+       from PHP version_compare, and a rough copy here would be a second answer
+       to one question. Ties break on the version string, which is stable. */
+    order.sort(function (a, b) {
+      return byv[b].sites.length - byv[a].sites.length
+        || String(a).localeCompare(String(b));
+    });
+    var LIM = 5, hidden = 0;
+    var h = order.map(function (k) {
+      var grp = byv[k], all = grp.sites;
+      var shown = open[i] ? all : all.slice(0, LIM);
+      hidden += all.length - shown.length;
+      return '<div class="vgrp">'
+        + (grp.ver === null ? '<b class="vunk">version not recorded</b>'
+                            : '<b>' + esc(grp.ver) + '</b>')
+        + '<span class="vgn">' + all.length + (all.length === 1 ? ' site' : ' sites') + '</span>'
+        + '<div class="vgs">'
+        + shown.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('')
+        + (all.length > shown.length
+           ? '<em>+' + (all.length - shown.length) + '</em>' : '')
+        + '</div></div>';
+    }).join('');
+    /* Say how many are hidden. A silent truncation reads as "only these". */
+    if (hidden || open[i]) {
+      h += '<button type="button" class="vmore" data-x="' + i + '">'
+        + (open[i] ? 'show fewer' : 'show all ' + (g.sites || []).length + ' sites')
+        + '</button>';
     }
-    return '<div class="vsites">' + h + '</div>';
+    return h;
   }
   function render() {
     var rows = DATA.slice().sort(function (a, b) {
@@ -3117,7 +3177,8 @@ VULN_JS = r"""
         + '<span class="vwhat">' + esc(g.title) + '</span>'
         + (g.patched === false ? ''
            : '<span class="vfix">Update to ' + esc(g.fix_version) + '</span>')
-        + sites(g, i)
+        + '<span class="vn">' + g.site_count
+        + (g.site_count === 1 ? ' site' : ' sites') + '</span>'
         + '<span class="vcve">'
         + (g.cve_link
            ? '<a href="' + esc(g.cve_link) + '" target="_blank" rel="noopener noreferrer">'
@@ -3127,7 +3188,7 @@ VULN_JS = r"""
               404. Plain text, never a dead link. */
            : esc(g.cve))
         + '</span></td>'
-        + '<td class="vver">' + esc((g.versions || []).join(', ')) + '</td>'
+        + '<td class="vver">' + versions(g, i) + '</td>'
         + '<td><span class="vsev ' + esc(g.rating || '') + '">'
         + '<span class="lbl">' + esc(g.rating || 'unrated') + '</span>'
         + '<span class="num">' + (typeof g.cvss === 'number' ? g.cvss.toFixed(1) : '') + '</span></span></td>'
@@ -3285,7 +3346,8 @@ def render_vulnerabilities(m):
           'rather than a task — replace it, restrict who can reach it, or '
           'accept it.</p>')
         A('<div class="vt"><table><thead><tr>')
-        for key, label in (("slug", "Component and sites"), ("ver", "Version"),
+        for key, label in (("slug", "Component"),
+                           ("ver", "Installed versions, and where"),
                            ("cvss", "Severity"), ("fix", "Fix"),
                            ("age", "Open for")):
             A('<th%s><button type="button" data-k="%s">%s'
