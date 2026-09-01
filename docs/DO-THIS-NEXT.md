@@ -14,17 +14,12 @@ rather than lost.
 **The live backlog starts at "What is left after this"**, and the open items
 are B1, B2, B3, B4, B6 and B7. B5 is closed.
 
-> **ONE-TIME, on the next Pantheon run only.** Three Sandbox sites were deleted
-> on 2026-09-01, so that run measures 47 where the last measured 48 and the
-> coverage guard will refuse to ingest or publish. Pass `allow_coverage_drop`
-> once; after it lands, 47 is the baseline and later runs are clean.
->
-> ```bash
-> gh workflow run pantheon-fleet-healthcheck.yml -f run_mode=full -f target_env=live -f fail_on_crit=false -f persist_ledger=true -f publish_dashboard=true -f allow_coverage_drop=true
-> ```
->
-> Nothing is wrong. The guard cannot tell a deletion from a lost site, which is
-> B7.
+> ~~**ONE-TIME, on the next Pantheon run.**~~ **SPENT 2026-09-01.** Run
+> `health-2026-09-01_1728` measured 47 where the previous measured 48, both
+> halves of the coverage guard refused as designed, and `allow_coverage_drop`
+> carried it through. **47 is the baseline now, so do NOT pass that flag out
+> of habit** -- it is the one control standing between a scan that quietly saw
+> fewer sites and a published page that does not say so.
 
 ---
 
@@ -786,9 +781,11 @@ bug otherwise.
 **Opened 2026-09-01.** There is no state meaning "this site is gone". The two
 consequences were measured, not reasoned about:
 
-- **A deleted site renders forever.** Simulating the next Pantheon run with
-  three deleted sites absent, all 85 still render -- `hoffmanscheese` still
-  CRIT, on data from the last scan that saw it, which nothing will refresh.
+- **A deleted site renders forever, as UNKNOWN.** Measured on the real run of
+  2026-09-01: all 85 still render and the three deleted ones read UNKNOWN with
+  no reasons. This bullet first said they stay frozen at CRIT/SKIP/FROZEN,
+  which came from a simulation and was wrong. UNKNOWN means "no scan has
+  reached this site" -- and these are not unreached, they are gone.
 - **A decommission looks exactly like a failed scan.** 48 measured becomes 47,
   and `coverage_regressions` trips on any drop in the same mode, so ingest and
   publish both refuse until someone passes `allow_coverage_drop`.

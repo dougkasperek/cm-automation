@@ -230,12 +230,19 @@ it is an archive.
 Sandbox sites were deleted from the host that day. There is no state in this
 repo that means "gone", and the two consequences both point the wrong way.
 
-**A deleted site renders forever.** Simulated the next Pantheon run with the
-three absent: all **85 sites still render**. `hoffmanscheese` still shows
-**CRIT**, `moorseville-nc` SKIP, `nc-moorseville` FROZEN -- carrying whatever
-the last scan that saw them recorded, permanently, because nothing will ever
-refresh it. They are out of the fleet totals, so no headline number is wrong;
-what is wrong is a row that looks measured and can never change.
+**A deleted site renders forever, as UNKNOWN.** Measured against the real run
+of 2026-09-01, which is the correction to what this section said first: all
+**85 sites still render**, and the three deleted ones read **UNKNOWN** with no
+reasons -- not, as a simulation written the same hour predicted, frozen at the
+CRIT, SKIP and FROZEN they last scored. They are excluded from the counted
+totals, so the headline is right; `excluded` carries `UNKNOWN: 3`.
+
+The first version of this paragraph was written from that simulation and
+stated in the same voice as a measurement. It was wrong within the hour, on
+this repo's own cardinal rule. The real behaviour is milder in one way -- no
+permanent stale CRIT -- and wrong in another that matters more: **UNKNOWN
+means "no scan has reached this site", and these sites are not unreached, they
+are gone.** An absence standing in for a different absence.
 
 Deleting the inventory record is not the fix. The ledger is append-only and
 holds observations under those `site_id`s, so removing the record makes them
