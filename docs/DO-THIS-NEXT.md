@@ -12,7 +12,7 @@ worth being able to see, so the next person can tell it was retired on purpose
 rather than lost.
 
 **The live backlog starts at "What is left after this"**, and the open items
-are B1, B2, B3, B4, B6 and B7. B5 is closed.
+are B1, B2, B3, B4, B6, B7, B8, B9 and B10. B5 is closed.
 
 > ~~**ONE-TIME, on the next Pantheon run.**~~ **SPENT 2026-09-01.** Run
 > `health-2026-09-01_1728` measured 47 where the previous measured 48, both
@@ -812,3 +812,86 @@ Two traps, both already paid for elsewhere in this repo:
 
 Full write-up, including the one-time workaround, in `docs/HANDOVER.md`
 section 9.
+
+---
+
+## B8. The coverage check only looks one run back
+
+**Opened 2026-09-01.** `coverage_regressions` compares a run against the run
+immediately before it, and refuses a publish when the new one measured fewer
+sites. A run that drops a site and then partly recovers passes, even though it
+covers fewer sites than it did two runs ago.
+
+Measured the day it was found. `health-2026-09-01_1728` measured 47 of 49.
+`_1946` measured 45, `_1948` measured 46. The last one published, because 46 is
+more than 45, and the live page went out covering one fewer site than an
+earlier page had.
+
+The fix is a comparison against a high-water mark rather than the previous run.
+The cost is that a fleet which legitimately shrinks stays in a warning state
+until a person acknowledges it, which is more friction on every deletion. That
+is the trade to decide before building it. See also B7: with a `retired` state,
+a deletion would not look like a loss in the first place.
+
+---
+
+## B9. Two dispatches run two scans at the same time
+
+**Opened 2026-09-01, after causing it.** The Pantheon workflow was dispatched at
+19:42 and again at 19:45. Both scans ran from 19:46 to 20:34 against the same 49
+sites, and both started at the same site 48 seconds apart:
+
+    run ...117332   [1/49] lasershows   19:46:41
+    run ...321102   [1/49] lasershows   19:48:54  ->  env preflight failed
+
+`lasershows.com` measured cleanly in the first run and read ERROR in the second,
+two minutes later. Nothing about a site changes in two minutes. Both runs
+measured fewer sites than a single run does: 45 and 46, against 47 when one scan
+ran alone at 17:28.
+
+The shared concurrency group covers the LEDGER WRITE and it worked: the second
+ingest failed rather than corrupting anything. The scan jobs themselves are not
+serialised.
+
+Two ways to fix it, and they behave differently for whoever pressed the button:
+
+- Put the scan job in a concurrency group, so a second dispatch waits. Safe, but
+  the person waits 45 minutes for a scan that has not started.
+- Refuse the dispatch while one is running, and say so. Faster to understand,
+  but the request is lost rather than queued.
+
+Worth doing before the schedules are turned on, because a schedule firing while
+someone runs a manual scan produces exactly this.
+
+---
+
+## B10. The consent sweep sees a different fleet depending on where it runs
+
+**Not fixed, worked around.** From a laptop it reaches 78 of 79 sites. From a
+GitHub runner it reaches 71 or 72, because several sites answer a datacenter IP
+with HTTP 403. Both numbers are correct measurements from different places.
+
+In the ledger:
+
+    consent-2026-08-28_1204    78 of 79
+    consent-2026-08-28_1613    71 of 79
+    consent-2026-08-28_1746    71 of 79
+    consent-2026-08-28_2051    72 of 79
+
+The workaround was `allow_coverage_drop`, so a runner sweep can publish after a
+laptop sweep without the guard refusing. That stops the publish failing. It does
+not stop the page reporting fewer measured sites with no explanation of why.
+
+**The run record does not say where the run happened.** `method` reads
+`chromium-headed` for both, so nothing in the data distinguishes a laptop sweep
+from a runner sweep, and the difference reads as a regression instead of a
+change of vantage point. Recording the vantage point is the small half of this.
+
+The larger half is deciding what we want. Options, none chosen:
+
+- Accept the runner's view as the fleet number and stop running it from a laptop,
+  so one instrument produces every figure.
+- Compare runs only against runs from the same place, the way health already
+  compares only within a cohort.
+- Reach the blocked sites from somewhere they will answer, which is a proxy
+  decision and probably not worth it for 7 sites.
