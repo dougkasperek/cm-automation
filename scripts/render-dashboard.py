@@ -608,6 +608,25 @@ def build_vulnerabilities(rows, sites, matched, today=None,
     clean. It is the same absence the hatched tokens exist for.
     """
     host = {s["site_id"]: (s.get("host") or "") for s in sites}
+
+    # A site ruled out of scope does not appear here. On 2026-09-01 five
+    # Sandbox sites were ruled `production: false`, three of them deleted from
+    # the host outright -- and one, hoffmanscheese, was carrying 70 of this
+    # page's 391 findings. Eighteen per cent of a page headed "what needs
+    # updating" was work on a site that no longer exists.
+    #
+    # Same rule the fleet counts follow, and the same reason: `production` is
+    # a human ruling and an excluded site must not inflate a total. What is
+    # NOT the same is silence -- the fleet page still renders an excluded row,
+    # so this page states how many findings it set aside and on which sites,
+    # rather than dropping them without a word.
+    #
+    # `production is False` only. Absent or None counts, because nobody has
+    # ruled and unreviewed must never mean unmonitored.
+    dropped = {x["site_id"] for x in sites if x.get("production") is False}
+    excluded_rows = [r for r in rows if r.get("site_id") in dropped]
+    rows = [r for r in rows if r.get("site_id") not in dropped]
+
     by = {}
     for r in rows:
         slug = (r.get("slug") or "").lower()
@@ -661,6 +680,10 @@ def build_vulnerabilities(rows, sites, matched, today=None,
         "findings": out,
         "nofix": nofix,
         "fixable": fixable,
+        # Named, not merely absent. A page that silently drops 18% of its rows
+        # is indistinguishable from one that never had them.
+        "excluded_findings": len(excluded_rows),
+        "excluded_sites": sorted({r["site_id"] for r in excluded_rows}),
         # Findings, not components: one component on four sites is four.
         "n_findings": sum(g["site_count"] for g in out),
         "n_nofix": sum(g["site_count"] for g in nofix),
@@ -2137,8 +2160,16 @@ def render(m):
     A("<div class=card>")
 
     _verdict = [st for st in SEV.ORDER if st in ("CRIT", "WARN", "OK")]
+    # NOT filtered on a non-zero count, since 2026-09-01. It was, and the
+    # `_verdict` line above it never has been -- so when the last SKIP, FROZEN
+    # and UNKNOWN sites were ruled out of the fleet the whole "Not measurable"
+    # group vanished, gloss and all. Two things break at once: a reader who
+    # later meets a SKIP chip has no key for it, and "zero sites are SKIP",
+    # which is good news, becomes indistinguishable from "this page does not
+    # track SKIP". A key defines its terms whether or not today's fleet uses
+    # them. Caught by test-ledger.py, not by reading the page.
     _nomeasure = [st for st in SEV.ORDER
-                  if st in ("SKIP", "FROZEN", "UNKNOWN") and counts.get(st, 0)]
+                  if st in ("SKIP", "FROZEN", "UNKNOWN")]
 
     A('<div class=keygroup><div class=keylab>Site health'
       '<span class=quiet> &mdash; a verdict on the site</span></div>'
@@ -2150,7 +2181,7 @@ def render(m):
              e(STATE_MEANING.get(st, ""))))
     A("</div></div>")
 
-    if _nomeasure:
+    if _nomeasure:   # always, now; kept so a future ORDER change cannot crash
         A('<div class=keygroup><div class=keylab>Not measurable'
           '<span class=quiet> &mdash; no verdict was reached, and that is not '
           'a mild one</span></div><div class=kpis>')
@@ -2226,7 +2257,22 @@ def render(m):
     # Sites with no `production` ruling AND no workbook row: nobody has ever
     # looked at them. Deliberately NOT every site whose `production` is null,
     # which is all 84 and would be ignored.
-    if h["unreviewed"]:
+    # The section renders even when the queue is EMPTY, since 2026-09-01. It
+    # used to be gated on `if h["unreviewed"]`, and when Doug ruled on the last
+    # five sites the whole section vanished -- taking `id=rulings` with it,
+    # which the jump nav still links to. A jump link pointing at nothing was
+    # the visible half; the worse half is that "no rulings outstanding" and
+    # "this page has no rulings section" then look identical, and the first is
+    # NEWS. Caught by test-ledger.py's dead-anchor check, not by reading.
+    if not h["unreviewed"]:
+        A('<h2 id=rulings>Rulings waiting on a person</h2>')
+        A('<p class=sub style="margin:-4px 0 10px">'
+          '<b>None outstanding.</b> Every site either carries a '
+          '<code>production</code> ruling or appears in the audit workbook. '
+          'This queue is sites no scan can resolve, so it empties only when a '
+          'person decides something; it filled again the last time the fleet '
+          'gained a site nobody had classified.</p>')
+    else:
         # "Needs a decision" collided with the headline number, which counts
         # facts that moved. This one is a RULING waiting on a person, and no
         # scan can ever clear it. Renamed 2026-08-26.
@@ -3027,9 +3073,11 @@ VULN_CSS = """
   font-family: var(--font-body); }
 .vgn { font-size: 10.5px; color: var(--ink2); white-space: nowrap; }
 .vgs { display: flex; flex-wrap: wrap; gap: 3px; flex-basis: 100%; }
-.vgs span { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink);
+.vgs a { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink);
   background: var(--surface2); border: 1px solid var(--line); border-radius: 2px;
-  padding: 0 5px; white-space: nowrap; }
+  padding: 0 5px; white-space: nowrap; text-decoration: none; }
+.vgs a:hover, .vgs a:focus-visible { color: var(--accent); border-color: var(--accent);
+  text-decoration: underline; text-underline-offset: 2px; }
 .vgs em { font-size: 10.5px; color: var(--ink2); font-style: normal;
   align-self: center; }
 .vmore { border: 0; background: none; padding: 0; margin-top: 6px; font: inherit;
@@ -3137,7 +3185,17 @@ VULN_JS = r"""
                             : '<b>' + esc(grp.ver) + '</b>')
         + '<span class="vgn">' + all.length + (all.length === 1 ? ' site' : ' sites') + '</span>'
         + '<div class="vgs">'
-        + shown.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('')
+        /* Each site opens its drawer on the fleet page. That page has
+           accepted #site=<id> on load and on hashchange since it was built,
+           so this is a link and NOT a second drawer -- one implementation,
+           already tested, showing health, consent, email and components
+           rather than only the vulnerability half. Absolute path, matching
+           /components?site= and "Back to the fleet page" above; like those it
+           resolves on the published site, not on a local file:// copy. */
+        + shown.map(function (x) {
+            return '<a href="/#site=' + encodeURIComponent(x) + '">'
+              + esc(x) + '</a>';
+          }).join('')
         + (all.length > shown.length
            ? '<em>+' + (all.length - shown.length) + '</em>' : '')
         + '</div></div>';
@@ -3370,6 +3428,17 @@ def render_vulnerabilities(m):
           'clear. %s</li>'
           % (n_unmatched, ", ".join("<code>%s</code>" % x
                                     for x in v["unmatched_sites"][:12])))
+    # Say what was set aside and why. Dropping 18% of the rows in silence is
+    # the same defect as counting them: the reader cannot tell a page that
+    # excluded work from one that never found any.
+    if v.get("excluded_findings"):
+        A('<li><b>%d</b> finding(s) on %d site(s) ruled out of scope are not '
+          'counted or listed above: %s. That is a human ruling in the '
+          'inventory (<code>production: false</code>), not a measurement — the '
+          'scan still sees them, and the fleet page still shows their rows.'
+          '</li>'
+          % (v["excluded_findings"], len(v["excluded_sites"]),
+             ", ".join("<code>%s</code>" % x for x in v["excluded_sites"][:12])))
     A('<li>Wordfence never having published an advisory for a component is not '
       'evidence the component is sound. For a widely used plugin it is '
       'meaningful; for code written for one client, it mostly means no outside '

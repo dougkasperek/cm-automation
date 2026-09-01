@@ -526,8 +526,17 @@ if os.path.exists(hist) and os.path.exists(inv_path):
     # than a hardcoded floor: runtalnorthamerica.com runs PHP 8.1, which
     # stopped receiving security patches on 2025-12-31. The old severity model
     # never looked at PHP at all, and a `< 8.0` floor would have passed it.
-    check("ledger: the CRIT list is hoffmanscheese and the PHP 8.1 site",
-          crit == ["hoffmanscheese", "runtalnorthamerica.com"], str(crit))
+    # NOT a pinned list of site names. It was
+    # `crit == ["hoffmanscheese", "runtalnorthamerica.com"]` and went red on
+    # 2026-09-01 when hoffmanscheese was ruled production:false -- a correct
+    # ruling, moving it out of the counted set. The property is that the
+    # counted CRIT list holds only sites that count, and the two reason checks
+    # below name what each site is CRIT FOR, which is what this was really for.
+    check("ledger: every counted CRIT site counts toward the fleet",
+          all(_d["severity"]["production"] for _d in merged
+              if _d["site_id"] in crit), str(crit))
+    check("ledger: the PHP 8.1 site is among them",
+          "runtalnorthamerica.com" in crit, str(crit))
     _byid = {d["site_id"]: d for d in merged}
     check("ledger: hoffmanscheese is CRIT for its 721-day backup gap",
           any(r["code"] == "backup_stale"
@@ -535,16 +544,31 @@ if os.path.exists(hist) and os.path.exists(inv_path):
     check("ledger: runtalnorthamerica is CRIT for PHP 8.1 being past EOL",
           any(r["code"] == "php_eol"
               for r in _byid["runtalnorthamerica.com"]["severity"]["reasons"]))
+    # The PROPERTY -- an excluded site is still scored, not skipped -- and not
+    # the one-element list it happened to be. More sites were ruled
+    # production:false on 2026-09-01 and the assertion went red on a correct
+    # inventory edit.
     check("ledger: cm-whitelabel is excluded but still scores CRIT",
-          res["excluded_sites"] == ["cm-whitelabel"] and res["excluded"]["CRIT"] == 1,
-          json.dumps(res))
+          "cm-whitelabel" in res["excluded_sites"]
+          and res["excluded"]["CRIT"] >= 1
+          and _byid["cm-whitelabel"]["severity"]["status"] == "CRIT",
+          json.dumps(res["excluded"]))
+    check("ledger: no excluded site is counted in the fleet totals",
+          not (set(res["excluded_sites"]) &
+               {d["site_id"] for d in merged if d["severity"]["production"]}),
+          str(res["excluded_sites"]))
     # Six Pantheon sites are absent from the workbook. cm-whitelabel has since
     # been ruled on, so five remain unreviewed -- which is the queue draining
     # as designed, not a count that happens to be five.
-    check("ledger: the review queue is the unaudited sites, not all 84",
-          res["unreviewed"] == ["clevermethod-forward", "hoffmanscheese",
-                                "moorseville-nc", "nc-moorseville",
-                                "pfannenbergsales"], str(res["unreviewed"]))
+    # The queue drains as people rule; it emptied on 2026-09-01. Asserting the
+    # five names was asserting the state of one afternoon -- the same trap the
+    # comment above it warned about and then walked into. The property: the
+    # queue holds only sites with no ruling and no workbook row, and never a
+    # site that has been ruled on.
+    check("ledger: the review queue holds only unruled, unaudited sites",
+          all(recs.get(sid, {}).get("production") is None
+              and recs.get(sid, {}).get("in_workbook") is False
+              for sid in res["unreviewed"]), str(res["unreviewed"]))
     check("ledger: a site with a production ruling has left the queue",
           "cm-whitelabel" not in res["unreviewed"])
 

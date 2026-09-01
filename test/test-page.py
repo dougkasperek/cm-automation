@@ -261,6 +261,44 @@ check("the version cell is grouped, not a flat joined list",
       "VULN_JS still joins versions into one string")
 check("...and an absent version renders as words, never a blank",
       "version not recorded" in RD.VULN_JS)
+# The fleet page has accepted #site=<id> on load and on hashchange since it was
+# built, so this is a link to the one drawer that already exists rather than a
+# second one to keep in step.
+check("each site links to its drawer on the fleet page",
+      "#site=" in RD.VULN_JS and "encodeURIComponent" in RD.VULN_JS,
+      "site chips are not links into the fleet drawer")
+
+# ---------------------------------------------------------------------------
+# A site ruled out of scope is not this page's work, 2026-09-01
+# ---------------------------------------------------------------------------
+# hoffmanscheese was deleted from Pantheon and ruled production:false while
+# carrying 70 of the page's 391 findings -- 18% of a page headed "what needs
+# updating" was work on a site that no longer exists.
+_scoped = [
+    dict(_rows[0], site_id="live.com"),
+    dict(_rows[0], site_id="gone.com", cve="CVE-2"),
+]
+_sites = [{"site_id": "live.com", "host": "h", "production": None},
+          {"site_id": "gone.com", "host": "h", "production": False}]
+_sc = RD.build_vulnerabilities(_scoped, _sites, set(), TODAY, [], None)
+check("an excluded site's findings leave the counts",
+      [x["site_id"] for g in _sc["findings"] for x in g["sites"]] == ["live.com"],
+      str([x["site_id"] for g in _sc["findings"] for x in g["sites"]]))
+check("...and are counted separately rather than vanishing",
+      _sc["excluded_findings"] == 1 and _sc["excluded_sites"] == ["gone.com"],
+      "%s %s" % (_sc["excluded_findings"], _sc["excluded_sites"]))
+# Fail safe, the same way is_production does. Nobody having ruled must never
+# mean nobody is watching.
+_unruled = RD.build_vulnerabilities(
+    _scoped, [{"site_id": "live.com", "host": "h"},
+              {"site_id": "gone.com", "host": "h"}], set(), TODAY, [], None)
+check("a site with NO ruling is still counted",
+      _unruled["excluded_findings"] == 0
+      and len([x for g in _unruled["findings"] for x in g["sites"]]) == 2)
+_html_sc = RD.render_vulnerabilities(dict(m, vulnerabilities=_sc))
+check("the page says how many findings it set aside, and where",
+      "ruled out of scope" in _html_sc and "gone.com" in _html_sc,
+      "the exclusion is silent")
 
 print("\n%d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

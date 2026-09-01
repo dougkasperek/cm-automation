@@ -1661,9 +1661,20 @@ check("a site that crossed a threshold renders outside the fold",
 print("\n-- rulings state the decision, not the site's health --")
 _i_rul = _at(_page, "id=rulings")
 _rul = _page[_i_rul:_i_chg] if 0 <= _i_rul < _i_chg else ""
-check("the rulings table asks the three questions",
-      all(x in _rul for x in ("Unresolved", "Why no scan can settle it",
-                              "The decision")), _rul[:200])
+# Conditional on the queue, since 2026-09-01. It asserted the three column
+# headers unconditionally and went red the day Doug ruled on the last five
+# sites -- a correct change emptying the queue, so there is no table to have
+# headers. The property is: when there ARE rulings the table asks the three
+# questions, and when there are none the section still exists and SAYS none,
+# rather than disappearing and taking its #rulings anchor with it.
+_has_rulings = "None outstanding" not in _rul
+if _has_rulings:
+    check("the rulings table asks the three questions",
+          all(x in _rul for x in ("Unresolved", "Why no scan can settle it",
+                                  "The decision")), _rul[:200])
+else:
+    check("an empty ruling queue still renders the section, and says so",
+          "id=rulings" in _page and "None outstanding" in _rul, _rul[:200])
 # THE BUG. It read `reasons or "<ruling text>"`, so a site with health findings
 # showed those instead of why its ruling is missing -- a different question,
 # answered in the same column, on one row out of five.
