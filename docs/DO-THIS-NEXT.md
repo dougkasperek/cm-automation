@@ -12,7 +12,7 @@ worth being able to see, so the next person can tell it was retired on purpose
 rather than lost.
 
 **The live backlog starts at "What is left after this"**, and the open items
-are B1, B2, B3, B4, B6, B7, B8, B9 and B10. B5 is closed.
+are B1, B2, B3, B4, B6, B7, B8, B9, B10 and B11. B5 is closed.
 
 > ~~**ONE-TIME, on the next Pantheon run.**~~ **SPENT 2026-09-01.** Run
 > `health-2026-09-01_1728` measured 47 where the previous measured 48, both
@@ -895,3 +895,77 @@ The larger half is deciding what we want. Options, none chosen:
   compares only within a cohort.
 - Reach the blocked sites from somewhere they will answer, which is a proxy
   decision and probably not worth it for 7 sites.
+
+---
+
+## B11. Read the consent configuration from OneTrust instead of inferring it
+
+**Opened 2026-09-01, from a question by Doug.** Not scoped, and the first
+question below has to be answered before any of it is worth planning.
+
+**What it would fix.** The sweep sees what a site DOES. It cannot see what the
+site is CONFIGURED to do, and that difference has already produced a wrong
+finding. `interstatewaste.com` was reported as leaking four trackers before
+consent. It is opt-out outside California and was doing exactly what it was set
+up to do. Nick Federico said so, the agency's own OneTrust audit records the
+site compliant, and the fix was to add `consent_model` as a ruling a person
+types into the inventory.
+
+An API would make that a measurement rather than a ruling. Same shape as the
+`OURS` list in B6: correct on the day it was entered, guaranteed to drift.
+
+**The footprint, measured 2026-09-01 against the latest consent sweep:**
+
+| | sites |
+|---|---|
+| Running OneTrust | 24 |
+| Tooling we manage | 12 |
+| Tooling someone else manages | 12 |
+| No banner detected at all | 46 |
+
+The split is exact. All 12 sites we manage have a `consent_model` recorded, and
+none of the 12 we do not manage have one. That is not a coincidence, it is who
+had the information.
+
+**What it could give us, in rough order of value:**
+
+- the configured consent model per site, measured instead of typed
+- the geolocation rules, which decide what a visitor actually gets. Our sweep
+  runs from one place, and B10 already shows that where a scan runs changes what
+  it sees
+- the category to tag mapping, which is what determines whether a tag should
+  stop after a rejection. The gating sweep infers this from behaviour today
+
+**What it cannot give us:**
+
+- anything about the 12 OneTrust sites we do not manage, because we would have
+  no credentials for them
+- anything about the 46 sites with no banner
+- on the 12 it does reach, mostly not new information today. It makes existing
+  information self-maintaining
+
+**Open, in order:**
+
+1. **Does the OneTrust tier clevermethod is on include API access at all?** A
+   question for Nick, and nothing below matters until it is answered.
+2. Are the credentials per tenant or per site, and do we hold them for all 12?
+3. Does the API expose the geolocation rules, or only the banner configuration?
+   The rules are the more valuable half.
+4. If configuration and behaviour disagree, which is the finding? Both readings
+   are useful and they are different questions. The suite already handles this
+   shape once, in `framework_not_wordpress`, where a disagreement between the
+   Nexcess control plane and the site itself is reported as a finding of its own
+   rather than one side silently winning.
+
+**Shape if it is built.** It is a new source, so it takes the five steps in
+CLAUDE.md: a `source` and fact family in `fleet-ledger.py` with its MEASURED
+predicate and COVERAGE_FLAGS entry, severity codes in `severity.py`, its own CI
+workflow, and a coverage line in the renderer from the day it is registered
+rather than from its first run.
+
+**One thing to decide early.** `consent_model` is currently an inventory ruling
+and it is deliberately NOT in `CONSENT_FACTS`, because that tuple defines
+whether a site has been swept, and seeding a ruling onto every site once made
+all 85 read as swept. If OneTrust starts supplying the model, it arrives as a
+measurement and the two must not be merged into one field without deciding
+which wins.
