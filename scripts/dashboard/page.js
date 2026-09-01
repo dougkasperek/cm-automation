@@ -333,7 +333,15 @@ const AGG = (() => {
 /* Newest run per source family, for the sweep line. */
 function sweepLine() {
   const L = D.latest;
-  const items = [['Pantheon health', L.health], ['Nexcess health', L['health-nexcess']], ['Email DNS', L['email-dns']], ['Consent', L.consent], ['Nexcess estate', L.nexcess]].filter(x => x[1]);
+  /* EVERY source that has run, not a hand-picked five. `vuln-intel` and
+     `consent-gating` were both missing until 2026-09-01 -- each had run, each
+     has its own page linked from the masthead, and neither said when it last
+     looked. Same family as the masthead's "3 tools feeding one ledger" over
+     four sources: a list of instruments that quietly omits one lets a stale
+     source read as a current one, which is the single thing this strip exists
+     to prevent. The .filter keeps a source with no runs off the strip; the
+     coverage box is where a never-run source is named. */
+  const items = [['Pantheon health', L.health], ['Nexcess health', L['health-nexcess']], ['Email DNS', L['email-dns']], ['Consent', L.consent], ['Consent gating', L['consent-gating']], ['Vulnerabilities', L['vuln-intel']], ['Nexcess estate', L.nexcess]].filter(x => x[1]);
   return items;
 }
 window.addEventListener('hashchange', () => { const m = location.hash.match(/^#site=(.+)$/); if (m) openSite(decodeURIComponent(m[1])); });
@@ -676,7 +684,19 @@ function banner() {
     .filter(c => c.fact === 'status' && c.after === 'CRIT')
     .map(c => c.site));
   const personNew = person.filter(s => becameCrit.has(s.id));
-  const regress = D.coverage_regressions || [];
+  const regressAll = D.coverage_regressions || [];
+  /* A drop a person acknowledged when the run was ingested is not an
+     unexplained one. On 2026-09-01 three Pantheon sites were deleted, the run
+     measured 47 against 48, the operator dispatched with allow_coverage_drop
+     -- and this banner still read "Can't say ... nothing here is green until
+     it is explained", over a drop that HAD been explained. The flag reached
+     the publisher and never reached the page.
+     Split, not filtered: an expected drop is still said out loud, with its
+     numbers, in the line under the lanes. What it no longer does is hold the
+     whole page at "Can't say". An acknowledgement that made a regression
+     invisible would be a way of hiding one. */
+  const regress = regressAll.filter(r => !r.expected);
+  const regressOk = regressAll.filter(r => r.expected);
   const runs = sweepLine();
   const oldest = runs.reduce((a, b) => (a[1].observed_at < b[1].observed_at ? a : b));
   const newest = runs.reduce((a, b) => (a[1].observed_at > b[1].observed_at ? a : b));
@@ -823,6 +843,10 @@ function banner() {
    nobody catches, so the split by lane is computed and printed, never
    asserted. */
 function coverageLine() {
+  /* Read here rather than passed in: coverageLine() is called from more than
+     one place and threading it through would put the same fact in two
+     signatures. */
+  const expectedDrops = (D.coverage_regressions || []).filter(r => r.expected);
   const ids = D.no_health_evidence;
   const by = {};
   let offRoster = 0;
@@ -850,7 +874,16 @@ function coverageLine() {
     h('b', {}, ids.length), ' with no health evidence',
     h('span', { class: 'aside-sub' }, ' \u2014 no backup age and no plugin or theme count. '
       + (ids.length ? 'Cuts across the lanes rather than being one: ' + parts.join(', ') + '.'
-                    : 'Nothing is in this state.')));
+                    : 'Nothing is in this state.')),
+    /* An acknowledged coverage drop, stated with its numbers. It does not
+       gate the banner, and it is not silent either. */
+    ...(expectedDrops.length
+        ? [h('span', { class: 'sep' }, '\u00b7'),
+           h('b', {}, expectedDrops.reduce((n, r) => n + r.lost, 0)),
+           ' fewer site' + (expectedDrops.reduce((n, r) => n + r.lost, 0) === 1 ? '' : 's') + ' measured',
+           h('span', { class: 'aside-sub' }, ' \u2014 ' + expectedDrops.map(coverageDropPhrase).join('; ')
+             + ', recorded as expected when the run was ingested. Not a scan that lost sight of them.')]
+        : []));
 }
 
 /* Module scope: coverageLine() renders the aside-lane chips now, and they are

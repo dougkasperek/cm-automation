@@ -146,10 +146,23 @@ if os.path.exists(CAT) and os.path.exists(PODS):
     idx = fv.by_slug(json.load(open(PODS, encoding="utf-8")))
     m = fv.evaluate(rows, idx)
     check("the real catalogue loads as installs", len(rows) > 2000, str(len(rows)))
-    check("no site is affected by any Pods advisory (all 31 run 3.3.9.1)",
+    # COUNTED FROM THE CATALOGUE, not pinned. This said 31 -- the number of Pods
+    # installs on the day it was written -- in the check NAME and in the
+    # assertion. Three Pantheon sites were deleted on 2026-09-01, the fleet's
+    # Pods installs went to 30, and the test went red on a correct change to
+    # the DATA. The property is that every Pods install the catalogue holds was
+    # actually evaluated, whatever that number is; a skipped install is the
+    # defect, and it is invisible if the total is a constant.
+    _pods = [r for r in rows if (r.get("slug") or "").lower() == "pods"]
+    check("no site is affected by any Pods advisory",
           len(m["hits"]) == 0, str(m["hits"][:2]))
-    check("the 31 Pods installs were actually CHECKED, not skipped",
-          m["n_clean"] == 31, str(m["n_clean"]))
+    check("every Pods install in the catalogue was CHECKED, not skipped",
+          m["n_clean"] == len(_pods),
+          "checked %s of %s in the catalogue" % (m["n_clean"], len(_pods)))
+    # Guard against the assertion above passing vacuously on an empty
+    # catalogue: zero installs checked against zero found is not evidence.
+    check("...and there are Pods installs to check in the first place",
+          len(_pods) > 0, str(len(_pods)))
 else:
     check("the real catalogue and Pods fixture are present", False,
           "%s / %s" % (CAT, PODS))

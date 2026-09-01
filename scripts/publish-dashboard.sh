@@ -195,7 +195,15 @@ spec = importlib.util.spec_from_file_location(
 L = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(L)
 runs, _ = L.load_ledger(sys.argv[1])
+# A drop a person already acknowledged AT INGEST is not a reason to refuse a
+# publish again. The judgement is recorded on the run itself, so every later
+# render of that ledger inherits it -- which is why the operator had to pass
+# the same flag twice on 2026-09-01, once to persist and once to publish.
+# `expected` runs still reach the PAGE, which says coverage fell and by how
+# much; they just do not block.
 for g in L.coverage_regressions(runs):
+    if g.get("expected"):
+        continue
     print("%s: %d of %d measured, was %d in %s (-%d)"
           % (g["source"], g["deep_scanned"], g["site_count"] or 0,
              g["previous_deep_scanned"], g["previous_run_id"], g["lost"]))

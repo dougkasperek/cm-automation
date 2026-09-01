@@ -865,7 +865,21 @@ RUN_MODE = {"consent": "browser", "nexcess": "api-estate", "email-dns": "dns",
             "vuln-intel": "feed-match"}
 
 
-def ingest(reports_dir, history_dir, inventory=None):
+def ingest(reports_dir, history_dir, inventory=None, drop_expected=False):
+    """`drop_expected` records a PERSON'S judgement on the run being ingested.
+
+    It is stamped onto the run record rather than passed at publish time, and
+    that is the whole point: on 2026-09-01 three Pantheon sites were deleted,
+    the run measured 47 where the previous measured 48, and the operator
+    dispatched with allow_coverage_drop -- which let the page publish and told
+    the PAGE nothing. The live banner then announced the acknowledged drop as
+    "Can't say ... nothing here is green until it is explained", when it had
+    been explained. A flag that lives for the length of one shell invocation
+    cannot reach a render that happens later, or again.
+
+    Stamped only when a drop was actually detected, so the field never appears
+    on a run that had nothing to forgive.
+    """
     obs_path = os.path.join(history_dir, "observations.jsonl")
     runs_path = os.path.join(history_dir, "runs.jsonl")
     if not os.path.isdir(history_dir):
@@ -1044,6 +1058,8 @@ def ingest(reports_dir, history_dir, inventory=None):
                     "previous_deep_scanned": prev["deep_scanned"],
                     "lost": prev["deep_scanned"] - deep,
                 })
+                if drop_expected:
+                    meta["coverage_drop_expected"] = True
             last_by_source[_cohort(meta)] = meta
 
             runs_fh.write(json.dumps(meta, sort_keys=True) + "\n")
@@ -1217,6 +1233,13 @@ def coverage_regressions(runs):
         if curr.get("mode") and prev.get("mode") and curr["mode"] != prev["mode"]:
             continue
         out.append({
+            # MARKED, never dropped. A person recorded at ingest that this
+            # run's smaller coverage was expected; the drop is still real and
+            # the page must still say coverage fell and by how much. What
+            # changes is only whether it reads as unexplained. Silently
+            # removing it would turn an acknowledgement into a way of hiding a
+            # regression, which is the guard's whole reason for existing.
+            "expected": bool(curr.get("coverage_drop_expected")),
             # The COHORT is what a reader needs -- "coverage went down for
             # health" over two transports names the wrong instrument, which is
             # the same mistake the provenance block made before 2026-08-25.
@@ -2149,7 +2172,8 @@ def main():
 
     if a.command == "ingest":
         res = ingest(a.reports, a.history,
-                     inventory=None if a.no_inventory else a.inventory)
+                     inventory=None if a.no_inventory else a.inventory,
+                     drop_expected=a.allow_coverage_drop)
         print(
             "ingested %d run(s), %d observation(s); %d run(s) already present -> %s"
             % (res["runs_added"], res["observations_added"], res["runs_skipped"], res["ledger"])

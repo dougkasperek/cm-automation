@@ -2000,7 +2000,21 @@ check("the page's UNKNOWN claim agrees with the model it rendered from",
 
 # The half that fails against hardcoded copy. Counted across production and
 # non-production alike, because the sentence is a claim about the fleet.
-_uh["counts"]["UNKNOWN"] = _uh["counts"].get("UNKNOWN", 0) + 1
+#
+# BOTH ENDS ARE CONSTRUCTED, since 2026-09-01. This used to add 1 to whatever
+# the live ledger happened to hold and assert the sentence moved -- which is a
+# real check only while the fleet has ZERO UNKNOWN. On 2026-09-01 three deleted
+# Pantheon sites became UNKNOWN, the baseline stopped being zero, the sentence
+# was already absent, and adding one more could not move it. The test went red
+# on a correct change to the DATA, having quietly stopped testing anything the
+# moment the fleet gained its first UNKNOWN. Same trap as the fleet-count
+# assertions: it assumed the state of an afternoon.
+_uh["counts"]["UNKNOWN"] = 0
+_uh["excluded"]["UNKNOWN"] = 0
+check("with no UNKNOWN anywhere, the page says so",
+      "no site is UNKNOWN on health" in RD.render(_um),
+      "the zero case does not produce the sentence")
+_uh["counts"]["UNKNOWN"] = 1
 _uh["counts"]["OK"] = max(0, _uh["counts"].get("OK", 0) - 1)
 _upage = RD.render(_um)
 check("...and one site going UNKNOWN changes what the sentence says",
@@ -2416,6 +2430,44 @@ check("its run mode is its own instrument, not shared with an API source",
       L.RUN_MODE["vuln-intel"] not in
       [v for k, v in L.RUN_MODE.items() if k != "vuln-intel"],
       L.RUN_MODE["vuln-intel"])
+
+print("\n-- an acknowledged coverage drop is marked, never hidden --")
+# 2026-09-01: three Pantheon sites were deleted, the run measured 47 against
+# 48, and the operator dispatched with allow_coverage_drop. That flag reached
+# the publisher and NOT the page, so the live banner announced the
+# acknowledged drop as "Can't say ... nothing here is green until it is
+# explained". The judgement is recorded on the run now, so every later render
+# inherits it.
+def _drop_pair(expected):
+    return [
+        {"run_id": "r1", "source": "health", "kind": "health",
+         "observed_at": "2026-09-01T01:00:00", "deep_scanned": 48,
+         "site_count": 52, "mode": "full"},
+        {"run_id": "r2", "source": "health", "kind": "health",
+         "observed_at": "2026-09-01T02:00:00", "deep_scanned": 47,
+         "site_count": 49, "mode": "full",
+         **({"coverage_drop_expected": True} if expected else {})},
+    ]
+_unack = L.coverage_regressions(_drop_pair(False))
+_ack = L.coverage_regressions(_drop_pair(True))
+check("an unacknowledged drop is still reported",
+      len(_unack) == 1 and _unack[0]["expected"] is False, str(_unack))
+# NOT filtered out. An acknowledgement that removed the record would turn the
+# flag into a way of hiding a regression, and the page must still say coverage
+# fell and by how much.
+check("an acknowledged drop is still RETURNED, and marked",
+      len(_ack) == 1 and _ack[0]["expected"] is True, str(_ack))
+check("...carrying the same numbers either way",
+      _ack[0]["lost"] == _unack[0]["lost"] == 1, str(_ack))
+# The stamp is a fact about ONE run. It must not forgive the next one.
+_later = _drop_pair(True) + [
+    {"run_id": "r3", "source": "health", "kind": "health",
+     "observed_at": "2026-09-01T03:00:00", "deep_scanned": 40,
+     "site_count": 49, "mode": "full"}]
+_next = L.coverage_regressions(_later)
+check("the stamp does not forgive a LATER run's drop",
+      len(_next) == 1 and _next[0]["run_id"] == "r3"
+      and _next[0]["expected"] is False, str(_next))
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 if FAIL:

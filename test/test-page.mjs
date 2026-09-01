@@ -502,6 +502,37 @@ check('the footer does not repeat the route list',
       !footLinks.some(p => ['/components', '/consent', '/vulnerabilities'].includes(p)),
       JSON.stringify(footLinks));
 
+// --- the header strip names every source that has run -------------------
+// `vuln-intel` and `consent-gating` were both missing until 2026-09-01: each
+// had run, each has its own page linked from the masthead, and neither said
+// when it last looked. A strip that omits an instrument lets a stale source
+// read as a current one -- the masthead's "3 tools feeding one ledger" over
+// four sources, in another place. Asserted against the page's OWN data, so a
+// new source added to the ledger fails this until it is put on the strip.
+// SCOPED TO `.sweep`, not the whole page. The first cut of this read the
+// document text, and "Vulnerabilities" is also a masthead nav link -- so the
+// check passed with the vulnerability row deleted from the strip. Found by
+// running the negative control, which is the only way this kind is ever
+// found: a check whose title claims more than its predicate.
+const stripText = await page.$eval('.sweep', e => e.innerText);
+const cohorts = Object.keys(model.latest || {});
+const LABEL = { 'health': 'Pantheon health', 'health-nexcess': 'Nexcess health',
+                'email-dns': 'Email DNS', 'consent': 'Consent',
+                'consent-gating': 'Consent gating', 'vuln-intel': 'Vulnerabilities',
+                'nexcess': 'Nexcess estate' };
+const unlabelled = cohorts.filter(c => !LABEL[c]);
+check('every cohort in the data has a strip label',
+      unlabelled.length === 0,
+      'no label for: ' + JSON.stringify(unlabelled));
+const offStrip = cohorts.filter(c => LABEL[c] && !stripText.includes(LABEL[c]));
+check('every cohort with a run is named in the header strip',
+      offStrip.length === 0,
+      'not on the strip: ' + JSON.stringify(offStrip.map(c => LABEL[c])));
+// The one the dev team asked for by name.
+check('the vulnerability run states when it last looked',
+      stripText.includes('Vulnerabilities') && !!(model.latest || {})['vuln-intel'],
+      'no vulnerability timestamp in the header');
+
 await browser.close();
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
