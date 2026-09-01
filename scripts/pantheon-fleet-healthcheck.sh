@@ -102,6 +102,12 @@ mkdir -p "$OUT_DIR" || { err "cannot create output dir: $OUT_DIR"; exit 1; }
 # the wrong pair. Harmless while only one machine writes; wrong the moment CI
 # does too.
 STAMP="$(date -u +%Y-%m-%d_%H%M)"
+# Where run_with_timeout puts the stderr and exit status of its last call.
+# One file for the whole run, truncated per call, read immediately after.
+RWT_ERR_FILE="$(mktemp)"
+export RWT_ERR_FILE
+trap 'rm -f "$RWT_ERR_FILE" "$RWT_ERR_FILE.status"' EXIT
+
 JSON_OUT="$OUT_DIR/fleet-health-$STAMP.json"
 CSV_OUT="$OUT_DIR/fleet-health-$STAMP.csv"
 MD_OUT="$OUT_DIR/fleet-health-$STAMP.md"
@@ -225,12 +231,30 @@ while IFS= read -r site <&3; do
   # outcomes - collapsing them is what produced the galbanicheese false result.
   envs_json="$(run_with_timeout "$ENV_CHECK_TIMEOUT" terminus env:list "$site" --format=json | json_or_empty)" || envs_json=""
   if [ -z "$envs_json" ]; then
+    # WHY IT FAILED, not just that it did. The message here read "env preflight
+    # failed, status unknown" for every cause alike, so when 22 of 49 sites
+    # failed on 2026-09-01 there was no way to tell a timeout from a rate-limit
+    # reply from an auth error. The exit status has to be read from the file
+    # too: the pipe into json_or_empty above makes $? the pipe's status, not
+    # the timeout's, which is the same trap that made a green CI step hide a
+    # rejected token.
+    pf_status="$(cat "${RWT_ERR_FILE}.status" 2>/dev/null || echo "?")"
+    pf_err="$(tr '\n' ' ' < "$RWT_ERR_FILE" 2>/dev/null | tr -s ' ' | cut -c1-300)"
+    [ -n "$pf_err" ] || pf_err="no output on stderr"
+    if [ "$pf_status" = "124" ]; then
+      pf_why="timed out after ${ENV_CHECK_TIMEOUT}s"
+    else
+      pf_why="terminus exited ${pf_status}"
+    fi
     obj="$(jq -n --arg site "$site" --arg fw "$framework" --arg plan "$plan" --arg env "$TARGET_ENV" \
+      --arg why "$pf_why" --arg err "$pf_err" \
       '{site:$site,framework:$fw,plan:$plan,env:$env,frozen:false,status:"ERROR",
-        notes:"Environment preflight failed (timeout or unparseable response). Status unknown, NOT confirmed absent."}')"
+        preflight_why:$why,preflight_stderr:$err,
+        notes:("Environment preflight failed: " + $why + ". " + $err
+               + " Status unknown, NOT confirmed absent.")}')"
     results="$(jq --argjson o "$obj" '. + [$o]' <<<"$results")"
     printf '%s' "$results" | jq '.' > "$JSON_OUT"
-    warn "$site: env preflight failed, status unknown"
+    warn "$site: env preflight failed, $pf_why: $pf_err"
     sleep "$SLEEP_BETWEEN"; continue
   fi
 

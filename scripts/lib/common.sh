@@ -40,10 +40,34 @@ err()  { printf 'ERROR: %s\n' "$*" >&2; }
 # a grandchild ssh process is reaped in every case. A stray one is harmless.
 # The guarantee that matters is that the SCRIPT never blocks past SECONDS+1.
 # ---------------------------------------------------------------------------
+# STDERR IS KEPT WHEN THE CALLER ASKS FOR IT, since 2026-09-01. It went to
+# /dev/null, so a timeout, a rate-limited reply, an auth failure and a
+# malformed response all produced the same empty string and the same message.
+# On 2026-09-01, 22 of 49 Pantheon sites failed their environment preflight and
+# nothing in the log or the ledger could say why, because the only evidence had
+# been thrown away at this line.
+#
+# It writes to a FILE rather than a variable on purpose. Every caller uses
+# `$(run_with_timeout ...)`, which runs in a subshell, so a global set in here
+# never reaches the caller. Set RWT_ERR_FILE once in the calling script and
+# read it, and RWT_ERR_FILE.status, immediately after the call.
+_rwt_status_to_file() {
+  [ -n "${RWT_ERR_FILE:-}" ] || return 0
+  printf '%s' "$1" > "${RWT_ERR_FILE}.status" 2>/dev/null || true
+}
+
 run_with_timeout() {
   local secs="$1"; shift
   local tmp_out; tmp_out="$(mktemp)"
-  "$@" > "$tmp_out" 2>/dev/null &
+  local err_to="${RWT_ERR_FILE:-}"
+  if [ -n "$err_to" ]; then
+    : > "$err_to" 2>/dev/null || err_to=""
+  fi
+  if [ -n "$err_to" ]; then
+    "$@" > "$tmp_out" 2>"$err_to" &
+  else
+    "$@" > "$tmp_out" 2>/dev/null &
+  fi
   local pid=$!
   local waited=0
   while kill -0 "$pid" 2>/dev/null; do
@@ -54,6 +78,8 @@ run_with_timeout() {
       sleep 1
       kill -KILL "$pid" 2>/dev/null
       wait "$pid" 2>/dev/null
+      [ -n "$err_to" ] && printf 'killed after %ss (timeout)\n' "$secs" >> "$err_to" 2>/dev/null
+      _rwt_status_to_file 124
       cat "$tmp_out"
       rm -f "$tmp_out"
       return 124
@@ -61,6 +87,7 @@ run_with_timeout() {
   done
   wait "$pid" 2>/dev/null
   local status=$?
+  _rwt_status_to_file "$status"
   cat "$tmp_out"
   rm -f "$tmp_out"
   return "$status"

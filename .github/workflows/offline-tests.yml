@@ -40,6 +40,16 @@ jobs:
             echo "== $t"
             python3 "$t"
           done
+      - name: Every offline shell suite
+        # Same discipline as the Python loop above: no || true, no tail.
+        # A glob rather than a list, so a new test/test-*.sh is picked up
+        # without anyone remembering to add it here.
+        run: |
+          set -e
+          for t in test/test-*.sh; do
+            echo "== $t"
+            bash "$t"
+          done
       - name: End-to-end mock scan
         # 1-3 minutes; two mock sites hang on purpose and the suite times
         # them out itself. Offline: the mock terminus is first on PATH.
