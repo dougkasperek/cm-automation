@@ -140,8 +140,9 @@ only READS, and only under the `fleet/` prefix, so it cannot collide with what
 another application on this account keeps in the same bucket. The bucket is
 shared and is not this project's to delete.
 
-**3. Route a hostname.** `fleet.thudstaff.com`. Do not serve this from
-`[removed]`.
+**3. Route a hostname.** `fleet.thudstaff.com`, its own. Do not attach it to a
+hostname another application on this account already serves: one hostname is
+one Access application, and sharing one merges the two audiences.
 
 This is already in `ci/cloudflare/wrangler.toml` as a `[[routes]]` block with
 `custom_domain = true`, so `wrangler deploy` attaches it. The hostname lives in

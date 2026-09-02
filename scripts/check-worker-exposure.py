@@ -31,9 +31,9 @@ AUTHENTICATION, NOT AUTHORISATION
 ---------------------------------
 Checks 1 and 2 answer "can a stranger get in". They say NOTHING about what a
 logged-in person can reach. Access authorises per APPLICATION: signing in at
-fleet.thudstaff.com does not grant [removed], because the deck's own
-policy is evaluated fresh against that identity. SSO makes it seamless, so it
-is easy to assume otherwise.
+one hostname on this account does not grant another, because each
+application's policy is evaluated fresh against that identity. SSO makes it
+seamless, so it is easy to assume otherwise.
 
 Check 3 is the closest this can get without credentials. Two hostnames sharing
 one application share one policy and therefore one audience. Distinct
