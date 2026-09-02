@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-08-29 (evening).** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-09-01 (late).** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,7 +8,115 @@ written down.
 
 ---
 
-## PICK UP HERE: 2026-08-29, evening: two more cuts, and a correction
+## PICK UP HERE: 2026-09-01, late. Start with one cold scan.
+
+**Do this first, before anything else.** One Pantheon health scan, from cold,
+with nothing else running. It answers a question tonight could not:
+
+```bash
+cd ~/dev/cm-automation
+gh run list --limit 5 --json status --jq '[.[] | select(.status != "completed")] | length'   # must be 0
+gh workflow run pantheon-fleet-healthcheck.yml -f run_mode=full -f target_env=live \
+  -f fail_on_crit=false -f persist_ledger=true -f publish_dashboard=true
+```
+
+**Check the count against 47.** That is what a healthy run measured at 17:28 on
+2026-09-01. If it comes back near 47 the fleet is fine and the evening was
+self-inflicted. If it fails again, the run will now SAY WHY, which it could not
+do this morning.
+
+**Do not pass `allow_coverage_drop`.** Nothing is expected to drop. If the guard
+refuses, that is the finding.
+
+### What happened on 2026-09-01, in order
+
+Five full Pantheon scans ran in five hours and the measured count fell every
+time: 47, then 46, then 45 and 46 from two that ran at once, then **26 of 49
+with 22 sites failing their environment preflight**. An hour of doing nothing
+took the next run back to **46**.
+
+**That fits throttling and nothing has confirmed it.** Treat it as the leading
+guess and not as the answer. What is measured: `terminus env:list` did not
+return within 20 seconds and terminus printed nothing at all, which rules out
+an auth failure and rules out an active refusal, both of which write to stderr.
+
+Two of those scans ran concurrently because the workflow was dispatched twice,
+two minutes apart, once by Doug and once by Claude. Both started on the same
+site 48 seconds apart and `lasershows.com` measured cleanly in one and ERRORed
+in the other. That is B9, and it is worth settling before the schedules are
+turned on, because a schedule firing during a manual run produces exactly it.
+
+### What was fixed, and what it means for tomorrow
+
+`run_with_timeout` was sending the child's stderr to `/dev/null`, so a timeout,
+a rate-limited reply, an auth failure and a malformed response all produced one
+empty string and one message. It keeps both stderr and the exit status now, and
+the scanner reports which of the two it was.
+
+`preflight_why` and `preflight_stderr` are in the health fact family, so the
+reason reaches the ledger rather than only a CI log. They read UNKNOWN on a
+healthy row and any move across that boundary classifies as COVERAGE, so
+nothing new shows up in the change feed.
+
+**Practical effect: if tomorrow's scan fails, do not guess.** Read the reason:
+
+```bash
+python3 -c "
+import json
+rows=[json.loads(l) for l in open('history/observations.jsonl')]
+run=max(r['run_id'] for r in rows if r.get('source')=='health' and not r['run_id'].startswith('health-nexcess'))
+for r in rows:
+    if r['run_id']==run and r.get('preflight_why') not in (None,'unknown'):
+        print(r['site_id'], '->', r['preflight_why'], '|', r.get('preflight_stderr'))
+"
+```
+
+### State as of tonight
+
+Everything is published and current. `fleet.thudstaff.com` carries health run
+`health-2026-09-01_2350` and vulnerability run `vuln-intel-2026-09-02_0056`,
+verified by reading the objects back out of R2 rather than from a log.
+
+- **9 CRIT, 55 WARN, 15 OK**, six sites excluded by ruling.
+- **453 vulnerability findings over 64 sites**, 15 with no fix, 9 sites not
+  checked and named on the page.
+- `knudsen.com` timed out tonight and is unmeasured. One site, one run, not a
+  pattern yet. Watch whether it recurs.
+- The coverage guard refused three publishes today and every refusal was right.
+  The one that went through was the only drop that had an explanation.
+
+### Also done on 2026-09-01
+
+- **Every em dash is out of the dashboard copy and the repo**, along with the
+  aphoristic sentence shapes. Doug asked for this twice. The exceptions are
+  `docs/correspondence/` (verbatim vendor messages, never edited), the frozen
+  Wordfence fixture, `_scratch/`, and three comments that quote a string which
+  used to exist.
+- **Zach patched two sites** and it is visible: `crackerbarrelcheese.com` and
+  `ciminelliflorida.com` closed eight advisories between them. The fleet total
+  rose anyway, from 391 to 455, and all 143 added findings come from ten
+  advisories Wordfence published since 31 August. The fleet improved; the world
+  published more.
+- **B8, B9, B10 and B11 were added** to `docs/DO-THIS-NEXT.md`. B11 is the
+  OneTrust API question and its first open item gates the rest: does the tier
+  clevermethod is on include API access at all. That is Nick's answer.
+- **`docs/HANDOVER.md`** covers moving the repo and the dashboard to the
+  clevermethod org. The GitHub transfer is ready; Cloudflare needs a Super
+  Administrator on the clevermethod, Inc. account to grant three roles first.
+
+### Two things I would not let slide
+
+**The git history still holds everything scrubbed from the working tree today**,
+including the other Workers, the access map and six colleagues' names. A
+stranger cloning the repo sees a clean tree; `git log -p` does not. That is a
+decision for before the transfer, not after.
+
+**A dispatch is not gated on whether something is already running.** Check
+first, every time. See B9.
+
+---
+
+## Previously: 2026-08-29, evening: two more cuts, and a correction
 
 ### The correction first
 
