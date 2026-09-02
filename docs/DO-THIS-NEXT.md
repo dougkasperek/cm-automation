@@ -12,7 +12,7 @@ worth being able to see, so the next person can tell it was retired on purpose
 rather than lost.
 
 **The live backlog starts at "What is left after this"**, and the open items
-are B1, B2, B3, B4, B6, B7, B8, B9, B10 and B11. B5 is closed.
+are B1, B2, B3, B4, B6, B7, B8, B9, B10, B11 and B12. B5 is closed.
 
 > ~~**ONE-TIME, on the next Pantheon run.**~~ **SPENT 2026-09-01.** Run
 > `health-2026-09-01_1728` measured 47 where the previous measured 48, both
@@ -969,3 +969,88 @@ whether a site has been swept, and seeding a ruling onto every site once made
 all 85 read as swept. If OneTrust starts supplying the model, it arrives as a
 measurement and the two must not be merged into one field without deciding
 which wins.
+
+---
+
+## B12. Acting on a finding, not just showing it
+
+**Opened 2026-09-02.** The Teams alert on a new critical is built and is step
+one of this. Everything below is not.
+
+### The boundary this crosses
+
+Until now the rule was simple: the tool never changes a client site. That still
+holds and is not up for discussion. What is new is that the tool now DOES
+something rather than only reporting, so the line needs stating:
+
+> This tool may write to clevermethod's own systems. It never writes to a
+> client site or to a host.
+
+An Asana task, a Teams message and a note in our own records are on one side of
+that line. A plugin update, a config change and anything reaching a client's
+server are on the other, and no amount of convenience moves them.
+
+### What is built
+
+A Teams message when a NEW finding at CVSS 9.0 or above reaches a site, sent
+after a successful publish. Grouped by site and plugin, because that is the
+unit of work: a person logs into one site and updates one plugin.
+
+### Why the trigger is that narrow, measured before it was written
+
+Across the seven vulnerability runs to 2026-09-02:
+
+| new findings per run | 0 | 0 | 143 | 4 | 4 | 0 |
+|---|---|---|---|---|---|---|
+| of those, CVSS 9.0+ | 0 | 0 | 0 | 0 | 0 | 0 |
+
+The 143 was Wordfence publishing ten advisories at once. Alerting on new
+findings would have sent 143 messages that evening. There are also **165
+distinct site-and-plugin pairs** needing an update right now, so anything
+broader is a backlog dump rather than a work queue.
+
+**It reports what is new, not what is outstanding.** On the day it was built,
+`ciminelli.com` was the worst site on the fleet and this would have said
+nothing about it, because its two 9.8s had been known to us for days. If a
+digest of what is still open is wanted, that is a different thing with a
+different cadence, and it should be weekly rather than per run.
+
+**It has never fired on real data.** That is the design working and it is also
+the risk, so `test/test-fleet-alert.py` plants a critical and requires it to be
+found, banded, grouped and carrying its fix version. Same reasoning as the
+planted leak in the consent gating test.
+
+### What is not built, in the order I would do it
+
+**1. A prefilled link, not a button.** Each finding row could carry a link that
+opens a task prefilled through a URL. NOT a click-to-create button: the
+vulnerability page is a static file in R2 served by a Worker that deliberately
+has no write endpoint. The Worker had one until 2026-08-19, it was removed, and
+the note says not to add one back without a reason that survives "the API
+already authenticates this on its own". A button needs a write path and a
+credential the browser can use. A link needs neither.
+
+**2. Asana tasks.** Only after the trigger has been watched for a few weeks.
+The hard part is not creating a task, it is not creating it twice: publish runs
+on every scan, so something has to remember what has already been raised. The
+stable key is site plus plugin. The honest place for that record is the ledger,
+which is append-only and which CI already writes to.
+
+**3. The first run after it ships must raise nothing**, or it opens with the
+entire backlog. The same trap is already in the bug table twice.
+
+**4. Closing the loop.** The site records already have the right shape: each
+check stores a value, who confirmed it and when. Those last two are empty on
+all 85 sites because they came from a spreadsheet import. A completed task
+should be able to fill them, which needs a write path to the inventory and
+therefore depends on B4.
+
+### Open questions
+
+- Which channel, and does it need to be a different one from routine publishes?
+  A channel that gets both will be muted.
+- Who owns a task by default, and does that vary by host or by client?
+- Should a site crossing into CRIT on the health axis also alert? It is a
+  different signal from a new advisory, and it needs severity diffed across
+  runs rather than the vulnerability findings compared, so it is more work than
+  it looks.

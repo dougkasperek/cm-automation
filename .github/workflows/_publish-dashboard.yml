@@ -103,3 +103,40 @@ jobs:
         run: |
           FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh \
             ${{ inputs.allow_coverage_drop && '--allow-coverage-drop' || '' }}
+
+      # AFTER the publish, and only after. An alert pointing at a page that
+      # failed to publish sends someone to stale numbers.
+      #
+      # It stays quiet on almost every run by design: across the seven
+      # vulnerability runs to 2026-09-02 this would have fired zero times. It
+      # reports what is NEW and critical, not what is outstanding, because
+      # there are 165 site-and-plugin pairs needing an update and repeating
+      # that every run is how a channel gets muted.
+      #
+      # `continue-on-error` because a webhook being down must not fail a
+      # publish that already succeeded. The step still reports its own status,
+      # so a failure is visible rather than swallowed: a diagnostic whose exit
+      # code is discarded is not a diagnostic.
+      - name: Tell someone if a new critical appeared
+        continue-on-error: true
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          FLEET_PUBLIC_URL: ${{ vars.FLEET_PUBLISH_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TEAMS_WEBHOOK_URL:-}" ]; then
+            # SAID OUT LOUD, not skipped in silence. Someone reading a green
+            # run must be able to tell "nothing to report" from "no webhook is
+            # configured, so nothing could have been reported".
+            echo "::warning::TEAMS_WEBHOOK_URL is not set, so no alert can be sent. Add it under Settings, Secrets and variables, Actions."
+            exit 0
+          fi
+          PAYLOAD="$(./scripts/fleet-alert.py)"
+          if [ -z "$PAYLOAD" ]; then
+            echo "No new critical findings. Nothing sent." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "$PAYLOAD" | curl -sS -X POST -H 'Content-Type: application/json' \
+            --data @- --fail-with-body "$TEAMS_WEBHOOK_URL"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Alert sent: a new critical vulnerability was found." >> "$GITHUB_STEP_SUMMARY"
