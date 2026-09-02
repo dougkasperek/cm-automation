@@ -71,7 +71,25 @@ API_ONLY=0
 FAIL_ON_CRIT=1
 SITE_FILTER=""
 SITE_LIMIT=0
-ENV_CHECK_TIMEOUT=20    # API call, should be fast
+# 20 UNTIL 2026-09-02, with the comment "API call, should be fast". It is not
+# fast. Measured on run health-2026-09-02_1147, 49 sites: MEDIAN 8s, slowest
+# 15s, and 12 of 49 calls took 10s or more. A ceiling of 20 left about five
+# seconds of headroom over the normal case.
+#
+# That is what the week's failures were. Four runs each lost exactly one site,
+# a different one every time, and Pantheon's own export showed the four shared
+# no plan, owner, tag or age. Under load on 2026-09-01 more calls drifted up at
+# once and 22 of 49 crossed together.
+#
+# NOT the tool and NOT the network, both measured and excluded: terminus and
+# PHP each start in under a second, and a TLS round trip to api.pantheon.io is
+# 0.19s. The 8 seconds is Pantheon answering `env:list` for one site.
+#
+# 45 matches the other Pantheon API calls below. It is headroom over a measured
+# distribution rather than a number chosen by feel, and the run record now
+# carries preflight_median_seconds so the next person can check whether the
+# distribution moved rather than re-deriving it.
+ENV_CHECK_TIMEOUT=45    # measured median 8s, max 15s; see above
 API_CALL_TIMEOUT=45     # backup:list / upstream:updates:list
 WP_CLI_TIMEOUT=60       # SSH + WP-CLI bootstrap, slowest of the three
 

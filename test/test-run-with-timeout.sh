@@ -63,6 +63,26 @@ echo "-- with no RWT_ERR_FILE set, nothing breaks --"
     || echo "FAIL  a caller that does not ask for stderr still works" )
 
 echo
+echo "-- the preflight ceiling is not tighter than the other API calls --"
+# THE MISTAKE THIS CATCHES. ENV_CHECK_TIMEOUT was 20 with the comment "API
+# call, should be fast", while the other Pantheon API calls in the same script
+# had 45. `terminus env:list` is the same kind of request and is not cheaper:
+# measured on run health-2026-09-02_1147 across 49 sites, the median was 8s and
+# 12 calls took 10s or more. Four runs that week each lost a different site to
+# that ceiling.
+#
+# NOT an assertion that it equals 45. That is a number someone may have good
+# reason to move. The property is that the env check never gets less headroom
+# than the calls beside it.
+_env=$(grep -E '^ENV_CHECK_TIMEOUT=' scripts/pantheon-fleet-healthcheck.sh | head -1 | sed 's/[^0-9]*\([0-9]*\).*/\1/')
+_api=$(grep -E '^API_CALL_TIMEOUT=' scripts/pantheon-fleet-healthcheck.sh | head -1 | sed 's/[^0-9]*\([0-9]*\).*/\1/')
+if [ -n "$_env" ] && [ -n "$_api" ] && [ "$_env" -ge "$_api" ]; then
+  PASS=$((PASS+1)); printf 'ok    %-58s %s\n' "the env preflight gets at least the other API calls' ceiling" "${_env}s vs ${_api}s"
+else
+  FAIL=$((FAIL+1)); printf 'FAIL  %-58s env %ss is tighter than api %ss\n' "the env preflight gets at least the other API calls' ceiling" "$_env" "$_api"
+fi
+
+echo
 echo "-------------------------------------------------------------------"
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
