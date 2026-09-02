@@ -3214,20 +3214,33 @@ VULN_JS = r"""
   }
   function render() {
     var rows = DATA.slice().sort(function (a, b) {
-      /* A finding NEW since the last check never sorts out of the top. It was
-         the criticals that were pinned here until 2026-08-31, and that was
-         wrong for the same reason the old headline was: six of the eight
-         criticals had been outstanding for months, so pinning them pinned the
-         backlog and buried the two that had just appeared. What changed is
-         what a reader cannot already know. */
-      var an = a.new_since_last ? 0 : 1;
-      var bn = b.new_since_last ? 0 : 1;
-      if (an !== bn) { return an - bn; }
+      /* SEVERITY LEADS, AND NEW IS THE TIEBREAK. Until 2026-09-02 a finding
+         new since the last check was pinned above everything, unconditionally.
+         That was put in on 2026-08-31 for a good reason -- pinning CRITICALS
+         instead meant pinning a months-old backlog and burying the two things
+         that had just appeared -- but it overcorrected. A new 6.4 is not more
+         urgent than a standing 9.8.
+
+         Measured on 2026-09-02 at 10:04: four new findings at 7.5, 7.2, 6.4
+         and 6.4 sat above five criticals, so the page opened on a 6.4 with a
+         9.8 below the fold. That is what a reader would call wrong, and they
+         would be right.
+
+         What changed is still said twice on this page: the "N new since the
+         last check" figure in the strip, and the marker on each row. It does
+         not also need to control the order.
+
+         There is no separate tier for it any more. A first cut of this kept
+         one behind a `pinNew` flag that was initialised false, so the branch
+         could never run and the click handler that cleared it did nothing. A
+         variable that is never true is worse than no variable. */
       var x = GET[key](a), y = GET[key](b);
       var n = (typeof x === 'number') ? x - y : String(x).localeCompare(String(y));
-      /* Oldest first among equals: eight findings at 9.8 are indistinguishable
-         by score, and how long we have carried one is the thing that ranks it. */
-      var tie = (GET.age(b) - GET.age(a)) || (b.site_count - a.site_count);
+      /* Among equals: what is NEW first, then oldest, then blast radius.
+         Eight findings at 9.8 are indistinguishable by score, so new-to-us and
+         how long we have carried it are what rank them. */
+      var tie = ((a.new_since_last ? 0 : 1) - (b.new_since_last ? 0 : 1))
+        || (GET.age(b) - GET.age(a)) || (b.site_count - a.site_count);
       return (n * dir) || tie;
     });
     tb.innerHTML = rows.map(function (g, i) {

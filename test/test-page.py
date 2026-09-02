@@ -264,6 +264,38 @@ check("...and an absent version renders as words, never a blank",
 # The fleet page has accepted #site=<id> on load and on hashchange since it was
 # built, so this is a link to the one drawer that already exists rather than a
 # second one to keep in step.
+# --- the findings table sorts by severity, not by what is new ---------------
+# Until 2026-09-02 the comparator compared new_since_last BEFORE the sort key,
+# unconditionally, so clicking "Severity" did not put the worst finding first
+# and the page could open on a 6.4 with a 9.8 below the fold. Measured that
+# morning: four new findings at 7.5, 7.2, 6.4 and 6.4 sat above five criticals.
+#
+# The pin was added on 2026-08-31 for a good reason, since pinning CRITICALS
+# instead pinned a months-old backlog. It overcorrected: a new 6.4 is not more
+# urgent than a standing 9.8.
+#
+# Asserted on ORDER IN THE SOURCE, because the comparator is inline JS with no
+# seam to call. The sort key must be read before new_since_last is looked at.
+_js = RD.VULN_JS
+_sort = _js[_js.index("DATA.slice().sort"):_js.index("tb.innerHTML")]
+# .find() and not .index(): a missing string returns -1 rather than raising, so
+# a broken comparator fails this check instead of crashing the suite. The same
+# slip cost a negative control earlier the same day.
+_i_key = _sort.find("GET[key](a)")
+_i_new = _sort.find("new_since_last ? 0 : 1")
+check("the sort reads the chosen key before anything else",
+      _i_key >= 0 and _i_new >= 0 and _i_key < _i_new,
+      "key at %d, new_since_last at %d" % (_i_key, _i_new))
+# It must still BREAK TIES, or eight findings at 9.8 have nothing to rank them
+# and what just appeared is indistinguishable from what has sat for two years.
+check("...and what is new still breaks ties among equal scores",
+      "new_since_last ? 0 : 1" in _sort and "var tie" in _sort)
+# No separate tier survives. A first cut kept one behind a flag initialised
+# false, so the branch could never run and the handler clearing it did nothing.
+check("...and no unconditional new-first tier survives",
+      "if (an !== bn)" not in _sort,
+      "the new-first tier is still there")
+
 check("each site links to its drawer on the fleet page",
       "#site=" in RD.VULN_JS and "encodeURIComponent" in RD.VULN_JS,
       "site chips are not links into the fleet drawer")
