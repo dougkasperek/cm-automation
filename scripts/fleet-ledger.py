@@ -65,6 +65,25 @@ OBSERVED = (
     "wp_core_update",
     "plugin_updates",
     "theme_updates",
+    # WHY A PREFLIGHT FAILED, carried into the ledger since 2026-09-01.
+    # The scanner has recorded these since the same day and _health_rows copies
+    # only what is listed here, so for one evening the answer existed in the
+    # report file, was written into a CI log, and reached nothing that outlives
+    # the run. On 2026-09-01, 22 of 49 sites failed and the reason was gone by
+    # morning.
+    #
+    # `preflight_why` is the category: "timed out after 20s" or "terminus
+    # exited N". Those point at different problems, one of them ours.
+    # `preflight_stderr` is what the tool actually said, kept because "terminus
+    # said nothing at all" is itself the finding: it is how an unanswered call
+    # was told apart from an active refusal.
+    #
+    # Both are absent on a healthy row, so they read as UNKNOWN there, and
+    # classify() sends any move across that boundary to COVERAGE before any
+    # other rule runs. A site going dark is the tool losing sight of it, not
+    # the fleet changing, and it is already reported that way.
+    "preflight_why",
+    "preflight_stderr",
     # Did this run inventory the site's components at all? The LIST itself is
     # not a fact and is not stored here -- it goes to components.jsonl, one row
     # per component. This is the scalar the page needs so that "no vulnerable

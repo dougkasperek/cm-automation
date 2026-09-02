@@ -1908,7 +1908,18 @@ check("...and it routes to the full list rather than replacing it",
 # whether or not the fleet currently has a baseline-less cause.
 _pm = RD.build_model("./history", "./data/fleet-inventory.json",
                      datetime.date(2026, 8, 23))
-_top_causes = list(_pm["standing"])[:12]
+# THE SAME SLICE THE PAGE DRAWS, not a different one. This read
+# `list(_pm["standing"])[:12]`, the model's own order; the renderer draws
+# `sorted(standing, key=-len(sites))[:6]`. Those are different sets, and on
+# 2026-09-01 "No recent DB backup" landed at index 6 of the model order, inside
+# the test's twelve and outside the page's six. The check then demanded a
+# marker for a cause the page never rendered. It had only ever passed while the
+# two slices happened to agree.
+#
+# Mirrored rather than imported because the renderer builds it inline. If that
+# slice changes, this has to change with it, which is why the coupling is
+# written down here rather than left to be discovered.
+_top_causes = sorted(_pm["standing"], key=lambda g: -len(g["sites"]))[:6]
 _with = [g for g in _top_causes if _pm["standing_was"].get(g["cause"]) is not None]
 _without = [g for g in _top_causes if _pm["standing_was"].get(g["cause"]) is None]
 check("every cause that HAS a baseline draws a direction",
@@ -2441,6 +2452,44 @@ check("its run mode is its own instrument, not shared with an API source",
       L.RUN_MODE["vuln-intel"] not in
       [v for k, v in L.RUN_MODE.items() if k != "vuln-intel"],
       L.RUN_MODE["vuln-intel"])
+
+print("\n-- a preflight failure says WHY, in the ledger --")
+# The scanner has recorded preflight_why and preflight_stderr since 2026-09-01
+# and _health_rows copies only what OBSERVED lists, so for one evening the
+# reason existed in the report file, went into a CI log, and reached nothing
+# that outlives the run. 22 of 49 sites failed that day and the reason was gone
+# by morning.
+_pf = L._health_rows([
+    {"site": "goodsite", "framework": "wordpress", "plan": "Basic", "env": "live",
+     "frozen": False, "status": "WARN", "wp_checked": True, "wp_version": "7.0.3"},
+    {"site": "timedout", "framework": "wordpress", "plan": "Basic", "env": "live",
+     "frozen": False, "status": "ERROR", "preflight_why": "timed out after 20s",
+     "preflight_stderr": "killed after 20s (timeout)"},
+    {"site": "refused", "framework": "wordpress", "plan": "Basic", "env": "live",
+     "frozen": False, "status": "ERROR", "preflight_why": "terminus exited 1",
+     "preflight_stderr": "Could not authenticate"},
+], {})
+_by = {r["site_id"]: r for r in _pf}
+check("a preflight failure carries its reason into the ledger",
+      _by["timedout"].get("preflight_why") == "timed out after 20s",
+      str(_by["timedout"].get("preflight_why")))
+# THE DISTINCTION THAT MATTERS. A call that never answered and a call that was
+# refused point at different problems, one of them ours, and before this they
+# produced the same empty string.
+check("...and a timeout is distinguishable from a refusal",
+      _by["timedout"].get("preflight_why") != _by["refused"].get("preflight_why")
+      and _by["timedout"].get("preflight_why") is not None)
+check("...and what the tool actually said is kept",
+      _by["refused"].get("preflight_stderr") == "Could not authenticate")
+# Terminus saying NOTHING is itself the finding, so the field must not be
+# dropped when it is empty on a healthy row either.
+check("a healthy row reads UNKNOWN, never a fabricated reason",
+      _by["goodsite"].get("preflight_why") == L.UNKNOWN,
+      str(_by["goodsite"].get("preflight_why")))
+# A site going dark is the TOOL losing sight of it, not the fleet changing.
+check("a site going dark is coverage, not fleet news",
+      L.classify("s", "preflight_why", L.UNKNOWN, "timed out after 20s",
+                 {}, {}, None) == "COVERAGE")
 
 print("\n-- an acknowledged coverage drop is marked, never hidden --")
 # 2026-09-01: three Pantheon sites were deleted, the run measured 47 against
