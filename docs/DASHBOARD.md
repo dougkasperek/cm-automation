@@ -137,7 +137,8 @@ write route went" below, where production kept a route the repo had removed.
 **2. R2 is already bound** by the config above: binding `FLEET`, bucket
 `dash-data` (verified to exist 2026-08-19, re-checked 2026-08-20). The Worker
 only READS, and only under the `fleet/` prefix, so it cannot collide with what
-`[removed]` keeps in the same bucket.
+another application on this account keeps in the same bucket. The bucket is
+shared and is not this project's to delete.
 
 **3. Route a hostname.** `fleet.thudstaff.com`. Do not serve this from
 `[removed]`.

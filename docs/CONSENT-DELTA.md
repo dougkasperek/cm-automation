@@ -35,7 +35,7 @@ snippet above GTM (denied for opt-in, granted for opt-out), import the
 OneTrust GTM workspace, and re-trigger every non-Google tag on the
 `cEvent - OneTrust - <Category> Cookies Updated` event. Post-launch rules:
 every new GTM tag gets its consent configured, and **monthly** someone reads
-the OneTrust scan report (emailed to [removed]@ and systems@) and
+the OneTrust scan report (emailed to the consent lead and systems@) and
 categorizes any new `Unknown` cookies.
 
 **Nick's nuances from the thread**, in order:

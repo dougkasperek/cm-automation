@@ -65,7 +65,8 @@ custom_domain = true
 # stale silently. If wrangler asks, select the clevermethod account.
 
 # The Worker only READS, and only under the fleet/ prefix, so sharing the
-# bucket with [removed] is safe. Bucket verified to exist 2026-08-19,
+# bucket with another application on this account is safe. THE BUCKET IS NOT
+# OURS ALONE: do not delete it. Verified to exist 2026-08-19,
 # re-checked 2026-08-20 (no custom domain, public dev URL disabled).
 [[r2_buckets]]
 binding = "FLEET"
