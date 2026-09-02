@@ -2453,6 +2453,39 @@ check("its run mode is its own instrument, not shared with an API source",
       [v for k, v in L.RUN_MODE.items() if k != "vuln-intel"],
       L.RUN_MODE["vuln-intel"])
 
+print("\n-- how slow the preflight was, per run and never per site --")
+# Four runs across 2026-09-01 and 2026-09-02 each lost exactly one site to a 20s
+# ceiling on `terminus env:list`, a different site every time, and Pantheon's
+# own export showed the four share no plan, owner, tag or age. The open question
+# is the distribution: near zero, or near the ceiling.
+import tempfile as _tf, shutil as _sh
+_td = _tf.mkdtemp()
+_rp, _hp = os.path.join(_td, "reports"), os.path.join(_td, "history")
+os.makedirs(_rp); os.makedirs(_hp)
+_pl = [{"site": "s%d" % i, "framework": "wordpress", "plan": "Basic", "env": "live",
+        "frozen": False, "status": "ERROR" if sec == 20 else "WARN",
+        "wp_checked": sec != 20, "wp_version": "7.0.3", "preflight_seconds": sec}
+       for i, sec in enumerate([0, 1, 0, 1, 0, 2, 0, 1, 20])]
+json.dump(_pl, open(os.path.join(_rp, "fleet-health-2026-09-02_1200.json"), "w"))
+L.ingest(_rp, _hp, inventory=None)
+_run = [json.loads(l) for l in open(os.path.join(_hp, "runs.jsonl"))][0]
+_obs = [json.loads(l) for l in open(os.path.join(_hp, "observations.jsonl"))]
+check("the run says how slow the slowest preflight was",
+      _run.get("preflight_slowest_seconds") == 20, str(_run.get("preflight_slowest_seconds")))
+check("...and the median, so one outlier cannot pass for the norm",
+      _run.get("preflight_median_seconds") == 1, str(_run.get("preflight_median_seconds")))
+check("...and how many got at least halfway to the ceiling",
+      _run.get("preflight_over_10s") == 1, str(_run.get("preflight_over_10s")))
+# THE PART THAT KEEPS THE CHANGE FEED USABLE. classify() has no rule for this
+# key, so it falls through to TRANSITION, the strongest class. Stored per site,
+# a number that moves every run would report a change on every site every time.
+check("the number never reaches a site row",
+      not any("preflight_seconds" in r for r in _obs),
+      "%d row(s) carry it" % sum(1 for r in _obs if "preflight_seconds" in r))
+check("...and it is not a diffable fact either",
+      "preflight_seconds" not in L.FACT_FAMILIES["health"])
+_sh.rmtree(_td)
+
 print("\n-- a preflight failure says WHY, in the ledger --")
 # The scanner has recorded preflight_why and preflight_stderr since 2026-09-01
 # and _health_rows copies only what OBSERVED lists, so for one evening the

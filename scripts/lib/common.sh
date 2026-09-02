@@ -56,6 +56,26 @@ _rwt_status_to_file() {
   printf '%s' "$1" > "${RWT_ERR_FILE}.status" 2>/dev/null || true
 }
 
+# HOW LONG THE CALL TOOK, in whole seconds. The wait loop below already counts
+# this and threw it away, so recording it costs nothing.
+#
+# Whole seconds is the resolution available: this has to run on bash 3.2, which
+# is what macOS ships, and that has no EPOCHREALTIME. It is enough for the
+# question it exists to answer. Four runs on 2026-09-01 and 2026-09-02 each
+# lost exactly one site to a 20s preflight ceiling, a different site every time
+# and with nothing in common between them, so the open question is whether the
+# other calls sit near zero or near the ceiling. Zero against twenty does not
+# need a millisecond clock.
+#
+# 0 AND 1 BOTH MEAN "under about a second". The loop checks, sleeps a second,
+# then increments, so a call that finishes instantly reads 0 or 1 depending on
+# whether it was still alive at the first check. Measured: `echo` reads 1. Do
+# not read 1 as "took a second".
+_rwt_elapsed_to_file() {
+  [ -n "${RWT_ERR_FILE:-}" ] || return 0
+  printf '%s' "$1" > "${RWT_ERR_FILE}.secs" 2>/dev/null || true
+}
+
 run_with_timeout() {
   local secs="$1"; shift
   local tmp_out; tmp_out="$(mktemp)"
@@ -80,6 +100,7 @@ run_with_timeout() {
       wait "$pid" 2>/dev/null
       [ -n "$err_to" ] && printf 'killed after %ss (timeout)\n' "$secs" >> "$err_to" 2>/dev/null
       _rwt_status_to_file 124
+      _rwt_elapsed_to_file "$waited"
       cat "$tmp_out"
       rm -f "$tmp_out"
       return 124
@@ -88,6 +109,7 @@ run_with_timeout() {
   wait "$pid" 2>/dev/null
   local status=$?
   _rwt_status_to_file "$status"
+  _rwt_elapsed_to_file "$waited"
   cat "$tmp_out"
   rm -f "$tmp_out"
   return "$status"

@@ -1047,6 +1047,29 @@ def ingest(reports_dir, history_dir, inventory=None, drop_expected=False):
                 # an unknown site is the highest-signal finding there is.
                 "sites_not_in_inventory": sorted(r["site_id"] for r in unresolved),
             })
+            # HOW SLOW THE PREFLIGHT WAS, summarised per RUN and never per site.
+            #
+            # Four runs across 2026-09-01 and 2026-09-02 each lost exactly one
+            # site to a 20s ceiling on `terminus env:list`, a different site
+            # every time, and Pantheon's own export shows the four share no
+            # plan, owner, tag or age. The open question is the distribution:
+            # do the other calls sit near zero or near the ceiling.
+            #
+            # PER RUN, because per site it would be diffed. classify() has no
+            # rule for this key so it falls through to TRANSITION, the
+            # strongest class, and a number that moves every run would then
+            # report a change on every site in the fleet every time.
+            #
+            # 0 and 1 both mean "under about a second"; see run_with_timeout.
+            _secs = [r.get("preflight_seconds") for r in payload] \
+                if isinstance(payload, list) else []
+            _secs = [x for x in _secs if isinstance(x, (int, float))]
+            if _secs:
+                meta["preflight_slowest_seconds"] = max(_secs)
+                meta["preflight_median_seconds"] = sorted(_secs)[len(_secs) // 2]
+                # Calls that got at least halfway to the ceiling. One is noise;
+                # a dozen would say the ceiling is the wrong number.
+                meta["preflight_over_10s"] = sum(1 for x in _secs if x >= 10)
             if unresolved:
                 unresolved_by_run[meta["run_id"]] = sorted(
                     r["site_id"] for r in unresolved)

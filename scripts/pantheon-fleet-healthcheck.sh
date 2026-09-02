@@ -230,6 +230,15 @@ while IFS= read -r site <&3; do
   # catches it. "Check failed" and "confirmed absent" are DELIBERATELY distinct
   # outcomes - collapsing them is what produced the galbanicheese false result.
   envs_json="$(run_with_timeout "$ENV_CHECK_TIMEOUT" terminus env:list "$site" --format=json | json_or_empty)" || envs_json=""
+  # HOW LONG IT TOOK, on every call including the ones that worked. Four runs
+  # across 2026-09-01 and 2026-09-02 each lost exactly one site to this 20s
+  # ceiling, a different site each time, and Pantheon's own export shows the
+  # four share no plan, owner, tag or age. So the question is not which sites
+  # are slow, it is whether the other 48 calls sit near zero or near the
+  # ceiling. Recorded per site here; ingest keeps only the run-level summary,
+  # because a number that moves every run would render as a change on every
+  # site in the change feed.
+  pf_secs="$(cat "${RWT_ERR_FILE}.secs" 2>/dev/null || echo "")"
   if [ -z "$envs_json" ]; then
     # WHY IT FAILED, not just that it did. The message here read "env preflight
     # failed, status unknown" for every cause alike, so when 22 of 49 sites
@@ -247,9 +256,10 @@ while IFS= read -r site <&3; do
       pf_why="terminus exited ${pf_status}"
     fi
     obj="$(jq -n --arg site "$site" --arg fw "$framework" --arg plan "$plan" --arg env "$TARGET_ENV" \
-      --arg why "$pf_why" --arg err "$pf_err" \
+      --arg why "$pf_why" --arg err "$pf_err" --arg secs "$pf_secs" \
       '{site:$site,framework:$fw,plan:$plan,env:$env,frozen:false,status:"ERROR",
         preflight_why:$why,preflight_stderr:$err,
+        preflight_seconds:(if $secs == "" then null else ($secs|tonumber) end),
         notes:("Environment preflight failed: " + $why + ". " + $err
                + " Status unknown, NOT confirmed absent.")}')"
     results="$(jq --argjson o "$obj" '. + [$o]' <<<"$results")"
@@ -276,8 +286,9 @@ while IFS= read -r site <&3; do
     reason="does not exist"
     [ "$env_state" = "uninitialized" ] && reason="exists but was never initialized"
     [ -z "$env_state" ] && reason="could not be determined from the env list response"
-    obj="$(jq -n --arg site "$site" --arg fw "$framework" --arg plan "$plan" --arg env "$TARGET_ENV" --arg reason "$reason" \
+    obj="$(jq -n --arg site "$site" --arg fw "$framework" --arg plan "$plan" --arg env "$TARGET_ENV" --arg reason "$reason" --arg secs "$pf_secs" \
       '{site:$site,framework:$fw,plan:$plan,env:$env,frozen:false,status:"SKIP",
+        preflight_seconds:(if $secs == "" then null else ($secs|tonumber) end),
         notes:("Environment \($env) \($reason); skipped without attempting SSH.")}')"
     results="$(jq --argjson o "$obj" '. + [$o]' <<<"$results")"
     printf '%s' "$results" | jq '.' > "$JSON_OUT"
@@ -609,7 +620,9 @@ while IFS= read -r site <&3; do
     --arg smtp_relay_host "$smtp_relay_host" \
     --arg smtp_transport "$smtp_transport" \
     --arg status "$status" --arg notes "$notes" \
+    --arg pf_secs "$pf_secs" \
     '{site:$site,framework:$fw,plan:$plan,env:$env,php_version:$php,
+      preflight_seconds:(if $pf_secs == "" then null else ($pf_secs|tonumber) end),
       db_backup_age_days:$backup_age,upstream_pending:$upstream,
       wp_checked:$wp_checked,wp_version:$wpver,wp_core_update:$core,
       plugin_updates:$plugins,theme_updates:$themes,
