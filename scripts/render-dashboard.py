@@ -3022,9 +3022,13 @@ VULN_CSS = """
 .vd { border-left: 4px solid var(--good); padding: 2px 0 2px 15px; margin: 0 0 14px; }
 .vd.crit { border-left-color: var(--crit); }
 .vd h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em;
-  text-wrap: balance; max-width: 40ch; color: var(--good-ink); }
+  text-wrap: balance; color: var(--good-ink); }
 .vd.crit h2 { color: var(--crit); }
-.vd p { margin: 7px 0 0; font-size: 13.5px; color: var(--ink2); max-width: 72ch; }
+.vd p { margin: 7px 0 0; font-size: 13.5px; color: var(--ink2); }
+/* The run time. Small, quiet, and always present: this page is opened on its
+   own, so it cannot rely on the fleet page's header to date it. */
+.vwhen { margin: 5px 0 0; font-size: 12.5px; color: var(--ink2); }
+.vwhen b { color: var(--ink); font-family: var(--font-mono); font-weight: 600; }
 .vd p b { color: var(--ink); font-family: var(--font-mono); font-weight: 600; }
 .vstrip { display: flex; flex-wrap: wrap; gap: 4px 26px; font-size: 12.5px;
   color: var(--ink2); padding: 10px 0 0 19px; margin: 0 0 26px;
@@ -3109,7 +3113,7 @@ VULN_CSS = """
 .vnote h3 { font-size: 12px; color: var(--ink2); text-transform: uppercase;
   letter-spacing: 0.07em; margin: 0 0 8px; }
 .vnote ul { margin: 0; padding-left: 17px; font-size: 12.5px; color: var(--ink2); }
-.vnote li { margin: 6px 0; max-width: 78ch; }
+.vnote li { margin: 6px 0; }
 .vnote b { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-weight: 500; color: var(--ink); }
 """
@@ -3318,13 +3322,30 @@ def render_vulnerabilities(m):
     A("<style>%s%s</style>" % (css_text, VULN_CSS))
     A("</head><body>")
     A('<div class="wrap">')
+    # WHEN, on this page and not only on the fleet page. This one gets opened
+    # on its own and sent to people, so a reader has no other way to tell
+    # whether they are looking at this morning's numbers or last week's. The
+    # component versions come from the health scans, which can be older than
+    # the match itself, so both dates are given rather than one.
+    # FROM THE COHORTS, not from `latest`. `latest` keys on SOURCE, so both
+    # health transports collapse to one entry there and the Nexcess read time
+    # disappears. It is the older of the two and the one a reader most needs,
+    # because those 21 sites can be days behind the Pantheon ones.
+    _vrun = (m.get("latest") or {}).get("vuln-intel") or {}
+    _comp_when = sorted({
+        r.get("observed_at") for (src, _k), r in (m.get("latest_by_cohort") or {}).items()
+        if src == "health" and r.get("observed_at")})
     A('<header class="top"><div><h1>Plugin vulnerabilities'
       '<small>%d site(s) matched &middot; %d distinct component(s) &middot; '
       'Wordfence, read-only</small></h1>'
       '<p class="thesis">Every plugin, mu-plugin and theme we can see, checked '
       'against Wordfence’s published advisories. '
-      '<a href="/">Back to the fleet page</a>.</p></div></header>'
-      % (n_matched, installs))
+      '<a href="/">Back to the fleet page</a>.</p>'
+      '<p class="vwhen">Matched <b>%s</b>. Plugin versions were read %s.</p>'
+      '</div></header>'
+      % (n_matched, installs, e(when(_vrun.get("observed_at"))),
+         (" and ".join(e(when(x)) for x in sorted(_comp_when))
+          if _comp_when else "at an unrecorded time")))
 
     # --- THE VERDICT ------------------------------------------------------
     if not v["matched_sites"]:
@@ -3383,8 +3404,15 @@ def render_vulnerabilities(m):
     A('<div class="bad" title="No component inventory exists, so these could '
       'not be matched at all."><b>%d</b>not checked</div>' % n_unmatched)
     if v["has_baseline"]:
+        # ALL new findings, not just the critical ones. This counted `fresh`,
+        # which is criticals only, while every other number in this strip
+        # counts everything. On 2026-09-02 it read "0 new since the last check"
+        # with a HIGH finding marked "new this run" in the first row of the
+        # table below it. Two true numbers answering different questions,
+        # printed side by side with one label.
+        _new_all = [g for g in v["findings"] if g.get("new_since_last")]
         A('<div class="%s"><b>%d</b>new since the last check</div>'
-          % ("bad" if fresh else "", len(fresh)))
+          % ("bad" if _new_all else "", len(_new_all)))
     else:
         # No earlier run to compare against. Saying "0 new" would be a claim
         # this page cannot support, and on a first run everything is new to us
@@ -3395,7 +3423,7 @@ def render_vulnerabilities(m):
     # --- THE TABLE --------------------------------------------------------
     if v["findings"]:
         A('<h3 style="font-size:14.5px;margin:0 0 3px">Findings, worst first</h3>')
-        A('<p class="quiet" style="margin:0 0 11px;font-size:12.5px;max-width:72ch">'
+        A('<p class="quiet" style="margin:0 0 11px;font-size:12.5px">'
           'Sorted worst first, and among findings that share a score, by how '
           'long the advisory has been public. '
           'Findings that share a score are indistinguishable by it; age is what '
@@ -3709,7 +3737,7 @@ h2.sec { font-size: 15px; margin: 22px 0 8px; }
 .ctbl th, .ctbl td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
 .ctbl thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink2); font-weight: 600; }
 .ctbl .num { text-align: right; }
-.caveats { margin: 0; padding-left: 20px; line-height: 1.6; font-size: 13px; max-width: 78ch; }
+.caveats { margin: 0; padding-left: 20px; line-height: 1.6; font-size: 13px; }
 .caveats li { margin-bottom: 7px; }
 """
 

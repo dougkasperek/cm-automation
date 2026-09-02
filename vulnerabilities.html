@@ -295,9 +295,13 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 .vd { border-left: 4px solid var(--good); padding: 2px 0 2px 15px; margin: 0 0 14px; }
 .vd.crit { border-left-color: var(--crit); }
 .vd h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.01em;
-  text-wrap: balance; max-width: 40ch; color: var(--good-ink); }
+  text-wrap: balance; color: var(--good-ink); }
 .vd.crit h2 { color: var(--crit); }
-.vd p { margin: 7px 0 0; font-size: 13.5px; color: var(--ink2); max-width: 72ch; }
+.vd p { margin: 7px 0 0; font-size: 13.5px; color: var(--ink2); }
+/* The run time. Small, quiet, and always present: this page is opened on its
+   own, so it cannot rely on the fleet page's header to date it. */
+.vwhen { margin: 5px 0 0; font-size: 12.5px; color: var(--ink2); }
+.vwhen b { color: var(--ink); font-family: var(--font-mono); font-weight: 600; }
 .vd p b { color: var(--ink); font-family: var(--font-mono); font-weight: 600; }
 .vstrip { display: flex; flex-wrap: wrap; gap: 4px 26px; font-size: 12.5px;
   color: var(--ink2); padding: 10px 0 0 19px; margin: 0 0 26px;
@@ -382,23 +386,23 @@ tr.row:hover td.site { background-color: color-mix(in srgb, var(--accent) 10%, v
 .vnote h3 { font-size: 12px; color: var(--ink2); text-transform: uppercase;
   letter-spacing: 0.07em; margin: 0 0 8px; }
 .vnote ul { margin: 0; padding-left: 17px; font-size: 12.5px; color: var(--ink2); }
-.vnote li { margin: 6px 0; max-width: 78ch; }
+.vnote li { margin: 6px 0; }
 .vnote b { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-weight: 500; color: var(--ink); }
 </style>
 </head><body>
 <div class="wrap">
-<header class="top"><div><h1>Plugin vulnerabilities<small>66 site(s) matched &middot; 365 distinct component(s) &middot; Wordfence, read-only</small></h1><p class="thesis">Every plugin, mu-plugin and theme we can see, checked against Wordfence’s published advisories. <a href="/">Back to the fleet page</a>.</p></div></header>
+<header class="top"><div><h1>Plugin vulnerabilities<small>66 site(s) matched &middot; 365 distinct component(s) &middot; Wordfence, read-only</small></h1><p class="thesis">Every plugin, mu-plugin and theme we can see, checked against Wordfence’s published advisories. <a href="/">Back to the fleet page</a>.</p><p class="vwhen">Matched <b>Sep 1, 8:56 PM EDT</b>. Plugin versions were read Aug 31, 12:07 PM EDT and Sep 2, 7:47 AM EDT.</p></div></header>
 <div class="vd crit"><h2>8 critical finding(s) have gone unpatched, the oldest for <b>859 days</b>.</h2><p>None is new since the last check. Every one has a patch available and has had for as long as 859 days. 438 finding(s) in total close with a normal plugin update; 15 have no update available and need a decision.</p></div>
 <div class="vstrip">
 <div class="ok"><b>438</b>closed by updating</div>
 <div class="look"><b>9</b>need a decision</div>
 <div><b>64</b>site(s) affected</div>
 <div class="bad" title="No component inventory exists, so these could not be matched at all."><b>9</b>not checked</div>
-<div class=""><b>0</b>new since the last check</div>
+<div class="bad"><b>4</b>new since the last check</div>
 </div>
 <h3 style="font-size:14.5px;margin:0 0 3px">Findings, worst first</h3>
-<p class="quiet" style="margin:0 0 11px;font-size:12.5px;max-width:72ch">Sorted worst first, and among findings that share a score, by how long the advisory has been public. Findings that share a score are indistinguishable by it; age is what separates one disclosed last week from one carried for years. New findings are marked. Anything with no update available is a choice rather than a task. Replace it, restrict who can reach it, or accept it.</p>
+<p class="quiet" style="margin:0 0 11px;font-size:12.5px">Sorted worst first, and among findings that share a score, by how long the advisory has been public. Findings that share a score are indistinguishable by it; age is what separates one disclosed last week from one carried for years. New findings are marked. Anything with no update available is a choice rather than a task. Replace it, restrict who can reach it, or accept it.</p>
 <div class="vt"><table><thead><tr>
 <th><button type="button" data-k="slug">Component<span class="ar">&#9660;</span></button></th>
 <th><button type="button" data-k="ver">Installed versions, and where<span class="ar">&#9660;</span></button></th>
