@@ -3324,28 +3324,39 @@ def render_vulnerabilities(m):
     A('<div class="wrap">')
     # WHEN, on this page and not only on the fleet page. This one gets opened
     # on its own and sent to people, so a reader has no other way to tell
-    # whether they are looking at this morning's numbers or last week's. The
-    # component versions come from the health scans, which can be older than
-    # the match itself, so both dates are given rather than one.
-    # FROM THE COHORTS, not from `latest`. `latest` keys on SOURCE, so both
-    # health transports collapse to one entry there and the Nexcess read time
-    # disappears. It is the older of the two and the one a reader most needs,
-    # because those 21 sites can be days behind the Pantheon ones.
+    # WHEN, in words a reader does not have to decode. This page gets opened
+    # on its own and sent to people, so it cannot rely on the fleet page's
+    # header to date it.
+    #
+    # It first read "Matched Sep 2, 10:04 AM EDT. Plugin versions were read Aug
+    # 31, 12:07 PM EDT and Sep 2, 7:47 AM EDT." Three problems. "Matched" is
+    # the matcher's verb, not the reader's. Two bare dates with nothing saying
+    # which host each belongs to, when that is the whole point: Nexcess can be
+    # days behind Pantheon and a finding is only as fresh as the plugin version
+    # under it. And the reader had to work out for themselves that the older
+    # date is the caveat.
+    #
+    # NAMED PER HOST, from latest_by_cohort. `latest` keys on SOURCE, so both
+    # health transports collapse into one entry there and the Nexcess time
+    # disappears entirely.
     _vrun = (m.get("latest") or {}).get("vuln-intel") or {}
-    _comp_when = sorted({
-        r.get("observed_at") for (src, _k), r in (m.get("latest_by_cohort") or {}).items()
-        if src == "health" and r.get("observed_at")})
+    _COHORT_NAME = {"health": "Pantheon", "health-nexcess": "Nexcess"}
+    _reads = []
+    for (src, kind), r in sorted((m.get("latest_by_cohort") or {}).items()):
+        if src != "health" or not r.get("observed_at"):
+            continue
+        _reads.append("%s on %s" % (_COHORT_NAME.get(kind, kind),
+                                    e(when(r["observed_at"]))))
     A('<header class="top"><div><h1>Plugin vulnerabilities'
       '<small>%d site(s) matched &middot; %d distinct component(s) &middot; '
       'Wordfence, read-only</small></h1>'
       '<p class="thesis">Every plugin, mu-plugin and theme we can see, checked '
       'against Wordfence’s published advisories. '
       '<a href="/">Back to the fleet page</a>.</p>'
-      '<p class="vwhen">Matched <b>%s</b>. Plugin versions were read %s.</p>'
+      '<p class="vwhen">Checked <b>%s</b>. Plugin versions came from %s.</p>'
       '</div></header>'
       % (n_matched, installs, e(when(_vrun.get("observed_at"))),
-         (" and ".join(e(when(x)) for x in sorted(_comp_when))
-          if _comp_when else "at an unrecorded time")))
+         (" and ".join(_reads) if _reads else "an unrecorded time")))
 
     # --- THE VERDICT ------------------------------------------------------
     if not v["matched_sites"]:
