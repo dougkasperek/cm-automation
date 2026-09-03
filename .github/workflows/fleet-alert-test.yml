@@ -60,6 +60,15 @@ jobs:
             echo "::error::TEAMS_WEBHOOK_URL is not set, so there is nothing to send to. Add it under Settings, Secrets and variables, Actions."
             exit 1
           fi
+          # THE URL MUST BE WHOLE. A Power Automate webhook URL ends in a query
+          # string (?api-version=...&sig=...) and the first paste of it lost
+          # that part: the post came back `400 ApiVersionInvalid`, a message
+          # that says nothing about a truncated paste. Checked by shape, never
+          # printed, because the signature IS the credential.
+          case "$TEAMS_WEBHOOK_URL" in
+            *"?"*"sig="*) ;;
+            *) echo "::error::TEAMS_WEBHOOK_URL has no query string. A Power Automate webhook URL ends in ?api-version=...&sig=... and the paste lost it. Set the secret again from a file: gh secret set TEAMS_WEBHOOK_URL < url.txt"; exit 1 ;;
+          esac
           WHO="$SENT_BY"
           if [ -n "${NOTE:-}" ]; then WHO="$SENT_BY (\"$NOTE\")"; fi
           PAYLOAD="$(./scripts/fleet-alert.py --test --sent-by "$WHO" --run-url "$RUN_URL")"

@@ -1061,6 +1061,16 @@ no ledger, no publish, and it FAILS if it cannot send, where the publish step
 warns. `test-fleet-alert.py` checks the test message names no inventory domain
 and is not red; `test-workflows.py` checks the workflow's shape.
 
+**The first send failed, and the failure was worth having.** The webhook
+answered `400 ApiVersionInvalid`, an Azure Power Automate error, which settled
+two things at once. The webhook is a Teams Workflows one, so the payload had to
+become an Adaptive Card in `attachments` (the MessageCard shape the first cut
+sent renders nothing there), and the secret's URL had lost its query string in
+the paste, because that error is what the endpoint says when `?api-version=`
+is absent. Both send steps now check the URL's shape before posting and say
+"the paste lost the query string" instead of relaying a message about API
+versions. The secret has to be set again from a file, not a prompt.
+
 ### What is not built, in the order I would do it
 
 **1. A prefilled link, not a button.** Each finding row could carry a link that

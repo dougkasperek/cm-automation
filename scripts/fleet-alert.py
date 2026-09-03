@@ -147,7 +147,7 @@ def message(findings, page_url):
     lines = []
     for (site, slug), d in sorted(by.items()):
         fix = ("update to %s" % d["fix"]) if d["fix"] else "NO FIX AVAILABLE"
-        lines.append("- **%s** runs `%s` %s, CVSS %s, %s"
+        lines.append("- **%s** runs %s %s, CVSS %s, %s"
                      % (site, slug, d.get("version") or "version unknown",
                         d["worst"], fix))
     body = "\n".join(lines)
@@ -156,8 +156,9 @@ def message(findings, page_url):
     return head, body
 
 
-ALERT_COLOUR = "d13438"     # red: a real critical
-TEST_COLOUR = "6c757d"      # grey: nothing is wrong
+# Adaptive Card TextBlock colours. "Attention" renders red in Teams.
+ALERT_COLOUR = "Attention"  # a real critical
+TEST_COLOUR = "Default"     # nothing is wrong
 
 # A host that cannot resolve, by RFC 2606. The test message must never name a
 # real site: a reader skimming the channel would act on it.
@@ -166,13 +167,35 @@ TEST_SITE = "example.invalid"
 
 def payload(head, body, colour):
     """One message shape for the real alert and the test, so the test proves the
-    format the channel will actually receive."""
+    format the channel will actually receive.
+
+    AN ADAPTIVE CARD, NOT A MESSAGECARD. The first cut sent the older
+    Office 365 connector shape. On 2026-09-03 the first test post came back
+    `400 ApiVersionInvalid` from an Azure Power Automate endpoint, which is what
+    a Teams "Workflows" incoming webhook is; the connector kind was retired in
+    2025. A Workflows webhook posts whatever arrives in `attachments` as an
+    Adaptive Card and shows nothing for a MessageCard. Teams' Adaptive Card
+    markdown covers bold, links and bullet lists and NOT backticks, which is
+    why message() no longer uses them.
+    """
+    card = {
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "type": "AdaptiveCard",
+        "version": "1.4",
+        "msteams": {"width": "Full"},
+        "body": [
+            {"type": "TextBlock", "size": "Large", "weight": "Bolder",
+             "wrap": True, "color": colour, "text": head},
+            {"type": "TextBlock", "wrap": True, "text": body},
+        ],
+    }
     return {
-        "@type": "MessageCard",
-        "@context": "https://schema.org/extensions",
-        "themeColor": colour,
-        "summary": head,
-        "sections": [{"activityTitle": head, "text": body, "markdown": True}],
+        "type": "message",
+        "attachments": [{
+            "contentType": "application/vnd.microsoft.card.adaptive",
+            "contentUrl": None,
+            "content": card,
+        }],
     }
 
 
@@ -189,7 +212,7 @@ def test_message(page_url, sent_by="", run_url=""):
     head, body = message(planted, page_url)
     head = "TEST ALERT, not a real finding: " + head
     note = ("This is a test of the critical-vulnerability alert. %s is not a "
-            "site and `test-plugin` is not a plugin; a real alert looks like "
+            "site and test-plugin is not a plugin; a real alert looks like "
             "the line below and names a real site. Nothing is wrong."
             % TEST_SITE)
     if sent_by:

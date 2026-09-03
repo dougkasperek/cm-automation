@@ -153,12 +153,23 @@ try:
 except Exception as e:                                       # pragma: no cover
     _card = {}
     check("--test prints one JSON payload", False, str(e))
-check("...and it is the same MessageCard shape the real alert sends",
-      _card.get("@type") == "MessageCard" and "sections" in _card, str(_card)[:120])
-_title = _card.get("summary", "")
+# THE SHAPE A WORKFLOWS WEBHOOK ACCEPTS. The first cut sent a MessageCard and
+# the endpoint answered 400. An Adaptive Card in `attachments`, or nothing
+# renders.
+_att = (_card.get("attachments") or [{}])[0]
+check("...and it is an Adaptive Card in attachments, the shape a Teams Workflows "
+      "webhook renders",
+      _card.get("type") == "message"
+      and _att.get("contentType") == "application/vnd.microsoft.card.adaptive"
+      and (_att.get("content") or {}).get("type") == "AdaptiveCard",
+      str(_card)[:160])
+_blocks = (_att.get("content") or {}).get("body") or [{}, {}]
+_title = _blocks[0].get("text", "")
 check("the title starts with TEST", _title.startswith("TEST"), _title)
 check("...and says it is not a real finding", "not a real finding" in _title, _title)
-_text = (_card.get("sections") or [{}])[0].get("text", "")
+_text = _blocks[1].get("text", "") if len(_blocks) > 1 else ""
+# Backticks render literally in Adaptive Card markdown.
+check("the body uses no backticks", "`" not in _text and "`" not in _title, _text[:120])
 check("the body says nothing is wrong", "Nothing is wrong" in _text, _text[:200])
 check("...names who sent it", "me" in _text, _text[:200])
 check("...and the run that sent it", "https://runs/1" in _text, _text[:200])
@@ -175,11 +186,15 @@ if os.path.exists(_inv):
 check("the inventory was read, so the next check is not vacuous", len(_domains) > 50, str(len(_domains)))
 _named = [d for d in _domains if d and d in _text]
 check("the test message names no real site", not _named, str(_named))
-check("...and is not red", _card.get("themeColor") != A.ALERT_COLOUR, str(_card.get("themeColor")))
+check("...and is not red", _blocks[0].get("color") != A.ALERT_COLOUR, str(_blocks[0].get("color")))
 # And the other direction: a REAL alert never carries the label.
 _rh, _rb = A.message(_found, "https://example/")
 check("a real alert is not labelled TEST", "TEST" not in _rh and "TEST" not in _rb, _rh)
-check("...and is red", A.payload(_rh, _rb, A.ALERT_COLOUR)["themeColor"] == "d13438")
+# Reached by .get() so a wrong shape is a FAIL line and not a traceback.
+_rp = A.payload(_rh, _rb, A.ALERT_COLOUR)
+_real = ((((_rp.get("attachments") or [{}])[0]).get("content") or {}).get("body") or [{}])[0]
+check("...and is red", _real.get("color") == "Attention", str(_real.get("color")))
+check("...and uses no backticks either", "`" not in _rb, _rb)
 check("without --test an empty ledger prints nothing to send",
       _quiet.stdout.strip() == "" and _quiet.returncode == 0, _quiet.stdout[:80])
 

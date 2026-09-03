@@ -412,6 +412,10 @@ if isinstance(_t, dict):
         check("...and the step is not continue-on-error",
               not _send[0].get("continue-on-error"))
         check("a refused post shows the webhook's answer", "--fail-with-body" in _run)
+        # The first paste of the URL lost its query string and the endpoint
+        # said `ApiVersionInvalid`, which names nothing a person can act on.
+        check("a truncated webhook URL is named as such, before the post",
+              '*"?"*"sig="*' in _run and "no query string" in _run)
     _perm = _t.get("permissions") or {}
     check("the test alert cannot write to the repo",
           _perm.get("contents") == "read", str(_perm))
@@ -425,6 +429,9 @@ if _alert:
     check("...and cannot fail a publish that succeeded",
           _alert[0].get("continue-on-error") is True)
     check("...and never sends the TEST message", "--test" not in str(_alert[0].get("run")))
+    check("...and also names a truncated URL, as a warning",
+          '*"?"*"sig="*' in str(_alert[0].get("run"))
+          and "::warning::TEAMS_WEBHOOK_URL has no query string" in str(_alert[0].get("run")))
 
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

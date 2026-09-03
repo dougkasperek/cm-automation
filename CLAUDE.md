@@ -774,7 +774,7 @@ python3 test/test-vercmp.py           # 51   offline; the version comparator.
                                       #      from the feed, not transcribed. Seven
                                       #      ways of breaking it were verified to fail
 python3 test/test-consent-rulings.py  # 17   offline, no network
-python3 test/test-fleet-alert.py      # 32   offline; plants a critical and requires
+python3 test/test-fleet-alert.py      # 34   offline; plants a critical and requires
                                       #      the alert to find it, and requires the
                                       #      TEST message to name no real site
 python3 test/test-nexcess-ssh.py      # 43   offline, no key
