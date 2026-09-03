@@ -8,7 +8,7 @@ written down.
 
 ---
 
-## PICK UP HERE: 2026-09-03. The fleet was fine. The alert needs a webhook.
+## PICK UP HERE: 2026-09-03. The fleet was fine, the alert is live, B9 is closed.
 
 **The cold scan the previous handoff asked for was run on 2026-09-02 and
 measured 47.** Run `health-2026-09-02_1147`: 47 of 49 sites with WordPress
@@ -28,13 +28,10 @@ session left.
   sent after a successful publish. `scripts/fleet-alert.py`, a step in
   `_publish-dashboard.yml`, `test/test-fleet-alert.py`. The design and the
   rest of the plan are B12 in `docs/DO-THIS-NEXT.md`.
-- **It has never run in CI.** The last publish of 2026-09-02 ran from
-  `734b3f1`, which is before the alert commit `dc9cf32`. The next publish
-  from any workflow will be its first run.
-- **`TEAMS_WEBHOOK_URL` is not set.** Checked with `gh secret list` on
-  2026-09-03. Until it is, the step prints a warning and exits 0. So the
-  first real run will warn and send nothing, and that is the intended
-  behaviour, not a failure.
+- It had never run in CI when this section was first written on 2026-09-03:
+  the last publish of 2026-09-02 ran from `734b3f1`, before the alert commit
+  `dc9cf32`, and `TEAMS_WEBHOOK_URL` was not set. Both changed the same day;
+  see "Done on 2026-09-03" below.
 - The env preflight got the same ceiling as the other Pantheon calls, and its
   duration is measured rather than guessed.
 - The vulnerability page carries its own dates: when the match ran and when
@@ -57,29 +54,59 @@ count is identical.
   example `eamusicfest.com` 37 findings to 9 and `hitsfoundation.org` 28 to 2.
   Nothing in this repo records who did the updating. Ask Zach.
 - Last runs per source: Pantheon health 2026-09-02_1147, Nexcess health
-  2026-09-02_1535, vuln-intel 2026-09-02_1543, email 08-28, consent 08-28,
-  consent-gating 08-28.
+  2026-09-02_1535, vuln-intel 2026-09-02_1543, email 2026-09-03_2132, consent
+  08-28, consent-gating 08-28.
+
+### Done on 2026-09-03
+
+- **The Teams webhook is set and the alert step has run three times.** Doug
+  set `TEAMS_WEBHOOK_URL`; an email DNS dispatch (run 33807790859) published
+  and the step ran with the secret present, printed `no new critical findings
+  in vuln-intel-2026-09-02_1543 (compared against vuln-intel-2026-09-02_1404)`
+  and sent nothing. No missing-webhook warning, no annotation. The two B9
+  dispatches below ran it twice more with the same result. It will send its
+  first message when a run finds something new at CVSS 9.0 or above, and
+  nothing has yet.
+- **B9 is closed.** Every scanner's scan job carries a concurrency group of
+  its own: `pantheon-terminus`, `wordfence-feed`, `consent-sweep` (shared by
+  the cold sweep and the gating job, so a second consent run waits for both),
+  `email-dns-lookup`, `nexcess-api`; the SSH scan already had `nexcess-ssh`.
+  Queue rather than refuse, per workflow rather than fleet-wide, never the
+  ledger lock. `test/test-workflows.py` asserts all of it and four ways of
+  breaking it were verified to fail. Commit `b09d98c`, the reasoning in B9 of
+  `docs/DO-THIS-NEXT.md`.
+- **Observed, on two email dispatches seven seconds apart**: the second scan
+  job started eight seconds after the first finished, against a four-second
+  pickup for the first. A 15-second scan shows the ordering and nothing
+  longer. The Pantheon case, a 45-minute wait, has not been watched.
+- **Two runs in one minute share a run id.** Both email runs stamped
+  `2026-09-03_2132`. Ingest is idempotent on run id and the second wrote
+  nothing: `ingested 0 run(s); 1 run(s) already present`, 78 rows, not 156.
+  Harmless here; a long scan stamps after its wait, so it gets its own minute.
+- This section was rewritten from the commits and the ledger, because the
+  2026-09-02 session did not refresh it. Commit `4a066a1`.
 
 ### Decisions that are Doug's, in order
 
-1. **Set the Teams webhook.** Create an incoming webhook on the channel that
-   should receive it (B12 asks which channel, and whether it must differ from
-   routine publishes), then:
-
-   ```bash
-   cd ~/dev/cm-automation
-   gh secret set TEAMS_WEBHOOK_URL
-   ```
-
-   It prompts for the value; paste the webhook URL. The next publish runs the
-   step for real. Expect "No new critical findings. Nothing sent." in the run
-   summary, because nothing new at 9.0 or above has appeared in any run yet.
-
-2. **B9, before any schedule is turned on.** Two dispatches still run two
-   scans at once, and the count falls when they do.
-
-3. **The git history scrub, before the transfer to the clevermethod org.**
+1. **The git history scrub, before the transfer to the clevermethod org.**
    The working tree is clean; `git log -p` is not.
+
+2. **Schedules.** B9 was the stated blocker and it is gone. What remains is
+   the older condition: a scheduled run trusted for several cycles before
+   `fail_on_crit` goes on. The schedule blocks are still commented out.
+
+3. **Which Teams channel.** The webhook points somewhere; B12 asks whether
+   routine publishes and criticals should share it. A channel that gets both
+   will be muted.
+
+### Not done, and worth knowing
+
+- The Pantheon queue has not been watched. The first time two Pantheon
+  dispatches overlap, whether by hand or by a schedule, read the second run's
+  scan job and confirm it waited. It costs nothing to check and it is the
+  case B9 was opened on.
+- Three email DNS runs landed today, all 70 of 78. Two were for B9. The
+  ledger diff between them is empty, as expected.
 
 ---
 
