@@ -24,22 +24,19 @@ on:
       - ".github/workflows/check-worker-exposure.yml"
   workflow_dispatch:
 
-  # THIS IS THE ONE SCHEDULE WORTH TURNING ON FIRST, and it is commented out
-  # only to keep the house rule that a schedule is a deliberate decision.
+  # ON A SCHEDULE SINCE 2026-09-03, the first one in this repo. This job's
+  # entire value is DETECTION LATENCY: on manual dispatch it tells you the door
+  # was shut at the moment you happened to look, which is close to worthless.
+  # The failure mode it exists for is a toggle being flipped and nobody
+  # noticing for weeks. Every other workflow here produces data that is still
+  # useful when it is a day old. This one is not.
   #
-  # The argument for enabling it ahead of the others: this job's entire value is
-  # DETECTION LATENCY. On manual dispatch it tells you the door was shut at the
-  # moment you happened to look, which is close to worthless -- the failure mode
-  # it exists for is a toggle being flipped and nobody noticing for weeks. Every
-  # other workflow here produces data that is still useful when it is a day old.
-  # This one is not.
-  #
-  # It also carries none of the usual risk: no secrets, no client site is
-  # touched, nothing is written to the ledger, and a bad run cannot corrupt a
-  # good one because it stores nothing.
-  #
-  # schedule:
-  #   - cron: "13 */6 * * *"   # every six hours
+  # It carries none of the usual risk: no secrets, no client site is touched,
+  # nothing is written to the ledger, and a bad run cannot corrupt a good one
+  # because it stores nothing. It reads no inputs, so the scheduled-run trap
+  # (every `inputs.*` empty) does not apply.
+  schedule:
+    - cron: "13 */6 * * *"   # every six hours
 
 permissions:
   contents: read

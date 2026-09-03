@@ -141,9 +141,20 @@ full scan `health-2026-09-03_2159`, then the vulnerability match twice,
 1. **The git history scrub, before the transfer to the clevermethod org.**
    The working tree is clean; `git log -p` is not.
 
-2. **Schedules.** B9 was the stated blocker and it is gone. What remains is
-   the older condition: a scheduled run trusted for several cycles before
-   `fail_on_crit` goes on. The schedule blocks are still commented out.
+2. **Two schedules are ON since 2026-09-03 evening, the first in this repo.**
+   The vulnerability probe daily at 11:37 UTC (07:37 ET during EDT), because
+   the alert is only as timely as the match that feeds it; and the worker
+   exposure check every six hours at 13 past (00:13, 06:13, 12:13, 18:13 UTC),
+   because its whole value is noticing quickly. **Neither has been observed
+   yet.** Read the first scheduled probe on 2026-09-04: it must reach the
+   ledger AND publish AND run the alert step, which is exactly what a
+   scheduled run silently fails to do when a job is gated on a bare
+   `inputs.x` (every input is empty on a schedule). Every input the probe
+   reads now goes through a default and `test-workflows.py` refuses a bare
+   one in any scheduled workflow, verified to fail three ways. GitHub can
+   delay a scheduled run by minutes at busy times; a run at 11:50 is not a
+   fault. The Pantheon, email, consent and Nexcess schedules stay commented
+   out until a person has watched these two for a week.
 
 3. **Which Teams channel.** The webhook points somewhere; B12 asks whether
    routine publishes and criticals should share it. A channel that gets both

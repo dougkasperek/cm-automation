@@ -177,8 +177,11 @@ for name in sorted(scanners):
     body = io.open(os.path.join(WF, name), encoding="utf-8").read()
     check("%s passes the drop decision to persist-ledger.sh" % name,
           "FLEET_ALLOW_COVERAGE_DROP" in body)
+    # `${{ inputs.allow_coverage_drop }}` or `${{ inputs.allow_coverage_drop
+    # == true }}`: the second is what a scheduled workflow must pass, because
+    # there the input is an empty string and the callee declares a boolean.
     check("%s passes the drop decision on to the publish side" % name,
-          "allow_coverage_drop: ${{ inputs.allow_coverage_drop }}" in body
+          "allow_coverage_drop: ${{ inputs.allow_coverage_drop" in body
           or "--allow-coverage-drop" in body)
 
 pub = io.open(os.path.join(WF, "_publish-dashboard.yml"), encoding="utf-8").read()
@@ -434,6 +437,41 @@ if _alert:
     check("...and also names a truncated URL, as a warning",
           '*"?"*"sig="*' in str(_alert[0].get("run"))
           and "::warning::TEAMS_WEBHOOK_URL has no query string" in str(_alert[0].get("run")))
+
+
+# ---------------------------------------------------------------------------
+# A SCHEDULED RUN HAS NO INPUTS (2026-09-03)
+# ---------------------------------------------------------------------------
+# On a `schedule` event every `inputs.*` is the empty string. A job gated on a
+# bare `inputs.persist_ledger` silently SKIPS, so the scheduled match never
+# reaches the ledger or the alert, and a `--feed "${{ inputs.feed }}"` passes
+# an empty argument. Neither fails visibly: the run is green and the page does
+# not move. So in any workflow that carries a schedule: every job `if` that
+# mentions inputs must also handle the schedule event, and no step may use a
+# bare `${{ inputs.X }}` without a default.
+_BARE = re.compile(r"\$\{\{\s*inputs\.\w+\s*\}\}")
+_scheduled = [n for n, d in loaded.items()
+              if isinstance(d, dict) and "schedule" in (d.get(True) or d.get("on") or {})]
+check("at least the vulnerability probe and the exposure check are scheduled",
+      {"fleet-vuln-probe.yml", "check-worker-exposure.yml"} <= set(_scheduled),
+      str(sorted(_scheduled)))
+for name in sorted(_scheduled):
+    doc = loaded[name]
+    for jn, job in (doc.get("jobs") or {}).items():
+        if not isinstance(job, dict):
+            continue
+        cond = str(job.get("if") or "")
+        if "inputs." in cond:
+            check("%s / %s: a job gated on inputs also runs on the schedule" % (name, jn),
+                  "github.event_name == 'schedule'" in cond, cond.strip()[:80])
+        texts = [str(job.get(k) or "") for k in ("env", "with")]
+        for st in (job.get("steps") or []):
+            texts += [str(st.get(k) or "") for k in ("run", "with", "env")]
+        bare = sorted({m.group(0) for t in texts for m in _BARE.finditer(t)})
+        check("%s / %s uses no bare input (every input has a default)" % (name, jn),
+              not bare, str(bare))
+check("the test alert is not among the scheduled workflows",
+      "fleet-alert-test.yml" not in _scheduled)
 
 
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))

@@ -1,10 +1,20 @@
 # Wordfence Intelligence V3 feed probe.
 #
-# MANUAL ONLY. It carries a credential, and CLAUDE.md's rule for a new
-# workflow is that credential-free checks run on every push while anything
-# needing a secret stays human-triggered until it has been trusted for several
-# cycles. There is no schedule below and none should be added until the
-# numbers here have been read by a person more than once.
+# SCHEDULED DAILY SINCE 2026-09-03, after nine manual runs over four days had
+# been read by a person, two sites' plugin versions had been checked against
+# wp-admin by hand, and the alert built on this match had been proven to reach
+# the channel. It carries a credential, which is why it was manual first.
+#
+# The alert is only as timely as this match, so a hand-run match defeats it:
+# a new critical published on a Tuesday would wait until someone pressed the
+# button. One fetch a day is well inside whatever Wordfence's limit is; two
+# nine seconds apart were not.
+#
+# ON A SCHEDULED RUN EVERY `inputs.*` IS EMPTY. A `--feed ""` would fail, and
+# a persist job gated on a bare `inputs.persist_ledger` would silently skip,
+# so the scheduled match would never reach the ledger or the alert. Every
+# input this file reads goes through a default below, and
+# test/test-workflows.py refuses a bare input in any scheduled workflow.
 #
 # THIS WORKFLOW DOES NOT WRITE TO THE LEDGER AND DOES NOT PUBLISH.
 # It answers three questions and stops:
@@ -46,6 +56,8 @@
 name: Vulnerability Feed Probe
 
 on:
+  schedule:
+    - cron: "37 11 * * *"   # daily, 07:37 America/New_York during EDT (UTC-4)
   workflow_dispatch:
     inputs:
       feed:
@@ -87,6 +99,12 @@ jobs:
   vuln-probe:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Inputs resolved ONCE, with the dispatch defaults, so a scheduled run
+    # (where every input is empty) behaves like a default dispatch.
+    env:
+      FEED: ${{ inputs.feed || 'production' }}
+      SHOW: ${{ inputs.show || '40' }}
+      SLUG: ${{ inputs.fixture_slug || '' }}
     # ONE SCAN AT A TIME. Two full-feed requests nine seconds apart got
     # `429 API key limit exceeded` on 2026-08-30. Two runs at once are two
     # fetches, and the second one fails.
@@ -142,9 +160,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .feed-cache
-          key: wf-feed-${{ inputs.feed }}-${{ steps.bucket.outputs.value }}
+          key: wf-feed-${{ env.FEED }}-${{ steps.bucket.outputs.value }}
           restore-keys: |
-            wf-feed-${{ inputs.feed }}-
+            wf-feed-${{ env.FEED }}-
 
       - name: Confirm the key is present
         env:
@@ -169,8 +187,8 @@ jobs:
         run: |
           mkdir -p .feed-cache
           python3 scripts/fleet-vuln.py fetch \
-            --feed "${{ inputs.feed }}" \
-            ${{ inputs.allow_stale && '--allow-stale' || '' }} \
+            --feed "$FEED" \
+            ${{ (github.event_name == 'schedule' || inputs.allow_stale) && '--allow-stale' || '' }} \
             --out ".feed-cache/wf-feed.json"
 
       - name: Probe the feed
@@ -178,10 +196,10 @@ jobs:
         # trip the rate limit; that is what happened on 2026-08-30.
         run: |
           python3 scripts/fleet-vuln.py probe \
-            --feed "${{ inputs.feed }}" \
+            --feed "$FEED" \
             --feed-file ".feed-cache/wf-feed.json" \
             --components history/components.jsonl \
-            --show "${{ inputs.show }}"
+            --show "$SHOW"
 
       - name: Match the fleet against the feed
         # Reads the cached feed. Reporting only: it writes nothing, scores no
@@ -194,12 +212,12 @@ jobs:
         run: |
           mkdir -p out/reports
           python3 scripts/fleet-vuln.py match \
-            --feed "${{ inputs.feed }}" \
+            --feed "$FEED" \
             --feed-file ".feed-cache/wf-feed.json" \
             --components history/components.jsonl \
             --inventory data/fleet-inventory.json \
             --report "out/reports/fleet-vuln-intel-${{ steps.stamp.outputs.value }}.json" \
-            --show "${{ inputs.show }}"
+            --show "$SHOW"
 
       - name: Upload the report for the ledger
         uses: actions/upload-artifact@v4
@@ -210,7 +228,7 @@ jobs:
           retention-days: 90
 
       - name: Extract the fixture
-        if: ${{ inputs.fixture_slug != '' }}
+        if: ${{ github.event_name != 'schedule' && inputs.fixture_slug != '' }}
         # The Pods record is the test fixture for the version comparator, and
         # the comparator is the piece that must be right. Extracting it here
         # means step 4 is developed and tested with no key on any laptop.
@@ -224,16 +242,16 @@ jobs:
         run: |
           mkdir -p out
           python3 scripts/fleet-vuln.py fixture \
-            --feed "${{ inputs.feed }}" \
+            --feed "$FEED" \
             --feed-file ".feed-cache/wf-feed.json" \
-            --slug "${{ inputs.fixture_slug }}" \
-            --out "out/wf-${{ inputs.fixture_slug }}-${{ inputs.feed }}.json"
+            --slug "$SLUG" \
+            --out "out/wf-$SLUG-$FEED.json"
 
       - name: Upload the fixture
-        if: ${{ inputs.fixture_slug != '' }}
+        if: ${{ github.event_name != 'schedule' && inputs.fixture_slug != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: vuln-fixture-${{ inputs.fixture_slug }}-${{ inputs.feed }}
+          name: vuln-fixture-${{ env.SLUG }}-${{ env.FEED }}
           path: out/
           if-no-files-found: error
           retention-days: 14
@@ -248,7 +266,7 @@ jobs:
     needs: vuln-probe
     if: >-
       always()
-      && inputs.persist_ledger
+      && (github.event_name == 'schedule' || inputs.persist_ledger)
       && needs.vuln-probe.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -301,10 +319,12 @@ jobs:
     needs: persist-ledger
     if: >-
       always()
-      && inputs.publish_dashboard
+      && (github.event_name == 'schedule' || inputs.publish_dashboard)
       && needs.persist-ledger.result == 'success'
     uses: ./.github/workflows/_publish-dashboard.yml
     secrets: inherit
     with:
-      allow_coverage_drop: ${{ inputs.allow_coverage_drop }}
+      # `== true`, because on a scheduled run the input is an empty string and
+      # the called workflow declares this as a boolean.
+      allow_coverage_drop: ${{ inputs.allow_coverage_drop == true }}
       label: "Wordfence vulnerability match"
