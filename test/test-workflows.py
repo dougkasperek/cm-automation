@@ -385,5 +385,47 @@ check("no two scanner workflows share a scan group",
       not _shared_scan, str(_shared_scan))
 
 
+# ---------------------------------------------------------------------------
+# THE TEST ALERT IS SENT BY HAND, AND A FAILURE TO SEND IS A FAILURE
+# ---------------------------------------------------------------------------
+# fleet-alert-test.yml exists to put one labelled message in the channel. Two
+# things must stay true. It runs on dispatch only: a test message on a timer
+# trains the channel to ignore the real one. And it FAILS when it cannot send,
+# unlike the publish step, which warns, because there a webhook must not fail
+# a publish that already succeeded and here sending is the whole job.
+_t = loaded.get("fleet-alert-test.yml")
+check("the test-alert workflow exists", isinstance(_t, dict))
+if isinstance(_t, dict):
+    _on = _t.get(True) or _t.get("on") or {}
+    check("the test alert runs on dispatch only", set(_on) == {"workflow_dispatch"},
+          str(sorted(_on)))
+    _jobs_t = _t.get("jobs") or {}
+    check("...and has no persist or publish job",
+          not any(("persist" in j) or ("publish" in j) for j in _jobs_t), str(sorted(_jobs_t)))
+    _steps_t = [st for j in _jobs_t.values() for st in (j.get("steps") or [])]
+    _send = [st for st in _steps_t if "fleet-alert.py --test" in str(st.get("run", ""))]
+    check("...one step sends the test message", len(_send) == 1, str(len(_send)))
+    if _send:
+        _run = str(_send[0].get("run"))
+        check("a missing webhook is an ERROR here, not a warning",
+              "::error::TEAMS_WEBHOOK_URL" in _run and "::warning::" not in _run)
+        check("...and the step is not continue-on-error",
+              not _send[0].get("continue-on-error"))
+        check("a refused post shows the webhook's answer", "--fail-with-body" in _run)
+    _perm = _t.get("permissions") or {}
+    check("the test alert cannot write to the repo",
+          _perm.get("contents") == "read", str(_perm))
+
+# The publish-side step keeps the opposite policy, on purpose.
+_pub_doc = loaded.get("_publish-dashboard.yml") or {}
+_pub_steps = [st for j in (_pub_doc.get("jobs") or {}).values() for st in (j.get("steps") or [])]
+_alert = [st for st in _pub_steps if "fleet-alert.py" in str(st.get("run", ""))]
+check("the publish alert step still exists", len(_alert) == 1, str(len(_alert)))
+if _alert:
+    check("...and cannot fail a publish that succeeded",
+          _alert[0].get("continue-on-error") is True)
+    check("...and never sends the TEST message", "--test" not in str(_alert[0].get("run")))
+
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)

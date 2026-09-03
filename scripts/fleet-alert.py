@@ -38,6 +38,15 @@ already in the bug table twice.
 
 BOUNDARY. This writes to clevermethod's own systems and never to a client site
 or a host. That line is new with this script; see docs/DO-THIS-NEXT.md B12.
+
+THE TEST MESSAGE. `--test` ignores the ledger entirely and emits one message in
+the real format about a site that cannot exist, `example.invalid`, with the
+word TEST first in the title and a body that says what it is. It exists because
+the real trigger had run four times by 2026-09-03 and correctly sent nothing,
+which proves the step runs and nothing about whether a message reaches the
+channel, or what one looks like when it does. The unit test plants a critical;
+this plants one in the channel. `.github/workflows/fleet-alert-test.yml` sends
+it, by hand only, and fails rather than warns if it cannot.
 """
 import argparse
 import json
@@ -147,13 +156,73 @@ def message(findings, page_url):
     return head, body
 
 
+ALERT_COLOUR = "d13438"     # red: a real critical
+TEST_COLOUR = "6c757d"      # grey: nothing is wrong
+
+# A host that cannot resolve, by RFC 2606. The test message must never name a
+# real site: a reader skimming the channel would act on it.
+TEST_SITE = "example.invalid"
+
+
+def payload(head, body, colour):
+    """One message shape for the real alert and the test, so the test proves the
+    format the channel will actually receive."""
+    return {
+        "@type": "MessageCard",
+        "@context": "https://schema.org/extensions",
+        "themeColor": colour,
+        "summary": head,
+        "sections": [{"activityTitle": head, "text": body, "markdown": True}],
+    }
+
+
+def test_message(page_url, sent_by="", run_url=""):
+    """The real message shape, about a site that cannot exist, labelled TEST.
+
+    Built through message() rather than hand-written, so it cannot drift from
+    what a real alert looks like. The label goes FIRST in the title and the body
+    says what it is, because a test that looks like a finding is a false alarm
+    with a footnote.
+    """
+    planted = [{"site_id": TEST_SITE, "slug": "test-plugin", "cve": "TEST-0000",
+                "cvss": 9.8, "version": "1.0.0", "fix_version": "1.0.1"}]
+    head, body = message(planted, page_url)
+    head = "TEST ALERT, not a real finding: " + head
+    note = ("This is a test of the critical-vulnerability alert. %s is not a "
+            "site and `test-plugin` is not a plugin; a real alert looks like "
+            "the line below and names a real site. Nothing is wrong."
+            % TEST_SITE)
+    if sent_by:
+        note += " Sent by %s." % sent_by
+    if run_url:
+        note += " Run: %s" % run_url
+    return head, note + "\n\n" + body
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--history", default=os.path.join(HERE, "..", "history"))
     ap.add_argument("--page-url", default=os.environ.get("FLEET_PUBLIC_URL", ""))
     ap.add_argument("--dry-run", action="store_true",
                     help="print what would be sent and send nothing")
+    ap.add_argument("--test", action="store_true",
+                    help="emit a labelled TEST message about example.invalid, "
+                         "reading nothing from the ledger")
+    ap.add_argument("--sent-by", default="",
+                    help="who or what sent the test, printed in its body")
+    ap.add_argument("--run-url", default="",
+                    help="the CI run that sent the test, printed in its body")
     a = ap.parse_args()
+
+    if a.test:
+        url = a.page_url.rstrip("/")
+        head, body = test_message((url + "/vulnerabilities") if url else "",
+                                  a.sent_by, a.run_url)
+        if a.dry_run:
+            print("WOULD SEND:\n  %s\n%s" % (head, body), file=sys.stderr)
+            return 0
+        print(json.dumps(payload(head, body, TEST_COLOUR)))
+        return 0
 
     rows = _load(a.history)
     findings, latest, prev = new_criticals(rows, _run_ids(a.history, rows))
@@ -175,17 +244,10 @@ def main():
 
     url = a.page_url.rstrip("/")
     head, body = message(findings, (url + "/vulnerabilities") if url else "")
-    payload = {
-        "@type": "MessageCard",
-        "@context": "https://schema.org/extensions",
-        "themeColor": "d13438",
-        "summary": head,
-        "sections": [{"activityTitle": head, "text": body, "markdown": True}],
-    }
     if a.dry_run:
         print("WOULD SEND:\n  %s\n%s" % (head, body), file=sys.stderr)
         return 0
-    print(json.dumps(payload))
+    print(json.dumps(payload(head, body, ALERT_COLOUR)))
     return 0
 
 

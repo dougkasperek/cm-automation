@@ -1,0 +1,72 @@
+# Send one labelled TEST message to the Teams channel the critical alert uses.
+#
+# WHY THIS EXISTS. The real alert step in _publish-dashboard.yml had run four
+# times by 2026-09-03 and correctly sent nothing every time, because nothing new
+# at CVSS 9.0 or above had appeared. That proves the step executes and says
+# nothing about whether a message reaches the channel, whether the webhook
+# accepts the payload shape, or what a person sees when it does. This sends the
+# real message shape about a site that cannot exist (example.invalid), with
+# TEST first in the title, and nothing else.
+#
+# BY HAND ONLY. No push trigger, no schedule, and it must stay that way: a test
+# message on a timer trains the channel to ignore the real one.
+#
+# IT FAILS RATHER THAN WARNS. The publish step treats a missing webhook as a
+# warning, because a webhook must not fail a publish that already succeeded.
+# Here sending IS the job, so a missing secret or a refused post is a red run.
+#
+# TOUCHES NOTHING. No ledger, no publish, no client site. It writes exactly one
+# message to clevermethod's own channel, which is the boundary B12 in
+# docs/DO-THIS-NEXT.md draws.
+name: Send a test alert to Teams
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "Optional free text to put in the message, e.g. why you are sending it"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The offline suite first. If the script cannot tell a planted critical
+      # from a standing one, there is no point proving the channel works.
+      - name: Test the alert logic
+        run: python3 test/test-fleet-alert.py
+
+      - name: Send the test message
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          FLEET_PUBLIC_URL: ${{ vars.FLEET_PUBLISH_URL }}
+          SENT_BY: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NOTE: ${{ inputs.note }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TEAMS_WEBHOOK_URL:-}" ]; then
+            echo "::error::TEAMS_WEBHOOK_URL is not set, so there is nothing to send to. Add it under Settings, Secrets and variables, Actions."
+            exit 1
+          fi
+          WHO="$SENT_BY"
+          if [ -n "${NOTE:-}" ]; then WHO="$SENT_BY (\"$NOTE\")"; fi
+          PAYLOAD="$(./scripts/fleet-alert.py --test --sent-by "$WHO" --run-url "$RUN_URL")"
+          echo "$PAYLOAD" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["summary"])'
+          # --fail-with-body: a refused post prints the webhook's answer, which is
+          # the one thing you need when the payload shape is wrong.
+          echo "$PAYLOAD" | curl -sS -X POST -H 'Content-Type: application/json' \
+            --data @- --fail-with-body "$TEAMS_WEBHOOK_URL"
+          echo ""
+          echo "Test alert sent to Teams by $WHO." >> "$GITHUB_STEP_SUMMARY"

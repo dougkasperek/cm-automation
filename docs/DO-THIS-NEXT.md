@@ -1049,6 +1049,18 @@ the risk, so `test/test-fleet-alert.py` plants a critical and requires it to be
 found, banded, grouped and carrying its fix version. Same reasoning as the
 planted leak in the consent gating test.
 
+**And the channel end is tested by hand, since 2026-09-03.** Four real runs
+with the webhook set had each correctly sent nothing, which proved the step
+executes and nothing about whether a message reaches the channel, whether the
+webhook accepts the payload shape, or what a person sees. `fleet-alert.py
+--test` emits the real message shape about `example.invalid`, with TEST first
+in the title and a body saying nothing is wrong, built through the same
+`message()` as a real alert so the two cannot drift.
+`.github/workflows/fleet-alert-test.yml` sends it: dispatch only, no schedule,
+no ledger, no publish, and it FAILS if it cannot send, where the publish step
+warns. `test-fleet-alert.py` checks the test message names no inventory domain
+and is not red; `test-workflows.py` checks the workflow's shape.
+
 ### What is not built, in the order I would do it
 
 **1. A prefilled link, not a button.** Each finding row could carry a link that
