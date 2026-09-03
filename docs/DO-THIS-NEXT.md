@@ -848,9 +848,23 @@ because the resources do not overlap and a six-minute email check has no
 reason to wait behind a 45-minute Pantheon scan. `test/test-workflows.py`
 asserts every job the persist job needs carries a group, that it is not the
 ledger lock, and that no two scanners share one; four ways of breaking it
-were verified to fail. **Not yet observed on this repo**: dispatch the
-Pantheon workflow twice and confirm the second run's scan job sits in
-`waiting` until the first finishes.
+were verified to fail.
+
+**Observed on this repo the same day, the cheap way.** Two email DNS
+dispatches seven seconds apart (runs 33808458870 and 33808470848). The first
+scan job ran 21:32:10 to 21:32:25; the second was created at 21:32:13 and its
+scan job did not start until 21:32:33, eight seconds after the first finished,
+against a four-second pickup for the first. The publish jobs serialised the
+same way on `fleet-publish`. A 15-second scan cannot show a long wait, so
+this shows the ordering and not much more; the Pantheon case, a 45-minute
+wait, has not been watched and costs two full scans to watch.
+
+One side effect worth knowing: both runs stamped the same minute,
+`2026-09-03_2132`, so they shared a run id. Ingest is idempotent on run id
+and the second one wrote nothing: `ingested 0 run(s); 1 run(s) already
+present`, 78 rows in the ledger, not 156. Harmless for two identical
+15-second DNS checks. For a long scan the second run's stamp is taken when
+its scan job starts, after the wait, so it gets a minute of its own.
 
 **Opened 2026-09-01, after causing it.** The Pantheon workflow was dispatched at
 19:42 and again at 19:45. Both scans ran from 19:46 to 20:34 against the same 49
