@@ -1,6 +1,6 @@
 # Fleet automation: handoff for the next session
 
-**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-09-01 (late).** Chats share this folder and project memory,
+**Rewritten 2026-08-19, PICK UP HERE refreshed 2026-09-03.** Chats share this folder and project memory,
 never each other's conversation history, so everything needed to resume is
 written down.
 
@@ -8,7 +8,82 @@ written down.
 
 ---
 
-## PICK UP HERE: 2026-09-01, late. Start with one cold scan.
+## PICK UP HERE: 2026-09-03. The fleet was fine. The alert needs a webhook.
+
+**The cold scan the previous handoff asked for was run on 2026-09-02 and
+measured 47.** Run `health-2026-09-02_1147`: 47 of 49 sites with WordPress
+checked, no preflight failures, `knudsen.com` and `galbanicheese.com` both
+clean. A run at 10:15 the same morning measured 46 with `galbanicheese.com`
+timing out once. So the evening of 2026-09-01 was self-inflicted: five scans
+in five hours, two of them at once. Throttling is still the leading guess and
+still unconfirmed. One scan at a time holds at 46 or 47.
+
+**The 2026-09-02 session did not refresh this file.** What follows was read
+back from the commits and the ledger on 2026-09-03, not from a record the
+session left.
+
+### What the 2026-09-02 session built
+
+- **A Teams message when a NEW finding at CVSS 9.0 or above reaches a site**,
+  sent after a successful publish. `scripts/fleet-alert.py`, a step in
+  `_publish-dashboard.yml`, `test/test-fleet-alert.py`. The design and the
+  rest of the plan are B12 in `docs/DO-THIS-NEXT.md`.
+- **It has never run in CI.** The last publish of 2026-09-02 ran from
+  `734b3f1`, which is before the alert commit `dc9cf32`. The next publish
+  from any workflow will be its first run.
+- **`TEAMS_WEBHOOK_URL` is not set.** Checked with `gh secret list` on
+  2026-09-03. Until it is, the step prints a warning and exits 0. So the
+  first real run will warn and send nothing, and that is the intended
+  behaviour, not a failure.
+- The env preflight got the same ceiling as the other Pantheon calls, and its
+  duration is measured rather than guessed.
+- The vulnerability page carries its own dates: when the match ran and when
+  each host's plugin versions were read. Its "new since the last check" count
+  now counts all new findings, not only new criticals.
+
+### State as of 2026-09-03
+
+`fleet.thudstaff.com` is current. Checked by fetching `fleet/latest.json` out
+of R2 and comparing it with a fresh render from the ledger: every headline
+count is identical.
+
+- **5 CRIT, 55 WARN, 19 OK**, six sites excluded by ruling.
+- **378 vulnerability findings over 65 sites**, 15 with no fix, 5 criticals
+  unpatched (the oldest for 106 days), 8 sites not checked and named on the
+  page. Match `vuln-intel-2026-09-02_1543`.
+- **That total fell from 459 to 378 in one afternoon, and the drop is real.**
+  Eight Nexcess sites had plugins updated between the 14:04 and 15:43 matches:
+  92 version changes across those sites in the Nexcess scan of 15:35, for
+  example `eamusicfest.com` 37 findings to 9 and `hitsfoundation.org` 28 to 2.
+  Nothing in this repo records who did the updating. Ask Zach.
+- Last runs per source: Pantheon health 2026-09-02_1147, Nexcess health
+  2026-09-02_1535, vuln-intel 2026-09-02_1543, email 08-28, consent 08-28,
+  consent-gating 08-28.
+
+### Decisions that are Doug's, in order
+
+1. **Set the Teams webhook.** Create an incoming webhook on the channel that
+   should receive it (B12 asks which channel, and whether it must differ from
+   routine publishes), then:
+
+   ```bash
+   cd ~/dev/cm-automation
+   gh secret set TEAMS_WEBHOOK_URL
+   ```
+
+   It prompts for the value; paste the webhook URL. The next publish runs the
+   step for real. Expect "No new critical findings. Nothing sent." in the run
+   summary, because nothing new at 9.0 or above has appeared in any run yet.
+
+2. **B9, before any schedule is turned on.** Two dispatches still run two
+   scans at once, and the count falls when they do.
+
+3. **The git history scrub, before the transfer to the clevermethod org.**
+   The working tree is clean; `git log -p` is not.
+
+---
+
+## Previously: 2026-09-01, late. Start with one cold scan.
 
 **Do this first, before anything else.** One Pantheon health scan, from cold,
 with nothing else running. It answers a question tonight could not:
