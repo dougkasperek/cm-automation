@@ -124,21 +124,18 @@ for name, doc in loaded.items():
             c = job.get("concurrency") or {}
             check("%s / %s joins fleet-ledger-write" % (name, jn),
                   c.get("group") == "fleet-ledger-write", repr(c.get("group")))
-        if "publish" in jn:
-            # A job that CALLS a reusable workflow cannot set `concurrency`:
-            # that belongs to the called workflow. So a publish job satisfies
-            # the contract either by carrying the group itself (pantheon's
-            # inline copy) or by delegating to the shared workflow that does.
-            # Asserted rather than exempted, because "it delegates" is the
-            # thing that has to stay true -- a publish job that called
-            # something else, or inlined its own steps, would reintroduce the
-            # race with nothing to notice it.
-            c = job.get("concurrency") or {}
+        if "publish" in jn and name != "_publish-dashboard.yml":
+            # EVERY scanner publishes through the shared workflow. Until
+            # 2026-09-03 this accepted an inline copy that carried the
+            # `fleet-publish` group itself, and Pantheon's copy drifted: the
+            # alert step added to the shared workflow on 2026-09-02 never
+            # reached it, so a Pantheon publish could not alert. A copy of the
+            # thing that actually runs is a place for the two to disagree, and
+            # the copy that loses is the one nobody is looking at.
             uses = str(job.get("uses") or "")
-            check("%s / %s serialises against other publishes" % (name, jn),
-                  c.get("group") == "fleet-publish"
-                  or uses.endswith("_publish-dashboard.yml"),
-                  "group=%r uses=%r" % (c.get("group"), uses))
+            check("%s / %s publishes through the shared workflow" % (name, jn),
+                  uses.endswith("_publish-dashboard.yml"),
+                  "uses=%r (an inline publish job cannot carry the alert step)" % uses)
 
 # --- the coverage-drop override ------------------------------------------
 # Added 2026-08-28. The guard's own error message said "pass

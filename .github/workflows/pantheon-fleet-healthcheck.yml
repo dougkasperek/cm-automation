@@ -347,6 +347,14 @@ jobs:
   # Default OFF until the Worker, the R2 bucket, the hostname and the Access
   # policy exist. See docs/DASHBOARD.md.
   # -------------------------------------------------------------------------
+  # PUBLISH THROUGH THE SHARED WORKFLOW, since 2026-09-03. This job was an
+  # inline copy of _publish-dashboard.yml from before that file existed, and
+  # the copy drifted the way copies do: the alert step ("tell someone if a new
+  # critical appeared") was added to the shared workflow on 2026-09-02 and
+  # never reached this one, so a Pantheon publish could not alert. Caught by
+  # reading this run's job steps after a full scan and finding no such step.
+  # The concurrency group, the fresh checkout of main and the credential check
+  # all live in the shared file now, once.
   publish-dashboard:
     name: Publish dashboard
     needs: persist-ledger
@@ -354,75 +362,8 @@ jobs:
       always()
       && inputs.publish_dashboard
       && needs.persist-ledger.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    # ONE PUBLISH AT A TIME, ACROSS ALL WORKFLOWS.
-    #
-    # Added 2026-08-28, before running four scans in one afternoon to bring
-    # every source current. Each publish checks out main FRESH, so the last one
-    # to start reads the newest ledger -- but only if they do not overlap.
-    # Concurrent publishes race on the R2 uploads, and the loser is whichever
-    # finishes last, which is not necessarily the one holding the newest data.
-    # The failure it produces is this repo's worst shape: a page that is behind
-    # the ledger and looks current. `fleet-ledger-write` already serialises the
-    # INGEST side; nothing serialised the PUBLISH side.
-    #
-    # cancel-in-progress is false on purpose: cancelling a running publish
-    # mid-upload leaves R2 holding a new dashboard.html beside an old
-    # consent.html, which is worse than waiting.
-    concurrency:
-      group: fleet-publish
-      queue: max
-      cancel-in-progress: false
-    steps:
-      # persist-ledger pushed the ingested run to main a moment ago, so check
-      # main out FRESH rather than reusing the workspace. Without ref: main
-      # this would render the commit the workflow started from - the one
-      # WITHOUT this run's observations, which is the bug this job's ordering
-      # exists to avoid.
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      # A missing secret must stop the job with a readable message rather than
-      # letting the script fail on an unbound variable ten lines later. The
-      # publish URL is not a secret and is fine in a variable; the token is.
-      - name: Install wrangler
-        run: npm install -g wrangler@4
-
-      - name: Check publish credentials
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set -uo pipefail
-          missing=""
-          [ -z "${CLOUDFLARE_API_TOKEN}" ]  && missing="$missing CLOUDFLARE_API_TOKEN(secret)"
-          [ -z "${CLOUDFLARE_ACCOUNT_ID}" ] && missing="$missing CLOUDFLARE_ACCOUNT_ID(variable)"
-          if [ -n "$missing" ]; then
-            echo "::error::publish_dashboard is on but$missing is not set. Set them in repo settings, or turn publish_dashboard off."
-            exit 1
-          fi
-
-      - name: Render and publish
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          FLEET_PUBLIC_URL: ${{ vars.FLEET_PUBLISH_URL }}
-        # $GITHUB_STEP_SUMMARY is a runner env var, so it is read in the shell
-        # rather than through a ${{ }} context that does not exist.
-        run: |
-          FLEET_PUBLISH_SUMMARY="$GITHUB_STEP_SUMMARY" ./scripts/publish-dashboard.sh \
-            ${{ inputs.allow_coverage_drop && '--allow-coverage-drop' || '' }}
-
-      # The summary is written BY THE SCRIPT, via FLEET_PUBLISH_SUMMARY. This
-      # file's own rule is that it does platform glue only, and the first draft
-      # of this step broke that by inlining a Python heredoc -- which also
-      # broke the YAML, because a heredoc terminator at column 0 ends the block
-      # scalar. Glue passes a path; the script decides what to say.
+    uses: ./.github/workflows/_publish-dashboard.yml
+    secrets: inherit
+    with:
+      allow_coverage_drop: ${{ inputs.allow_coverage_drop }}
+      label: "Pantheon fleet health check"

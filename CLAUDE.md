@@ -508,8 +508,10 @@ tool. **The RENDERER is the exception and the claim used to say otherwise.**
 only the Pantheon workflow did, so the email, Nexcess and consent workflows each
 moved the ledger and left `fleet.thudstaff.com` rendering older data. Nobody
 sees a stale page and knows it is stale. Publishing is now one shared reusable
-workflow, `_publish-dashboard.yml`, called by the three; folding Pantheon's
-inline copy into it is the next tidy-up.
+workflow, `_publish-dashboard.yml`, called by every scanner. **Pantheon kept
+an inline copy until 2026-09-03**, and the copy drifted the way copies do: the
+alert step added to the shared workflow on 2026-09-02 never reached it, so a
+Pantheon publish could not alert. Found by reading a run's job steps.
 
 **Do not assert a fleet COUNT in a test.** Three tests broke this session on
 correct changes because they pinned a number that a new source was entitled to
