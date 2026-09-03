@@ -104,6 +104,38 @@ count is identical.
 - This section was rewritten from the commits and the ledger, because the
   2026-09-02 session did not refresh it. Commit `4a066a1`.
 
+### The full run of 2026-09-03 evening, and what it showed
+
+Doug asked for a full run to see whether an alert would be sent. Pantheon
+full scan `health-2026-09-03_2159`, then the vulnerability match twice,
+`vuln-intel-2026-09-03_2155` before the scan landed and `_2250` after.
+
+- **No alert was sent, and both silences were correct.** The first match
+  found 51 new findings, all one medium Divi advisory. The second found
+  nothing new. Neither had anything at 9.0 or above that the previous run
+  lacked.
+- **The scan measured 47 of 49, no preflight failures**, the same as the
+  healthy baseline. Preflight median 9 seconds, slowest 14.
+- **Someone patched 20 Pantheon sites today**: 231 plugin version changes,
+  pending plugin updates down from 396 to 218, WordPress core updated on ten
+  sites. Four sites lost their critical vulnerability: `ciminelli.com`,
+  `gmroot.com`, `morrison-chs.com`, `pfannenbergusa.com`. Health went from
+  5 CRIT / 55 WARN / 19 OK to **1 CRIT / 45 WARN / 33 OK**; the one CRIT left
+  is `runtalnorthamerica.com`. Findings went 429 to 371 across the two matches,
+  and sites carrying a 9.0 or above went 4 to 0 (none). Same as the Nexcess
+  sites yesterday: nothing in this repo records who did it. Ask Zach.
+- **The Pantheon workflow's publish job could not have alerted.** It was an
+  inline copy of the shared publish workflow from before that file existed,
+  and the alert step never reached it. Found by reading the run's job steps.
+  Folded into the shared workflow the same evening; `test-workflows.py` now
+  refuses an inline publish job in any scanner. **Not yet observed**: the next
+  Pantheon run is the first through the shared publish, and its job list
+  should show "Tell someone if a new critical appeared".
+- The commit that folded it, `3da32ed`, says in its message that this
+  section was written. It was not: the script writing it crashed on a site
+  whose worst score reads `unknown`, after the commit had been staged. This
+  commit is the correction.
+
 ### Decisions that are Doug's, in order
 
 1. **The git history scrub, before the transfer to the clevermethod org.**
