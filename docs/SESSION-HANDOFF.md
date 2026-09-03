@@ -67,6 +67,24 @@ count is identical.
   dispatches below ran it twice more with the same result. It will send its
   first message when a run finds something new at CVSS 9.0 or above, and
   nothing has yet.
+- **The alert reaches the channel, proven at 22:44 UTC.** `fleet-alert.py
+  --test` plus `fleet-alert-test.yml`, dispatch only, send one grey message
+  titled "TEST ALERT, not a real finding" about `example.invalid`. It took
+  four tries and each failure was worth having: the first secret's URL had
+  lost its query string in the paste (the endpoint said `400
+  ApiVersionInvalid`, which names nothing); the webhook is a Teams Workflows
+  one, so the payload became an Adaptive Card; and my own shell one-liner then
+  read a key the new payload did not have. Doug recreated the webhook through
+  the channel's Workflows menu and set the secret from a file. The message was
+  read back out of the channel through the Teams connector, posted by
+  "Workflows" at 22:44:03. Both send steps now name a truncated URL before
+  posting. B12 has the detail.
+- **A real vulnerability match ran against changed data and stayed silent,
+  correctly.** Run `vuln-intel-2026-09-03_2155` found 51 new findings since
+  the previous match, all one advisory: Divi up to 4.27.6, stored XSS needing a
+  Contributor login, CVSS 6.4, on 51 sites. Below 9.0, so the step printed
+  "no new critical findings" and sent nothing. Better evidence than the runs
+  where nothing had changed.
 - **B9 is closed.** Every scanner's scan job carries a concurrency group of
   its own: `pantheon-terminus`, `wordfence-feed`, `consent-sweep` (shared by
   the cold sweep and the gating job, so a second consent run waits for both),

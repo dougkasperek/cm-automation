@@ -1071,6 +1071,18 @@ is absent. Both send steps now check the URL's shape before posting and say
 "the paste lost the query string" instead of relaying a message about API
 versions. The secret has to be set again from a file, not a prompt.
 
+**Proven end to end at 22:44 UTC on 2026-09-03.** Doug created the webhook
+fresh through the channel's Workflows menu ("Post to a channel when a webhook
+request is received"), set the secret from a file, and run 33814401609 posted
+the test. The message was then read back out of the channel through the
+Teams connector: posted by "Workflows" at 22:44:03, title and body as
+designed. That is the first time anything this suite sends has been seen to
+arrive. Between the truncated URL and the send there was one more failure of
+my own: the workflow's shell parsed the payload for a `summary` key the
+Adaptive Card did not have, and died one line before the post on the first
+run with a whole URL. The shell no longer parses the payload and the test
+refuses a `json.load` in that step.
+
 ### What is not built, in the order I would do it
 
 **1. A prefilled link, not a button.** Each finding row could carry a link that
