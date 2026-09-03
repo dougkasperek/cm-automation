@@ -93,6 +93,18 @@ jobs:
   consent:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # ONE SCAN AT A TIME. Two headed sweeps at once load 79 client sites twice
+    # from two datacenter addresses, and 7 of them already refuse a runner.
+    # The gating job below shares this group so a second consent run waits
+    # for the whole of the first, cold sweep and gating both.
+    # Its own group, not the ledger lock: the ledger lock serialises a 25-second
+    # ingest and this would queue a scan behind an unrelated one. B9 in
+    # docs/DO-THIS-NEXT.md; test/test-workflows.py asserts every scan job
+    # carries a group of its own.
+    concurrency:
+      group: consent-sweep
+      queue: max
+      cancel-in-progress: false
     outputs:
       stamp: ${{ steps.stamp.outputs.value }}
 
@@ -239,6 +251,12 @@ jobs:
       && inputs.run_gating
       && needs.consent.result == 'success'
     runs-on: ubuntu-latest
+    # Same group as the cold sweep above, on purpose: see the note there. No
+    # self-deadlock, because this job only starts after that one has finished.
+    concurrency:
+      group: consent-sweep
+      queue: max
+      cancel-in-progress: false
     # Three passes per site with real waits, and the tester is one browser per
     # site rather than one for the sweep. 27 sites took ~13 minutes by hand.
     timeout-minutes: 45

@@ -484,6 +484,11 @@ of scripts:
    module. A second scorer is two answers.
 4. **Its own CI workflow.** Credential-free checks run on every push; anything
    needing secrets is manual until it has been trusted for several cycles.
+   **Its scan job carries a concurrency group of its own**, named for the
+   resource it shares with a second copy of itself, never the ledger lock and
+   never another scanner's. Two Pantheon scans at once measured 45 and 46
+   sites against 47 alone (B9, 2026-09-01); `test-workflows.py` refuses a
+   scan job without one.
 5. **Add a coverage line for it in `render-dashboard.py`'s coverage box,
    present from the day the source is registered, not gated on whether it
    has ever produced a run.** Nexcess got a real `source` in the ledger on

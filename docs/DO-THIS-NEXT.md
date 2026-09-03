@@ -835,7 +835,22 @@ a deletion would not look like a loss in the first place.
 
 ---
 
-## B9. Two dispatches run two scans at the same time
+## B9. CLOSED 2026-09-03: every scan job queues behind its own kind
+
+**Closed by giving each scanner's scan job a concurrency group of its own**:
+`pantheon-terminus`, `wordfence-feed`, `consent-sweep` (shared by the cold
+sweep and the gating job, so a second consent run waits for both),
+`email-dns-lookup` and `nexcess-api`. The SSH scan already had `nexcess-ssh`
+at workflow level. Queue, not refuse: the second dispatch waits and then
+runs, so a schedule firing during a manual run costs a wait rather than a
+lost run or a degraded one. Per workflow rather than one fleet-wide group,
+because the resources do not overlap and a six-minute email check has no
+reason to wait behind a 45-minute Pantheon scan. `test/test-workflows.py`
+asserts every job the persist job needs carries a group, that it is not the
+ledger lock, and that no two scanners share one; four ways of breaking it
+were verified to fail. **Not yet observed on this repo**: dispatch the
+Pantheon workflow twice and confirm the second run's scan job sits in
+`waiting` until the first finishes.
 
 **Opened 2026-09-01, after causing it.** The Pantheon workflow was dispatched at
 19:42 and again at 19:45. Both scans ran from 19:46 to 20:34 against the same 49

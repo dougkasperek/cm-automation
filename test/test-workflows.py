@@ -323,5 +323,67 @@ check("the dead-page list names only files that are actually committed",
       _DEAD_PAGES <= _html, str(sorted(_DEAD_PAGES - _html)))
 
 
+# ---------------------------------------------------------------------------
+# EVERY SCAN JOB QUEUES BEHIND ITS OWN KIND (B9, 2026-09-03)
+# ---------------------------------------------------------------------------
+# On 2026-09-01 the Pantheon workflow was dispatched twice, two minutes apart.
+# Both scans ran against the same 49 sites at once; lasershows.com measured
+# cleanly in one and read ERROR in the other, and both measured fewer sites
+# (45, 46) than a scan running alone (47). The ledger lock covered the WRITE
+# and worked; nothing covered the scan. A schedule firing during a manual run
+# produces exactly this.
+#
+# The contract: every job the persist job depends on carries a concurrency
+# group. It must NOT be one of the shared groups (a scan queued on the ledger
+# lock waits behind a 25-second ingest and blocks the next ingest for 45
+# minutes), and it must not be shared with a DIFFERENT scanner, or a six-minute
+# email check queues behind a 45-minute Pantheon scan for no reason. A
+# workflow-level group (the Nexcess SSH scan) satisfies it, since that covers
+# every job in the run.
+def _scan_jobs(doc):
+    """The jobs the persist job needs, i.e. the ones that produce the run."""
+    jobs = (doc or {}).get("jobs") or {}
+    out = set()
+    for jn, job in jobs.items():
+        if "persist" in jn and "ledger" in jn:
+            needs = job.get("needs") or []
+            out.update([needs] if isinstance(needs, str) else needs)
+    return sorted(out)
+
+
+_scan_groups = {}                                    # file -> set(group)
+for name in sorted(scanners):
+    doc = loaded[name]
+    top = (doc.get("concurrency") or {}) if isinstance(doc.get("concurrency"), dict) else {}
+    found = _scan_jobs(doc)
+    check("%s: the scan job(s) could be identified from the persist job" % name,
+          bool(found), "persist-ledger has no needs")
+    for jn in found:
+        job = (doc.get("jobs") or {}).get(jn) or {}
+        c = job.get("concurrency") if isinstance(job.get("concurrency"), dict) else None
+        c = c or top
+        g = c.get("group")
+        check("%s / %s carries a concurrency group" % (name, jn), bool(g),
+              "no job-level or workflow-level concurrency")
+        if not g:
+            continue
+        check("%s / %s does not queue on a shared-state lock" % (name, jn),
+              g not in SHARED_GROUPS or g == "nexcess-ssh", repr(g))
+        check("%s / %s queues rather than cancelling" % (name, jn),
+              c.get("queue") == "max" and c.get("cancel-in-progress") is False,
+              repr(c))
+        _scan_groups.setdefault(name, set()).add(g)
+
+# Distinct per WORKFLOW, not per job: the consent cold sweep and its gating job
+# share one group on purpose, so a second consent run waits for both.
+_owner = {}
+for name, groups in _scan_groups.items():
+    for g in groups:
+        _owner.setdefault(g, set()).add(name)
+_shared_scan = {g: sorted(o) for g, o in _owner.items() if len(o) > 1}
+check("no two scanner workflows share a scan group",
+      not _shared_scan, str(_shared_scan))
+
+
 print("\n%d passed, %d failed" % (len(PASS), len(FAIL)))
 sys.exit(1 if FAIL else 0)
