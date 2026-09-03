@@ -244,6 +244,7 @@ def main():
         if a.dry_run:
             print("WOULD SEND:\n  %s\n%s" % (head, body), file=sys.stderr)
             return 0
+        print("sending: %s" % head, file=sys.stderr)
         print(json.dumps(payload(head, body, TEST_COLOUR)))
         return 0
 
@@ -270,6 +271,7 @@ def main():
     if a.dry_run:
         print("WOULD SEND:\n  %s\n%s" % (head, body), file=sys.stderr)
         return 0
+    print("sending: %s" % head, file=sys.stderr)
     print(json.dumps(payload(head, body, ALERT_COLOUR)))
     return 0
 

@@ -71,8 +71,11 @@ jobs:
           esac
           WHO="$SENT_BY"
           if [ -n "${NOTE:-}" ]; then WHO="$SENT_BY (\"$NOTE\")"; fi
+          # The script prints what it is sending on stderr, which lands in this
+          # log. The shell does NOT parse the payload: a one-liner here read a
+          # key the payload no longer had and killed the step one line before
+          # the post, on the first run with a whole webhook URL.
           PAYLOAD="$(./scripts/fleet-alert.py --test --sent-by "$WHO" --run-url "$RUN_URL")"
-          echo "$PAYLOAD" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["summary"])'
           # --fail-with-body: a refused post prints the webhook's answer, which is
           # the one thing you need when the payload shape is wrong.
           echo "$PAYLOAD" | curl -sS -X POST -H 'Content-Type: application/json' \

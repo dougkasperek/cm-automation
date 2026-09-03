@@ -412,6 +412,11 @@ if isinstance(_t, dict):
         check("...and the step is not continue-on-error",
               not _send[0].get("continue-on-error"))
         check("a refused post shows the webhook's answer", "--fail-with-body" in _run)
+        # The shell must not parse the payload. A one-liner reading d["summary"]
+        # outlived the payload shape it was written for and killed the step one
+        # line before the post, on the first run with a whole webhook URL.
+        check("the send step does not parse the payload in shell",
+              "json.load" not in _run and '["summary"]' not in _run)
         # The first paste of the URL lost its query string and the endpoint
         # said `ApiVersionInvalid`, which names nothing a person can act on.
         check("a truncated webhook URL is named as such, before the post",

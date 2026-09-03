@@ -148,6 +148,10 @@ with tempfile.TemporaryDirectory() as _empty:
     _quiet = subprocess.run([sys.executable, _script, "--history", _empty],
                             capture_output=True, text=True)
 check("--test exits 0 against an empty ledger", _out.returncode == 0, _out.stderr)
+# The title goes to stderr so the CI log shows what was sent without the
+# workflow having to parse the payload, which is how the 2026-09-03 send died.
+check("--test says on stderr what it is sending", "sending: TEST ALERT" in _out.stderr, _out.stderr[:120])
+check("...and stdout is the payload alone", _out.stdout.count("\n") == 1, repr(_out.stdout[:60]))
 try:
     _card = json.loads(_out.stdout)
 except Exception as e:                                       # pragma: no cover
