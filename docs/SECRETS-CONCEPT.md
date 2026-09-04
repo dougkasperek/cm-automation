@@ -1,271 +1,169 @@
-# Secrets management: the concept for the team
+# Secrets management: guidance for building the concept
 
-**For Nick Federico, to present at the regroup the week of 2026-09-08.**
-Written 2026-09-03 from the 2026-09-01 regroup transcript, `docs/SECRETS.md`
-(Doug's Keeper notes for the CI side, 2026-08-09), the fleet's own component
-catalogue, and vendor documentation read on 2026-09-03. Every vendor claim
-below carries a source at the end; the ones marked **unverified** were not
-found on any vendor page and have to be tested or asked.
-
-Brian asked for: the pieces, the flow, the steps, the cost, the assumptions,
-and the known challenges. Not a working thing. This is that.
+**For Nick, who is building and presenting the concept at the regroup the
+week of 2026-09-08.** Written 2026-09-03 by Doug. This is a brief, not the
+answer. It says what Brian asked for, the questions the concept has to answer
+and the order to take them in, where each answer lives, two things to test on
+a real site, and the traps that will sink the pitch if they surface in the
+room instead of in the prep.
 
 ---
 
-## 1. The problem, stated the way the data supports it
+## 1. What Brian asked for, in his words
 
-Brian framed it on the call as "Autopilot brings live down and steps on dev,
-and Zach spends time pasting keys back". Two corrections before building on
-it, both from the call itself and from Pantheon's docs.
+From the 2026-09-01 regroup: *"bring to this table a proposition on here's
+how secrets management could work. Here's the pieces, here's the flow, here's
+the steps we got to do to make it work."* And: *"It doesn't have to be a
+working thing. It just needs to be like, this is what it should look like and
+where it should connect and what it should do."* Assumptions are fine if they
+are written down as assumptions. He wants to be able to say either "that is
+the right thing for us" or "we don't need this right now".
 
-**The mechanism is real and it is opt-in.** Autopilot's *Sync Environment*
-setting copies Live's database and files to Dev before each run; code is not
-copied. Premium plugin licence keys live in the database (`wp_options`), so
-whatever Live holds overwrites whatever Dev held. (Sources 1, 2.)
+He scoped it: *"solving the issue where when Autopilot runs, it brings live
+down, it steps on dev"*, and then, after Zach said he had fixed the pasting
+problem by hand, the part that survives: *"your eyes don't get to see it and
+we're injecting it."* So the concept's job is the security one. Nobody's eyes
+on a key; a machine places it.
 
-**The keys were lost because they were never on Live.** A key entered on Dev
-during a build, and never entered on Live at launch, is gone at the next sync.
-Zach said so and fixed it by hand: put the key on Live once and it flows down
-from then on. He called it "one and done", and he is right about the
-inconvenience half. That half is a two-minute step at launch, not a system.
-
-**What is left is the security half, and it is the half Brian named last.**
-Zach copies the actual key value through his clipboard into a settings page
-on each site. Nobody's eyes should be on the value; it should come from a
-store and be placed by a machine. And a key that lives in code or in a
-platform secret survives every refresh and every new environment, which a
-key in the database does not.
-
-So the concept has one job: **premium plugin licence keys and the automation
-suite's own credentials are placed by machines, from one store of record,
-and no person types or sees the values.**
+Matt's three steps for Keeper stand: validate it is the right approach, get
+it acquired and set up, get the data in. Doug will get the Keeper quote and
+covers the CI half (section 5). You cover the WordPress half.
 
 ---
 
-## 2. The pieces
+## 2. The questions, in order
 
-Four, and three already exist.
+Answer these in this order, because each one changes the next.
 
-| piece | what it is | cost | state |
-|---|---|---|---|
-| **Keeper** (the vault of record) | The company's existing vault. Keeper Secrets Manager (KSM) is the add-on that lets a *machine* read from it: an "Application" is a machine identity that sees only the folders shared to it, zero-knowledge, decrypted on the client. No PHP SDK exists, so WordPress cannot read Keeper directly (3, 4, 5, 6). | Add-on to the business plan, licensed per user per year. **No published price; sales quote** (7, 8). | Not enabled. Victoria: it is "an entire different aspect of Keeper that we don't have". |
-| **GitHub Actions** (the courier) | The fleet automation already runs here with its credentials in repository secrets. Keeper's own action reads secrets into a job and masks them in logs (9). The KSM config blob is the bootstrap credential and stays a GitHub secret; Keeper protects everything except itself (`docs/SECRETS.md`). | $0 | Live, six scanners. |
-| **Pantheon Secrets** (the delivery on 52 sites) | Free on every plan, built into Terminus 4.2+. A secret is set per site or per organisation with an environment override, lives outside the database and the files, and is read in PHP with `pantheon_get_secret()`. Pantheon's own WordPress guide recommends exactly this for licence keys, and its own example defines a plugin constant in `wp-config.php` from a secret (10, 11, 12, 13, 14). | $0 | Available. Not in use. |
-| **The plugin** (the consumer) | A plugin that reads its key from a PHP constant takes it from `wp-config.php`, which is code, which Autopilot does not sync. Six of the fleet's fourteen premium products document such a constant. **The Divi family does not.** See section 4. | $0 | Per plugin. |
-
-Nexcess has no secrets service and no documented environment variables (15).
-Its auto-updater copies production to a staging copy and updates there, so a
-key in the database carries over; the refresh problem does not exist on
-Nexcess (16). Only the eyes-on-the-key problem does. See section 6.
-
----
-
-## 3. The flow
-
-**Today.** Zach reads a key from Keeper or a vendor account, pastes it into
-Plugin Settings on Live and on Dev. The value is on his screen and in his
-clipboard. Autopilot syncs Live's database to Dev, clones Dev to its own
-Multidev, updates there with WP-CLI, merges back to Dev and deploys on to
-Test and Live (1, 17, 18).
-
-**Proposed, for a plugin that reads a constant.**
-
-1. The key is a record in Keeper, in a folder shared to one KSM Application
-   named for the CI job. A person puts it there once, in the vault, where it
-   already lives today.
-2. A GitHub Actions job reads it with Keeper's action, masked, and runs
-   `terminus secret:org:set` for a key shared across the fleet (Gravity
-   Forms' unlimited licence, for one) or `terminus secret:site:set` for a
-   per-site key (10, 19).
-3. Each site's `wp-config.php` carries one guarded line per plugin, committed
-   once:
-   `if (function_exists('pantheon_get_secret')) define('GF_LICENSE_KEY', pantheon_get_secret('gf_license_key'));`
-4. The plugin reads the constant. The settings field goes read-only or
-   disappears. The value is never in the database, so Sync Environment cannot
-   remove it, and every environment (Dev, Test, Live, the Autopilot
-   Multidev) sees it, because site and org secrets are visible to every
-   environment (20).
-5. Autopilot updates as before. Nothing in its path changes.
-
-Nobody types the value after step 1, and step 1 is into the vault, which is
-the one place it is supposed to be.
-
-**For the suite's own credentials** (the Pantheon machine token, the SSH keys,
-the Nexcess API token, the Cloudflare token, the Wordfence key, the Teams
-webhook): the same Keeper Application feeds the same jobs, replacing the six
-GitHub secrets set by hand today. `docs/SECRETS.md` section 2 has the exact
-YAML; it was written for this and needs no change.
+1. **What actually happens to a key on Pantheon today?** Where does a plugin
+   store its licence key, what does Autopilot copy between environments and
+   what does it not, and why did Zach's "put it on Live once" fix work. Get
+   this from Pantheon's Autopilot docs and from Zach, not from memory. If you
+   cannot draw this on a whiteboard the rest will not hold.
+2. **Where can a key live so that the copy does not touch it?** Pantheon has
+   its own answer to this and documents it for licence keys specifically.
+   Find it, find what it costs, and find how PHP reads it.
+3. **Which of our plugins can take a key from that place?** A key outside the
+   database only helps a plugin that reads its key from code. This is
+   per plugin and per vendor. Section 4 gives you the list and the site
+   counts from the fleet scan; you supply the answer for each. This table is
+   the slide the room will remember.
+4. **What is Keeper's role, given the above?** Start from `docs/SECRETS.md`,
+   which has Doug's notes on how Keeper feeds a CI job. Then find out, from
+   Keeper's own docs, whether Keeper can reach a WordPress site directly at
+   all. The answer shapes the whole flow, and it is not the answer people in
+   the room assume.
+5. **What does Nexcess offer?** Nothing is a valid finding. Then note what
+   this repo says about Nexcess SSH access in `CLAUDE.md` under Hard
+   boundaries, because any write to a Nexcess site over SSH touches a
+   control Doug approved, and the concept has to say so rather than walk
+   into it.
+6. **What does it cost and who has to do what?** Keeper's add-on has no
+   published price; Doug is getting the quote. Pantheon's piece and GitHub's
+   piece have prices you can find. Effort is per site per plugin; estimate it
+   from the counts in section 4.
 
 ---
 
-## 4. Which plugins can take a key from code
+## 3. Two things to test on one real site before you present
 
-Measured against the fleet's component catalogue, latest scan per site,
-68 sites inventoried. "Sites" is sites, not installs.
+Both are ten-minute checks on a single Pantheon site, and both change the
+pitch depending on the answer. Pick a sandbox site or ask Zach which one.
 
-| plugin | sites | key from code | how | source |
-|---|---|---|---|---|
-| Gravity Forms | 9 | **yes, documented** | `GF_LICENSE_KEY` in wp-config; field goes read-only; also `wp gf license update` | 21, 22 |
-| ACF PRO | 4 | **yes, documented** | `ACF_PRO_LICENSE`; the plugin activates the site itself | 23 |
-| Object Cache Pro | 20 | **yes, documented** | `token` in `WP_REDIS_CONFIG`; on Pantheon the recommended config reads it from an environment variable already | 24, 25 |
-| WP Activity Log (premium tier only) | 65 installs | yes, documented | `WP__WSAL_FREEMIUS_LICENSE_KEY` plus a snippet; free tier needs no key | 26 |
-| Elementor Pro | 1 | WP-CLI | `wp elementor license activate`; no constant | 27 |
-| UpdraftPlus Premium | 10 | WP-CLI | connects with account credentials, not a key | 28 |
-| WPMU DEV Dashboard / Smush Pro | 1 | in source, undocumented | `WPMUDEV_APIKEY`; confirmed in a plugin mirror, not in vendor docs | 29 |
-| Formidable Pro | 2 | in source, undocumented | `FRM_PRO_LICENSE` (the call's `FRM_LICENSE` was wrong) | 30 |
-| **Divi** | **65** | **no** | username and API key typed into Theme Options; one key may serve many sites | 31 |
-| **Divi Booster** | **37** | **no** | key typed into its settings page | 32 |
-| **Divi Overlays** | **17** | **no** | key typed in; licences count activations per site | 33 |
-| PDF Embedder Premium | 13 | no | settings field only | 34 |
-| TablePress (paid tiers) | 10 | no | Freemius; key typed in after upload | 35 |
-| Yoast SEO Premium | 1 | no key exists | activated from the MyYoast account | 36 |
+- **Can a person read a Pantheon secret back?** Set one, then see what the
+  Terminus listing command and the site dashboard show to an ordinary team
+  member. If values are visible to anyone with site access, the concept still
+  beats the clipboard, but "nobody sees it" becomes "only people with Pantheon
+  access see it", and you should say that yourself.
+- **Does Autopilot's update process see it?** Autopilot updates plugins with
+  WP-CLI on its own environment. Pantheon's docs say which scopes the
+  application and its scripts can read and do not mention WP-CLI. Run a
+  WP-CLI command on a Multidev that reads the secret. If it comes back empty,
+  the plugin is unlicensed at exactly the moment it updates, and the flow
+  needs a different shape.
 
-Two things this table settles.
-
-**The constant route covers the plugins that break Autopilot updates most
-often and misses the one that is on nearly every site.** Gravity Forms, ACF
-and Object Cache Pro are the documented cases and the pilot candidates. The
-Divi family, on 65, 37 and 17 sites, has no code path at all. For Divi the
-answer stays what Zach found: the key on Live, carried down by the sync. Two
-possible code paths exist for it and **both are untested**: WordPress core's
-`pre_option_` filter, which can supply any option from code (37), and a
-Quicksilver hook after `clone_database` that re-writes the option from a
-Pantheon secret (38). Either would be our code, and each plugin would need a
-test of whether it re-reads the injected value or a separately stored
-activation flag.
-
-**A constant removes the typing. It does not remove the activation.** Every
-one of these plugins still calls its vendor to activate the site. Divi
-Overlays and the Freemius products count activations per site, so Dev, Test
-and the Autopilot Multidev may each consume one. Pantheon says a licence must
-be active on Dev before the Autopilot Multidev is created, and that some
-plugins need activating on each environment (1).
+Write down what you ran and what it printed. A measured answer in the room is
+worth more than the diagram.
 
 ---
 
-## 5. Cost
+## 4. The premium plugins in the fleet
 
-| item | cost | basis |
-|---|---|---|
-| Keeper Secrets Manager add-on | **quote required**; per user per year | Keeper publishes no number (7, 8). Nick to ask the Keeper account rep how many seats need the add-on: every vault user, or only the one who creates Applications. |
-| Pantheon Secrets | $0 | free on every plan (10) |
-| GitHub Actions | $0 | already running |
-| Autopilot | already paid | Gold, Platinum, Diamond or Agency plans only (39) |
-| Alternatives, for the record | 1Password Business $8.99 per user per month, Secrets Automation included, no PHP SDK either (40, 41). HashiCorp HCP Vault Dedicated from $0.62 per cluster per hour plus $73 per client per month on the paid tiers (42): for a fleet of sites it is the wrong shape and the wrong price. | The company already pays for Keeper; a second vault needs a reason. |
-| Effort | one `wp-config.php` commit per Pantheon site per plugin, scriptable; one `terminus secret` call per key, scriptable; a Keeper folder and Application, once | a day of Zach's time for the three documented plugins across their 33 sites, if the two tests in section 7 pass |
+From the fleet scan, latest run per site, 68 sites inventoried, counted as
+sites and not installs. For each one, the concept needs: can the key come
+from code (a constant in `wp-config.php`, a filter, or a WP-CLI command),
+what the vendor documents, and whether the site still has to activate against
+the vendor even when the key comes from code.
 
----
+| plugin | sites |
+|---|---|
+| Divi (theme) | 65 |
+| WP Activity Log | 65 installs, mostly the free tier |
+| Divi Booster | 37 |
+| Object Cache Pro | 20 |
+| Divi Overlays | 17 |
+| PDF Embedder Premium | 13 |
+| TablePress, paid tiers | 10 |
+| UpdraftPlus Premium | 10 |
+| Gravity Forms | 9 |
+| ACF PRO | 4 |
+| Formidable Pro | 2 |
+| WPMU DEV Dashboard and Smush Pro | 1 |
+| Elementor Pro | 1 |
+| Yoast SEO Premium | 1 |
 
-## 6. Nexcess, and one control this touches
-
-Nexcess Managed WordPress has no secrets service and documents no
-per-site environment variables (15). Its own updater copies production to a
-staging copy every four days and updates there, so a key in the database is
-not lost the way it is on Pantheon (16). The only path to a constant is
-editing `wp-config.php` over SSH, which WP-CLI can do with `wp config set`
-(43).
-
-**That path changes a security control.** This repo reaches Nexcess with one
-account-level SSH key that can write to every site, and Nexcess has confirmed
-no read-only SSH user exists. The list of commands the scan runs is the only
-thing making the tool read-only, and Doug approved that list as such. Adding
-a write command to it is a decision, not a configuration. The honest option
-for the 22 Nexcess sites is to leave licence keys as Zach's process until
-someone decides that.
-
----
-
-## 7. Assumptions and known challenges
-
-In the order they would stop the concept.
-
-1. **Can a person with site access read a Pantheon secret back?** The goal is
-   that nobody sees the value. Whether `terminus secret:site:list` or the
-   dashboard's Secrets tab prints values to any team member is **unverified**.
-   `terminus secret:site:local-generate` writes them to a JSON file on a
-   laptop by design (19). If any team member can list values, Pantheon
-   Secrets still beats the clipboard, but "nobody sees it" becomes "only
-   people with Pantheon site access see it". Ten minutes on one site.
-2. **Does WP-CLI on the Autopilot Multidev see the secret?** Pantheon says
-   web-scope secrets are for the application runtime, that Quicksilver can
-   read them, and that cron needs a different scope. WP-CLI is not mentioned
-   anywhere (12, 20). If Autopilot's update process cannot see the constant,
-   the plugin is unlicensed at exactly the moment it updates. **Unverified.**
-   One `terminus wp` call on one Multidev settles it.
-3. **The Divi family has no code path.** 65 sites. Section 4.
-4. **Per-site activation counts.** Section 4.
-5. **Is Sync Environment on?** It is a per-site dashboard setting and the
-   ledger does not record it (2). If it is off on a site, that site's key loss
-   was not Autopilot's doing.
-6. **The Keeper cost is unknown** and the seat model matters more than the
-   rate.
-7. **GitHub runners have changing addresses.** A KSM Application is IP-locked
-   by default and must be created unlocked for hosted runners (44).
-8. **Nexcess.** Section 6.
+Go to each vendor's documentation, not to a blog. Where the vendor is silent,
+say so; where a constant only exists in the plugin's source, say that too,
+because it can change without notice. Sort the finished table by site count
+so the room sees the biggest rows first.
 
 ---
 
-## 8. What to do before presenting
+## 5. What Doug is covering
 
-1. Ask the Keeper admin two questions: is the Secrets Manager add-on enabled,
-   and what is the quote for our seat count. Doug's four questions in
-   `docs/SECRETS.md` section 4 still stand.
-2. Run the two tests in items 1 and 2 above on one Pantheon site. Both take
-   minutes and both change the pitch.
-3. Pick Gravity Forms as the pilot: documented constant, WP-CLI path, one
-   unlimited key shared across nine sites, so an org-level secret covers all
-   of them.
-4. Bring the plugin table. It is the slide that answers "does this fix
-   Divi", and the answer is no, and saying so first is what keeps the room.
+- The Keeper quote, and the questions for the Keeper admin in
+  `docs/SECRETS.md` section 4.
+- The automation suite's own credentials. `docs/SECRETS.md` section 2 has
+  the exact way a GitHub Actions job reads from Keeper; that half is written
+  and does not need to be in your concept beyond one sentence.
 
 ---
 
-## Sources
+## 6. Traps
 
-Read 2026-09-03. Each was fetched and checked by a second reader; the four
-marked *inferred* are consistent with the pages but not stated on them.
+Each of these will come up. Better from you than from the room.
 
-1. https://docs.pantheon.io/guides/autopilot/enable-autopilot (Sync Environment copies database and files, not code; licence active on Dev first; per-environment activation; WP-CLI updates)
-2. https://docs.pantheon.io/guides/autopilot/autopilot-faq (Sync Environment is opt-in; Multidev cloned from Dev)
-3. https://docs.keeper.io/en/keeperpam/secrets-manager/developer-sdk-library (SDK list, no PHP)
-4. https://docs.keeper.io/keeperpam/privileged-access-manager/getting-started/applications (an Application is a machine identity)
-5. https://docs.keeper.io/keeperpam/secrets-manager/about/security-encryption-model (zero-knowledge)
-6. https://docs.keeper.io/keeperpam/secrets-manager/integrations (no PHP or WordPress integration)
-7. https://www.keepersecurity.com/secrets-manager.html (add-on, per user per year, contact sales)
-8. https://www.keepersecurity.com/pricing/business-and-enterprise.html (no price printed)
-9. https://docs.keeper.io/keeperpam/secrets-manager/integrations/github-actions (ksm-action, masked)
-10. https://docs.pantheon.io/guides/secrets (free on all plans, Terminus 4.2+)
-11. https://docs.pantheon.io/guides/secrets/overview (types, scopes, site and org, overrides, 16 KB)
-12. https://docs.pantheon.io/guides/secrets/php (`pantheon_get_secret()`, web scope, 15-minute cache, Quicksilver)
-13. https://docs.pantheon.io/guides/wordpress-developer/wordpress-secrets-management (recommends Secrets for licence keys)
-14. https://docs.pantheon.io/plugins-known-issues (WPML: a constant beats the database value, so pushes do not lose it)
-15. Nexcess documentation searched for environment variables, 2026-09-03: nothing found. *Absence, not a page.*
-16. https://docs.nexcess.com/sites-stores/managed-wordpress/plugin-management/visual-comparison/ (every 4 days, staging copy)
-17. https://docs.pantheon.io/guides/autopilot/troubleshoot-autopilot (updates via WP-CLI; Multidev to Dev to Test to Live)
-18. https://docs.pantheon.io/pantheon-workflow (a files clone is wp-content/uploads; code writable only on Dev and Multidev)
-19. https://docs.pantheon.io/guides/secrets/create and https://docs.pantheon.io/terminus/commands (`secret:site:set`, `secret:org:set`, `local-generate`)
-20. https://docs.pantheon.io/guides/secrets/overview (site secrets visible to every environment; cron needs `ic` scope; WP-CLI unmentioned)
-21. https://docs.gravityforms.com/gf_license_key/ and https://docs.gravityforms.com/wp-config-options/
-22. https://docs.gravityforms.com/manage-gravity-forms-license-key-with-wpcli/
-23. https://www.advancedcustomfields.com/resources/how-to-activate/ (`ACF_PRO_LICENSE`, since 5.11)
-24. https://objectcache.pro/docs/configuration-options (`token` in `WP_REDIS_CONFIG`)
-25. https://docs.pantheon.io/object-cache/wordpress (Pantheon's recommended config reads the token from an environment variable)
-26. https://melapress.com/support/kb/activate-melapress-plugin-license-programmatically/
-27. https://developers.elementor.com/docs/cli/license-activate
-28. https://teamupdraft.com/documentation/updraftplus/premium-features/how-to-operate-updraftplus-from-the-wp-cli/
-29. https://github.com/ORCA-WPMU/wpmudev-updates/blob/master/includes/class-wpmudev-dashboard-site.php (plugin source mirror, version 4.4; vendor docs silent)
-30. https://github.com/Strategy11/formidable-forms/blob/master/classes/models/FrmAddon.php (`FRM_<SLUG>_LICENSE` pattern; vendor KB silent)
-31. https://help.elegantthemes.com/en/articles/9502180-how-to-manage-api-keys-and-activate-your-license
-32. https://divibooster.com/how-to-install-the-divi-booster-plugin/
-33. https://divilife.com/downloads/divi-overlays/ (per-site activation count)
-34. https://wp-pdf.com/docs/premium-instructions/
-35. https://tablepress.org/pricing/
-36. https://yoast.com/help/activate-premium-license/
-37. https://developer.wordpress.org/reference/hooks/pre_option_option/
-38. https://docs.pantheon.io/guides/quicksilver/hooks (`clone_database` hook)
-39. https://docs.pantheon.io/guides/autopilot (eligible plans; pricing via Sales)
-40. https://1password.com/pricing/business
-41. https://www.1password.dev/sdks (Go, JavaScript, Python)
-42. https://www.hashicorp.com/en/products/vault/pricing (rendered in a browser; the tab prints the figures)
-43. https://developer.wordpress.org/cli/commands/config/set/
-44. https://docs.keeper.io/keeperpam/secrets-manager/about/one-time-token (IP-locked by default; `--unlock-ip`)
+- **The pasting problem is already fixed.** Zach said so and Brian accepted
+  it. If the concept is pitched as saving Zach's time it loses in the first
+  minute. It is about who sees the value, and about a key surviving refreshes
+  and new environments without a person.
+- **Keeper "injecting at runtime" was said on the call.** Check whether that
+  is true for a PHP application on a host where we cannot install anything.
+  If it is not, the flow has a courier in it, and the concept has to name it.
+- **A key from code is not the same as no activation.** Vendors still count
+  site activations. Ask what Dev, Test, Live and the Autopilot environment
+  each cost against a licence's site limit, especially for plugins that count
+  per site.
+- **The biggest plugin may not have a code path.** If the table in section 4
+  shows that, put it on the slide and say what the answer for that plugin is
+  instead. A concept that quietly skips its largest row is the one Brian will
+  poke at.
+- **Nexcess is a control, not a configuration.** Section 2, item 5.
+- **Do not build it.** Brian said so twice. A diagram, the pieces, the steps,
+  the cost, the assumptions, the challenges. Written assumptions are a
+  feature of this deliverable.
+
+---
+
+## 7. The shape of a good answer
+
+One page and one diagram. The diagram shows where the value travels: the
+store, the courier, the place it lands on the site, and the plugin that reads
+it, with the Autopilot copy drawn so the room can see what it does and does
+not touch. Under it: the plugin table, the cost line, the steps in order, and
+a short list headed "assumptions and known challenges" with the two test
+results at the top. If the answer to a question is "we do not know yet", that
+is a line on the page, not a gap in it.
+
+Doug has read the vendor material once already and has notes. Ask for them
+after you have formed your own view, not before, so the concept is yours.

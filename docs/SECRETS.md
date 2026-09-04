@@ -5,11 +5,11 @@ uses native platform secrets so the first CI run has exactly one moving part.
 Keeper replaces one step in the pipeline and nothing else.
 
 **2026-09-03: this file covers the CI half only.** The other half, premium
-plugin licence keys on Pantheon and Nexcess and how Keeper could feed them
-without a person typing values, is `docs/SECRETS-CONCEPT.md`, written for the
-team regroup the week of 2026-09-08. The short version: Keeper has no PHP SDK,
-so it cannot feed WordPress directly; the delivery is CI into Pantheon Secrets,
-read by a constant in `wp-config.php`, and only for plugins that read one.
+plugin licence keys on Pantheon and Nexcess, is the concept Nick is building
+for the team regroup the week of 2026-09-08. `docs/SECRETS-CONCEPT.md` is
+Doug's guidance to him: the assignment, the questions in order, two tests to
+run on a real site, and the traps. It deliberately does not contain the
+answers.
 
 ---
 

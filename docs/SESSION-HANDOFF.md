@@ -139,19 +139,15 @@ full scan `health-2026-09-03_2159`, then the vulnerability match twice,
 ### The secrets-management concept, for Nick (2026-09-03 evening)
 
 Brian's to-do from the 2026-09-01 regroup: a concept for secrets management,
-Nick presenting the week of 2026-09-08. `docs/SECRETS-CONCEPT.md` is the
-brief, built from the transcript, `docs/SECRETS.md`, the component catalogue
-and 44 vendor pages each read twice. Three findings shape it. Keeper has no
-PHP SDK, so it cannot inject into WordPress at runtime; the delivery is CI
-into Pantheon Secrets (free, built into Terminus), read by a `wp-config.php`
-constant. Six of the fourteen premium products document such a constant;
-**the Divi family, on 65, 37 and 17 sites, has none**, so for Divi the answer
-stays Zach's process, key on Live once. And two cheap tests decide the pitch
-and are unverified: whether a site member can read a Pantheon secret back,
-and whether WP-CLI on the Autopilot Multidev sees the secret. A one-page
-diagram for the presentation was published as an artifact; the link is in the
-session's last message. Nexcess is a security-control decision (a write
-command over SSH), not a configuration.
+Nick presenting the week of 2026-09-08. **Doug's call: Nick builds it; the
+repo gives him guidance, not the answer.** `docs/SECRETS-CONCEPT.md` is that
+guidance: Brian's ask in his words, six questions in the order that each
+changes the next, two ten-minute tests on one Pantheon site, the premium
+plugin list with site counts from the fleet scan, what Doug covers (the
+Keeper quote and the CI half in `docs/SECRETS.md`), and the traps. A first
+version of that file held a finished concept with sourced findings; it was
+replaced the same evening at Doug's instruction and the draft is outside the
+repo, Doug's to share after Nick has formed his own view.
 
 ### Decisions that are Doug's, in order
 
