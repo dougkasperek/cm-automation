@@ -138,8 +138,16 @@ full scan `health-2026-09-03_2159`, then the vulnerability match twice,
 
 ### Decisions that are Doug's, in order
 
-1. **The git history scrub, before the transfer to the clevermethod org.**
-   The working tree is clean; `git log -p` is not.
+1. **The git history scrub, before the transfer to the clevermethod org.
+   Not done, and measured on 2026-09-03 to be smaller than the 2026-09-01
+   note said.** No rewrite has run (317 commits, initial import intact, no
+   filter-repo marker). The six-name access map was never committed, so it
+   is not in history. What is: the DASHBOARD.md Access section, 1,813 lines
+   of old handoff naming other Workers' bindings, secret names and a D1 id,
+   the other Workers' exposure-map entries, and one colleague's email. No
+   credential anywhere. `docs/HANDOVER.md` section 3 has the measurement.
+   Rewrite or accept is your call; if rewrite, not while a scheduled run can
+   be pushing to the ledger.
 
 2. **Two schedules are ON since 2026-09-03 evening, the first in this repo.**
    The vulnerability probe daily at 11:37 UTC (07:37 ET during EDT), because

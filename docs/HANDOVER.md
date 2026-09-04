@@ -54,7 +54,7 @@ All measured 2026-08-31 unless stated.
 |---|---|---|
 | Does any commit contain a credential? | **No.** The only match is prose in `docs/SSH-KEY-SETUP.md` explaining what a key file looks like | `git log --all -p` piped through a pattern set covering private keys, `ghp_`/`github_pat_`, AWS, Slack, certificates |
 | Is the working tree clean and pushed? | Yes, `main` == `origin/main` | `git status --short`, `git ls-remote origin main` |
-| Will anything start running by itself after transfer? | **No.** Every `cron:` block in all nine workflows is commented out | `grep -rn "^\s*-\s*cron" .github/workflows` returns nothing |
+| Will anything start running by itself after transfer? | **Yes, two, since 2026-09-03.** The vulnerability probe daily at 11:37 UTC and the worker exposure check every six hours. The other four `cron:` blocks are commented out. Both scheduled workflows need the org's secrets and variables in place before their first run there, or the probe fails at "Confirm the key is present" and the exposure check fails to reach the Worker | `grep -rn "^\s*-\s*cron" .github/workflows` |
 | Does the deployed Worker match the repo? | **Yes.** All five routes present including `/vulnerabilities`; no write route; no `PUT /api/publish` | Cloudflare MCP `workers_get_worker_code` on `cm-fleet` |
 | How big is the transfer? | `.git` is 31M, 264 commits, two authors (Doug and the Actions bot) | `du -sh .git`, `git log` |
 
@@ -62,9 +62,26 @@ All measured 2026-08-31 unless stated.
 PRs, and a redirect from the old URL. **It does not carry the Actions secrets or
 variables.** Those are recreated by hand -- see step 2 below.
 
-Because the history is clean, **no history rewrite is needed**. That is the
-expensive branch this handover gets to skip, and it was checked rather than
-assumed.
+Because the history holds no credential, **no history rewrite is needed on
+security grounds**. That was checked rather than assumed.
+
+**Measured again 2026-09-03, because the 2026-09-01 handoff said the opposite
+and both could not be right.** They were answering different questions. No
+commit holds a credential, as above. The history DOES still hold what the
+2026-08-31 scoping commit (`7faf6c7`) cut from the working tree: the
+"Access: what is configured" section of `docs/DASHBOARD.md` (110 lines, one
+hostname, no email addresses, six lines naming a person), 1,813 lines of this
+handoff's tail naming other Workers' bindings and secret NAMES and a D1 id,
+and the other Workers' entries in the exposure check. One colleague's email
+address is in history and gone from the tree. **The six-name access map was
+never in git at all**: `data/access-expectations.json`, its checker and its
+test have no commit under any path, so the 2026-09-01 claim that history
+holds "six colleagues' names" from that file is wrong. What history holds is
+infrastructure detail about Workers that are not this project's, plus a few
+names in prose. Whether that justifies a rewrite before the transfer is a
+judgement about the receiving team, and it is Doug's. A rewrite means
+`git filter-repo` and a force-push, which invalidates every clone and must
+not run while a ledger-writing workflow is in flight.
 
 ---
 
