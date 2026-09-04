@@ -78,10 +78,9 @@ never in git at all**: `data/access-expectations.json`, its checker and its
 test have no commit under any path, so the 2026-09-01 claim that history
 holds "six colleagues' names" from that file is wrong. What history holds is
 infrastructure detail about Workers that are not this project's, plus a few
-names in prose. Whether that justifies a rewrite before the transfer is a
-judgement about the receiving team, and it is Doug's. A rewrite means
-`git filter-repo` and a force-push, which invalidates every clone and must
-not run while a ledger-writing workflow is in flight.
+names in prose. **Doug's decision, 2026-09-03: leave the history as it
+is.** No rewrite before the transfer. Recorded so the next session does not
+reopen it; the measurement above is what the decision was made on.
 
 ---
 
