@@ -160,20 +160,19 @@ repo, Doug's to share after Nick has formed his own view.
    section 3 has the measurement and the decision. Do not reopen without
    new information.
 
-2. **Two schedules are ON since 2026-09-03 evening, the first in this repo.**
-   The vulnerability probe daily at 11:37 UTC (07:37 ET during EDT), because
-   the alert is only as timely as the match that feeds it; and the worker
-   exposure check every six hours at 13 past (00:13, 06:13, 12:13, 18:13 UTC),
-   because its whole value is noticing quickly. **Neither has been observed
-   yet.** Read the first scheduled probe on 2026-09-04: it must reach the
-   ledger AND publish AND run the alert step, which is exactly what a
-   scheduled run silently fails to do when a job is gated on a bare
-   `inputs.x` (every input is empty on a schedule). Every input the probe
-   reads now goes through a default and `test-workflows.py` refuses a bare
-   one in any scheduled workflow, verified to fail three ways. GitHub can
-   delay a scheduled run by minutes at busy times; a run at 11:50 is not a
-   fault. The Pantheon, email, consent and Nexcess schedules stay commented
-   out until a person has watched these two for a week.
+2. **One schedule is ON: the vulnerability probe, daily at 11:37 UTC
+   (07:37 ET during EDT).** Turned on 2026-09-03 with the exposure check;
+   Doug turned the exposure check off on 2026-09-04 after one day. **The
+   first scheduled probe was observed on 2026-09-04 and did all three
+   things**: 85 observations into the ledger, a publish, and the alert step,
+   which printed "no new critical findings" and sent nothing. So the
+   empty-inputs trap (every `inputs.x` is empty on a schedule, and a job
+   gated on one silently skips) is handled on a real run, not only in
+   `test-workflows.py`. **GitHub ran every scheduled job hours late**, not
+   minutes: the probe 3h 28m after its slot, the four exposure checks 2h 30m
+   to 5h. Expect an alert on a new critical to land hours after 07:37 ET;
+   if that gap matters, schedule the probe more than once a day. The
+   Pantheon, email, consent and Nexcess schedules stay commented out.
 
 3. **Which Teams channel.** The webhook points somewhere; B12 asks whether
    routine publishes and criticals should share it. A channel that gets both

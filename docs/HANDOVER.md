@@ -54,7 +54,7 @@ All measured 2026-08-31 unless stated.
 |---|---|---|
 | Does any commit contain a credential? | **No.** The only match is prose in `docs/SSH-KEY-SETUP.md` explaining what a key file looks like | `git log --all -p` piped through a pattern set covering private keys, `ghp_`/`github_pat_`, AWS, Slack, certificates |
 | Is the working tree clean and pushed? | Yes, `main` == `origin/main` | `git status --short`, `git ls-remote origin main` |
-| Will anything start running by itself after transfer? | **Yes, two, since 2026-09-03.** The vulnerability probe daily at 11:37 UTC and the worker exposure check every six hours. The other four `cron:` blocks are commented out. Both scheduled workflows need the org's secrets and variables in place before their first run there, or the probe fails at "Confirm the key is present" and the exposure check fails to reach the Worker | `grep -rn "^\s*-\s*cron" .github/workflows` |
+| Will anything start running by itself after transfer? | **Yes, one, since 2026-09-03.** The vulnerability probe daily at 11:37 UTC. The worker exposure check ran on a six-hour schedule for one day and was turned off on 2026-09-04; the other four `cron:` blocks are commented out. The probe needs the org's secrets and variables in place before its first run there, or it fails at "Confirm the key is present" | `grep -rn "^\s*-\s*cron" .github/workflows` |
 | Does the deployed Worker match the repo? | **Yes.** All five routes present including `/vulnerabilities`; no write route; no `PUT /api/publish` | Cloudflare MCP `workers_get_worker_code` on `cm-fleet` |
 | How big is the transfer? | `.git` is 31M, 264 commits, two authors (Doug and the Actions bot) | `du -sh .git`, `git log` |
 

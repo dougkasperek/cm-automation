@@ -452,9 +452,10 @@ if _alert:
 _BARE = re.compile(r"\$\{\{\s*inputs\.\w+\s*\}\}")
 _scheduled = [n for n, d in loaded.items()
               if isinstance(d, dict) and "schedule" in (d.get(True) or d.get("on") or {})]
-check("at least the vulnerability probe and the exposure check are scheduled",
-      {"fleet-vuln-probe.yml", "check-worker-exposure.yml"} <= set(_scheduled),
-      str(sorted(_scheduled)))
+# The exposure check was scheduled for one day and Doug turned it off on
+# 2026-09-04; the probe stays, because the alert depends on it running.
+check("the vulnerability probe is scheduled",
+      "fleet-vuln-probe.yml" in _scheduled, str(sorted(_scheduled)))
 for name in sorted(_scheduled):
     doc = loaded[name]
     for jn, job in (doc.get("jobs") or {}).items():

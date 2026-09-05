@@ -24,19 +24,17 @@ on:
       - ".github/workflows/check-worker-exposure.yml"
   workflow_dispatch:
 
-  # ON A SCHEDULE SINCE 2026-09-03, the first one in this repo. This job's
-  # entire value is DETECTION LATENCY: on manual dispatch it tells you the door
-  # was shut at the moment you happened to look, which is close to worthless.
-  # The failure mode it exists for is a toggle being flipped and nobody
-  # noticing for weeks. Every other workflow here produces data that is still
-  # useful when it is a day old. This one is not.
+  # SCHEDULED FOR ONE DAY, 2026-09-03 to 2026-09-04, then turned off by Doug.
+  # Four scheduled runs fired, all green, each between 2.5 and 5 hours after
+  # its slot (GitHub delays scheduled workflows under load). The argument for
+  # a schedule here is detection latency: on manual dispatch this job says the
+  # door was shut at the moment you looked, and the failure it exists for is a
+  # toggle flipped and nobody noticing for weeks. That argument still stands;
+  # the push trigger above covers every change to the check itself, and the
+  # cron is kept here, commented, for when a schedule is wanted again.
   #
-  # It carries none of the usual risk: no secrets, no client site is touched,
-  # nothing is written to the ledger, and a bad run cannot corrupt a good one
-  # because it stores nothing. It reads no inputs, so the scheduled-run trap
-  # (every `inputs.*` empty) does not apply.
-  schedule:
-    - cron: "13 */6 * * *"   # every six hours
+  # schedule:
+  #   - cron: "13 */6 * * *"   # every six hours
 
 permissions:
   contents: read
